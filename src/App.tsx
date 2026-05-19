@@ -63,6 +63,7 @@ type CharacterOption = {
   englishName: string;
   label: string;
   concept: string;
+  evolution: string;
 };
 
 type WorkspaceMember = {
@@ -173,12 +174,13 @@ const workspaceRoomsStorageKey = "contribution-arc-workspace-rooms";
 
 const characterOptions: CharacterOption[] = [
   {
-    id: "recorder",
-    name: "記録者",
-    englishName: "Recorder",
+    id: "arc-sprout",
+    name: "アークの芽",
+    englishName: "Arc Sprout",
     label: "初期解放キャラクター",
     concept:
-      "まだ成果は大きくない。でも、“積み上げる”ことを覚え始めた人。学習や記録を残すことを知り、少し不安でも前を見ている。",
+      "最初の学習記録から生まれる小さな精霊。Contributionの草と学習ログから発生したArc粒子が、まだ小さな生命体として定着した存在。",
+    evolution: "アークの芽 → ログリーフ → アークブルーム → コントリビュート",
   },
 ];
 
@@ -421,65 +423,84 @@ function PixelIcon({ type }: { type: QuestEvent }) {
   );
 }
 
-function RecorderCharacter() {
+function ArcSproutCharacter() {
   return (
-    <svg className="recorder-character" viewBox="0 0 160 180" role="img" aria-label="記録者 Recorder">
+    <svg className="arc-sprout-character" viewBox="0 0 160 180" role="img" aria-label="アークの芽 Arc Sprout">
       <defs>
-        <linearGradient id="recorder-hood" x1="48" y1="22" x2="118" y2="150">
-          <stop offset="0" stopColor="#172033" />
-          <stop offset="0.58" stopColor="#111827" />
-          <stop offset="1" stopColor="#1f6f4a" />
+        <radialGradient id="sprout-body" cx="42%" cy="28%" r="72%">
+          <stop offset="0" stopColor="#ffffff" />
+          <stop offset="0.42" stopColor="#f4faf6" />
+          <stop offset="0.76" stopColor="#dce8e1" />
+          <stop offset="1" stopColor="#b8d0c3" />
+        </radialGradient>
+        <linearGradient id="sprout-belly" x1="47" y1="122" x2="119" y2="44">
+          <stop offset="0" stopColor="#1f6f4a" stopOpacity="0.94" />
+          <stop offset="1" stopColor="#83bb70" stopOpacity="0.82" />
         </linearGradient>
-        <linearGradient id="recorder-arc" x1="45" y1="132" x2="132" y2="44">
+        <linearGradient id="sprout-arc" x1="35" y1="128" x2="132" y2="36">
           <stop offset="0" stopColor="#1f6f4a" stopOpacity="0.05" />
-          <stop offset="0.55" stopColor="#1f6f4a" stopOpacity="0.55" />
-          <stop offset="1" stopColor="#83bb70" stopOpacity="0.72" />
+          <stop offset="0.48" stopColor="#1f6f4a" stopOpacity="0.38" />
+          <stop offset="1" stopColor="#9dcc80" stopOpacity="0.74" />
         </linearGradient>
+        <filter id="sprout-soft-shadow" x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="14" stdDeviation="10" floodColor="#1f6f4a" floodOpacity="0.14" />
+        </filter>
       </defs>
       <path
-        className="recorder-arc"
-        d="M42 132 C68 109 82 77 124 48"
+        className="sprout-arc"
+        d="M35 126 C61 106 73 70 123 42"
         fill="none"
-        stroke="url(#recorder-arc)"
-        strokeWidth="3"
+        stroke="url(#sprout-arc)"
+        strokeWidth="3.5"
         strokeLinecap="round"
       />
-      <g className="recorder-arc-blocks">
-        <rect x="42" y="130" width="6" height="6" rx="2" />
-        <rect x="59" y="113" width="6" height="6" rx="2" />
-        <rect x="74" y="91" width="6" height="6" rx="2" />
-        <rect x="93" y="69" width="5" height="5" rx="1.8" />
-        <rect x="117" y="47" width="5" height="5" rx="1.8" />
+      <g className="sprout-arc-blocks">
+        <rect x="34" y="124" width="6" height="6" rx="2" />
+        <rect x="52" y="108" width="6" height="6" rx="2" />
+        <rect x="65" y="88" width="6" height="6" rx="2" />
+        <rect x="84" y="67" width="5" height="5" rx="1.7" />
+        <rect x="110" y="47" width="5" height="5" rx="1.7" />
+        <rect x="126" y="38" width="4" height="4" rx="1.4" />
       </g>
-      <ellipse cx="80" cy="160" rx="38" ry="8" fill="rgba(31,111,74,0.14)" />
-      <path
-        d="M59 60 C59 38 74 27 91 31 C106 35 117 51 115 72 L111 112 C109 136 96 150 78 149 C61 148 50 134 51 112 Z"
-        fill="url(#recorder-hood)"
-      />
-      <path
-        d="M65 61 C68 47 80 40 92 44 C103 48 108 61 105 76 C102 92 91 101 78 97 C66 93 61 77 65 61Z"
-        fill="#ead7b6"
-      />
-      <path
-        d="M62 66 C65 45 79 34 94 38 C108 42 115 59 111 78 C104 61 93 54 77 55 C70 56 66 60 62 66Z"
-        fill="#111827"
-      />
-      <path d="M76 75 L82 76" stroke="#111827" strokeWidth="2" strokeLinecap="round" />
-      <path d="M94 75 L99 74" stroke="#111827" strokeWidth="2" strokeLinecap="round" />
-      <path d="M82 88 C87 91 92 91 97 88" stroke="#4b5563" strokeWidth="1.8" strokeLinecap="round" fill="none" />
-      <path
-        d="M47 118 C51 93 61 79 78 78 L91 79 C107 82 117 98 121 122 L116 150 L46 150Z"
-        fill="#152033"
-      />
-      <path d="M68 87 L90 145" stroke="#dce8e1" strokeOpacity="0.22" strokeWidth="2" />
-      <path d="M97 84 L82 148" stroke="#1f6f4a" strokeOpacity="0.45" strokeWidth="2" />
-      <rect x="36" y="101" width="28" height="36" rx="7" fill="#fafaf8" stroke="#dce8e1" strokeWidth="2" />
-      <path d="M43 112 H58 M43 121 H55 M43 130 H53" stroke="#1f6f4a" strokeOpacity="0.62" strokeWidth="2" strokeLinecap="round" />
-      <path d="M118 112 L132 136" stroke="#111827" strokeWidth="5" strokeLinecap="round" />
-      <path d="M132 136 L137 146" stroke="#1f6f4a" strokeWidth="3" strokeLinecap="round" />
-      <rect x="105" y="74" width="22" height="34" rx="5" fill="#0f172a" stroke="#dce8e1" strokeOpacity="0.42" />
-      <rect x="111" y="82" width="10" height="14" rx="2" fill="#1f6f4a" opacity="0.7" />
-      <path d="M62 150 L57 166 M101 150 L106 166" stroke="#111827" strokeWidth="8" strokeLinecap="round" />
+      <ellipse cx="80" cy="160" rx="42" ry="9" fill="rgba(31,111,74,0.13)" />
+      <g filter="url(#sprout-soft-shadow)">
+        <path
+          d="M73 37 C66 24 72 13 87 15 C99 17 105 29 99 41 C110 30 126 32 129 45 C132 59 118 70 102 64 C114 78 118 97 111 117 C104 137 89 149 72 146 C53 143 39 127 37 107 C35 86 46 72 59 64 C46 60 43 47 52 39 C59 33 67 33 73 37Z"
+          fill="url(#sprout-body)"
+          stroke="#dce8e1"
+          strokeWidth="2"
+        />
+        <path
+          d="M73 37 C69 22 76 10 90 14 C101 17 103 31 94 42 C109 29 126 33 128 46 C130 58 116 66 101 61 C94 57 85 50 73 37Z"
+          fill="#1f6f4a"
+          opacity="0.96"
+        />
+        <path
+          d="M77 34 C83 24 91 20 98 23 C99 31 94 39 84 43"
+          fill="#83bb70"
+          opacity="0.92"
+        />
+        <path
+          d="M71 83 C78 74 93 75 101 85 C107 94 105 111 94 119 C84 127 67 122 61 111 C56 100 61 90 71 83Z"
+          fill="url(#sprout-belly)"
+          opacity="0.18"
+        />
+        <circle cx="62" cy="89" r="10" fill="#111827" />
+        <circle cx="98" cy="91" r="10" fill="#111827" />
+        <circle cx="66" cy="86" r="3.2" fill="#fafaf8" />
+        <circle cx="101" cy="88" r="3.2" fill="#fafaf8" />
+        <path d="M77 108 C81 111 85 111 89 108" stroke="#111827" strokeWidth="2.4" strokeLinecap="round" fill="none" opacity="0.72" />
+        <path d="M39 107 C29 108 24 117 26 127" stroke="#b8d0c3" strokeWidth="7" strokeLinecap="round" />
+        <path d="M118 108 C129 111 134 120 132 130" stroke="#b8d0c3" strokeWidth="7" strokeLinecap="round" />
+        <path d="M61 145 L56 158 M99 144 L104 158" stroke="#8aa998" strokeWidth="7" strokeLinecap="round" />
+        <g className="sprout-contribution-mark">
+          <rect x="53" y="116" width="7" height="7" rx="2" />
+          <rect x="64" y="121" width="7" height="7" rx="2" />
+          <rect x="75" y="115" width="7" height="7" rx="2" />
+          <rect x="86" y="122" width="7" height="7" rx="2" />
+          <rect x="97" y="116" width="7" height="7" rx="2" />
+        </g>
+      </g>
     </svg>
   );
 }
@@ -1336,7 +1357,7 @@ function App() {
 
       <div className="status-title-panel">
         <div className="character-stage status-title-stage">
-          <RecorderCharacter />
+          <ArcSproutCharacter />
           <div className="pixel-shadow" />
         </div>
         <div className="status-title-content">
@@ -1556,6 +1577,7 @@ function App() {
                       <h2>{selectedCharacter.name} <span>{selectedCharacter.englishName}</span></h2>
                       <small>{selectedCharacter.label}</small>
                       <p>{selectedCharacter.concept}</p>
+                      <p className="character-evolution">{selectedCharacter.evolution}</p>
                     </div>
 
                     <div className="character-option-list">
@@ -1567,7 +1589,7 @@ function App() {
                           onClick={() => handleCharacterSelect(character.id)}
                         >
                           <span className="character-option-avatar">
-                            <RecorderCharacter />
+                            <ArcSproutCharacter />
                           </span>
                           <span>
                             <strong>{character.name}</strong>

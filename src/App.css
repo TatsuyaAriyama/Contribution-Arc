@@ -949,6 +949,14 @@
   line-height: 1.75;
 }
 
+.character-select-card .character-evolution {
+  margin-top: 12px;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 850;
+  letter-spacing: 0.02em;
+}
+
 .character-option-list {
   display: grid;
   gap: 10px;
@@ -992,7 +1000,7 @@
   background-size: 12px 12px;
 }
 
-.character-option-avatar .recorder-character {
+.character-option-avatar .arc-sprout-character {
   width: 62px;
 }
 
@@ -1324,7 +1332,7 @@
   min-height: 88px;
 }
 
-.recorder-character {
+.arc-sprout-character {
   position: relative;
   z-index: 1;
   width: 112px;
@@ -1334,16 +1342,18 @@
   animation: hero-idle 4.8s ease-in-out infinite;
 }
 
-.recorder-character .recorder-arc {
+.arc-sprout-character .sprout-arc {
   filter: drop-shadow(0 0 8px rgba(31, 111, 74, 0.18));
   animation: contribution-line 3.4s ease-in-out infinite;
 }
 
-.recorder-arc-blocks rect {
+.sprout-arc-blocks rect,
+.sprout-contribution-mark rect {
   fill: var(--green);
 }
 
-.recorder-arc-blocks rect:nth-child(n + 4) {
+.sprout-arc-blocks rect:nth-child(n + 4),
+.sprout-contribution-mark rect:nth-child(even) {
   fill: #83bb70;
 }
 
