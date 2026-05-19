@@ -140,43 +140,7 @@ const outputStats = {
   pullRequests: 2,
 };
 
-const workspaceRooms: WorkspaceRoom[] = [
-  {
-    id: "frontend",
-    name: "Frontend Room",
-    totalMinutes: 2460,
-    contributions: 74,
-    commits: 124,
-  },
-  {
-    id: "backend",
-    name: "Backend Room",
-    totalMinutes: 1920,
-    contributions: 51,
-    commits: 88,
-  },
-  {
-    id: "java",
-    name: "Java Study",
-    totalMinutes: 1380,
-    contributions: 32,
-    commits: 57,
-  },
-  {
-    id: "late-night",
-    name: "Late Night Build",
-    totalMinutes: 3120,
-    contributions: 96,
-    commits: 156,
-  },
-  {
-    id: "deep-work",
-    name: "Deep Work",
-    totalMinutes: 2700,
-    contributions: 64,
-    commits: 101,
-  },
-];
+const workspaceRooms: WorkspaceRoom[] = [];
 
 const focusDurationSeconds = 50 * 60;
 const breakDurationSeconds = 10 * 60;
@@ -788,7 +752,7 @@ function App() {
   const [customUserName, setCustomUserName] = useState("");
   const [draftUserName, setDraftUserName] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [selectedRoomId, setSelectedRoomId] = useState(workspaceRooms[0].id);
+  const [selectedRoomId, setSelectedRoomId] = useState("");
   const [customRooms, setCustomRooms] = useState<WorkspaceRoom[]>([]);
   const [newRoomName, setNewRoomName] = useState("");
   const [workspaceTask, setWorkspaceTask] = useState("React");
@@ -824,11 +788,12 @@ function App() {
     setCustomUserName(savedUserName || "");
     setDraftUserName(savedUserName || currentUser.displayName || currentUser.email?.split("@")[0] || "");
     setCustomRooms(parsedRooms);
-    if (
-      savedRoomId &&
-      [...workspaceRooms, ...parsedRooms].some((room) => room.id === savedRoomId)
-    ) {
+    if (savedRoomId && parsedRooms.some((room) => room.id === savedRoomId)) {
       setSelectedRoomId(savedRoomId);
+    } else if (parsedRooms[0]) {
+      setSelectedRoomId(parsedRooms[0].id);
+    } else {
+      setSelectedRoomId("");
     }
     setWorkspaceTask(savedWorkspaceTask || studySubject);
   }, [currentUser]);
@@ -934,6 +899,7 @@ function App() {
   const totalWeeklyHours = weeklyStudyHours.reduce((sum, item) => sum + item.hours, 0);
   const allWorkspaceRooms = [...workspaceRooms, ...customRooms];
   const selectedRoom = allWorkspaceRooms.find((room) => room.id === selectedRoomId) || allWorkspaceRooms[0];
+  const hasSelectedRoom = Boolean(selectedRoom);
   const elapsedFocusMinutes =
     focusMode === "focus"
       ? Math.floor((focusDurationSeconds - focusRemaining) / 60)
@@ -948,10 +914,12 @@ function App() {
       tone: "deep",
     },
   ];
-  const roomTotalMinutes = selectedRoom.totalMinutes + Math.max(0, elapsedFocusMinutes);
-  const roomContributions = selectedRoom.contributions + outputStats.contributions;
-  const roomCommits = selectedRoom.commits + outputStats.commits;
-  const roomOnlineCount = visibleMembers.length;
+  const roomTotalMinutes = selectedRoom
+    ? selectedRoom.totalMinutes + Math.max(0, elapsedFocusMinutes)
+    : 0;
+  const roomContributions = selectedRoom ? selectedRoom.contributions + outputStats.contributions : 0;
+  const roomCommits = selectedRoom ? selectedRoom.commits + outputStats.commits : 0;
+  const roomOnlineCount = hasSelectedRoom ? visibleMembers.length : 0;
 
   const handleStudySubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1281,83 +1249,93 @@ function App() {
               <button
                 type="button"
                 key={room.id}
-                className={room.id === selectedRoom.id ? "room-card active" : "room-card"}
+                className={room.id === selectedRoom?.id ? "room-card active" : "room-card"}
                 onClick={() => setSelectedRoomId(room.id)}
               >
                 <span>{room.name}</span>
-                <strong>{room.id === selectedRoom.id ? roomOnlineCount : 0} online</strong>
+                <strong>{room.id === selectedRoom?.id ? roomOnlineCount : 0} online</strong>
                 <small>{Math.round(room.totalMinutes / 60)}h learned / {room.contributions} contributions</small>
               </button>
             ))}
           </div>
 
           <div className="room-detail">
-            <div className="room-detail-top">
-              <div>
-                <p className="card-kicker">入室中 / {selectedRoom.name}</p>
-                <h3>{roomOnlineCount}人が静かに作業中</h3>
-              </div>
-              <div className="focus-timer" aria-label="Focus session timer">
-                <span>{focusMode === "focus" ? "Focus" : "Break"}</span>
-                <strong>{formatTimer(focusRemaining)}</strong>
-              </div>
-            </div>
-
-            <label className="workspace-task-field">
-              <span>現在の作業</span>
-              <input
-                value={workspaceTask}
-                onChange={(event) => setWorkspaceTask(event.target.value)}
-                placeholder="React / Java / API設計"
-                maxLength={48}
-              />
-            </label>
-
-            <div className="focus-controls">
-              <button type="button" onClick={() => setIsFocusRunning((running) => !running)}>
-                {isFocusRunning ? "一時停止" : "開始 50 / 10"}
-              </button>
-              <button type="button" className="focus-reset" onClick={handleFocusReset}>
-                リセット
-              </button>
-              {showFocusComplete ? <span className="focus-complete">+120 EXPを静かに追加</span> : null}
-            </div>
-
-            <div className="presence-list" aria-label="People currently studying">
-              {visibleMembers.map((member) => (
-                <article className="presence-card" key={`${member.name}-${member.building}`}>
-                  <span className={`presence-avatar ${member.tone}`}>
-                    {member.name.slice(0, 1).toUpperCase()}
-                  </span>
+            {selectedRoom ? (
+              <>
+                <div className="room-detail-top">
                   <div>
-                    <strong>{member.name}</strong>
-                    <span>作業中: {member.building}</span>
-                    <small>{member.elapsedMinutes}分経過 / 今日 +{member.expToday} EXP</small>
+                    <p className="card-kicker">入室中 / {selectedRoom.name}</p>
+                    <h3>{roomOnlineCount}人が静かに作業中</h3>
                   </div>
-                </article>
-              ))}
-            </div>
+                  <div className="focus-timer" aria-label="Focus session timer">
+                    <span>{focusMode === "focus" ? "Focus" : "Break"}</span>
+                    <strong>{formatTimer(focusRemaining)}</strong>
+                  </div>
+                </div>
 
-            <div className="room-output-panel">
-              <div>
-                <p className="card-kicker">Tonight's Output</p>
-                <h3>{roomCommits.toLocaleString()} commits</h3>
-                <span>{Math.round(roomTotalMinutes / 60).toLocaleString()}h learned</span>
-              </div>
-              <div className="room-heatmap" aria-hidden="true">
-                {Array.from({ length: 42 }, (_, index) => (
-                  <span
-                    key={index}
-                    className={`heat-${(index + roomOnlineCount + selectedRoom.contributions) % 5}`}
-                    style={{ animationDelay: `${index * 18}ms` }}
+                <label className="workspace-task-field">
+                  <span>現在の作業</span>
+                  <input
+                    value={workspaceTask}
+                    onChange={(event) => setWorkspaceTask(event.target.value)}
+                    placeholder="React / Java / API設計"
+                    maxLength={48}
                   />
-                ))}
+                </label>
+
+                <div className="focus-controls">
+                  <button type="button" onClick={() => setIsFocusRunning((running) => !running)}>
+                    {isFocusRunning ? "一時停止" : "開始 50 / 10"}
+                  </button>
+                  <button type="button" className="focus-reset" onClick={handleFocusReset}>
+                    リセット
+                  </button>
+                  {showFocusComplete ? <span className="focus-complete">+120 EXPを静かに追加</span> : null}
+                </div>
+
+                <div className="presence-list" aria-label="People currently studying">
+                  {visibleMembers.map((member) => (
+                    <article className="presence-card" key={`${member.name}-${member.building}`}>
+                      <span className={`presence-avatar ${member.tone}`}>
+                        {member.name.slice(0, 1).toUpperCase()}
+                      </span>
+                      <div>
+                        <strong>{member.name}</strong>
+                        <span>作業中: {member.building}</span>
+                        <small>{member.elapsedMinutes}分経過 / 今日 +{member.expToday} EXP</small>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+
+                <div className="room-output-panel">
+                  <div>
+                    <p className="card-kicker">Tonight's Output</p>
+                    <h3>{roomCommits.toLocaleString()} commits</h3>
+                    <span>{Math.round(roomTotalMinutes / 60).toLocaleString()}h learned</span>
+                  </div>
+                  <div className="room-heatmap" aria-hidden="true">
+                    {Array.from({ length: 42 }, (_, index) => (
+                      <span
+                        key={index}
+                        className={`heat-${(index + roomOnlineCount + selectedRoom.contributions) % 5}`}
+                        style={{ animationDelay: `${index * 18}ms` }}
+                      />
+                    ))}
+                  </div>
+                  <div className="room-output-meta">
+                    <strong>{roomContributions.toLocaleString()}</strong>
+                    <span>contributions today</span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="room-empty-detail">
+                <p className="card-kicker">Silent Workspace</p>
+                <h3>まずはRoomを作成しましょう。</h3>
+                <p>左の入力欄から、自分の集中場所を作成できます。</p>
               </div>
-              <div className="room-output-meta">
-                <strong>{roomContributions.toLocaleString()}</strong>
-                <span>contributions today</span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </section>

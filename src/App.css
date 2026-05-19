@@ -1799,6 +1799,29 @@
     linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(250, 250, 248, 0.92));
 }
 
+.room-empty-detail {
+  display: grid;
+  align-content: center;
+  min-height: 260px;
+}
+
+.room-empty-detail h3 {
+  margin: 10px 0 0;
+  color: var(--ink);
+  font-size: clamp(24px, 3vw, 34px);
+  line-height: 1.08;
+  letter-spacing: 0;
+}
+
+.room-empty-detail p:last-child {
+  max-width: 520px;
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.8;
+}
+
 .room-detail-top {
   display: flex;
   align-items: flex-start;
