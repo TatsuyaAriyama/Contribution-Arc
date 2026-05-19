@@ -42,6 +42,13 @@ type WeeklyStudyDay = {
   logs: StudyLog[];
 };
 
+type StudySegment = {
+  key: string;
+  subject: string;
+  minutes: number;
+  color: string;
+};
+
 type AuthErrorDetail = {
   title: string;
   message: string;
@@ -282,18 +289,25 @@ function getSubjectSummary(logs: StudyLog[]) {
     .join(" / ");
 }
 
-function getStudyColor(logs: StudyLog[]) {
+function getStudySegments(logs: StudyLog[]): StudySegment[] {
   if (logs.length === 0) {
-    return studyColorOptions[0].value;
+    return [];
   }
 
-  const colorMinutes = logs.reduce<Record<string, number>>((acc, log) => {
+  const segments = logs.reduce<Record<string, StudySegment>>((acc, log) => {
     const color = log.color || studyColorOptions[0].value;
-    acc[color] = (acc[color] || 0) + log.minutes;
+    const key = `${log.subject}-${color}`;
+    acc[key] = acc[key] || {
+      key,
+      subject: log.subject,
+      minutes: 0,
+      color,
+    };
+    acc[key].minutes += log.minutes;
     return acc;
   }, {});
 
-  return Object.entries(colorMinutes).sort(([, a], [, b]) => b - a)[0]?.[0] || studyColorOptions[0].value;
+  return Object.values(segments).sort((a, b) => b.minutes - a.minutes);
 }
 
 function PixelIcon({ type }: { type: QuestEvent }) {
@@ -868,32 +882,51 @@ function App() {
           </div>
 
           <div className="bar-chart" aria-label="Learning hours for the last seven days">
-            {weeklyStudyHours.map((item) => (
-              <div className="bar-item" key={item.day} tabIndex={0}>
-                <div className="bar-shell">
-                  <span
+            {weeklyStudyHours.map((item) => {
+              const segments = getStudySegments(item.logs);
+
+              return (
+                <div className="bar-item" key={item.day} tabIndex={0}>
+                  <div
+                    className="bar-shell"
                     style={
                       {
                         "--bar-height": `${(item.hours / maxHours) * 100}%`,
-                        "--bar-color": getStudyColor(item.logs),
                       } as CSSProperties
                     }
-                  />
-                </div>
-                <div className="bar-tooltip" role="tooltip">
-                  <div>
-                    <strong>
-                      {item.day} / {item.dateLabel}
-                    </strong>
-                    <span>{item.hours}h logged</span>
+                  >
+                    {segments.length > 0 ? (
+                      <div className="bar-stack">
+                        {segments.map((segment) => (
+                          <span
+                            key={segment.key}
+                            title={`${segment.subject} ${formatStudyTime(segment.minutes)}`}
+                            style={
+                              {
+                                "--segment-ratio": `${(segment.minutes / (item.hours * 60)) * 100}%`,
+                                "--bar-color": segment.color,
+                              } as CSSProperties
+                            }
+                          />
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
-                  <p>{getSubjectSummary(item.logs)}</p>
-                  <small>+{Math.round(item.hours * 80)} Effort EXP</small>
+                  <div className="bar-tooltip" role="tooltip">
+                    <div>
+                      <strong>
+                        {item.day} / {item.dateLabel}
+                      </strong>
+                      <span>{item.hours}h logged</span>
+                    </div>
+                    <p>{getSubjectSummary(item.logs)}</p>
+                    <small>+{Math.round(item.hours * 80)} Effort EXP</small>
+                  </div>
+                  <strong>{item.day}</strong>
+                  <small>{item.hours}h</small>
                 </div>
-                <strong>{item.day}</strong>
-                <small>{item.hours}h</small>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="progress-console">
