@@ -56,6 +56,24 @@ type AuthErrorDetail = {
   code?: string;
 };
 
+type WorkspaceMember = {
+  name: string;
+  building: string;
+  elapsedMinutes: number;
+  expToday: number;
+  tone: "deep" | "green" | "soft" | "blue";
+};
+
+type WorkspaceRoom = {
+  id: string;
+  name: string;
+  online: number;
+  totalMinutes: number;
+  contributions: number;
+  commits: number;
+  members: WorkspaceMember[];
+};
+
 const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const studyColorOptions = [
   { name: "Forest", value: "#1f6f4a" },
@@ -123,6 +141,76 @@ const outputStats = {
   contributions: 42,
   pullRequests: 2,
 };
+
+const workspaceRooms: WorkspaceRoom[] = [
+  {
+    id: "frontend",
+    name: "Frontend Room",
+    online: 18,
+    totalMinutes: 2460,
+    contributions: 74,
+    commits: 124,
+    members: [
+      { name: "Mika", building: "Next.js dashboard", elapsedMinutes: 42, expToday: 180, tone: "green" },
+      { name: "Ryo", building: "CSS refactor", elapsedMinutes: 28, expToday: 96, tone: "blue" },
+      { name: "Noa", building: "React hooks", elapsedMinutes: 61, expToday: 240, tone: "soft" },
+    ],
+  },
+  {
+    id: "backend",
+    name: "Backend Room",
+    online: 12,
+    totalMinutes: 1920,
+    contributions: 51,
+    commits: 88,
+    members: [
+      { name: "Ken", building: "API design", elapsedMinutes: 35, expToday: 140, tone: "deep" },
+      { name: "Iori", building: "Database indexes", elapsedMinutes: 54, expToday: 210, tone: "green" },
+      { name: "Yui", building: "Auth tests", elapsedMinutes: 19, expToday: 80, tone: "blue" },
+    ],
+  },
+  {
+    id: "java",
+    name: "Java Study",
+    online: 9,
+    totalMinutes: 1380,
+    contributions: 32,
+    commits: 57,
+    members: [
+      { name: "Sora", building: "Spring Security", elapsedMinutes: 48, expToday: 160, tone: "green" },
+      { name: "Nagi", building: "OOP review", elapsedMinutes: 24, expToday: 90, tone: "soft" },
+    ],
+  },
+  {
+    id: "late-night",
+    name: "Late Night Build",
+    online: 24,
+    totalMinutes: 3120,
+    contributions: 96,
+    commits: 156,
+    members: [
+      { name: "Aoi", building: "Release notes", elapsedMinutes: 73, expToday: 260, tone: "deep" },
+      { name: "Ren", building: "Bug fixes", elapsedMinutes: 39, expToday: 150, tone: "green" },
+      { name: "Mei", building: "Design polish", elapsedMinutes: 31, expToday: 120, tone: "blue" },
+    ],
+  },
+  {
+    id: "deep-work",
+    name: "Deep Work",
+    online: 15,
+    totalMinutes: 2700,
+    contributions: 64,
+    commits: 101,
+    members: [
+      { name: "Haru", building: "Algorithm drills", elapsedMinutes: 66, expToday: 220, tone: "deep" },
+      { name: "Toma", building: "TypeScript types", elapsedMinutes: 52, expToday: 190, tone: "green" },
+      { name: "Ema", building: "Reading docs", elapsedMinutes: 44, expToday: 130, tone: "soft" },
+    ],
+  },
+];
+
+const focusDurationSeconds = 50 * 60;
+const breakDurationSeconds = 10 * 60;
 
 const eventCells = new Map<number, QuestEvent>([
   [7, "star"],
@@ -272,6 +360,12 @@ function formatStudyTime(minutes: number) {
 
   const hours = Math.round((minutes / 60) * 10) / 10;
   return `${hours}h`;
+}
+
+function formatTimer(seconds: number) {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
 }
 
 function getSubjectSummary(logs: StudyLog[]) {
@@ -725,6 +819,12 @@ function App() {
   const [customUserName, setCustomUserName] = useState("");
   const [draftUserName, setDraftUserName] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [selectedRoomId, setSelectedRoomId] = useState(workspaceRooms[0].id);
+  const [focusMode, setFocusMode] = useState<"focus" | "break">("focus");
+  const [focusRemaining, setFocusRemaining] = useState(focusDurationSeconds);
+  const [isFocusRunning, setIsFocusRunning] = useState(false);
+  const [sessionExpGained, setSessionExpGained] = useState(0);
+  const [showFocusComplete, setShowFocusComplete] = useState(false);
 
   useEffect(() => {
     return onAuthStateChanged(auth, (user) => {
@@ -760,6 +860,33 @@ function App() {
     );
   }, [currentUser, studyLogs]);
 
+  useEffect(() => {
+    if (!isFocusRunning) {
+      return;
+    }
+
+    const timerId = window.setInterval(() => {
+      setFocusRemaining((seconds) => {
+        if (seconds > 1) {
+          return seconds - 1;
+        }
+
+        if (focusMode === "focus") {
+          setFocusMode("break");
+          setSessionExpGained((exp) => exp + 120);
+          setShowFocusComplete(true);
+          window.setTimeout(() => setShowFocusComplete(false), 2200);
+          return breakDurationSeconds;
+        }
+
+        setFocusMode("focus");
+        return focusDurationSeconds;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(timerId);
+  }, [focusMode, isFocusRunning]);
+
   if (window.location.pathname === githubCallbackPath) {
     return <GitHubCallbackPage />;
   }
@@ -791,6 +918,25 @@ function App() {
     [...titles].reverse().find((title) => title.unlocked)?.name || "Commit Knight";
   const recentLogs = studyLogs.slice(-3).reverse();
   const totalWeeklyHours = weeklyStudyHours.reduce((sum, item) => sum + item.hours, 0);
+  const selectedRoom = workspaceRooms.find((room) => room.id === selectedRoomId) || workspaceRooms[0];
+  const elapsedFocusMinutes =
+    focusMode === "focus"
+      ? Math.floor((focusDurationSeconds - focusRemaining) / 60)
+      : 50 + Math.floor((breakDurationSeconds - focusRemaining) / 60);
+  const currentBuilding = studySubject.trim() || "Deep work";
+  const visibleMembers: WorkspaceMember[] = [
+    {
+      name: playerName,
+      building: currentBuilding,
+      elapsedMinutes: Math.max(1, elapsedFocusMinutes),
+      expToday: Math.round(totalWeeklyHours * 80) + sessionExpGained,
+      tone: "deep",
+    },
+    ...selectedRoom.members,
+  ];
+  const roomTotalMinutes = selectedRoom.totalMinutes + Math.max(0, elapsedFocusMinutes);
+  const roomContributions = selectedRoom.contributions + outputStats.contributions;
+  const roomCommits = selectedRoom.commits + outputStats.commits;
 
   const handleStudySubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -826,6 +972,13 @@ function App() {
     setCustomUserName(nextName);
     window.localStorage.setItem(`contribution-arc-name-${currentUser.uid}`, nextName);
     setIsSettingsOpen(false);
+  };
+
+  const handleFocusReset = () => {
+    setIsFocusRunning(false);
+    setFocusMode("focus");
+    setFocusRemaining(focusDurationSeconds);
+    setShowFocusComplete(false);
   };
 
   return (
@@ -1062,6 +1215,93 @@ function App() {
             </div>
           </div>
         </article>
+      </section>
+
+      <section className="card silent-workspace" aria-label="Silent Workspace">
+        <div className="workspace-heading">
+          <div>
+            <p className="card-kicker">Silent Workspace</p>
+            <h2>静かに積み上げる人たちの部屋</h2>
+            <p>通話も雑談も主役にしない。同じ時間に手を動かしている気配だけを共有します。</p>
+          </div>
+          <span className="workspace-live-pill">quiet presence</span>
+        </div>
+
+        <div className="workspace-layout">
+          <div className="room-list" aria-label="Workspace rooms">
+            {workspaceRooms.map((room) => (
+              <button
+                type="button"
+                key={room.id}
+                className={room.id === selectedRoom.id ? "room-card active" : "room-card"}
+                onClick={() => setSelectedRoomId(room.id)}
+              >
+                <span>{room.name}</span>
+                <strong>{room.online} online</strong>
+                <small>{Math.round(room.totalMinutes / 60)}h learned / {room.contributions} contributions</small>
+              </button>
+            ))}
+          </div>
+
+          <div className="room-detail">
+            <div className="room-detail-top">
+              <div>
+                <p className="card-kicker">Now in {selectedRoom.name}</p>
+                <h3>{selectedRoom.online + 1} builders are quietly working</h3>
+              </div>
+              <div className="focus-timer" aria-label="Focus session timer">
+                <span>{focusMode === "focus" ? "Focus" : "Break"}</span>
+                <strong>{formatTimer(focusRemaining)}</strong>
+              </div>
+            </div>
+
+            <div className="focus-controls">
+              <button type="button" onClick={() => setIsFocusRunning((running) => !running)}>
+                {isFocusRunning ? "Pause session" : "Start 50 / 10"}
+              </button>
+              <button type="button" className="focus-reset" onClick={handleFocusReset}>
+                Reset
+              </button>
+              {showFocusComplete ? <span className="focus-complete">+120 EXP quietly added</span> : null}
+            </div>
+
+            <div className="presence-list" aria-label="People currently studying">
+              {visibleMembers.map((member) => (
+                <article className="presence-card" key={`${member.name}-${member.building}`}>
+                  <span className={`presence-avatar ${member.tone}`}>
+                    {member.name.slice(0, 1).toUpperCase()}
+                  </span>
+                  <div>
+                    <strong>{member.name}</strong>
+                    <span>Building: {member.building}</span>
+                    <small>{member.elapsedMinutes}m elapsed / +{member.expToday} EXP today</small>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div className="room-output-panel">
+              <div>
+                <p className="card-kicker">Tonight's Output</p>
+                <h3>{roomCommits.toLocaleString()} commits</h3>
+                <span>{Math.round(roomTotalMinutes / 60).toLocaleString()}h learned</span>
+              </div>
+              <div className="room-heatmap" aria-hidden="true">
+                {Array.from({ length: 42 }, (_, index) => (
+                  <span
+                    key={index}
+                    className={`heat-${(index + selectedRoom.online) % 5}`}
+                    style={{ animationDelay: `${index * 18}ms` }}
+                  />
+                ))}
+              </div>
+              <div className="room-output-meta">
+                <strong>{roomContributions.toLocaleString()}</strong>
+                <span>contributions today</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
     </main>
   );
