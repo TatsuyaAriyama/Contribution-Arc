@@ -40,6 +40,7 @@ type WeeklyStudyDay = {
   hours: number;
   totalMinutes: number;
   dateLabel: string;
+  isToday: boolean;
   logs: StudyLog[];
 };
 
@@ -243,6 +244,7 @@ function getWeekStart(date = new Date()) {
 
 function getWeeklyStudyHours(logs: StudyLog[]): WeeklyStudyDay[] {
   const weekStart = getWeekStart();
+  const todayKey = getTodayKey();
   const nextWeek = new Date(weekStart);
   nextWeek.setDate(weekStart.getDate() + 7);
 
@@ -260,6 +262,7 @@ function getWeeklyStudyHours(logs: StudyLog[]): WeeklyStudyDay[] {
       hours: totalMinutes / 60,
       totalMinutes,
       dateLabel: `${date.getMonth() + 1}/${date.getDate()}`,
+      isToday: getTodayKey(date) === todayKey,
       logs: dayLogs,
     };
   }).filter((item) => {
@@ -1819,7 +1822,7 @@ function App() {
               const segments = getStudySegments(item.logs);
 
               return (
-                <div className="bar-item" key={item.day} tabIndex={0}>
+                <div className={item.isToday ? "bar-item today" : "bar-item"} key={item.day} tabIndex={0}>
                   <div
                     className="bar-shell"
                     style={

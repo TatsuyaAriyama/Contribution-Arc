@@ -2045,7 +2045,7 @@
   min-height: 0;
   height: auto;
   overflow: visible;
-  padding: 18px 6px 0;
+  padding: 22px 6px 0;
 }
 
 .bar-item {
@@ -2060,15 +2060,38 @@
 .bar-shell {
   position: relative;
   width: 100%;
-  height: clamp(112px, 16vh, 170px);
+  height: clamp(190px, 28vh, 300px);
   overflow: hidden;
-  border-radius: 14px 14px 9px 9px;
+  border: 1px solid rgba(31, 111, 74, 0.08);
+  border-radius: 18px 18px 12px 12px;
   background: var(--green-soft);
   box-shadow: inset 0 0 0 1px rgba(31, 111, 74, 0.08);
   transition:
     transform 0.18s ease,
     box-shadow 0.18s ease,
     background 0.18s ease;
+}
+
+.bar-item.today .bar-shell {
+  border-color: rgba(132, 204, 144, 0.92);
+  box-shadow:
+    inset 0 0 0 1px rgba(250, 250, 248, 0.72),
+    0 0 0 1px rgba(132, 204, 144, 0.72),
+    0 0 22px rgba(132, 204, 144, 0.34);
+}
+
+.bar-item.today .bar-shell::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border: 1px solid rgba(187, 232, 186, 0.72);
+  border-radius: inherit;
+  pointer-events: none;
+  animation: today-bar-glow 3.6s ease-in-out infinite;
+}
+
+.bar-item.today > strong {
+  color: var(--green);
 }
 
 .bar-stack {
@@ -2101,6 +2124,14 @@
   box-shadow:
     inset 0 0 0 1px rgba(31, 111, 74, 0.16),
     0 16px 34px rgba(31, 111, 74, 0.14);
+}
+
+.bar-item.today:hover .bar-shell {
+  box-shadow:
+    inset 0 0 0 1px rgba(250, 250, 248, 0.72),
+    0 0 0 1px rgba(132, 204, 144, 0.82),
+    0 18px 36px rgba(31, 111, 74, 0.14),
+    0 0 28px rgba(132, 204, 144, 0.42);
 }
 
 .bar-item:focus-visible .bar-shell {
@@ -3212,6 +3243,16 @@
   }
 }
 
+@keyframes today-bar-glow {
+  0%,
+  100% {
+    opacity: 0.46;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
 @keyframes contribution-line {
   0%,
   100% {
@@ -3478,7 +3519,7 @@
   }
 
   .bar-shell {
-    height: 140px;
+    height: 190px;
   }
 
   .study-form {
