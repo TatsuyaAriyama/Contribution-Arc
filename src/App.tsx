@@ -1252,7 +1252,12 @@ function App() {
                 className={room.id === selectedRoom?.id ? "room-card active" : "room-card"}
                 onClick={() => setSelectedRoomId(room.id)}
               >
-                <span>{room.name}</span>
+                <span className="room-card-top">
+                  <span>{room.name}</span>
+                  <span className="room-join-badge">
+                    {room.id === selectedRoom?.id ? "入室中" : "参加"}
+                  </span>
+                </span>
                 <strong>{room.id === selectedRoom?.id ? roomOnlineCount : 0} online</strong>
                 <small>{Math.round(room.totalMinutes / 60)}h learned / {room.contributions} contributions</small>
               </button>
@@ -1268,7 +1273,7 @@ function App() {
                     <h3>{roomOnlineCount}人が静かに作業中</h3>
                   </div>
                   <div className="focus-timer" aria-label="Focus session timer">
-                    <span>{focusMode === "focus" ? "Focus" : "Break"}</span>
+                    <span>{focusMode === "focus" ? "集中タイマー" : "休憩タイマー"}</span>
                     <strong>{formatTimer(focusRemaining)}</strong>
                   </div>
                 </div>
@@ -1285,11 +1290,12 @@ function App() {
 
                 <div className="focus-controls">
                   <button type="button" onClick={() => setIsFocusRunning((running) => !running)}>
-                    {isFocusRunning ? "一時停止" : "開始 50 / 10"}
+                    {isFocusRunning ? "一時停止" : "50分集中を開始"}
                   </button>
                   <button type="button" className="focus-reset" onClick={handleFocusReset}>
                     リセット
                   </button>
+                  <span className="focus-cycle-note">集中後は10分休憩に切り替わります</span>
                   {showFocusComplete ? <span className="focus-complete">+120 EXPを静かに追加</span> : null}
                 </div>
 

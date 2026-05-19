@@ -1770,10 +1770,43 @@
   display: block;
 }
 
-.room-card span {
+.room-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.room-card-top span:first-child {
+  min-width: 0;
+  overflow: hidden;
   color: var(--ink);
   font-size: 16px;
   font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-join-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid rgba(31, 111, 74, 0.14);
+  border-radius: 999px;
+  background: rgba(220, 232, 225, 0.48);
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.room-card:not(.active):hover .room-join-badge {
+  border-color: rgba(31, 111, 74, 0.32);
+  background: var(--green);
+  color: #ffffff;
 }
 
 .room-card strong {
@@ -1928,6 +1961,12 @@
   font-size: 13px;
   font-weight: 850;
   animation: quiet-glow 2.2s ease both;
+}
+
+.focus-cycle-note {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
 }
 
 .presence-list {
