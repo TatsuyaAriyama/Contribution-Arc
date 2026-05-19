@@ -1459,6 +1459,23 @@ function App() {
         <div className="user-session">
           <button
             type="button"
+            className={currentView === "workspace" ? "workspace-nav-button active" : "workspace-nav-button"}
+            onClick={() => setCurrentView("workspace")}
+            aria-label="Silent Workspaceを開く"
+          >
+            <span className="workspace-nav-icon" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </span>
+            <span className="workspace-nav-copy">
+              <strong>Silent Workspace</strong>
+              <small>静かに積み上げる作業空間</small>
+            </span>
+            <i>{activeRoom ? "入室中" : `${allWorkspaceRooms.length} Rooms`}</i>
+          </button>
+          <button
+            type="button"
             className="settings-button"
             aria-label="Settings"
             onClick={handleSettingsOpen}
@@ -1912,18 +1929,6 @@ function App() {
         </article>
       </section>
 
-      <button
-        type="button"
-        className="workspace-launch-card"
-        onClick={() => setCurrentView("workspace")}
-        aria-label="Silent Workspaceを開く"
-      >
-        <span>
-          <b>Silent Workspace</b>
-          <small>静かに積み上げるための作業空間</small>
-        </span>
-        <i>{activeRoom ? "入室中" : `${allWorkspaceRooms.length} Rooms`}</i>
-      </button>
       </>
       )}
     </main>

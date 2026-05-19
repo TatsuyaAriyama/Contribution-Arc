@@ -109,6 +109,184 @@
   gap: 12px;
 }
 
+.workspace-nav-button {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-width: min(360px, 40vw);
+  min-height: 56px;
+  padding: 8px 12px 8px 9px;
+  overflow: hidden;
+  border: 1px solid rgba(31, 111, 74, 0.16);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 18% 28%, rgba(255, 255, 255, 0.92), transparent 32%),
+    linear-gradient(120deg, rgba(250, 250, 248, 0.92), rgba(220, 232, 225, 0.58), rgba(250, 250, 248, 0.9));
+  background-size: 180% 180%;
+  box-shadow:
+    0 18px 42px rgba(17, 24, 39, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.94);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background-position 0.7s ease;
+  animation: workspace-sheen 10s ease-in-out infinite;
+}
+
+.workspace-nav-button::before,
+.workspace-nav-button::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(31, 111, 74, 0.22);
+  filter: blur(0.2px);
+  animation: workspace-dust 4.8s ease-in-out infinite;
+}
+
+.workspace-nav-button::before {
+  top: 13px;
+  right: 102px;
+}
+
+.workspace-nav-button::after {
+  right: 72px;
+  bottom: 12px;
+  width: 4px;
+  height: 4px;
+  animation-delay: 1.4s;
+}
+
+.workspace-nav-button:hover {
+  transform: translateY(-2px);
+  border-color: rgba(31, 111, 74, 0.28);
+  background-position: 100% 50%;
+  box-shadow:
+    0 24px 58px rgba(17, 24, 39, 0.1),
+    0 0 0 1px rgba(31, 111, 74, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+}
+
+.workspace-nav-button:active {
+  transform: translateY(0) scale(0.985);
+}
+
+.workspace-nav-button.active {
+  border-color: rgba(31, 111, 74, 0.34);
+  background:
+    radial-gradient(circle at 18% 28%, rgba(255, 255, 255, 0.94), transparent 32%),
+    linear-gradient(120deg, rgba(220, 232, 225, 0.82), rgba(250, 250, 248, 0.94));
+}
+
+.workspace-nav-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  overflow: hidden;
+  border: 1px solid rgba(31, 111, 74, 0.14);
+  border-radius: 15px;
+  background:
+    linear-gradient(90deg, rgba(31, 111, 74, 0.08) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(31, 111, 74, 0.08) 1px, transparent 1px),
+    rgba(250, 250, 248, 0.78);
+  background-size: 10px 10px;
+}
+
+.workspace-nav-icon::before {
+  content: "";
+  width: 17px;
+  height: 17px;
+  border: 2px solid var(--green);
+  border-top-color: transparent;
+  border-left-color: rgba(31, 111, 74, 0.34);
+  border-radius: 999px;
+  transform: rotate(-24deg);
+  filter: drop-shadow(0 0 7px rgba(31, 111, 74, 0.16));
+  animation: workspace-orbit 5.4s ease-in-out infinite;
+}
+
+.workspace-nav-icon span {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--green);
+  opacity: 0.78;
+  animation: workspace-pulse 3.6s ease-in-out infinite;
+}
+
+.workspace-nav-icon span:nth-child(1) {
+  top: 11px;
+  left: 12px;
+}
+
+.workspace-nav-icon span:nth-child(2) {
+  top: 18px;
+  right: 10px;
+  background: #83bb70;
+  animation-delay: 0.8s;
+}
+
+.workspace-nav-icon span:nth-child(3) {
+  right: 16px;
+  bottom: 10px;
+  animation-delay: 1.6s;
+}
+
+.workspace-nav-copy {
+  min-width: 0;
+}
+
+.workspace-nav-copy strong,
+.workspace-nav-copy small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-nav-copy strong {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.workspace-nav-copy small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.workspace-nav-button i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(31, 111, 74, 0.14);
+  border-radius: 999px;
+  background: rgba(250, 250, 248, 0.72);
+  color: var(--green);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
 .settings-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -1575,73 +1753,6 @@
   padding: clamp(14px, 2vw, 20px);
 }
 
-.workspace-launch-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  width: 100%;
-  margin-top: 12px;
-  padding: 18px 22px;
-  border: 1px solid rgba(31, 111, 74, 0.12);
-  border-radius: 22px;
-  background:
-    radial-gradient(circle at 92% 18%, rgba(31, 111, 74, 0.12), transparent 22rem),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(220, 232, 225, 0.32)),
-    var(--surface);
-  box-shadow:
-    0 18px 58px rgba(17, 24, 39, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  color: var(--ink);
-  cursor: pointer;
-  text-align: left;
-  transition:
-    transform 0.18s ease,
-    border-color 0.18s ease,
-    box-shadow 0.18s ease;
-}
-
-.workspace-launch-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(31, 111, 74, 0.24);
-  box-shadow:
-    0 24px 70px rgba(17, 24, 39, 0.08),
-    0 0 0 1px rgba(31, 111, 74, 0.04);
-}
-
-.workspace-launch-card span,
-.workspace-launch-card b,
-.workspace-launch-card small {
-  display: block;
-}
-
-.workspace-launch-card b {
-  font-size: clamp(22px, 2.4vw, 32px);
-  letter-spacing: 0;
-}
-
-.workspace-launch-card small {
-  margin-top: 6px;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 750;
-}
-
-.workspace-launch-card i {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  min-height: 34px;
-  padding: 0 14px;
-  border: 1px solid rgba(31, 111, 74, 0.14);
-  border-radius: 999px;
-  background: rgba(220, 232, 225, 0.56);
-  color: var(--green);
-  font-size: 12px;
-  font-style: normal;
-  font-weight: 900;
-}
-
 .workspace-screen {
   display: grid;
   gap: 12px;
@@ -3057,6 +3168,50 @@
   }
 }
 
+@keyframes workspace-sheen {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes workspace-dust {
+  0%,
+  100% {
+    opacity: 0.24;
+    transform: translateY(3px) scale(0.86);
+  }
+  45% {
+    opacity: 0.7;
+    transform: translateY(-3px) scale(1);
+  }
+}
+
+@keyframes workspace-orbit {
+  0%,
+  100% {
+    transform: rotate(-24deg) scale(1);
+  }
+  50% {
+    transform: rotate(-14deg) scale(1.04);
+  }
+}
+
+@keyframes workspace-pulse {
+  0%,
+  100% {
+    opacity: 0.42;
+    transform: scale(0.86);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+}
+
 @keyframes contribution-line {
   0%,
   100% {
@@ -3109,6 +3264,19 @@
   .social-card,
   .login-shell {
     flex-direction: column;
+  }
+
+  .site-header {
+    align-items: stretch;
+  }
+
+  .user-session {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .workspace-nav-button {
+    min-width: min(100%, 340px);
   }
 
   .login-shell {
@@ -3174,6 +3342,34 @@
     width: 100%;
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .workspace-nav-button {
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    min-width: 0;
+    width: 100%;
+    min-height: 50px;
+    padding: 7px 10px 7px 8px;
+  }
+
+  .workspace-nav-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 13px;
+  }
+
+  .workspace-nav-copy strong {
+    font-size: 13px;
+  }
+
+  .workspace-nav-copy small {
+    font-size: 10px;
+  }
+
+  .workspace-nav-button i {
+    min-height: 26px;
+    padding: 0 8px;
+    font-size: 10px;
   }
 
   .login-shell {
