@@ -38,6 +38,7 @@ type TitleRank = {
 type WeeklyStudyDay = {
   day: string;
   hours: number;
+  totalMinutes: number;
   dateLabel: string;
   logs: StudyLog[];
 };
@@ -234,7 +235,8 @@ function getWeeklyStudyHours(logs: StudyLog[]): WeeklyStudyDay[] {
 
     return {
       day,
-      hours: Math.round((totalMinutes / 60) * 10) / 10,
+      hours: totalMinutes / 60,
+      totalMinutes,
       dateLabel: `${date.getMonth() + 1}/${date.getDate()}`,
       logs: dayLogs,
     };
@@ -990,7 +992,7 @@ function App() {
   const playerName =
     customUserName.trim() || currentUser.displayName || currentUser.email?.split("@")[0] || "Developer";
   const weeklyStudyHours = getWeeklyStudyHours(studyLogs);
-  const maxHours = Math.max(1, ...weeklyStudyHours.map((item) => item.hours));
+  const maxStudyMinutes = Math.max(1, ...weeklyStudyHours.map((item) => item.totalMinutes));
   const effortExp = getEffortExp(studyLogs);
   const outputExp = getOutputExp();
   const levelState = getLevelState(effortExp + outputExp);
@@ -998,7 +1000,11 @@ function App() {
   const currentTitle =
     [...titles].reverse().find((title) => title.unlocked)?.name || "Commit Knight";
   const recentLogs = studyLogs.slice(-3).reverse();
-  const totalWeeklyHours = weeklyStudyHours.reduce((sum, item) => sum + item.hours, 0);
+  const totalWeeklyMinutes = weeklyStudyHours.reduce((sum, item) => sum + item.totalMinutes, 0);
+  const totalWeeklyLabel =
+    totalWeeklyMinutes > 0 && totalWeeklyMinutes < 60
+      ? formatStudyTime(totalWeeklyMinutes)
+      : `${(Math.round((totalWeeklyMinutes / 60) * 10) / 10).toLocaleString()}h`;
   const allWorkspaceRooms = [...workspaceRooms, ...customRooms];
   const selectedRoom = allWorkspaceRooms.find((room) => room.id === selectedRoomId) || allWorkspaceRooms[0];
   const currentBuilding = workspaceTask.trim() || studySubject.trim() || "Deep work";
@@ -1492,7 +1498,7 @@ function App() {
           <div className="section-heading compact">
             <div>
               <p className="card-kicker">Weekly Study Log</p>
-              <p className="study-total">{totalWeeklyHours.toLocaleString()}h this week</p>
+              <p className="study-total">{totalWeeklyLabel} this week</p>
             </div>
             <span className="soft-pill">7 days</span>
           </div>
@@ -1507,7 +1513,9 @@ function App() {
                     className="bar-shell"
                     style={
                       {
-                        "--bar-height": `${(item.hours / maxHours) * 100}%`,
+                        "--bar-height": segments.length
+                          ? `${Math.max((item.totalMinutes / maxStudyMinutes) * 100, 4)}%`
+                          : "0%",
                       } as CSSProperties
                     }
                   >
@@ -1519,7 +1527,7 @@ function App() {
                             title={`${segment.subject} ${formatStudyTime(segment.minutes)}`}
                             style={
                               {
-                                "--segment-ratio": `${(segment.minutes / (item.hours * 60)) * 100}%`,
+                                "--segment-ratio": `${(segment.minutes / item.totalMinutes) * 100}%`,
                                 "--bar-color": segment.color,
                               } as CSSProperties
                             }
@@ -1533,13 +1541,13 @@ function App() {
                       <strong>
                         {item.day} / {item.dateLabel}
                       </strong>
-                      <span>{item.hours}h logged</span>
+                      <span>{formatStudyTime(item.totalMinutes)} logged</span>
                     </div>
                     <p>{getSubjectSummary(item.logs)}</p>
                     <small>+{Math.round(item.hours * 80)} Effort EXP</small>
                   </div>
                   <strong>{item.day}</strong>
-                  <small>{item.hours}h</small>
+                  <small>{item.totalMinutes > 0 ? formatStudyTime(item.totalMinutes) : "0h"}</small>
                 </div>
               );
             })}
