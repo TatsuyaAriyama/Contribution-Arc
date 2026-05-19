@@ -722,6 +722,9 @@ function App() {
   const [studyAmount, setStudyAmount] = useState("1");
   const [studyUnit, setStudyUnit] = useState<"hours" | "minutes">("hours");
   const [studyColor, setStudyColor] = useState(studyColorOptions[0].value);
+  const [customUserName, setCustomUserName] = useState("");
+  const [draftUserName, setDraftUserName] = useState("");
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   useEffect(() => {
     return onAuthStateChanged(auth, (user) => {
@@ -736,11 +739,14 @@ function App() {
     }
 
     const savedLogs = window.localStorage.getItem(`contribution-arc-study-${currentUser.uid}`);
+    const savedUserName = window.localStorage.getItem(`contribution-arc-name-${currentUser.uid}`);
     if (savedLogs) {
       setStudyLogs(JSON.parse(savedLogs) as StudyLog[]);
     } else {
       setStudyLogs(defaultStudyLogs);
     }
+    setCustomUserName(savedUserName || "");
+    setDraftUserName(savedUserName || currentUser.displayName || currentUser.email?.split("@")[0] || "");
   }, [currentUser]);
 
   useEffect(() => {
@@ -774,7 +780,7 @@ function App() {
   }
 
   const playerName =
-    currentUser.displayName || currentUser.email?.split("@")[0] || "Developer";
+    customUserName.trim() || currentUser.displayName || currentUser.email?.split("@")[0] || "Developer";
   const weeklyStudyHours = getWeeklyStudyHours(studyLogs);
   const maxHours = Math.max(1, ...weeklyStudyHours.map((item) => item.hours));
   const effortExp = getEffortExp(studyLogs);
@@ -808,6 +814,20 @@ function App() {
     setStudyAmount(studyUnit === "hours" ? "1" : "30");
   };
 
+  const handleSettingsOpen = () => {
+    setDraftUserName(playerName);
+    setIsSettingsOpen(true);
+  };
+
+  const handleSettingsSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const nextName = draftUserName.trim();
+    setCustomUserName(nextName);
+    window.localStorage.setItem(`contribution-arc-name-${currentUser.uid}`, nextName);
+    setIsSettingsOpen(false);
+  };
+
   return (
     <main className="app-shell">
       <header className="site-header">
@@ -816,7 +836,7 @@ function App() {
             type="button"
             className="settings-button"
             aria-label="Settings"
-            onClick={() => window.alert("設定機能は準備中です。")}
+            onClick={handleSettingsOpen}
           >
             <SettingsIcon />
           </button>
@@ -825,6 +845,39 @@ function App() {
           </button>
         </div>
       </header>
+
+      {isSettingsOpen ? (
+        <div className="settings-modal-backdrop" role="presentation">
+          <section className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+            <div>
+              <p className="card-kicker">Settings</p>
+              <h2 id="settings-title">プロフィール設定</h2>
+            </div>
+
+            <form className="settings-form" onSubmit={handleSettingsSubmit}>
+              <label>
+                <span>ユーザーネーム</span>
+                <input
+                  value={draftUserName}
+                  onChange={(event) => setDraftUserName(event.target.value)}
+                  placeholder="表示したい名前"
+                  maxLength={24}
+                  autoFocus
+                />
+              </label>
+
+              <div className="settings-actions">
+                <button type="button" className="settings-secondary" onClick={() => setIsSettingsOpen(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="settings-primary">
+                  Save
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      ) : null}
 
       <section className="hero-grid" aria-label="Contribution Arc overview">
         <div className="overview-stack">

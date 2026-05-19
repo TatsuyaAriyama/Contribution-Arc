@@ -109,6 +109,104 @@
   gap: 12px;
 }
 
+.settings-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(17, 24, 39, 0.18);
+  backdrop-filter: blur(10px);
+}
+
+.settings-modal {
+  width: min(420px, 100%);
+  padding: 26px;
+  border: 1px solid rgba(31, 111, 74, 0.14);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 253, 250, 0.94)),
+    var(--surface);
+  box-shadow:
+    0 30px 90px rgba(17, 24, 39, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.settings-modal h2 {
+  margin: 10px 0 0;
+  color: var(--ink);
+  font-size: 30px;
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+.settings-form {
+  display: grid;
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.settings-form label {
+  display: grid;
+  gap: 8px;
+}
+
+.settings-form label span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.settings-form input {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-warm);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 750;
+  outline: none;
+}
+
+.settings-form input:focus {
+  border-color: rgba(31, 111, 74, 0.36);
+  background: var(--surface);
+  box-shadow: 0 0 0 4px rgba(31, 111, 74, 0.08);
+}
+
+.settings-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.settings-actions button {
+  height: 44px;
+  border-radius: 14px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.settings-secondary {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.settings-primary {
+  border: 0;
+  background: var(--ink);
+  color: #ffffff;
+}
+
+.settings-primary:hover {
+  background: var(--green);
+}
+
 .login-shell {
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
