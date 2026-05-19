@@ -1403,8 +1403,7 @@ function App() {
             <article className="card determination-card">
               <div>
                 <p className="card-kicker">決意</p>
-                <h2>積み上げる理由を残す。</h2>
-                {determination ? <p>{determination}</p> : <p>例: 毎日少しでも積み上げる</p>}
+                {determination ? <p>{determination}</p> : null}
               </div>
 
               <form className="determination-form" onSubmit={handleDeterminationSubmit}>
@@ -1413,7 +1412,6 @@ function App() {
                   <textarea
                     value={draftDetermination}
                     onChange={(event) => setDraftDetermination(event.target.value)}
-                    placeholder="毎日少しでも積み上げる"
                     rows={8}
                   />
                 </label>

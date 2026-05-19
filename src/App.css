@@ -903,16 +903,8 @@
 
 .determination-card {
   display: grid;
-  gap: 22px;
+  gap: 18px;
   padding: clamp(22px, 4vw, 34px);
-}
-
-.determination-card h2 {
-  margin: 10px 0 0;
-  color: var(--ink);
-  font-size: clamp(30px, 4vw, 48px);
-  line-height: 1.02;
-  letter-spacing: 0;
 }
 
 .determination-card > div > p:last-child {
