@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
+import { useEffect, useState, type CSSProperties, type ChangeEvent, type FormEvent } from "react";
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
@@ -73,6 +73,7 @@ type WorkspaceMember = {
   color: string;
   joinedAt: string;
   tone: "deep" | "green" | "soft" | "blue";
+  avatar?: string;
 };
 
 type WorkspaceSessionHistory = {
@@ -901,7 +902,7 @@ function App() {
   const [profileMember, setProfileMember] = useState<WorkspaceMember | null>(null);
   const [determination, setDetermination] = useState("");
   const [draftDetermination, setDraftDetermination] = useState("");
-  const [selectedCharacterId, setSelectedCharacterId] = useState(characterOptions[0].id);
+  const [playerAvatar, setPlayerAvatar] = useState("");
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [customRooms, setCustomRooms] = useState<WorkspaceRoom[]>([]);
   const [isWorkspaceLoaded, setIsWorkspaceLoaded] = useState(false);
@@ -931,7 +932,7 @@ function App() {
     const savedLogs = window.localStorage.getItem(`contribution-arc-study-${currentUser.uid}`);
     const savedUserName = window.localStorage.getItem(`contribution-arc-name-${currentUser.uid}`);
     const savedDetermination = window.localStorage.getItem(`contribution-arc-determination-${currentUser.uid}`);
-    const savedCharacterId = window.localStorage.getItem(`contribution-arc-character-${currentUser.uid}`);
+    const savedAvatar = window.localStorage.getItem(`contribution-arc-avatar-${currentUser.uid}`);
     const savedRoomId = window.localStorage.getItem(`contribution-arc-room-${currentUser.uid}`);
     const savedRooms = window.localStorage.getItem(`contribution-arc-rooms-${currentUser.uid}`);
     const savedWorkspaceTask = window.localStorage.getItem(`contribution-arc-workspace-task-${currentUser.uid}`);
@@ -957,11 +958,7 @@ function App() {
     setDraftUserName(savedUserName || currentUser.displayName || currentUser.email?.split("@")[0] || "");
     setDetermination(savedDetermination || "");
     setDraftDetermination(savedDetermination || "");
-    setSelectedCharacterId(
-      savedCharacterId && characterOptions.some((character) => character.id === savedCharacterId)
-        ? savedCharacterId
-        : characterOptions[0].id,
-    );
+    setPlayerAvatar(savedAvatar || currentUser.photoURL || "");
     setCustomRooms(parsedRooms);
     if (savedRoomId && parsedRooms.some((room) => room.id === savedRoomId)) {
       setSelectedRoomId(savedRoomId);
@@ -1049,7 +1046,7 @@ function App() {
             return member;
           }
 
-          if (member.name === nextName && member.building === nextBuilding) {
+          if (member.name === nextName && member.building === nextBuilding && member.avatar === playerAvatar) {
             return member;
           }
 
@@ -1058,6 +1055,7 @@ function App() {
             ...member,
             name: nextName,
             building: nextBuilding,
+            avatar: playerAvatar,
           };
         });
 
@@ -1066,7 +1064,7 @@ function App() {
 
       return changed ? nextRooms : rooms;
     });
-  }, [currentUser, customUserName, isWorkspaceLoaded, studySubject, workspaceTask]);
+  }, [currentUser, customUserName, isWorkspaceLoaded, playerAvatar, studySubject, workspaceTask]);
 
   if (window.location.pathname === githubCallbackPath) {
     return <GitHubCallbackPage />;
@@ -1089,6 +1087,7 @@ function App() {
 
   const playerName =
     customUserName.trim() || currentUser.displayName || currentUser.email?.split("@")[0] || "Developer";
+  const playerInitial = playerName.slice(0, 1).toUpperCase();
   const weeklyStudyHours = getWeeklyStudyHours(studyLogs);
   const maxStudyMinutes = Math.max(1, ...weeklyStudyHours.map((item) => item.totalMinutes));
   const effortExp = getEffortExp(studyLogs);
@@ -1130,8 +1129,7 @@ function App() {
   const pendingJoinRoom = pendingJoinRoomId
     ? allWorkspaceRooms.find((room) => room.id === pendingJoinRoomId)
     : null;
-  const selectedCharacter =
-    characterOptions.find((character) => character.id === selectedCharacterId) || characterOptions[0];
+  const guideCharacter = characterOptions[0];
 
   const handleStudySubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1187,9 +1185,25 @@ function App() {
     setCurrentView("profile");
   };
 
-  const handleCharacterSelect = (characterId: string) => {
-    setSelectedCharacterId(characterId);
-    window.localStorage.setItem(`contribution-arc-character-${currentUser.uid}`, characterId);
+  const handleAvatarChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const nextAvatar = typeof reader.result === "string" ? reader.result : "";
+      setPlayerAvatar(nextAvatar);
+      window.localStorage.setItem(`contribution-arc-avatar-${currentUser.uid}`, nextAvatar);
+    };
+    reader.readAsDataURL(file);
+    event.target.value = "";
+  };
+
+  const handleAvatarRemove = () => {
+    setPlayerAvatar("");
+    window.localStorage.removeItem(`contribution-arc-avatar-${currentUser.uid}`);
   };
 
   const closeWorkspaceSession = (roomId: string) => {
@@ -1289,6 +1303,7 @@ function App() {
               color: workspaceDraftColor,
               joinedAt,
               tone: "deep",
+              avatar: playerAvatar,
             },
           ],
         };
@@ -1349,6 +1364,9 @@ function App() {
     >
       <div className="card-kicker">Player Status</div>
       <div className="player-heading">
+        <span className="player-avatar">
+          {playerAvatar ? <img src={playerAvatar} alt="" /> : playerInitial}
+        </span>
         <div>
           <h2>{playerName} Lv.{levelState.level}</h2>
           <p>Learning and contribution profile</p>
@@ -1356,14 +1374,15 @@ function App() {
       </div>
 
       <div className="status-title-panel">
-        <div className="character-stage status-title-stage">
-          <ArcSproutCharacter />
-          <div className="pixel-shadow" />
+        <div className="profile-icon-stage status-title-stage">
+          <span className="profile-icon-preview">
+            {playerAvatar ? <img src={playerAvatar} alt="" /> : playerInitial}
+          </span>
         </div>
         <div className="status-title-content">
-          <p className="card-kicker">Current Character</p>
-          <h3>{selectedCharacter.name}</h3>
-          <p>{selectedCharacter.englishName} / {selectedCharacter.label}</p>
+          <p className="card-kicker">Profile Icon</p>
+          <h3>{playerName}</h3>
+          <p>Personal photo / Player identity</p>
         </div>
       </div>
 
@@ -1417,7 +1436,7 @@ function App() {
       <article className="card member-profile-card">
         <div className="member-profile-hero">
           <span className={`presence-avatar ${member.tone}`}>
-            {member.name.slice(0, 1).toUpperCase()}
+            {member.avatar ? <img src={member.avatar} alt="" /> : member.name.slice(0, 1).toUpperCase()}
           </span>
           <div>
             <p className="card-kicker">Profile</p>
@@ -1571,32 +1590,47 @@ function App() {
                 {playerStatusCard(false)}
 
                 <div className="profile-panel-stack">
-                  <article className="card character-select-card">
+                  <article className="card profile-icon-card">
                     <div>
-                      <p className="card-kicker">キャラクター選択</p>
-                      <h2>{selectedCharacter.name} <span>{selectedCharacter.englishName}</span></h2>
-                      <small>{selectedCharacter.label}</small>
-                      <p>{selectedCharacter.concept}</p>
-                      <p className="character-evolution">{selectedCharacter.evolution}</p>
+                      <p className="card-kicker">プロフィールアイコン</p>
+                      <h2>{playerName}</h2>
                     </div>
 
-                    <div className="character-option-list">
-                      {characterOptions.map((character) => (
-                        <button
-                          type="button"
-                          key={character.id}
-                          className={character.id === selectedCharacterId ? "active" : ""}
-                          onClick={() => handleCharacterSelect(character.id)}
-                        >
-                          <span className="character-option-avatar">
-                            <ArcSproutCharacter />
-                          </span>
-                          <span>
-                            <strong>{character.name}</strong>
-                            <small>{character.englishName}</small>
-                          </span>
-                        </button>
-                      ))}
+                    <div className="profile-icon-editor">
+                      <span className="profile-icon-large">
+                        {playerAvatar ? <img src={playerAvatar} alt="" /> : playerInitial}
+                      </span>
+                      <div className="profile-icon-actions">
+                        <label>
+                          写真を選択
+                          <input type="file" accept="image/*" onChange={handleAvatarChange} />
+                        </label>
+                        {playerAvatar ? (
+                          <button type="button" onClick={handleAvatarRemove}>
+                            削除
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  </article>
+
+                  <article className="card character-select-card guide-card">
+                    <div>
+                      <p className="card-kicker">案内人</p>
+                      <h2>{guideCharacter.name} <span>{guideCharacter.englishName}</span></h2>
+                      <small>{guideCharacter.label}</small>
+                      <p>{guideCharacter.concept}</p>
+                      <p className="character-evolution">{guideCharacter.evolution}</p>
+                    </div>
+
+                    <div className="guide-avatar-panel">
+                      <span className="character-option-avatar">
+                        <ArcSproutCharacter />
+                      </span>
+                      <div>
+                        <strong>{guideCharacter.name}</strong>
+                        <small>{guideCharacter.englishName}</small>
+                      </div>
                     </div>
                   </article>
 
@@ -1847,7 +1881,7 @@ function App() {
                           onClick={() => handleMemberProfileOpen(member)}
                         >
                           <span className={`presence-avatar ${member.tone}`}>
-                            {member.name.slice(0, 1).toUpperCase()}
+                            {member.avatar ? <img src={member.avatar} alt="" /> : member.name.slice(0, 1).toUpperCase()}
                           </span>
                           <div>
                             <strong>
