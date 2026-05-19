@@ -60,6 +60,7 @@ type WorkspaceMember = {
   userId: string;
   name: string;
   building: string;
+  color: string;
   joinedAt: string;
   tone: "deep" | "green" | "soft" | "blue";
 };
@@ -71,6 +72,7 @@ type WorkspaceSessionHistory = {
   roomId: string;
   roomName: string;
   building: string;
+  color: string;
   joinedAt: string;
   leftAt: string;
   minutes: number;
@@ -340,8 +342,14 @@ function normalizeWorkspaceRoom(room: WorkspaceRoom): WorkspaceRoom {
     commits: room.commits || 0,
     createdAt: room.createdAt || new Date().toISOString(),
     createdBy: room.createdBy || "legacy",
-    activeMembers: room.activeMembers || [],
-    history: room.history || [],
+    activeMembers: (room.activeMembers || []).map((member) => ({
+      ...member,
+      color: member.color || studyColorOptions[0].value,
+    })),
+    history: (room.history || []).map((item) => ({
+      ...item,
+      color: item.color || studyColorOptions[0].value,
+    })),
   };
 }
 
@@ -801,6 +809,9 @@ function App() {
   const [isWorkspaceLoaded, setIsWorkspaceLoaded] = useState(false);
   const [newRoomName, setNewRoomName] = useState("");
   const [workspaceTask, setWorkspaceTask] = useState("React");
+  const [workspaceDraftTask, setWorkspaceDraftTask] = useState("React");
+  const [workspaceDraftColor, setWorkspaceDraftColor] = useState(studyColorOptions[0].value);
+  const [pendingJoinRoomId, setPendingJoinRoomId] = useState<string | null>(null);
   const [workspaceNow, setWorkspaceNow] = useState(Date.now());
   const [lastRoomSession, setLastRoomSession] = useState<WorkspaceSessionHistory | null>(null);
 
@@ -851,6 +862,8 @@ function App() {
       setSelectedRoomId("");
     }
     setWorkspaceTask(savedWorkspaceTask || studySubject);
+    setWorkspaceDraftTask(savedWorkspaceTask || studySubject);
+    setWorkspaceDraftColor(studyColorOptions[0].value);
     setIsWorkspaceLoaded(true);
   }, [currentUser]);
 
@@ -1001,6 +1014,9 @@ function App() {
     .flatMap((room) => room.history.filter((item) => item.userId === currentUser.uid))
     .sort((a, b) => new Date(b.leftAt).getTime() - new Date(a.leftAt).getTime())
     .slice(0, 4);
+  const pendingJoinRoom = pendingJoinRoomId
+    ? allWorkspaceRooms.find((room) => room.id === pendingJoinRoomId)
+    : null;
 
   const handleStudySubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1054,6 +1070,7 @@ function App() {
       roomId: room.id,
       roomName: room.name,
       building: member.building,
+      color: member.color,
       joinedAt: member.joinedAt,
       leftAt,
       minutes,
@@ -1081,20 +1098,42 @@ function App() {
         subject: session.building,
         minutes: session.minutes,
         createdAt: session.leftAt,
-        color: studyColor,
+        color: session.color,
       },
     ]);
     setLastRoomSession(session);
   };
 
   const handleRoomJoin = (roomId: string) => {
+    setPendingJoinRoomId(roomId);
+    setWorkspaceDraftTask(workspaceTask || studySubject || "");
+    setWorkspaceDraftColor(studyColor);
+  };
+
+  const handleWorkspaceStart = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!pendingJoinRoomId) {
+      return;
+    }
+
+    const nextTask = workspaceDraftTask.trim();
+    if (!nextTask) {
+      return;
+    }
+
+    const roomId = pendingJoinRoomId;
     if (activeRoom && activeRoom.id !== roomId) {
       closeWorkspaceSession(activeRoom.id);
     }
 
     const joinedAt = new Date().toISOString();
     setSelectedRoomId(roomId);
+    setWorkspaceTask(nextTask);
+    setStudySubject(nextTask);
+    setStudyColor(workspaceDraftColor);
     setLastRoomSession(null);
+    setPendingJoinRoomId(null);
     setCustomRooms((rooms) =>
       rooms.map((room) => {
         if (room.id !== roomId || room.activeMembers.some((member) => member.userId === currentUser.uid)) {
@@ -1108,7 +1147,8 @@ function App() {
             {
               userId: currentUser.uid,
               name: playerName,
-              building: currentBuilding,
+              building: nextTask,
+              color: workspaceDraftColor,
               joinedAt,
               tone: "deep",
             },
@@ -1196,6 +1236,60 @@ function App() {
                 <button type="submit" className="settings-primary">
                   Save
                 </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      ) : null}
+
+      {pendingJoinRoom ? (
+        <div className="settings-modal-backdrop" role="presentation">
+          <section
+            className="workspace-start-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="workspace-start-title"
+          >
+            <div>
+              <p className="card-kicker">Start Session / {pendingJoinRoom.name}</p>
+              <h2 id="workspace-start-title">何を積み上げますか。</h2>
+            </div>
+
+            <form className="workspace-start-form" onSubmit={handleWorkspaceStart}>
+              <label>
+                <span>作業内容</span>
+                <input
+                  value={workspaceDraftTask}
+                  onChange={(event) => setWorkspaceDraftTask(event.target.value)}
+                  placeholder="React / Java / AWS"
+                  maxLength={48}
+                  autoFocus
+                />
+              </label>
+
+              <fieldset className="workspace-start-color">
+                <legend>記録カラー</legend>
+                <div className="workspace-start-colors">
+                  {studyColorOptions.map((color) => (
+                    <label key={color.value} title={color.name}>
+                      <input
+                        type="radio"
+                        name="workspace-session-color"
+                        value={color.value}
+                        checked={workspaceDraftColor === color.value}
+                        onChange={(event) => setWorkspaceDraftColor(event.target.value)}
+                      />
+                      <span style={{ background: color.value }} />
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              <div className="workspace-start-actions">
+                <button type="button" onClick={() => setPendingJoinRoomId(null)}>
+                  Cancel
+                </button>
+                <button type="submit">作業を始める</button>
               </div>
             </form>
           </section>
@@ -1478,7 +1572,10 @@ function App() {
                             {member.name.slice(0, 1).toUpperCase()}
                           </span>
                           <div>
-                            <strong>{member.name} — {member.building}</strong>
+                            <strong>
+                              <i style={{ background: member.color }} />
+                              {member.name} — {member.building}
+                            </strong>
                             <span>{formatStayTime(minutes)}滞在</span>
                             <small>今日 +{getRoomSessionExp(minutes)} EXP</small>
                           </div>
@@ -1497,7 +1594,10 @@ function App() {
                       <article key={item.id}>
                         <span>{new Date(item.leftAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
                         <strong>{item.roomName}</strong>
-                        <small>{item.building} / {formatStayTime(item.minutes)} / +{item.exp} EXP</small>
+                        <small>
+                          <i style={{ background: item.color }} />
+                          {item.building} / {formatStayTime(item.minutes)} / +{item.exp} EXP
+                        </small>
                       </article>
                     ))}
                   </div>
