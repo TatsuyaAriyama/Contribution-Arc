@@ -1340,9 +1340,9 @@ function App() {
           <div className="pixel-shadow" />
         </div>
         <div className="status-title-content">
-          <p className="card-kicker">Current Title</p>
-          <h3>{currentTitle}</h3>
-          <p>Study fills effort. Commits forge output.</p>
+          <p className="card-kicker">Current Character</p>
+          <h3>{selectedCharacter.name}</h3>
+          <p>{selectedCharacter.englishName} / {selectedCharacter.label}</p>
         </div>
       </div>
 
