@@ -805,6 +805,7 @@ function App() {
   const [draftUserName, setDraftUserName] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [currentView, setCurrentView] = useState<"home" | "profile">("home");
+  const [profileMember, setProfileMember] = useState<WorkspaceMember | null>(null);
   const [determination, setDetermination] = useState("");
   const [draftDetermination, setDraftDetermination] = useState("");
   const [selectedRoomId, setSelectedRoomId] = useState("");
@@ -822,6 +823,7 @@ function App() {
     return onAuthStateChanged(auth, (user) => {
       setIsWorkspaceLoaded(false);
       setCurrentView("home");
+      setProfileMember(null);
       setCurrentUser(user);
       setIsAuthReady(true);
     });
@@ -1069,6 +1071,16 @@ function App() {
     window.localStorage.setItem(`contribution-arc-determination-${currentUser.uid}`, nextDetermination);
   };
 
+  const handleProfileBack = () => {
+    setCurrentView("home");
+    setProfileMember(null);
+  };
+
+  const handleMemberProfileOpen = (member: WorkspaceMember) => {
+    setProfileMember(member.userId === currentUser.uid ? null : member);
+    setCurrentView("profile");
+  };
+
   const closeWorkspaceSession = (roomId: string) => {
     const room = customRooms.find((item) => item.id === roomId);
     const member = room?.activeMembers.find((item) => item.userId === currentUser.uid);
@@ -1284,6 +1296,49 @@ function App() {
     </article>
   );
 
+  const memberProfileCard = (member: WorkspaceMember) => {
+    const memberRoom =
+      customRooms.find((room) => room.activeMembers.some((item) => item.userId === member.userId)) ||
+      selectedRoom;
+    const elapsedMinutes = getElapsedMinutes(member.joinedAt, workspaceNow);
+
+    return (
+      <article className="card member-profile-card">
+        <div className="member-profile-hero">
+          <span className={`presence-avatar ${member.tone}`}>
+            {member.name.slice(0, 1).toUpperCase()}
+          </span>
+          <div>
+            <p className="card-kicker">Profile</p>
+            <h2>{member.name}</h2>
+          </div>
+        </div>
+
+        <div className="member-profile-grid">
+          <div>
+            <span>Room</span>
+            <strong>{memberRoom?.name || "Silent Workspace"}</strong>
+          </div>
+          <div>
+            <span>Working on</span>
+            <strong>
+              <i style={{ background: member.color }} />
+              {member.building}
+            </strong>
+          </div>
+          <div>
+            <span>Stay</span>
+            <strong>{formatStayTime(elapsedMinutes)}</strong>
+          </div>
+          <div>
+            <span>Today</span>
+            <strong>+{getRoomSessionExp(elapsedMinutes)} EXP</strong>
+          </div>
+        </div>
+      </article>
+    );
+  };
+
   return (
     <main className="app-shell">
       <header className="site-header">
@@ -1392,32 +1447,38 @@ function App() {
       {currentView === "profile" ? (
         <section className="profile-screen" aria-label="Profile">
           <div className="profile-topbar">
-            <button type="button" onClick={() => setCurrentView("home")}>
+            <button type="button" onClick={handleProfileBack}>
               ← Home
             </button>
           </div>
 
           <div className="profile-layout">
-            {playerStatusCard(false)}
+            {profileMember ? (
+              memberProfileCard(profileMember)
+            ) : (
+              <>
+                {playerStatusCard(false)}
 
-            <article className="card determination-card">
-              <div>
-                <p className="card-kicker">決意</p>
-                {determination ? <p>{determination}</p> : null}
-              </div>
+                <article className="card determination-card">
+                  <div>
+                    <p className="card-kicker">決意</p>
+                    {determination ? <p>{determination}</p> : null}
+                  </div>
 
-              <form className="determination-form" onSubmit={handleDeterminationSubmit}>
-                <label>
-                  <span>決意入力</span>
-                  <textarea
-                    value={draftDetermination}
-                    onChange={(event) => setDraftDetermination(event.target.value)}
-                    rows={8}
-                  />
-                </label>
-                <button type="submit">保存</button>
-              </form>
-            </article>
+                  <form className="determination-form" onSubmit={handleDeterminationSubmit}>
+                    <label>
+                      <span>決意入力</span>
+                      <textarea
+                        value={draftDetermination}
+                        onChange={(event) => setDraftDetermination(event.target.value)}
+                        rows={8}
+                      />
+                    </label>
+                    <button type="submit">保存</button>
+                  </form>
+                </article>
+              </>
+            )}
           </div>
         </section>
       ) : (
@@ -1635,7 +1696,12 @@ function App() {
                     visibleMembers.map((member) => {
                       const minutes = getElapsedMinutes(member.joinedAt, workspaceNow);
                       return (
-                        <article className="presence-card" key={`${member.userId}-${member.joinedAt}`}>
+                        <button
+                          type="button"
+                          className="presence-card"
+                          key={`${member.userId}-${member.joinedAt}`}
+                          onClick={() => handleMemberProfileOpen(member)}
+                        >
                           <span className={`presence-avatar ${member.tone}`}>
                             {member.name.slice(0, 1).toUpperCase()}
                           </span>
@@ -1647,7 +1713,7 @@ function App() {
                             <span>{formatStayTime(minutes)}滞在</span>
                             <small>今日 +{getRoomSessionExp(minutes)} EXP</small>
                           </div>
-                        </article>
+                        </button>
                       );
                     })
                   ) : (
