@@ -57,6 +57,14 @@ type AuthErrorDetail = {
   code?: string;
 };
 
+type CharacterOption = {
+  id: string;
+  name: string;
+  englishName: string;
+  label: string;
+  concept: string;
+};
+
 type WorkspaceMember = {
   userId: string;
   name: string;
@@ -162,6 +170,17 @@ const outputStats = {
 
 const workspaceRooms: WorkspaceRoom[] = [];
 const workspaceRoomsStorageKey = "contribution-arc-workspace-rooms";
+
+const characterOptions: CharacterOption[] = [
+  {
+    id: "recorder",
+    name: "記録者",
+    englishName: "Recorder",
+    label: "初期解放キャラクター",
+    concept:
+      "まだ成果は大きくない。でも、“積み上げる”ことを覚え始めた人。学習や記録を残すことを知り、少し不安でも前を見ている。",
+  },
+];
 
 const eventCells = new Map<number, QuestEvent>([
   [7, "star"],
@@ -402,15 +421,66 @@ function PixelIcon({ type }: { type: QuestEvent }) {
   );
 }
 
-function PixelHero() {
+function RecorderCharacter() {
   return (
-    <div className="pixel-hero" aria-label="Commit Knight pixel avatar">
-      <span className="pixel-row helmet" />
-      <span className="pixel-row face" />
-      <span className="pixel-row cape" />
-      <span className="pixel-row armor" />
-      <span className="pixel-row boots" />
-    </div>
+    <svg className="recorder-character" viewBox="0 0 160 180" role="img" aria-label="記録者 Recorder">
+      <defs>
+        <linearGradient id="recorder-hood" x1="48" y1="22" x2="118" y2="150">
+          <stop offset="0" stopColor="#172033" />
+          <stop offset="0.58" stopColor="#111827" />
+          <stop offset="1" stopColor="#1f6f4a" />
+        </linearGradient>
+        <linearGradient id="recorder-arc" x1="45" y1="132" x2="132" y2="44">
+          <stop offset="0" stopColor="#1f6f4a" stopOpacity="0.05" />
+          <stop offset="0.55" stopColor="#1f6f4a" stopOpacity="0.55" />
+          <stop offset="1" stopColor="#83bb70" stopOpacity="0.72" />
+        </linearGradient>
+      </defs>
+      <path
+        className="recorder-arc"
+        d="M42 132 C68 109 82 77 124 48"
+        fill="none"
+        stroke="url(#recorder-arc)"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      <g className="recorder-arc-blocks">
+        <rect x="42" y="130" width="6" height="6" rx="2" />
+        <rect x="59" y="113" width="6" height="6" rx="2" />
+        <rect x="74" y="91" width="6" height="6" rx="2" />
+        <rect x="93" y="69" width="5" height="5" rx="1.8" />
+        <rect x="117" y="47" width="5" height="5" rx="1.8" />
+      </g>
+      <ellipse cx="80" cy="160" rx="38" ry="8" fill="rgba(31,111,74,0.14)" />
+      <path
+        d="M59 60 C59 38 74 27 91 31 C106 35 117 51 115 72 L111 112 C109 136 96 150 78 149 C61 148 50 134 51 112 Z"
+        fill="url(#recorder-hood)"
+      />
+      <path
+        d="M65 61 C68 47 80 40 92 44 C103 48 108 61 105 76 C102 92 91 101 78 97 C66 93 61 77 65 61Z"
+        fill="#ead7b6"
+      />
+      <path
+        d="M62 66 C65 45 79 34 94 38 C108 42 115 59 111 78 C104 61 93 54 77 55 C70 56 66 60 62 66Z"
+        fill="#111827"
+      />
+      <path d="M76 75 L82 76" stroke="#111827" strokeWidth="2" strokeLinecap="round" />
+      <path d="M94 75 L99 74" stroke="#111827" strokeWidth="2" strokeLinecap="round" />
+      <path d="M82 88 C87 91 92 91 97 88" stroke="#4b5563" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+      <path
+        d="M47 118 C51 93 61 79 78 78 L91 79 C107 82 117 98 121 122 L116 150 L46 150Z"
+        fill="#152033"
+      />
+      <path d="M68 87 L90 145" stroke="#dce8e1" strokeOpacity="0.22" strokeWidth="2" />
+      <path d="M97 84 L82 148" stroke="#1f6f4a" strokeOpacity="0.45" strokeWidth="2" />
+      <rect x="36" y="101" width="28" height="36" rx="7" fill="#fafaf8" stroke="#dce8e1" strokeWidth="2" />
+      <path d="M43 112 H58 M43 121 H55 M43 130 H53" stroke="#1f6f4a" strokeOpacity="0.62" strokeWidth="2" strokeLinecap="round" />
+      <path d="M118 112 L132 136" stroke="#111827" strokeWidth="5" strokeLinecap="round" />
+      <path d="M132 136 L137 146" stroke="#1f6f4a" strokeWidth="3" strokeLinecap="round" />
+      <rect x="105" y="74" width="22" height="34" rx="5" fill="#0f172a" stroke="#dce8e1" strokeOpacity="0.42" />
+      <rect x="111" y="82" width="10" height="14" rx="2" fill="#1f6f4a" opacity="0.7" />
+      <path d="M62 150 L57 166 M101 150 L106 166" stroke="#111827" strokeWidth="8" strokeLinecap="round" />
+    </svg>
   );
 }
 
@@ -810,6 +880,7 @@ function App() {
   const [profileMember, setProfileMember] = useState<WorkspaceMember | null>(null);
   const [determination, setDetermination] = useState("");
   const [draftDetermination, setDraftDetermination] = useState("");
+  const [selectedCharacterId, setSelectedCharacterId] = useState(characterOptions[0].id);
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [customRooms, setCustomRooms] = useState<WorkspaceRoom[]>([]);
   const [isWorkspaceLoaded, setIsWorkspaceLoaded] = useState(false);
@@ -839,6 +910,7 @@ function App() {
     const savedLogs = window.localStorage.getItem(`contribution-arc-study-${currentUser.uid}`);
     const savedUserName = window.localStorage.getItem(`contribution-arc-name-${currentUser.uid}`);
     const savedDetermination = window.localStorage.getItem(`contribution-arc-determination-${currentUser.uid}`);
+    const savedCharacterId = window.localStorage.getItem(`contribution-arc-character-${currentUser.uid}`);
     const savedRoomId = window.localStorage.getItem(`contribution-arc-room-${currentUser.uid}`);
     const savedRooms = window.localStorage.getItem(`contribution-arc-rooms-${currentUser.uid}`);
     const savedWorkspaceTask = window.localStorage.getItem(`contribution-arc-workspace-task-${currentUser.uid}`);
@@ -864,6 +936,11 @@ function App() {
     setDraftUserName(savedUserName || currentUser.displayName || currentUser.email?.split("@")[0] || "");
     setDetermination(savedDetermination || "");
     setDraftDetermination(savedDetermination || "");
+    setSelectedCharacterId(
+      savedCharacterId && characterOptions.some((character) => character.id === savedCharacterId)
+        ? savedCharacterId
+        : characterOptions[0].id,
+    );
     setCustomRooms(parsedRooms);
     if (savedRoomId && parsedRooms.some((room) => room.id === savedRoomId)) {
       setSelectedRoomId(savedRoomId);
@@ -1032,6 +1109,8 @@ function App() {
   const pendingJoinRoom = pendingJoinRoomId
     ? allWorkspaceRooms.find((room) => room.id === pendingJoinRoomId)
     : null;
+  const selectedCharacter =
+    characterOptions.find((character) => character.id === selectedCharacterId) || characterOptions[0];
 
   const handleStudySubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1085,6 +1164,11 @@ function App() {
   const handleMemberProfileOpen = (member: WorkspaceMember) => {
     setProfileMember(member.userId === currentUser.uid ? null : member);
     setCurrentView("profile");
+  };
+
+  const handleCharacterSelect = (characterId: string) => {
+    setSelectedCharacterId(characterId);
+    window.localStorage.setItem(`contribution-arc-character-${currentUser.uid}`, characterId);
   };
 
   const closeWorkspaceSession = (roomId: string) => {
@@ -1252,7 +1336,7 @@ function App() {
 
       <div className="status-title-panel">
         <div className="character-stage status-title-stage">
-          <PixelHero />
+          <RecorderCharacter />
           <div className="pixel-shadow" />
         </div>
         <div className="status-title-content">
@@ -1465,24 +1549,54 @@ function App() {
               <>
                 {playerStatusCard(false)}
 
-                <article className="card determination-card">
-                  <div>
-                    <p className="card-kicker">決意</p>
-                    {determination ? <p>{determination}</p> : null}
-                  </div>
+                <div className="profile-panel-stack">
+                  <article className="card character-select-card">
+                    <div>
+                      <p className="card-kicker">キャラクター選択</p>
+                      <h2>{selectedCharacter.name} <span>{selectedCharacter.englishName}</span></h2>
+                      <small>{selectedCharacter.label}</small>
+                      <p>{selectedCharacter.concept}</p>
+                    </div>
 
-                  <form className="determination-form" onSubmit={handleDeterminationSubmit}>
-                    <label>
-                      <span>決意入力</span>
-                      <textarea
-                        value={draftDetermination}
-                        onChange={(event) => setDraftDetermination(event.target.value)}
-                        rows={8}
-                      />
-                    </label>
-                    <button type="submit">保存</button>
-                  </form>
-                </article>
+                    <div className="character-option-list">
+                      {characterOptions.map((character) => (
+                        <button
+                          type="button"
+                          key={character.id}
+                          className={character.id === selectedCharacterId ? "active" : ""}
+                          onClick={() => handleCharacterSelect(character.id)}
+                        >
+                          <span className="character-option-avatar">
+                            <RecorderCharacter />
+                          </span>
+                          <span>
+                            <strong>{character.name}</strong>
+                            <small>{character.englishName}</small>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </article>
+
+                  <article className="card determination-card">
+                    <div>
+                      <p className="card-kicker">決意</p>
+                      {determination ? <p>{determination}</p> : null}
+                    </div>
+
+                    <form className="determination-form" onSubmit={handleDeterminationSubmit}>
+                      <label>
+                        <span>決意入力</span>
+                        <textarea
+                          value={draftDetermination}
+                          onChange={(event) => setDraftDetermination(event.target.value)}
+                          rows={8}
+                        />
+                      </label>
+                      <button type="submit">保存</button>
+                    </form>
+                  </article>
+                </div>
               </>
             )}
           </div>
