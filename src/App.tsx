@@ -898,6 +898,7 @@ function App() {
   const [studyAmount, setStudyAmount] = useState("1");
   const [studyUnit, setStudyUnit] = useState<"hours" | "minutes">("hours");
   const [studyColor, setStudyColor] = useState(studyColorOptions[0].value);
+  const [selectedStudyDay, setSelectedStudyDay] = useState(dayLabels[(new Date().getDay() + 6) % 7]);
   const [customUserName, setCustomUserName] = useState("");
   const [draftUserName, setDraftUserName] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -1099,8 +1100,11 @@ function App() {
   const titles = getTitleRanks(studyLogs, effortExp, outputExp);
   const currentTitle =
     [...titles].reverse().find((title) => title.unlocked)?.name || "Commit Knight";
-  const recentLogs = [...studyLogs].reverse();
   const totalWeeklyMinutes = weeklyStudyHours.reduce((sum, item) => sum + item.totalMinutes, 0);
+  const selectedStudyDayData =
+    weeklyStudyHours.find((item) => item.day === selectedStudyDay) ||
+    weeklyStudyHours.find((item) => item.isToday) ||
+    weeklyStudyHours[0];
   const totalWeeklyLabel =
     totalWeeklyMinutes > 0 && totalWeeklyMinutes < 60
       ? formatStudyTime(totalWeeklyMinutes)
@@ -1822,7 +1826,26 @@ function App() {
               const segments = getStudySegments(item.logs);
 
               return (
-                <div className={item.isToday ? "bar-item today" : "bar-item"} key={item.day} tabIndex={0}>
+                <div
+                  className={[
+                    "bar-item",
+                    item.isToday ? "today" : "",
+                    selectedStudyDayData?.day === item.day ? "selected" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  key={item.day}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedStudyDay(item.day)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setSelectedStudyDay(item.day);
+                    }
+                  }}
+                  aria-label={`${item.day}の学習詳細を表示`}
+                >
                   <div
                     className="bar-shell"
                     style={
@@ -1917,17 +1940,33 @@ function App() {
               <button type="submit">Log +EXP</button>
             </form>
 
-            <div className="recent-log" aria-label="Recent study logs">
-              {recentLogs.map((log) => (
-                <div key={log.id}>
-                  <span>
-                    <i style={{ background: log.color || studyColorOptions[0].value }} />
-                    <b>{log.subject}</b>
-                  </span>
-                  <strong>{formatStudyTime(log.minutes)}</strong>
+            {selectedStudyDayData ? (
+              <div className="study-day-detail" aria-label={`${selectedStudyDayData.day} study detail`}>
+                <div className="study-day-detail-head">
+                  <div>
+                    <p className="card-kicker">{selectedStudyDayData.day} / {selectedStudyDayData.dateLabel}</p>
+                    <strong>{formatStudyTime(selectedStudyDayData.totalMinutes)} logged</strong>
+                  </div>
+                  <span>+{Math.round(selectedStudyDayData.hours * 80)} EXP</span>
                 </div>
-              ))}
-            </div>
+
+                {selectedStudyDayData.logs.length > 0 ? (
+                  <div className="study-day-detail-list">
+                    {selectedStudyDayData.logs.map((log) => (
+                      <article key={log.id}>
+                        <span>
+                          <i style={{ background: log.color || studyColorOptions[0].value }} />
+                          <b>{log.subject}</b>
+                        </span>
+                        <strong>{formatStudyTime(log.minutes)}</strong>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="study-day-empty">No study logged yet</p>
+                )}
+              </div>
+            ) : null}
           </div>
         </article>
       </section>

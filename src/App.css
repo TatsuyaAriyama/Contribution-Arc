@@ -2060,7 +2060,7 @@
 .bar-shell {
   position: relative;
   width: 100%;
-  height: clamp(190px, 28vh, 300px);
+  height: clamp(260px, 42vh, 430px);
   overflow: hidden;
   border: 1px solid rgba(31, 111, 74, 0.08);
   border-radius: 18px 18px 12px 12px;
@@ -2091,6 +2091,19 @@
 }
 
 .bar-item.today > strong {
+  color: var(--green);
+}
+
+.bar-item.selected .bar-shell {
+  transform: translateY(-2px);
+  border-color: rgba(31, 111, 74, 0.42);
+  box-shadow:
+    inset 0 0 0 1px rgba(250, 250, 248, 0.64),
+    0 0 0 2px rgba(31, 111, 74, 0.12),
+    0 18px 42px rgba(31, 111, 74, 0.16);
+}
+
+.bar-item.selected > strong {
   color: var(--green);
 }
 
@@ -2378,17 +2391,45 @@
   box-shadow: 0 12px 24px rgba(31, 111, 74, 0.18);
 }
 
-.recent-log {
+.study-day-detail {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(31, 111, 74, 0.1);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.74), rgba(220, 232, 225, 0.22)),
+    rgba(250, 250, 248, 0.88);
+}
+
+.study-day-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.study-day-detail-head strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink);
+  font-size: 20px;
+}
+
+.study-day-detail-head > span {
+  flex: 0 0 auto;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.study-day-detail-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 8px;
-  min-width: 0;
-  max-height: 126px;
-  overflow-y: auto;
-  padding-right: 2px;
 }
 
-.recent-log div {
+.study-day-detail-list article {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2401,7 +2442,7 @@
   background: rgba(250, 250, 248, 0.86);
 }
 
-.recent-log span {
+.study-day-detail-list span {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2414,7 +2455,7 @@
   white-space: nowrap;
 }
 
-.recent-log b {
+.study-day-detail-list b {
   min-width: 0;
   overflow: hidden;
   font: inherit;
@@ -2422,7 +2463,7 @@
   white-space: nowrap;
 }
 
-.recent-log i {
+.study-day-detail-list i {
   flex: 0 0 auto;
   width: 10px;
   height: 10px;
@@ -2430,10 +2471,17 @@
   box-shadow: 0 0 0 1px rgba(17, 24, 39, 0.08);
 }
 
-.recent-log strong {
+.study-day-detail-list strong {
   flex: 0 0 auto;
   color: var(--green);
   font-size: 13px;
+}
+
+.study-day-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .silent-workspace {
@@ -3347,7 +3395,7 @@
     grid-template-columns: minmax(0, 1fr) 88px 76px minmax(136px, 0.72fr) 112px;
   }
 
-  .recent-log {
+  .study-day-detail-list {
     grid-template-columns: 1fr;
   }
 
@@ -3519,7 +3567,7 @@
   }
 
   .bar-shell {
-    height: 190px;
+    height: 260px;
   }
 
   .study-form {
