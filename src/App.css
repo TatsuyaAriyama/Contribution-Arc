@@ -633,6 +633,7 @@
 .player-heading h2 {
   font-size: 34px;
   line-height: 0.95;
+  overflow-wrap: anywhere;
 }
 
 .player-heading p,
@@ -713,6 +714,44 @@
   margin-top: 8px;
   color: var(--green);
   font-size: 20px;
+}
+
+.contribution-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.contribution-summary div {
+  display: grid;
+  align-content: center;
+  min-height: 72px;
+  padding: 12px;
+  border: 1px solid rgba(31, 111, 74, 0.1);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(220, 232, 225, 0.3)),
+    rgba(250, 250, 248, 0.82);
+}
+
+.contribution-summary strong,
+.contribution-summary span {
+  display: block;
+}
+
+.contribution-summary strong {
+  color: var(--ink);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.contribution-summary span {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
 }
 
 .status-title-panel {
@@ -1796,6 +1835,10 @@
   }
 
   .status-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .contribution-summary {
     grid-template-columns: 1fr;
   }
 

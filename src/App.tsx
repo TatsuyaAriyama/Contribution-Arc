@@ -121,7 +121,7 @@ const defaultStudyLogs: StudyLog[] = [
 const outputStats = {
   commits: 18,
   contributions: 42,
-  pullRequests: 3,
+  pullRequests: 2,
 };
 
 const eventCells = new Map<number, QuestEvent>([
@@ -773,6 +773,8 @@ function App() {
     return <LoginScreen />;
   }
 
+  const playerName =
+    currentUser.displayName || currentUser.email?.split("@")[0] || "Developer";
   const weeklyStudyHours = getWeeklyStudyHours(studyLogs);
   const maxHours = Math.max(1, ...weeklyStudyHours.map((item) => item.hours));
   const effortExp = getEffortExp(studyLogs);
@@ -830,8 +832,8 @@ function App() {
             <div className="card-kicker">Player Status</div>
             <div className="player-heading">
               <div>
-                <h2>Ari Lv.{levelState.level}</h2>
-                <p>Class: Frontend Adventurer</p>
+                <h2>{playerName} Lv.{levelState.level}</h2>
+                <p>Learning and contribution profile</p>
               </div>
             </div>
 
@@ -867,6 +869,21 @@ function App() {
               <div>
                 <span>Output EXP</span>
                 <strong>{outputExp.toLocaleString()}</strong>
+              </div>
+            </div>
+
+            <div className="contribution-summary" aria-label="GitHub contribution summary">
+              <div>
+                <strong>{outputStats.commits.toLocaleString()}</strong>
+                <span>commits</span>
+              </div>
+              <div>
+                <strong>{outputStats.contributions.toLocaleString()}</strong>
+                <span>contributions</span>
+              </div>
+              <div>
+                <strong>{outputStats.pullRequests.toLocaleString()}</strong>
+                <span>PRs</span>
               </div>
             </div>
           </article>
