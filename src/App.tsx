@@ -1303,6 +1303,20 @@ function App() {
     setNewRoomName("");
   };
 
+  const handleRoomDelete = (roomId: string) => {
+    const room = customRooms.find((item) => item.id === roomId);
+    if (!room || room.createdBy !== currentUser.uid) {
+      return;
+    }
+
+    const nextRooms = customRooms.filter((item) => item.id !== roomId);
+    setCustomRooms(nextRooms);
+
+    if (selectedRoomId === roomId) {
+      setSelectedRoomId(nextRooms[0]?.id || "");
+    }
+  };
+
   const playerStatusCard = (isInteractive = false) => (
     <article
       className={isInteractive ? "card status-card status-card-link" : "card status-card"}
@@ -1633,8 +1647,31 @@ function App() {
                   >
                     <span className="room-card-top">
                       <span>{room.name}</span>
-                      <span className="room-join-badge">
-                        {room.activeMembers.some((member) => member.userId === currentUser.uid) ? "入室中" : "参加"}
+                      <span className="room-card-actions">
+                        <span className="room-join-badge">
+                          {room.activeMembers.some((member) => member.userId === currentUser.uid) ? "入室中" : "参加"}
+                        </span>
+                        {room.createdBy === currentUser.uid ? (
+                          <span
+                            className="room-delete-button"
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`${room.name}を削除`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleRoomDelete(room.id);
+                            }}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                handleRoomDelete(room.id);
+                              }
+                            }}
+                          >
+                            ×
+                          </span>
+                        ) : null}
                       </span>
                     </span>
                     <strong>{room.activeMembers.length} online</strong>
@@ -1649,7 +1686,6 @@ function App() {
                     <div className="room-detail-top">
                       <div>
                         <p className="card-kicker">{isInSelectedRoom ? "入室中" : "Room"} / {selectedRoom.name}</p>
-                        <h3>静かな作業ログ</h3>
                       </div>
                       <div className="room-stay-panel" aria-label="Room stay status">
                         <span>{isInSelectedRoom ? "滞在時間" : "参加者"}</span>
