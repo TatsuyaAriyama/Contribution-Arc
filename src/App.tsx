@@ -26,6 +26,7 @@ type StudyLog = {
   subject: string;
   minutes: number;
   createdAt: string;
+  color?: string;
 };
 
 type TitleRank = {
@@ -41,15 +42,73 @@ type WeeklyStudyDay = {
   logs: StudyLog[];
 };
 
+type AuthErrorDetail = {
+  title: string;
+  message: string;
+  action?: string;
+  code?: string;
+};
+
 const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const studyColorOptions = [
+  { name: "Forest", value: "#1f6f4a" },
+  { name: "Lime", value: "#83bb70" },
+  { name: "Teal", value: "#2f8f83" },
+  { name: "Blue", value: "#3f6f9f" },
+  { name: "Violet", value: "#7667a8" },
+  { name: "Gold", value: "#c8a95b" },
+];
+
 const defaultStudyLogs: StudyLog[] = [
-  { id: "seed-mon", subject: "Java", minutes: 120, createdAt: "2026-05-11T09:00:00.000Z" },
-  { id: "seed-tue", subject: "React", minutes: 90, createdAt: "2026-05-12T09:00:00.000Z" },
-  { id: "seed-wed", subject: "資格勉強", minutes: 30, createdAt: "2026-05-13T09:00:00.000Z" },
-  { id: "seed-thu", subject: "React", minutes: 180, createdAt: "2026-05-14T09:00:00.000Z" },
-  { id: "seed-fri", subject: "Java", minutes: 60, createdAt: "2026-05-15T09:00:00.000Z" },
-  { id: "seed-sat", subject: "Build", minutes: 240, createdAt: "2026-05-16T09:00:00.000Z" },
-  { id: "seed-sun", subject: "資格勉強", minutes: 150, createdAt: "2026-05-17T09:00:00.000Z" },
+  {
+    id: "seed-mon",
+    subject: "Java",
+    minutes: 120,
+    createdAt: "2026-05-11T09:00:00.000Z",
+    color: "#c8a95b",
+  },
+  {
+    id: "seed-tue",
+    subject: "React",
+    minutes: 90,
+    createdAt: "2026-05-12T09:00:00.000Z",
+    color: "#3f6f9f",
+  },
+  {
+    id: "seed-wed",
+    subject: "資格勉強",
+    minutes: 30,
+    createdAt: "2026-05-13T09:00:00.000Z",
+    color: "#7667a8",
+  },
+  {
+    id: "seed-thu",
+    subject: "React",
+    minutes: 180,
+    createdAt: "2026-05-14T09:00:00.000Z",
+    color: "#3f6f9f",
+  },
+  {
+    id: "seed-fri",
+    subject: "Java",
+    minutes: 60,
+    createdAt: "2026-05-15T09:00:00.000Z",
+    color: "#c8a95b",
+  },
+  {
+    id: "seed-sat",
+    subject: "Build",
+    minutes: 240,
+    createdAt: "2026-05-16T09:00:00.000Z",
+    color: "#2f8f83",
+  },
+  {
+    id: "seed-sun",
+    subject: "資格勉強",
+    minutes: 150,
+    createdAt: "2026-05-17T09:00:00.000Z",
+    color: "#7667a8",
+  },
 ];
 
 const outputStats = {
@@ -223,6 +282,20 @@ function getSubjectSummary(logs: StudyLog[]) {
     .join(" / ");
 }
 
+function getStudyColor(logs: StudyLog[]) {
+  if (logs.length === 0) {
+    return studyColorOptions[0].value;
+  }
+
+  const colorMinutes = logs.reduce<Record<string, number>>((acc, log) => {
+    const color = log.color || studyColorOptions[0].value;
+    acc[color] = (acc[color] || 0) + log.minutes;
+    return acc;
+  }, {});
+
+  return Object.entries(colorMinutes).sort(([, a], [, b]) => b - a)[0]?.[0] || studyColorOptions[0].value;
+}
+
 function PixelIcon({ type }: { type: QuestEvent }) {
   return (
     <span className={`pixel-icon ${type}`} aria-hidden="true">
@@ -246,6 +319,96 @@ function PixelHero() {
   );
 }
 
+function GoogleIcon() {
+  return (
+    <svg className="provider-icon google-icon" viewBox="0 0 533.5 544.3" aria-hidden="true">
+      <path
+        fill="#4285f4"
+        d="M533.5 278.4c0-18.5-1.5-37.1-4.7-55.3H272.1v104.8h147c-6.1 33.8-25.7 63.7-54.4 82.7v68h87.7c51.5-47.4 81.1-117.4 81.1-200.2z"
+      />
+      <path
+        fill="#34a853"
+        d="M272.1 544.3c73.4 0 135.3-24.1 180.4-65.7l-87.7-68c-24.4 16.6-55.9 26-92.6 26-71 0-131.2-47.9-152.8-112.3H28.9v70.1c46.2 91.9 140.3 149.9 243.2 149.9z"
+      />
+      <path
+        fill="#fbbc04"
+        d="M119.3 324.3c-11.4-33.8-11.4-70.4 0-104.2V150H28.9c-38.6 76.9-38.6 167.5 0 244.4l90.4-70.1z"
+      />
+      <path
+        fill="#ea4335"
+        d="M272.1 107.7c38.8-.6 76.3 14 104.4 40.8l77.7-77.7C405 24.6 339.7-.8 272.1 0 169.2 0 75.1 58 28.9 150l90.4 70.1c21.5-64.5 81.8-112.4 152.8-112.4z"
+      />
+    </svg>
+  );
+}
+
+function GitHubIcon() {
+  return (
+    <svg className="provider-icon github-icon" viewBox="0 0 16 16" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.62 7.62 0 0 1 8 3.86c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"
+      />
+    </svg>
+  );
+}
+
+function SettingsIcon() {
+  return (
+    <svg className="settings-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M12 15.2A3.2 3.2 0 1 0 12 8.8a3.2 3.2 0 0 0 0 6.4Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M19.1 13.4c.08-.46.08-.94 0-1.4l1.62-1.22-1.7-2.95-1.9.78a7.3 7.3 0 0 0-1.2-.7L15.65 5.9h-3.4l-.28 2.02c-.42.18-.82.41-1.2.7l-1.9-.78-1.7 2.95L8.8 12c-.08.46-.08.94 0 1.4l-1.62 1.22 1.7 2.95 1.9-.78c.38.29.78.52 1.2.7l.28 2.02h3.4l.28-2.02c.42-.18.82-.41 1.2-.7l1.9.78 1.7-2.95-1.62-1.22Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
+
+function ContributionArcLogo() {
+  return (
+    <div className="brand-logo-stage" aria-label="Contribution Arc logo">
+      <svg
+        className="brand-logo-mark"
+        viewBox="0 0 160 160"
+        role="img"
+        aria-labelledby="contribution-arc-logo-title"
+      >
+        <title id="contribution-arc-logo-title">Contribution Arc</title>
+        <defs>
+          <linearGradient id="logo-border-gradient" x1="22" y1="134" x2="138" y2="24">
+            <stop offset="0" stopColor="#103d2a" />
+            <stop offset="0.48" stopColor="#1f6f4a" />
+            <stop offset="1" stopColor="#a7c978" />
+          </linearGradient>
+        </defs>
+        <rect className="logo-icon-base" x="10" y="10" width="140" height="140" rx="35" />
+        <rect className="logo-icon-border" x="13" y="13" width="134" height="134" rx="32" />
+        <rect className="logo-icon-inner-border" x="25" y="25" width="110" height="110" rx="27" />
+        <g className="logo-contribution-arc" aria-hidden="true">
+          <rect className="arc-block block-1" x="34" y="109" width="10" height="10" rx="2.4" />
+          <rect className="arc-block block-2" x="46" y="105" width="10" height="10" rx="2.4" />
+          <rect className="arc-block block-3" x="58" y="98" width="10" height="10" rx="2.4" />
+          <rect className="arc-block block-4" x="70" y="88" width="10" height="10" rx="2.4" />
+          <rect className="arc-block block-5" x="82" y="76" width="10" height="10" rx="2.4" />
+          <rect className="arc-block block-6" x="94" y="63" width="10" height="10" rx="2.4" />
+          <rect className="arc-block block-7" x="106" y="51" width="10" height="10" rx="2.4" />
+          <rect className="arc-block block-8" x="118" y="42" width="10" height="10" rx="2.4" />
+        </g>
+      </svg>
+    </div>
+  );
+}
+
 function GitHubCallbackPage() {
   const params = new URLSearchParams(window.location.search);
   const code = params.get("code");
@@ -256,7 +419,7 @@ function GitHubCallbackPage() {
     <main className="app-shell callback-shell">
       <section className="card callback-card">
         <p className="card-kicker">GitHub OAuth Callback</p>
-        <h1>Contribution Arc is ready to exchange your quest token.</h1>
+        <h1>Contribution Arc is ready to complete your GitHub connection.</h1>
         {error ? (
           <p className="callback-message error">
             GitHub returned an error: <strong>{error}</strong>
@@ -285,24 +448,104 @@ function GitHubCallbackPage() {
   );
 }
 
-function getAuthErrorMessage(error: unknown) {
-  const code = typeof error === "object" && error && "code" in error
+function getAuthErrorCode(error: unknown) {
+  return typeof error === "object" && error && "code" in error
     ? String((error as { code?: string }).code)
     : "";
+}
+
+function getLocalhostUrl() {
+  if (window.location.hostname !== "127.0.0.1") {
+    return "";
+  }
+
+  return `${window.location.protocol}//localhost:${window.location.port}${window.location.pathname}${window.location.search}`;
+}
+
+function getAuthErrorDetail(error: unknown): AuthErrorDetail {
+  const code = getAuthErrorCode(error);
+  const localhostUrl = getLocalhostUrl();
+
+  console.error("Firebase auth failed", error);
 
   switch (code) {
+    case "auth/unauthorized-domain":
+      return {
+        title: "このURLはFirebase Authで許可されていません。",
+        message: localhostUrl
+          ? "127.0.0.1 ではなく localhost で開くとログインできる可能性が高いです。"
+          : "Firebase ConsoleのAuthentication設定で、このドメインをAuthorized domainsに追加してください。",
+        action: localhostUrl ? `こちらで開き直してください: ${localhostUrl}` : undefined,
+        code,
+      };
+    case "auth/operation-not-allowed":
+      return {
+        title: "このログイン方法がFirebase側で有効化されていません。",
+        message: "Firebase ConsoleのAuthentication > Sign-in methodで、選んだログイン方法を有効にしてください。",
+        code,
+      };
     case "auth/invalid-credential":
     case "auth/wrong-password":
     case "auth/user-not-found":
-      return "メールアドレスまたはパスワードが正しくありません。";
+      return {
+        title: "メールアドレスまたはパスワードが正しくありません。",
+        message: "まだ登録していない場合は、Sign upに切り替えてアカウントを作成してください。",
+        code,
+      };
     case "auth/email-already-in-use":
-      return "このメールアドレスはすでに登録されています。ログインを試してください。";
+      return {
+        title: "このメールアドレスはすでに登録されています。",
+        message: "Loginに切り替えてログインしてください。",
+        code,
+      };
+    case "auth/weak-password":
+      return {
+        title: "パスワードが短すぎます。",
+        message: "6文字以上のパスワードを入力してください。",
+        code,
+      };
+    case "auth/invalid-email":
+      return {
+        title: "メールアドレスの形式が正しくありません。",
+        message: "入力内容を確認してもう一度お試しください。",
+        code,
+      };
+    case "auth/popup-blocked":
+      return {
+        title: "ログイン用ポップアップがブロックされました。",
+        message: "ブラウザのポップアップ許可設定を確認して、もう一度お試しください。",
+        code,
+      };
     case "auth/popup-closed-by-user":
-      return "ログイン画面が閉じられました。もう一度お試しください。";
+      return {
+        title: "ログイン画面が閉じられました。",
+        message: "もう一度ログインボタンを押してください。",
+        code,
+      };
     case "auth/account-exists-with-different-credential":
-      return "同じメールアドレスの別ログイン方法が存在します。別の方法でログインしてください。";
+      return {
+        title: "同じメールアドレスの別ログイン方法が存在します。",
+        message: "以前使ったログイン方法でログインしてください。",
+        code,
+      };
+    case "auth/network-request-failed":
+      return {
+        title: "ネットワーク接続に失敗しました。",
+        message: "通信状況を確認して、少し待ってからもう一度お試しください。",
+        code,
+      };
+    case "auth/too-many-requests":
+      return {
+        title: "ログイン試行が一時的に制限されています。",
+        message: "時間を置いてからもう一度お試しください。",
+        code,
+      };
     default:
-      return "ログインに失敗しました。設定または入力内容を確認してください。";
+      return {
+        title: "ログインに失敗しました。",
+        message: "設定または入力内容を確認してください。詳しいエラーはブラウザコンソールにも出力しています。",
+        code: code || undefined,
+      };
   }
 }
 
@@ -310,12 +553,12 @@ function LoginScreen() {
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [authError, setAuthError] = useState("");
+  const [authError, setAuthError] = useState<AuthErrorDetail | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleEmailAuth = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setAuthError("");
+    setAuthError(null);
     setIsSubmitting(true);
 
     try {
@@ -325,20 +568,26 @@ function LoginScreen() {
         await signInWithEmailAndPassword(auth, email, password);
       }
     } catch (error) {
-      setAuthError(getAuthErrorMessage(error));
+      setAuthError(getAuthErrorDetail(error));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleProviderLogin = async (provider: "google" | "github") => {
-    setAuthError("");
+    const localhostUrl = getLocalhostUrl();
+    if (localhostUrl) {
+      window.location.replace(localhostUrl);
+      return;
+    }
+
+    setAuthError(null);
     setIsSubmitting(true);
 
     try {
       await signInWithPopup(auth, provider === "google" ? googleProvider : githubProvider);
     } catch (error) {
-      setAuthError(getAuthErrorMessage(error));
+      setAuthError(getAuthErrorDetail(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -347,38 +596,21 @@ function LoginScreen() {
   return (
     <main className="login-shell">
       <section className="login-hero-panel" aria-label="Contribution Arc login">
-        <div className="login-brand">
-          <p className="eyebrow">GitHub Contribution RPG</p>
-          <h1>Contribution Arc</h1>
-          <p>Turn your commits into experience.</p>
-        </div>
+        <ContributionArcLogo />
 
-        <div className="login-preview-card">
-          <div className="login-preview-top">
-            <span>Lv.12</span>
-            <strong>Commit Knight</strong>
-          </div>
-          <div className="login-preview-map" aria-hidden="true">
-            {contributionMap.slice(0, 42).map((cell) => (
-              <span
-                key={cell.id}
-                className={`map-cell level-${cell.level} terrain-${cell.terrain} ${
-                  cell.route ? "is-route" : ""
-                } ${cell.event ? "has-event" : ""}`}
-              >
-                {cell.event ? <PixelIcon type={cell.event} /> : null}
-              </span>
-            ))}
-          </div>
-          <p>Every sign-in opens your quest map.</p>
+        <div className="login-brand">
+          <p className="eyebrow">Developer Learning Graph</p>
+          <h1>Contribution Arc</h1>
+          <p>学習の積み重ねを記録し、仲間と進捗を共有するための場所。</p>
         </div>
       </section>
 
       <section className="card login-card">
         <p className="card-kicker">Authentication</p>
-        <h2>Enter the guild.</h2>
+        <h2>記録を始めよう。</h2>
         <p className="login-copy">
-          メール、Google、GitHubでログインできます。Contributionを経験値に変える冒険を始めましょう。
+          <span>メール、Google、GitHubでログインできます。</span>
+          <span className="login-copy-highlight">今日の学習ログを明日の成長へ。</span>
         </p>
 
         <div className="auth-mode-tabs" aria-label="認証モード">
@@ -416,7 +648,6 @@ function LoginScreen() {
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              placeholder="8 characters or more"
               autoComplete={authMode === "signup" ? "new-password" : "current-password"}
               minLength={6}
               required
@@ -442,8 +673,8 @@ function LoginScreen() {
             onClick={() => handleProviderLogin("google")}
             disabled={isSubmitting}
           >
-            <span>G</span>
-            Google
+            <GoogleIcon />
+            <span>Continue with Google</span>
           </button>
           <button
             type="button"
@@ -451,12 +682,19 @@ function LoginScreen() {
             onClick={() => handleProviderLogin("github")}
             disabled={isSubmitting}
           >
-            <span>GH</span>
-            GitHub
+            <GitHubIcon />
+            <span>Continue with GitHub</span>
           </button>
         </div>
 
-        {authError ? <p className="auth-error">{authError}</p> : null}
+        {authError ? (
+          <div className="auth-error" role="alert">
+            <strong>{authError.title}</strong>
+            <span>{authError.message}</span>
+            {authError.action ? <span>{authError.action}</span> : null}
+            {authError.code ? <code>{authError.code}</code> : null}
+          </div>
+        ) : null}
       </section>
     </main>
   );
@@ -469,6 +707,7 @@ function App() {
   const [studySubject, setStudySubject] = useState("React");
   const [studyAmount, setStudyAmount] = useState("1");
   const [studyUnit, setStudyUnit] = useState<"hours" | "minutes">("hours");
+  const [studyColor, setStudyColor] = useState(studyColorOptions[0].value);
 
   useEffect(() => {
     return onAuthStateChanged(auth, (user) => {
@@ -510,7 +749,7 @@ function App() {
       <main className="login-shell loading-auth">
         <section className="card login-card">
           <p className="card-kicker">Contribution Arc</p>
-          <h2>Loading your quest...</h2>
+          <h2>Loading your workspace...</h2>
         </section>
       </main>
     );
@@ -520,8 +759,6 @@ function App() {
     return <LoginScreen />;
   }
 
-  const displayName =
-    currentUser.displayName || currentUser.email?.split("@")[0] || "Ari";
   const weeklyStudyHours = getWeeklyStudyHours(studyLogs);
   const maxHours = Math.max(1, ...weeklyStudyHours.map((item) => item.hours));
   const effortExp = getEffortExp(studyLogs);
@@ -532,12 +769,6 @@ function App() {
     [...titles].reverse().find((title) => title.unlocked)?.name || "Commit Knight";
   const recentLogs = studyLogs.slice(-3).reverse();
   const totalWeeklyHours = weeklyStudyHours.reduce((sum, item) => sum + item.hours, 0);
-  const weeklyActiveDays = weeklyStudyHours.filter((item) => item.hours > 0).length;
-  const weeklyEffortExp = Math.round(totalWeeklyHours * 80 + weeklyActiveDays * 20);
-  const bestStudyDay = weeklyStudyHours.reduce(
-    (best, item) => (item.hours > best.hours ? item : best),
-    weeklyStudyHours[0],
-  );
 
   const handleStudySubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -555,6 +786,7 @@ function App() {
         subject: studySubject.trim(),
         minutes,
         createdAt: new Date().toISOString(),
+        color: studyColor,
       },
     ]);
     setStudyAmount(studyUnit === "hours" ? "1" : "30");
@@ -564,7 +796,14 @@ function App() {
     <main className="app-shell">
       <header className="site-header">
         <div className="user-session">
-          <span>{displayName}</span>
+          <button
+            type="button"
+            className="settings-button"
+            aria-label="Settings"
+            onClick={() => window.alert("設定機能は準備中です。")}
+          >
+            <SettingsIcon />
+          </button>
           <button type="button" className="connect-button" onClick={() => signOut(auth)}>
             Sign out
           </button>
@@ -580,7 +819,18 @@ function App() {
                 <h2>Ari Lv.{levelState.level}</h2>
                 <p>Class: Frontend Adventurer</p>
               </div>
-              <span className="rank-badge">S</span>
+            </div>
+
+            <div className="status-title-panel">
+              <div className="character-stage status-title-stage">
+                <PixelHero />
+                <div className="pixel-shadow" />
+              </div>
+              <div className="status-title-content">
+                <p className="card-kicker">Current Title</p>
+                <h3>{currentTitle}</h3>
+                <p>Study fills effort. Commits forge output.</p>
+              </div>
             </div>
 
             <div className="exp-area">
@@ -606,18 +856,6 @@ function App() {
               </div>
             </div>
           </article>
-
-          <article className="card character-card">
-            <div className="character-stage">
-              <PixelHero />
-              <div className="pixel-shadow" />
-            </div>
-            <div>
-              <p className="card-kicker">Current Title</p>
-              <h2>{currentTitle}</h2>
-              <p>Study fills effort. Commits forge output.</p>
-            </div>
-          </article>
         </div>
 
         <article className="card hours-card weekly-card">
@@ -637,6 +875,7 @@ function App() {
                     style={
                       {
                         "--bar-height": `${(item.hours / maxHours) * 100}%`,
+                        "--bar-color": getStudyColor(item.logs),
                       } as CSSProperties
                     }
                   />
@@ -687,28 +926,33 @@ function App() {
                   <option value="minutes">m</option>
                 </select>
               </label>
+              <fieldset className="study-color-field">
+                <legend>Color</legend>
+                <div className="study-color-options">
+                  {studyColorOptions.map((color) => (
+                    <label key={color.value} title={color.name}>
+                      <input
+                        type="radio"
+                        name="study-color"
+                        value={color.value}
+                        checked={studyColor === color.value}
+                        onChange={(event) => setStudyColor(event.target.value)}
+                      />
+                      <span style={{ background: color.value }} />
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
               <button type="submit">Log +EXP</button>
             </form>
-
-            <div className="study-summary" aria-label="Weekly study summary">
-              <div>
-                <span>Active days</span>
-                <strong>{weeklyActiveDays} / 7</strong>
-              </div>
-              <div>
-                <span>Best day</span>
-                <strong>{bestStudyDay.day}</strong>
-              </div>
-              <div>
-                <span>Weekly Effort</span>
-                <strong>+{weeklyEffortExp}</strong>
-              </div>
-            </div>
 
             <div className="recent-log" aria-label="Recent study logs">
               {recentLogs.map((log) => (
                 <div key={log.id}>
-                  <span>{log.subject}</span>
+                  <span>
+                    <i style={{ background: log.color || studyColorOptions[0].value }} />
+                    <b>{log.subject}</b>
+                  </span>
                   <strong>{formatStudyTime(log.minutes)}</strong>
                 </div>
               ))}
