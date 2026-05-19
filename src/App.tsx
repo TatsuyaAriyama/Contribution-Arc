@@ -898,7 +898,7 @@ function App() {
   const [customUserName, setCustomUserName] = useState("");
   const [draftUserName, setDraftUserName] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<"home" | "profile">("home");
+  const [currentView, setCurrentView] = useState<"home" | "profile" | "workspace">("home");
   const [profileMember, setProfileMember] = useState<WorkspaceMember | null>(null);
   const [determination, setDetermination] = useState("");
   const [draftDetermination, setDraftDetermination] = useState("");
@@ -1614,6 +1614,173 @@ function App() {
             )}
           </div>
         </section>
+      ) : currentView === "workspace" ? (
+        <section className="workspace-screen" aria-label="Silent Workspace screen">
+          <div className="profile-topbar">
+            <button type="button" onClick={() => setCurrentView("home")}>
+              ← Home
+            </button>
+          </div>
+
+          <section className="card silent-workspace" aria-label="Silent Workspace">
+            <div className="workspace-heading">
+              <div>
+                <p className="card-kicker">Silent Workspace</p>
+                <p>通話も雑談も主役にしない。同じ時間に手を動かしている気配だけを共有します。</p>
+              </div>
+              <span className="workspace-live-pill">quiet presence</span>
+            </div>
+
+            <div className="workspace-layout">
+              <div className="room-list" aria-label="Workspace rooms">
+                <form className="room-create-form" onSubmit={handleRoomCreate}>
+                  <label>
+                    <span>Roomを作成</span>
+                    <input
+                      value={newRoomName}
+                      onChange={(event) => setNewRoomName(event.target.value)}
+                      placeholder="例: 朝活Build"
+                      maxLength={32}
+                    />
+                  </label>
+                  <button type="submit">作成</button>
+                </form>
+
+                {allWorkspaceRooms.map((room) => (
+                  <button
+                    type="button"
+                    key={room.id}
+                    className={room.id === selectedRoom?.id ? "room-card active" : "room-card"}
+                    onClick={() => setSelectedRoomId(room.id)}
+                  >
+                    <span className="room-card-top">
+                      <span>{room.name}</span>
+                      <span className="room-join-badge">
+                        {room.activeMembers.some((member) => member.userId === currentUser.uid) ? "入室中" : "参加"}
+                      </span>
+                    </span>
+                    <strong>{room.activeMembers.length} online</strong>
+                    <small>{Math.round(room.totalMinutes / 60)}h learned / {room.contributions} contributions</small>
+                  </button>
+                ))}
+              </div>
+
+              <div className="room-detail">
+                {selectedRoom ? (
+                  <>
+                    <div className="room-detail-top">
+                      <div>
+                        <p className="card-kicker">{isInSelectedRoom ? "入室中" : "Room"} / {selectedRoom.name}</p>
+                        <h3>静かな作業ログ</h3>
+                      </div>
+                      <div className="room-stay-panel" aria-label="Room stay status">
+                        <span>{isInSelectedRoom ? "滞在時間" : "参加者"}</span>
+                        <strong>{isInSelectedRoom ? formatStayTime(currentStayMinutes) : `${roomOnlineCount}人`}</strong>
+                      </div>
+                    </div>
+
+                    <label className="workspace-task-field">
+                      <span>現在の作業</span>
+                      <input
+                        value={workspaceTask}
+                        onChange={(event) => setWorkspaceTask(event.target.value)}
+                        placeholder="React / Java / API設計"
+                        maxLength={48}
+                      />
+                    </label>
+
+                    <div className="room-actions">
+                      <button
+                        type="button"
+                        className={isInSelectedRoom ? "room-leave-button" : "room-join-button"}
+                        onClick={() => (isInSelectedRoom ? handleRoomLeave() : handleRoomJoin(selectedRoom.id))}
+                      >
+                        {isInSelectedRoom ? "退出して学習を記録" : "このRoomに入室"}
+                      </button>
+                      <span>退出時に滞在時間がWeekly Study Logへ反映されます</span>
+                      {lastRoomSession ? (
+                        <strong>+{lastRoomSession.exp} EXP / {formatStayTime(lastRoomSession.minutes)}を記録</strong>
+                      ) : null}
+                    </div>
+
+                    <div className="presence-list" aria-label="Room presence">
+                      {visibleMembers.length > 0 ? (
+                        visibleMembers.map((member) => {
+                          const minutes = getElapsedMinutes(member.joinedAt, workspaceNow);
+                          return (
+                            <button
+                              type="button"
+                              className="presence-card"
+                              key={`${member.userId}-${member.joinedAt}`}
+                              onClick={() => handleMemberProfileOpen(member)}
+                            >
+                              <span className={`presence-avatar ${member.tone}`}>
+                                {member.avatar ? <img src={member.avatar} alt="" /> : member.name.slice(0, 1).toUpperCase()}
+                              </span>
+                              <div>
+                                <strong>
+                                  <i style={{ background: member.color }} />
+                                  {member.name} — {member.building}
+                                </strong>
+                                <span>{formatStayTime(minutes)}滞在</span>
+                                <small>今日 +{getRoomSessionExp(minutes)} EXP</small>
+                              </div>
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <div className="presence-empty">まだ誰も入室していません。</div>
+                      )}
+                    </div>
+
+                    {userRoomHistory.length > 0 ? (
+                      <div className="room-history-panel">
+                        <p className="card-kicker">学習履歴</p>
+                        {userRoomHistory.map((item) => (
+                          <article key={item.id}>
+                            <span>{new Date(item.leftAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                            <strong>{item.roomName}</strong>
+                            <small>
+                              <i style={{ background: item.color }} />
+                              {item.building} / {formatStayTime(item.minutes)} / +{item.exp} EXP
+                            </small>
+                          </article>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    <div className="room-output-panel">
+                      <div>
+                        <p className="card-kicker">Tonight's Output</p>
+                        <h3>{roomCommits.toLocaleString()} commits</h3>
+                        <span>{Math.round(roomTotalMinutes / 60).toLocaleString()}h learned</span>
+                      </div>
+                      <div className="room-heatmap" aria-hidden="true">
+                        {Array.from({ length: 42 }, (_, index) => (
+                          <span
+                            key={index}
+                            className={`heat-${(index + roomOnlineCount + selectedRoom.contributions) % 5}`}
+                            style={{ animationDelay: `${index * 18}ms` }}
+                          />
+                        ))}
+                      </div>
+                      <div className="room-output-meta">
+                        <strong>{roomContributions.toLocaleString()}</strong>
+                        <span>contributions today</span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="room-empty-detail">
+                    <p className="card-kicker">Silent Workspace</p>
+                    <h3>まずはRoomを作成しましょう。</h3>
+                    <p>左の入力欄から、自分の集中場所を作成できます。</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        </section>
       ) : (
       <>
       <section className="hero-grid" aria-label="Contribution Arc overview">
@@ -1745,164 +1912,18 @@ function App() {
         </article>
       </section>
 
-      <section className="card silent-workspace" aria-label="Silent Workspace">
-        <div className="workspace-heading">
-          <div>
-            <p className="card-kicker">Silent Workspace</p>
-            <p>通話も雑談も主役にしない。同じ時間に手を動かしている気配だけを共有します。</p>
-          </div>
-          <span className="workspace-live-pill">quiet presence</span>
-        </div>
-
-        <div className="workspace-layout">
-          <div className="room-list" aria-label="Workspace rooms">
-            <form className="room-create-form" onSubmit={handleRoomCreate}>
-              <label>
-                <span>Roomを作成</span>
-                <input
-                  value={newRoomName}
-                  onChange={(event) => setNewRoomName(event.target.value)}
-                  placeholder="例: 朝活Build"
-                  maxLength={32}
-                />
-              </label>
-              <button type="submit">作成</button>
-            </form>
-
-            {allWorkspaceRooms.map((room) => (
-              <button
-                type="button"
-                key={room.id}
-                className={room.id === selectedRoom?.id ? "room-card active" : "room-card"}
-                onClick={() => setSelectedRoomId(room.id)}
-              >
-                <span className="room-card-top">
-                  <span>{room.name}</span>
-                  <span className="room-join-badge">
-                    {room.activeMembers.some((member) => member.userId === currentUser.uid) ? "入室中" : "参加"}
-                  </span>
-                </span>
-                <strong>{room.activeMembers.length} online</strong>
-                <small>{Math.round(room.totalMinutes / 60)}h learned / {room.contributions} contributions</small>
-              </button>
-            ))}
-          </div>
-
-          <div className="room-detail">
-            {selectedRoom ? (
-              <>
-                <div className="room-detail-top">
-                  <div>
-                    <p className="card-kicker">{isInSelectedRoom ? "入室中" : "Room"} / {selectedRoom.name}</p>
-                    <h3>静かな作業ログ</h3>
-                  </div>
-                  <div className="room-stay-panel" aria-label="Room stay status">
-                    <span>{isInSelectedRoom ? "滞在時間" : "参加者"}</span>
-                    <strong>{isInSelectedRoom ? formatStayTime(currentStayMinutes) : `${roomOnlineCount}人`}</strong>
-                  </div>
-                </div>
-
-                <label className="workspace-task-field">
-                  <span>現在の作業</span>
-                  <input
-                    value={workspaceTask}
-                    onChange={(event) => setWorkspaceTask(event.target.value)}
-                    placeholder="React / Java / API設計"
-                    maxLength={48}
-                  />
-                </label>
-
-                <div className="room-actions">
-                  <button
-                    type="button"
-                    className={isInSelectedRoom ? "room-leave-button" : "room-join-button"}
-                    onClick={() => (isInSelectedRoom ? handleRoomLeave() : handleRoomJoin(selectedRoom.id))}
-                  >
-                    {isInSelectedRoom ? "退出して学習を記録" : "このRoomに入室"}
-                  </button>
-                  <span>退出時に滞在時間がWeekly Study Logへ反映されます</span>
-                  {lastRoomSession ? (
-                    <strong>+{lastRoomSession.exp} EXP / {formatStayTime(lastRoomSession.minutes)}を記録</strong>
-                  ) : null}
-                </div>
-
-                <div className="presence-list" aria-label="Room presence">
-                  {visibleMembers.length > 0 ? (
-                    visibleMembers.map((member) => {
-                      const minutes = getElapsedMinutes(member.joinedAt, workspaceNow);
-                      return (
-                        <button
-                          type="button"
-                          className="presence-card"
-                          key={`${member.userId}-${member.joinedAt}`}
-                          onClick={() => handleMemberProfileOpen(member)}
-                        >
-                          <span className={`presence-avatar ${member.tone}`}>
-                            {member.avatar ? <img src={member.avatar} alt="" /> : member.name.slice(0, 1).toUpperCase()}
-                          </span>
-                          <div>
-                            <strong>
-                              <i style={{ background: member.color }} />
-                              {member.name} — {member.building}
-                            </strong>
-                            <span>{formatStayTime(minutes)}滞在</span>
-                            <small>今日 +{getRoomSessionExp(minutes)} EXP</small>
-                          </div>
-                        </button>
-                      );
-                    })
-                  ) : (
-                    <div className="presence-empty">まだ誰も入室していません。</div>
-                  )}
-                </div>
-
-                {userRoomHistory.length > 0 ? (
-                  <div className="room-history-panel">
-                    <p className="card-kicker">学習履歴</p>
-                    {userRoomHistory.map((item) => (
-                      <article key={item.id}>
-                        <span>{new Date(item.leftAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                        <strong>{item.roomName}</strong>
-                        <small>
-                          <i style={{ background: item.color }} />
-                          {item.building} / {formatStayTime(item.minutes)} / +{item.exp} EXP
-                        </small>
-                      </article>
-                    ))}
-                  </div>
-                ) : null}
-
-                <div className="room-output-panel">
-                  <div>
-                    <p className="card-kicker">Tonight's Output</p>
-                    <h3>{roomCommits.toLocaleString()} commits</h3>
-                    <span>{Math.round(roomTotalMinutes / 60).toLocaleString()}h learned</span>
-                  </div>
-                  <div className="room-heatmap" aria-hidden="true">
-                    {Array.from({ length: 42 }, (_, index) => (
-                      <span
-                        key={index}
-                        className={`heat-${(index + roomOnlineCount + selectedRoom.contributions) % 5}`}
-                        style={{ animationDelay: `${index * 18}ms` }}
-                      />
-                    ))}
-                  </div>
-                  <div className="room-output-meta">
-                    <strong>{roomContributions.toLocaleString()}</strong>
-                    <span>contributions today</span>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="room-empty-detail">
-                <p className="card-kicker">Silent Workspace</p>
-                <h3>まずはRoomを作成しましょう。</h3>
-                <p>左の入力欄から、自分の集中場所を作成できます。</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
+      <button
+        type="button"
+        className="workspace-launch-card"
+        onClick={() => setCurrentView("workspace")}
+        aria-label="Silent Workspaceを開く"
+      >
+        <span>
+          <b>Silent Workspace</b>
+          <small>静かに積み上げるための作業空間</small>
+        </span>
+        <i>{activeRoom ? "入室中" : `${allWorkspaceRooms.length} Rooms`}</i>
+      </button>
       </>
       )}
     </main>
