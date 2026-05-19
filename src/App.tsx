@@ -1129,8 +1129,6 @@ function App() {
   const pendingJoinRoom = pendingJoinRoomId
     ? allWorkspaceRooms.find((room) => room.id === pendingJoinRoomId)
     : null;
-  const guideCharacter = characterOptions[0];
-
   const handleStudySubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -1369,7 +1367,6 @@ function App() {
         </span>
         <div>
           <h2>{playerName} Lv.{levelState.level}</h2>
-          <p>Learning and contribution profile</p>
         </div>
       </div>
 
@@ -1594,26 +1591,6 @@ function App() {
                 {playerStatusCard(false)}
 
                 <div className="profile-panel-stack">
-                  <article className="card character-select-card guide-card">
-                    <div>
-                      <p className="card-kicker">案内人</p>
-                      <h2>{guideCharacter.name} <span>{guideCharacter.englishName}</span></h2>
-                      <small>{guideCharacter.label}</small>
-                      <p>{guideCharacter.concept}</p>
-                      <p className="character-evolution">{guideCharacter.evolution}</p>
-                    </div>
-
-                    <div className="guide-avatar-panel">
-                      <span className="character-option-avatar">
-                        <ArcSproutCharacter />
-                      </span>
-                      <div>
-                        <strong>{guideCharacter.name}</strong>
-                        <small>{guideCharacter.englishName}</small>
-                      </div>
-                    </div>
-                  </article>
-
                   <article className="card determination-card">
                     <div>
                       <p className="card-kicker">決意</p>
