@@ -7,7 +7,24 @@ import {
   signOut,
   type User,
 } from "firebase/auth";
-import { auth, githubProvider, googleProvider } from "./firebase";
+import {
+  arrayRemove,
+  arrayUnion,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  runTransaction,
+  serverTimestamp,
+  setDoc,
+  startAt,
+  endAt,
+  updateDoc,
+} from "firebase/firestore";
+import { auth, db, githubProvider, googleProvider } from "./firebase";
 import "./App.css";
 
 type QuestEvent = "chest" | "sword" | "flame" | "star";
@@ -56,6 +73,16 @@ type AuthErrorDetail = {
   message: string;
   action?: string;
   code?: string;
+};
+
+type UserProfile = {
+  uid: string;
+  userId: string;
+  displayName: string;
+  photoURL: string;
+  searchName: string;
+  following: string[];
+  followers: string[];
 };
 
 type CharacterOption = {
@@ -234,6 +261,42 @@ function getOutputExp() {
 
 function removeSeedStudyLogs(logs: StudyLog[]) {
   return logs.filter((log) => !log.id.startsWith("seed-"));
+}
+
+function validateUserId(value: string) {
+  if (!value) {
+    return "ユーザーIDを入力してください。";
+  }
+
+  if (value.length > 30) {
+    return "ユーザーIDは30文字以内にしてください。";
+  }
+
+  if (!/^[a-z0-9._]+$/.test(value)) {
+    return "使用できる文字は小文字の半角英数字、_、. のみです。";
+  }
+
+  if (value.startsWith(".") || value.endsWith(".")) {
+    return "ピリオドは先頭と末尾には使えません。";
+  }
+
+  if (value.includes("..")) {
+    return "ピリオドは連続して使えません。";
+  }
+
+  return "";
+}
+
+function normalizeUserProfile(uid: string, data: Partial<UserProfile>): UserProfile {
+  return {
+    uid,
+    userId: data.userId || "",
+    displayName: data.displayName || "Developer",
+    photoURL: data.photoURL || "",
+    searchName: data.searchName || (data.displayName || "Developer").toLowerCase(),
+    following: Array.isArray(data.following) ? data.following : [],
+    followers: Array.isArray(data.followers) ? data.followers : [],
+  };
 }
 
 function getLevelState(totalExp: number) {
@@ -855,7 +918,17 @@ function App() {
   const [selectedStudyDay, setSelectedStudyDay] = useState(dayLabels[(new Date().getDay() + 6) % 7]);
   const [customUserName, setCustomUserName] = useState("");
   const [draftUserName, setDraftUserName] = useState("");
+  const [userId, setUserId] = useState("");
+  const [draftUserId, setDraftUserId] = useState("");
+  const [settingsError, setSettingsError] = useState("");
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const [following, setFollowing] = useState<string[]>([]);
   const [currentView, setCurrentView] = useState<"home" | "profile" | "workspace">("home");
   const [profileMember, setProfileMember] = useState<WorkspaceMember | null>(null);
   const [determination, setDetermination] = useState("");
@@ -889,6 +962,7 @@ function App() {
 
     const savedLogs = window.localStorage.getItem(`contribution-arc-study-${currentUser.uid}`);
     const savedUserName = window.localStorage.getItem(`contribution-arc-name-${currentUser.uid}`);
+    const savedUserId = window.localStorage.getItem(`contribution-arc-user-id-${currentUser.uid}`);
     const savedDetermination = window.localStorage.getItem(`contribution-arc-determination-${currentUser.uid}`);
     const savedAvatar = window.localStorage.getItem(`contribution-arc-avatar-${currentUser.uid}`);
     const savedRoomId = window.localStorage.getItem(`contribution-arc-room-${currentUser.uid}`);
@@ -914,6 +988,9 @@ function App() {
     }
     setCustomUserName(savedUserName || "");
     setDraftUserName(savedUserName || currentUser.displayName || currentUser.email?.split("@")[0] || "");
+    setUserId(savedUserId || "");
+    setDraftUserId(savedUserId || "");
+    setSettingsError("");
     setDetermination(savedDetermination || "");
     setDraftDetermination(savedDetermination || "");
     setPlayerAvatar(savedAvatar || currentUser.photoURL || "");
@@ -929,6 +1006,24 @@ function App() {
     setWorkspaceDraftTask(savedWorkspaceTask || studySubject);
     setWorkspaceDraftColor(studyColorOptions[0].value);
     setIsWorkspaceLoaded(true);
+
+    getDoc(doc(db, "users", currentUser.uid))
+      .then((snapshot) => {
+        if (!snapshot.exists()) {
+          return;
+        }
+
+        const profile = normalizeUserProfile(currentUser.uid, snapshot.data() as Partial<UserProfile>);
+        setUserId(profile.userId);
+        setDraftUserId(profile.userId);
+        setFollowing(profile.following);
+        if (profile.userId) {
+          window.localStorage.setItem(`contribution-arc-user-id-${currentUser.uid}`, profile.userId);
+        }
+      })
+      .catch(() => {
+        setSettingsError("ユーザーID情報を読み込めませんでした。");
+      });
   }, [currentUser]);
 
   useEffect(() => {
@@ -1114,16 +1209,171 @@ function App() {
 
   const handleSettingsOpen = () => {
     setDraftUserName(playerName);
+    setDraftUserId(userId);
+    setSettingsError("");
     setIsSettingsOpen(true);
   };
 
-  const handleSettingsSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSettingsSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const nextName = draftUserName.trim();
+    const nextUserId = draftUserId.trim();
+    const userIdError = validateUserId(nextUserId);
+    if (userIdError) {
+      setSettingsError(userIdError);
+      return;
+    }
+
+    setIsSavingSettings(true);
+    setSettingsError("");
+
+    try {
+      const userRef = doc(db, "users", currentUser.uid);
+
+      await runTransaction(db, async (transaction) => {
+        const userSnapshot = await transaction.get(userRef);
+        const currentProfile = userSnapshot.exists()
+          ? normalizeUserProfile(currentUser.uid, userSnapshot.data() as Partial<UserProfile>)
+          : normalizeUserProfile(currentUser.uid, {
+              displayName: playerName,
+              following,
+              photoURL: playerAvatar,
+            });
+        const currentUserId = currentProfile.userId || userId;
+        const nextUserIdRef = doc(db, "usernames", nextUserId);
+        const nextUserIdSnapshot = await transaction.get(nextUserIdRef);
+
+        if (nextUserIdSnapshot.exists() && nextUserIdSnapshot.data().uid !== currentUser.uid) {
+          throw new Error("このユーザーIDはすでに使われています。");
+        }
+
+        if (currentUserId && currentUserId !== nextUserId) {
+          transaction.delete(doc(db, "usernames", currentUserId));
+        }
+
+        transaction.set(nextUserIdRef, {
+          uid: currentUser.uid,
+          updatedAt: serverTimestamp(),
+        });
+        transaction.set(
+          userRef,
+          {
+            uid: currentUser.uid,
+            userId: nextUserId,
+            displayName: nextName || playerName,
+            photoURL: playerAvatar,
+            searchName: (nextName || playerName).toLowerCase(),
+            following: currentProfile.following,
+            followers: currentProfile.followers,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true },
+        );
+      });
+
+      setUserId(nextUserId);
+      window.localStorage.setItem(`contribution-arc-user-id-${currentUser.uid}`, nextUserId);
+    } catch (error) {
+      setSettingsError(error instanceof Error ? error.message : "ユーザーIDを保存できませんでした。");
+      setIsSavingSettings(false);
+      return;
+    }
+
     setCustomUserName(nextName);
     window.localStorage.setItem(`contribution-arc-name-${currentUser.uid}`, nextName);
+    setIsSavingSettings(false);
     setIsSettingsOpen(false);
+  };
+
+  const handleUserSearch = async (event?: FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
+
+    const nextQuery = searchQuery.trim();
+    if (!nextQuery) {
+      setSearchResults([]);
+      setSearchError("");
+      return;
+    }
+
+    setIsSearching(true);
+    setSearchError("");
+
+    try {
+      const usersQuery = query(
+        collection(db, "users"),
+        orderBy("userId"),
+        startAt(nextQuery),
+        endAt(`${nextQuery}\uf8ff`),
+        limit(12),
+      );
+      const snapshot = await getDocs(usersQuery);
+      const results = snapshot.docs
+        .map((item) => normalizeUserProfile(item.id, item.data() as Partial<UserProfile>))
+        .filter((profile) => profile.uid !== currentUser.uid && profile.userId);
+
+      setSearchResults(results);
+      if (results.length === 0) {
+        setSearchError("該当するユーザーが見つかりません。");
+      }
+    } catch {
+      setSearchError("ユーザー検索に失敗しました。");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleFollowToggle = async (profile: UserProfile) => {
+    if (!userId) {
+      setSearchError("フォローする前に設定からユーザーIDを登録してください。");
+      return;
+    }
+
+    const isFollowing = following.includes(profile.uid);
+    const currentRef = doc(db, "users", currentUser.uid);
+    const targetRef = doc(db, "users", profile.uid);
+
+    try {
+      await setDoc(
+        currentRef,
+        {
+          uid: currentUser.uid,
+          userId,
+          displayName: playerName,
+          photoURL: playerAvatar,
+          searchName: playerName.toLowerCase(),
+          following,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
+      await updateDoc(currentRef, {
+        following: isFollowing ? arrayRemove(profile.uid) : arrayUnion(profile.uid),
+        updatedAt: serverTimestamp(),
+      });
+      await updateDoc(targetRef, {
+        followers: isFollowing ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid),
+        updatedAt: serverTimestamp(),
+      });
+
+      setFollowing((items) =>
+        isFollowing ? items.filter((item) => item !== profile.uid) : [...items, profile.uid],
+      );
+      setSearchResults((items) =>
+        items.map((item) =>
+          item.uid === profile.uid
+            ? {
+                ...item,
+                followers: isFollowing
+                  ? item.followers.filter((uid) => uid !== currentUser.uid)
+                  : [...item.followers, currentUser.uid],
+              }
+            : item,
+        ),
+      );
+    } catch {
+      setSearchError("フォロー状態を更新できませんでした。");
+    }
   };
 
   const handleDeterminationSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -1434,6 +1684,15 @@ function App() {
         <div className="user-session">
           <button
             type="button"
+            className="user-search-button"
+            onClick={() => setIsSearchOpen(true)}
+            aria-label="ユーザー検索を開く"
+          >
+            <span aria-hidden="true" />
+            <strong>Search</strong>
+          </button>
+          <button
+            type="button"
             className={currentView === "workspace" ? "workspace-nav-button active" : "workspace-nav-button"}
             onClick={() => setCurrentView("workspace")}
             aria-label="Silent Workspaceを開く"
@@ -1500,15 +1759,89 @@ function App() {
                 />
               </label>
 
+              <label>
+                <span>ユーザーID</span>
+                <input
+                  value={draftUserId}
+                  onChange={(event) => setDraftUserId(event.target.value.toLowerCase())}
+                  placeholder="ari.dev"
+                  maxLength={30}
+                />
+              </label>
+
+              {settingsError ? <p className="settings-error">{settingsError}</p> : null}
+
               <div className="settings-actions">
                 <button type="button" className="settings-secondary" onClick={() => setIsSettingsOpen(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="settings-primary">
-                  Save
+                <button type="submit" className="settings-primary" disabled={isSavingSettings}>
+                  {isSavingSettings ? "Saving..." : "Save"}
                 </button>
               </div>
             </form>
+          </section>
+        </div>
+      ) : null}
+
+      {isSearchOpen ? (
+        <div className="settings-modal-backdrop" role="presentation">
+          <section className="user-search-modal" role="dialog" aria-modal="true" aria-labelledby="user-search-title">
+            <div className="user-search-head">
+              <div>
+                <p className="card-kicker">User Search</p>
+                <h2 id="user-search-title">ユーザーを探す</h2>
+              </div>
+              <button
+                type="button"
+                className="search-close-button"
+                onClick={() => setIsSearchOpen(false)}
+                aria-label="ユーザー検索を閉じる"
+              >
+                ×
+              </button>
+            </div>
+
+            <form className="user-search-form" onSubmit={handleUserSearch}>
+              <label>
+                <span>ユーザーID</span>
+                <input
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value.toLowerCase())}
+                  placeholder="ari.dev"
+                  maxLength={30}
+                  autoFocus
+                />
+              </label>
+              <button type="submit" disabled={isSearching}>
+                {isSearching ? "Searching" : "Search"}
+              </button>
+            </form>
+
+            {!userId ? (
+              <p className="search-note">フォロー機能を使うには、設定から自分のユーザーIDを登録してください。</p>
+            ) : null}
+            {searchError ? <p className="settings-error">{searchError}</p> : null}
+
+            <div className="user-search-results">
+              {searchResults.map((profile) => {
+                const isFollowing = following.includes(profile.uid);
+                return (
+                  <article key={profile.uid} className="user-result-card">
+                    <span className="user-result-avatar">
+                      {profile.photoURL ? <img src={profile.photoURL} alt="" /> : profile.displayName.slice(0, 1).toUpperCase()}
+                    </span>
+                    <div>
+                      <strong>{profile.displayName}</strong>
+                      <small>@{profile.userId}</small>
+                    </div>
+                    <button type="button" onClick={() => handleFollowToggle(profile)}>
+                      {isFollowing ? "Following" : "Follow"}
+                    </button>
+                  </article>
+                );
+              })}
+            </div>
           </section>
         </div>
       ) : null}
