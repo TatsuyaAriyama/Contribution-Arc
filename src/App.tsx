@@ -804,6 +804,9 @@ function App() {
   const [customUserName, setCustomUserName] = useState("");
   const [draftUserName, setDraftUserName] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [currentView, setCurrentView] = useState<"home" | "profile">("home");
+  const [determination, setDetermination] = useState("");
+  const [draftDetermination, setDraftDetermination] = useState("");
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [customRooms, setCustomRooms] = useState<WorkspaceRoom[]>([]);
   const [isWorkspaceLoaded, setIsWorkspaceLoaded] = useState(false);
@@ -818,6 +821,7 @@ function App() {
   useEffect(() => {
     return onAuthStateChanged(auth, (user) => {
       setIsWorkspaceLoaded(false);
+      setCurrentView("home");
       setCurrentUser(user);
       setIsAuthReady(true);
     });
@@ -830,6 +834,7 @@ function App() {
 
     const savedLogs = window.localStorage.getItem(`contribution-arc-study-${currentUser.uid}`);
     const savedUserName = window.localStorage.getItem(`contribution-arc-name-${currentUser.uid}`);
+    const savedDetermination = window.localStorage.getItem(`contribution-arc-determination-${currentUser.uid}`);
     const savedRoomId = window.localStorage.getItem(`contribution-arc-room-${currentUser.uid}`);
     const savedRooms = window.localStorage.getItem(`contribution-arc-rooms-${currentUser.uid}`);
     const savedWorkspaceTask = window.localStorage.getItem(`contribution-arc-workspace-task-${currentUser.uid}`);
@@ -853,6 +858,8 @@ function App() {
     }
     setCustomUserName(savedUserName || "");
     setDraftUserName(savedUserName || currentUser.displayName || currentUser.email?.split("@")[0] || "");
+    setDetermination(savedDetermination || "");
+    setDraftDetermination(savedDetermination || "");
     setCustomRooms(parsedRooms);
     if (savedRoomId && parsedRooms.some((room) => room.id === savedRoomId)) {
       setSelectedRoomId(savedRoomId);
@@ -1054,6 +1061,14 @@ function App() {
     setIsSettingsOpen(false);
   };
 
+  const handleDeterminationSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const nextDetermination = draftDetermination.trim();
+    setDetermination(nextDetermination);
+    window.localStorage.setItem(`contribution-arc-determination-${currentUser.uid}`, nextDetermination);
+  };
+
   const closeWorkspaceSession = (roomId: string) => {
     const room = customRooms.find((item) => item.id === roomId);
     const member = room?.activeMembers.find((item) => item.userId === currentUser.uid);
@@ -1191,6 +1206,84 @@ function App() {
     setNewRoomName("");
   };
 
+  const playerStatusCard = (isInteractive = false) => (
+    <article
+      className={isInteractive ? "card status-card status-card-link" : "card status-card"}
+      role={isInteractive ? "button" : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
+      onClick={isInteractive ? () => setCurrentView("profile") : undefined}
+      onKeyDown={
+        isInteractive
+          ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setCurrentView("profile");
+              }
+            }
+          : undefined
+      }
+      aria-label={isInteractive ? "プロフィール画面を開く" : undefined}
+    >
+      <div className="card-kicker">Player Status</div>
+      <div className="player-heading">
+        <div>
+          <h2>{playerName} Lv.{levelState.level}</h2>
+          <p>Learning and contribution profile</p>
+        </div>
+      </div>
+
+      <div className="status-title-panel">
+        <div className="character-stage status-title-stage">
+          <PixelHero />
+          <div className="pixel-shadow" />
+        </div>
+        <div className="status-title-content">
+          <p className="card-kicker">Current Title</p>
+          <h3>{currentTitle}</h3>
+          <p>Study fills effort. Commits forge output.</p>
+        </div>
+      </div>
+
+      <div className="exp-area">
+        <div className="exp-meta">
+          <span>Next Level</span>
+          <strong>
+            {levelState.currentExp.toLocaleString()} / {levelState.neededExp.toLocaleString()}
+          </strong>
+        </div>
+        <div className="exp-track" aria-label="Experience progress">
+          <span style={{ width: `${levelState.percent}%` }} />
+        </div>
+      </div>
+
+      <div className="status-metrics">
+        <div>
+          <span>Effort EXP</span>
+          <strong>{effortExp.toLocaleString()}</strong>
+        </div>
+        <div>
+          <span>Output EXP</span>
+          <strong>{outputExp.toLocaleString()}</strong>
+        </div>
+      </div>
+
+      <div className="contribution-summary" aria-label="GitHub contribution summary">
+        <div>
+          <strong>{outputStats.commits.toLocaleString()}</strong>
+          <span>commits</span>
+        </div>
+        <div>
+          <strong>{outputStats.contributions.toLocaleString()}</strong>
+          <span>contributions</span>
+        </div>
+        <div>
+          <strong>{outputStats.pullRequests.toLocaleString()}</strong>
+          <span>PRs</span>
+        </div>
+      </div>
+    </article>
+  );
+
   return (
     <main className="app-shell">
       <header className="site-header">
@@ -1296,67 +1389,44 @@ function App() {
         </div>
       ) : null}
 
+      {currentView === "profile" ? (
+        <section className="profile-screen" aria-label="Profile">
+          <div className="profile-topbar">
+            <button type="button" onClick={() => setCurrentView("home")}>
+              ← Home
+            </button>
+          </div>
+
+          <div className="profile-layout">
+            {playerStatusCard(false)}
+
+            <article className="card determination-card">
+              <div>
+                <p className="card-kicker">決意</p>
+                <h2>積み上げる理由を残す。</h2>
+                {determination ? <p>{determination}</p> : <p>例: 毎日少しでも積み上げる</p>}
+              </div>
+
+              <form className="determination-form" onSubmit={handleDeterminationSubmit}>
+                <label>
+                  <span>決意入力</span>
+                  <textarea
+                    value={draftDetermination}
+                    onChange={(event) => setDraftDetermination(event.target.value)}
+                    placeholder="毎日少しでも積み上げる"
+                    rows={8}
+                  />
+                </label>
+                <button type="submit">保存</button>
+              </form>
+            </article>
+          </div>
+        </section>
+      ) : (
+      <>
       <section className="hero-grid" aria-label="Contribution Arc overview">
         <div className="overview-stack">
-          <article className="card status-card">
-            <div className="card-kicker">Player Status</div>
-            <div className="player-heading">
-              <div>
-                <h2>{playerName} Lv.{levelState.level}</h2>
-                <p>Learning and contribution profile</p>
-              </div>
-            </div>
-
-            <div className="status-title-panel">
-              <div className="character-stage status-title-stage">
-                <PixelHero />
-                <div className="pixel-shadow" />
-              </div>
-              <div className="status-title-content">
-                <p className="card-kicker">Current Title</p>
-                <h3>{currentTitle}</h3>
-                <p>Study fills effort. Commits forge output.</p>
-              </div>
-            </div>
-
-            <div className="exp-area">
-              <div className="exp-meta">
-                <span>Next Level</span>
-                <strong>
-                  {levelState.currentExp.toLocaleString()} / {levelState.neededExp.toLocaleString()}
-                </strong>
-              </div>
-              <div className="exp-track" aria-label="Experience progress">
-                <span style={{ width: `${levelState.percent}%` }} />
-              </div>
-            </div>
-
-            <div className="status-metrics">
-              <div>
-                <span>Effort EXP</span>
-                <strong>{effortExp.toLocaleString()}</strong>
-              </div>
-              <div>
-                <span>Output EXP</span>
-                <strong>{outputExp.toLocaleString()}</strong>
-              </div>
-            </div>
-
-            <div className="contribution-summary" aria-label="GitHub contribution summary">
-              <div>
-                <strong>{outputStats.commits.toLocaleString()}</strong>
-                <span>commits</span>
-              </div>
-              <div>
-                <strong>{outputStats.contributions.toLocaleString()}</strong>
-                <span>contributions</span>
-              </div>
-              <div>
-                <strong>{outputStats.pullRequests.toLocaleString()}</strong>
-                <span>PRs</span>
-              </div>
-            </div>
-          </article>
+          {playerStatusCard(true)}
         </div>
 
         <article className="card hours-card weekly-card">
@@ -1634,6 +1704,8 @@ function App() {
           </div>
         </div>
       </section>
+      </>
+      )}
     </main>
   );
 }
