@@ -1870,19 +1870,19 @@
   letter-spacing: 0;
 }
 
-.focus-timer {
+.room-stay-panel {
   flex: 0 0 auto;
   display: grid;
   justify-items: end;
   gap: 4px;
-  min-width: 120px;
+  min-width: 132px;
   padding: 12px 14px;
   border: 1px solid rgba(31, 111, 74, 0.12);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.72);
 }
 
-.focus-timer span {
+.room-stay-panel span {
   color: var(--muted);
   font-size: 11px;
   font-weight: 900;
@@ -1890,10 +1890,9 @@
   text-transform: uppercase;
 }
 
-.focus-timer strong {
+.room-stay-panel strong {
   color: var(--ink);
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 28px;
+  font-size: 24px;
   line-height: 1;
 }
 
@@ -1928,14 +1927,14 @@
   box-shadow: 0 0 0 4px rgba(31, 111, 74, 0.08);
 }
 
-.focus-controls {
+.room-actions {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
 }
 
-.focus-controls button {
+.room-actions button {
   min-height: 40px;
   padding: 0 14px;
   border-radius: 999px;
@@ -1944,46 +1943,46 @@
   font-weight: 850;
 }
 
-.focus-controls button:first-child {
+.room-join-button {
   border: 0;
   background: var(--ink);
   color: #ffffff;
 }
 
-.focus-reset {
+.room-leave-button {
   border: 1px solid var(--line);
   background: var(--surface);
   color: var(--muted);
 }
 
-.focus-complete {
+.room-actions > span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.room-actions > strong {
   color: var(--green);
   font-size: 13px;
   font-weight: 850;
   animation: quiet-glow 2.2s ease both;
 }
 
-.focus-cycle-note {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 750;
-}
-
 .presence-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .presence-card {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-columns: 34px minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
-  padding: 13px;
+  padding: 10px;
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: 14px;
   background: rgba(250, 250, 248, 0.82);
   transition:
     transform 0.18s ease,
@@ -2000,11 +1999,11 @@
 .presence-avatar {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 15px;
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
   color: #ffffff;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 900;
 }
 
@@ -2042,21 +2041,73 @@
 
 .presence-card strong {
   color: var(--ink);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .presence-card span {
-  margin-top: 4px;
+  margin-top: 3px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 750;
 }
 
 .presence-card small {
-  margin-top: 5px;
+  margin-top: 4px;
   color: var(--green);
   font-size: 11px;
   font-weight: 850;
+}
+
+.presence-empty {
+  grid-column: 1 / -1;
+  padding: 14px;
+  border: 1px dashed rgba(31, 111, 74, 0.16);
+  border-radius: 16px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.room-history-panel {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid rgba(31, 111, 74, 0.1);
+  border-radius: 18px;
+  background: rgba(250, 250, 248, 0.66);
+}
+
+.room-history-panel article {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 0.7fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding-top: 8px;
+  border-top: 1px solid rgba(31, 111, 74, 0.08);
+}
+
+.room-history-panel article:first-of-type {
+  border-top: 0;
+}
+
+.room-history-panel span,
+.room-history-panel small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-history-panel strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .room-output-panel {
@@ -2468,9 +2519,14 @@
     flex-direction: column;
   }
 
-  .focus-timer {
+  .room-stay-panel {
     width: 100%;
     justify-items: start;
+  }
+
+  .room-history-panel article {
+    grid-template-columns: 1fr;
+    gap: 4px;
   }
 
   .room-output-meta {

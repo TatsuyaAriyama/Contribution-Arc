@@ -57,11 +57,24 @@ type AuthErrorDetail = {
 };
 
 type WorkspaceMember = {
+  userId: string;
   name: string;
   building: string;
-  elapsedMinutes: number;
-  expToday: number;
+  joinedAt: string;
   tone: "deep" | "green" | "soft" | "blue";
+};
+
+type WorkspaceSessionHistory = {
+  id: string;
+  userId: string;
+  userName: string;
+  roomId: string;
+  roomName: string;
+  building: string;
+  joinedAt: string;
+  leftAt: string;
+  minutes: number;
+  exp: number;
 };
 
 type WorkspaceRoom = {
@@ -70,6 +83,10 @@ type WorkspaceRoom = {
   totalMinutes: number;
   contributions: number;
   commits: number;
+  createdAt: string;
+  createdBy: string;
+  activeMembers: WorkspaceMember[];
+  history: WorkspaceSessionHistory[];
 };
 
 const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -141,9 +158,7 @@ const outputStats = {
 };
 
 const workspaceRooms: WorkspaceRoom[] = [];
-
-const focusDurationSeconds = 50 * 60;
-const breakDurationSeconds = 10 * 60;
+const workspaceRoomsStorageKey = "contribution-arc-workspace-rooms";
 
 const eventCells = new Map<number, QuestEvent>([
   [7, "star"],
@@ -295,10 +310,39 @@ function formatStudyTime(minutes: number) {
   return `${hours}h`;
 }
 
-function formatTimer(seconds: number) {
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
+function formatStayTime(minutes: number) {
+  if (minutes < 60) {
+    return `${minutes}分`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest > 0 ? `${hours}時間${rest}分` : `${hours}時間`;
+}
+
+function getElapsedMinutes(joinedAt: string, nowMs = Date.now()) {
+  return Math.max(1, Math.floor((nowMs - new Date(joinedAt).getTime()) / 60000));
+}
+
+function getRoomSessionExp(minutes: number) {
+  return Math.max(20, Math.round((minutes / 60) * 80));
+}
+
+function getTodayKey(date = new Date()) {
+  return date.toDateString();
+}
+
+function normalizeWorkspaceRoom(room: WorkspaceRoom): WorkspaceRoom {
+  return {
+    ...room,
+    totalMinutes: room.totalMinutes || 0,
+    contributions: room.contributions || 0,
+    commits: room.commits || 0,
+    createdAt: room.createdAt || new Date().toISOString(),
+    createdBy: room.createdBy || "legacy",
+    activeMembers: room.activeMembers || [],
+    history: room.history || [],
+  };
 }
 
 function getSubjectSummary(logs: StudyLog[]) {
@@ -754,16 +798,15 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [customRooms, setCustomRooms] = useState<WorkspaceRoom[]>([]);
+  const [isWorkspaceLoaded, setIsWorkspaceLoaded] = useState(false);
   const [newRoomName, setNewRoomName] = useState("");
   const [workspaceTask, setWorkspaceTask] = useState("React");
-  const [focusMode, setFocusMode] = useState<"focus" | "break">("focus");
-  const [focusRemaining, setFocusRemaining] = useState(focusDurationSeconds);
-  const [isFocusRunning, setIsFocusRunning] = useState(false);
-  const [sessionExpGained, setSessionExpGained] = useState(0);
-  const [showFocusComplete, setShowFocusComplete] = useState(false);
+  const [workspaceNow, setWorkspaceNow] = useState(Date.now());
+  const [lastRoomSession, setLastRoomSession] = useState<WorkspaceSessionHistory | null>(null);
 
   useEffect(() => {
     return onAuthStateChanged(auth, (user) => {
+      setIsWorkspaceLoaded(false);
       setCurrentUser(user);
       setIsAuthReady(true);
     });
@@ -779,7 +822,19 @@ function App() {
     const savedRoomId = window.localStorage.getItem(`contribution-arc-room-${currentUser.uid}`);
     const savedRooms = window.localStorage.getItem(`contribution-arc-rooms-${currentUser.uid}`);
     const savedWorkspaceTask = window.localStorage.getItem(`contribution-arc-workspace-task-${currentUser.uid}`);
-    const parsedRooms = savedRooms ? (JSON.parse(savedRooms) as WorkspaceRoom[]) : [];
+    const sharedRooms = window.localStorage.getItem(workspaceRoomsStorageKey);
+    const parsedSharedRooms = sharedRooms
+      ? (JSON.parse(sharedRooms) as WorkspaceRoom[]).map(normalizeWorkspaceRoom)
+      : [];
+    const legacyRooms = savedRooms
+      ? (JSON.parse(savedRooms) as WorkspaceRoom[]).map(normalizeWorkspaceRoom)
+      : [];
+    const parsedRooms = [...parsedSharedRooms];
+    legacyRooms.forEach((room) => {
+      if (!parsedRooms.some((sharedRoom) => sharedRoom.id === room.id)) {
+        parsedRooms.push(room);
+      }
+    });
     if (savedLogs) {
       setStudyLogs(JSON.parse(savedLogs) as StudyLog[]);
     } else {
@@ -796,6 +851,7 @@ function App() {
       setSelectedRoomId("");
     }
     setWorkspaceTask(savedWorkspaceTask || studySubject);
+    setIsWorkspaceLoaded(true);
   }, [currentUser]);
 
   useEffect(() => {
@@ -818,15 +874,12 @@ function App() {
   }, [currentUser, selectedRoomId]);
 
   useEffect(() => {
-    if (!currentUser) {
+    if (!currentUser || !isWorkspaceLoaded) {
       return;
     }
 
-    window.localStorage.setItem(
-      `contribution-arc-rooms-${currentUser.uid}`,
-      JSON.stringify(customRooms),
-    );
-  }, [currentUser, customRooms]);
+    window.localStorage.setItem(workspaceRoomsStorageKey, JSON.stringify(customRooms));
+  }, [currentUser, customRooms, isWorkspaceLoaded]);
 
   useEffect(() => {
     if (!currentUser) {
@@ -840,31 +893,58 @@ function App() {
   }, [currentUser, workspaceTask]);
 
   useEffect(() => {
-    if (!isFocusRunning) {
+    const timerId = window.setInterval(() => setWorkspaceNow(Date.now()), 30000);
+    return () => window.clearInterval(timerId);
+  }, []);
+
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== workspaceRoomsStorageKey || !event.newValue) {
+        return;
+      }
+
+      setCustomRooms((JSON.parse(event.newValue) as WorkspaceRoom[]).map(normalizeWorkspaceRoom));
+    };
+
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser || !isWorkspaceLoaded) {
       return;
     }
 
-    const timerId = window.setInterval(() => {
-      setFocusRemaining((seconds) => {
-        if (seconds > 1) {
-          return seconds - 1;
-        }
+    const nextName =
+      customUserName.trim() || currentUser.displayName || currentUser.email?.split("@")[0] || "Developer";
+    const nextBuilding = workspaceTask.trim() || studySubject.trim() || "Deep work";
 
-        if (focusMode === "focus") {
-          setFocusMode("break");
-          setSessionExpGained((exp) => exp + 120);
-          setShowFocusComplete(true);
-          window.setTimeout(() => setShowFocusComplete(false), 2200);
-          return breakDurationSeconds;
-        }
+    setCustomRooms((rooms) => {
+      let changed = false;
+      const nextRooms = rooms.map((room) => {
+        const nextMembers = room.activeMembers.map((member) => {
+          if (member.userId !== currentUser.uid) {
+            return member;
+          }
 
-        setFocusMode("focus");
-        return focusDurationSeconds;
+          if (member.name === nextName && member.building === nextBuilding) {
+            return member;
+          }
+
+          changed = true;
+          return {
+            ...member,
+            name: nextName,
+            building: nextBuilding,
+          };
+        });
+
+        return nextMembers === room.activeMembers ? room : { ...room, activeMembers: nextMembers };
       });
-    }, 1000);
 
-    return () => window.clearInterval(timerId);
-  }, [focusMode, isFocusRunning]);
+      return changed ? nextRooms : rooms;
+    });
+  }, [currentUser, customUserName, isWorkspaceLoaded, studySubject, workspaceTask]);
 
   if (window.location.pathname === githubCallbackPath) {
     return <GitHubCallbackPage />;
@@ -899,27 +979,28 @@ function App() {
   const totalWeeklyHours = weeklyStudyHours.reduce((sum, item) => sum + item.hours, 0);
   const allWorkspaceRooms = [...workspaceRooms, ...customRooms];
   const selectedRoom = allWorkspaceRooms.find((room) => room.id === selectedRoomId) || allWorkspaceRooms[0];
-  const hasSelectedRoom = Boolean(selectedRoom);
-  const elapsedFocusMinutes =
-    focusMode === "focus"
-      ? Math.floor((focusDurationSeconds - focusRemaining) / 60)
-      : 50 + Math.floor((breakDurationSeconds - focusRemaining) / 60);
   const currentBuilding = workspaceTask.trim() || studySubject.trim() || "Deep work";
-  const visibleMembers: WorkspaceMember[] = [
-    {
-      name: playerName,
-      building: currentBuilding,
-      elapsedMinutes: Math.max(1, elapsedFocusMinutes),
-      expToday: Math.round(totalWeeklyHours * 80) + sessionExpGained,
-      tone: "deep",
-    },
-  ];
-  const roomTotalMinutes = selectedRoom
-    ? selectedRoom.totalMinutes + Math.max(0, elapsedFocusMinutes)
-    : 0;
-  const roomContributions = selectedRoom ? selectedRoom.contributions + outputStats.contributions : 0;
-  const roomCommits = selectedRoom ? selectedRoom.commits + outputStats.commits : 0;
-  const roomOnlineCount = hasSelectedRoom ? visibleMembers.length : 0;
+  const activeRoom =
+    customRooms.find((room) => room.activeMembers.some((member) => member.userId === currentUser.uid)) || null;
+  const isInSelectedRoom = Boolean(
+    selectedRoom?.activeMembers.some((member) => member.userId === currentUser.uid),
+  );
+  const visibleMembers = selectedRoom?.activeMembers || [];
+  const currentPresence = visibleMembers.find((member) => member.userId === currentUser.uid) || null;
+  const currentStayMinutes = currentPresence ? getElapsedMinutes(currentPresence.joinedAt, workspaceNow) : 0;
+  const roomTotalMinutes =
+    (selectedRoom?.totalMinutes || 0) +
+    visibleMembers.reduce((sum, member) => sum + getElapsedMinutes(member.joinedAt, workspaceNow), 0);
+  const todayRoomHistory = selectedRoom
+    ? selectedRoom.history.filter((item) => getTodayKey(new Date(item.leftAt)) === getTodayKey())
+    : [];
+  const roomContributions = todayRoomHistory.length + (isInSelectedRoom ? 1 : 0);
+  const roomCommits = (selectedRoom?.commits || 0) + outputStats.commits;
+  const roomOnlineCount = visibleMembers.length;
+  const userRoomHistory = customRooms
+    .flatMap((room) => room.history.filter((item) => item.userId === currentUser.uid))
+    .sort((a, b) => new Date(b.leftAt).getTime() - new Date(a.leftAt).getTime())
+    .slice(0, 4);
 
   const handleStudySubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -957,11 +1038,92 @@ function App() {
     setIsSettingsOpen(false);
   };
 
-  const handleFocusReset = () => {
-    setIsFocusRunning(false);
-    setFocusMode("focus");
-    setFocusRemaining(focusDurationSeconds);
-    setShowFocusComplete(false);
+  const closeWorkspaceSession = (roomId: string) => {
+    const room = customRooms.find((item) => item.id === roomId);
+    const member = room?.activeMembers.find((item) => item.userId === currentUser.uid);
+    if (!room || !member) {
+      return;
+    }
+
+    const leftAt = new Date().toISOString();
+    const minutes = getElapsedMinutes(member.joinedAt);
+    const session: WorkspaceSessionHistory = {
+      id: crypto.randomUUID(),
+      userId: currentUser.uid,
+      userName: member.name,
+      roomId: room.id,
+      roomName: room.name,
+      building: member.building,
+      joinedAt: member.joinedAt,
+      leftAt,
+      minutes,
+      exp: getRoomSessionExp(minutes),
+    };
+
+    setCustomRooms((rooms) =>
+      rooms.map((item) =>
+        item.id === roomId
+          ? {
+              ...item,
+              totalMinutes: item.totalMinutes + minutes,
+              contributions: item.contributions + 1,
+              activeMembers: item.activeMembers.filter((activeMember) => activeMember.userId !== currentUser.uid),
+              history: [session, ...item.history].slice(0, 80),
+            }
+          : item,
+      ),
+    );
+
+    setStudyLogs((logs) => [
+      ...logs,
+      {
+        id: `workspace-${session.id}`,
+        subject: session.building,
+        minutes: session.minutes,
+        createdAt: session.leftAt,
+        color: studyColor,
+      },
+    ]);
+    setLastRoomSession(session);
+  };
+
+  const handleRoomJoin = (roomId: string) => {
+    if (activeRoom && activeRoom.id !== roomId) {
+      closeWorkspaceSession(activeRoom.id);
+    }
+
+    const joinedAt = new Date().toISOString();
+    setSelectedRoomId(roomId);
+    setLastRoomSession(null);
+    setCustomRooms((rooms) =>
+      rooms.map((room) => {
+        if (room.id !== roomId || room.activeMembers.some((member) => member.userId === currentUser.uid)) {
+          return room;
+        }
+
+        return {
+          ...room,
+          activeMembers: [
+            ...room.activeMembers,
+            {
+              userId: currentUser.uid,
+              name: playerName,
+              building: currentBuilding,
+              joinedAt,
+              tone: "deep",
+            },
+          ],
+        };
+      }),
+    );
+  };
+
+  const handleRoomLeave = () => {
+    if (!selectedRoom) {
+      return;
+    }
+
+    closeWorkspaceSession(selectedRoom.id);
   };
 
   const handleRoomCreate = (event: FormEvent<HTMLFormElement>) => {
@@ -978,6 +1140,10 @@ function App() {
       totalMinutes: 0,
       contributions: 0,
       commits: 0,
+      createdAt: new Date().toISOString(),
+      createdBy: currentUser.uid,
+      activeMembers: [],
+      history: [],
     };
 
     setCustomRooms((rooms) => [...rooms, room]);
@@ -1255,10 +1421,10 @@ function App() {
                 <span className="room-card-top">
                   <span>{room.name}</span>
                   <span className="room-join-badge">
-                    {room.id === selectedRoom?.id ? "入室中" : "参加"}
+                    {room.activeMembers.some((member) => member.userId === currentUser.uid) ? "入室中" : "参加"}
                   </span>
                 </span>
-                <strong>{room.id === selectedRoom?.id ? roomOnlineCount : 0} online</strong>
+                <strong>{room.activeMembers.length} online</strong>
                 <small>{Math.round(room.totalMinutes / 60)}h learned / {room.contributions} contributions</small>
               </button>
             ))}
@@ -1269,12 +1435,12 @@ function App() {
               <>
                 <div className="room-detail-top">
                   <div>
-                    <p className="card-kicker">入室中 / {selectedRoom.name}</p>
-                    <h3>{roomOnlineCount}人が静かに作業中</h3>
+                    <p className="card-kicker">{isInSelectedRoom ? "入室中" : "Room"} / {selectedRoom.name}</p>
+                    <h3>静かな作業ログ</h3>
                   </div>
-                  <div className="focus-timer" aria-label="Focus session timer">
-                    <span>{focusMode === "focus" ? "集中タイマー" : "休憩タイマー"}</span>
-                    <strong>{formatTimer(focusRemaining)}</strong>
+                  <div className="room-stay-panel" aria-label="Room stay status">
+                    <span>{isInSelectedRoom ? "滞在時間" : "参加者"}</span>
+                    <strong>{isInSelectedRoom ? formatStayTime(currentStayMinutes) : `${roomOnlineCount}人`}</strong>
                   </div>
                 </div>
 
@@ -1288,31 +1454,54 @@ function App() {
                   />
                 </label>
 
-                <div className="focus-controls">
-                  <button type="button" onClick={() => setIsFocusRunning((running) => !running)}>
-                    {isFocusRunning ? "一時停止" : "50分集中を開始"}
+                <div className="room-actions">
+                  <button
+                    type="button"
+                    className={isInSelectedRoom ? "room-leave-button" : "room-join-button"}
+                    onClick={() => (isInSelectedRoom ? handleRoomLeave() : handleRoomJoin(selectedRoom.id))}
+                  >
+                    {isInSelectedRoom ? "退出して学習を記録" : "このRoomに入室"}
                   </button>
-                  <button type="button" className="focus-reset" onClick={handleFocusReset}>
-                    リセット
-                  </button>
-                  <span className="focus-cycle-note">集中後は10分休憩に切り替わります</span>
-                  {showFocusComplete ? <span className="focus-complete">+120 EXPを静かに追加</span> : null}
+                  <span>退出時に滞在時間がWeekly Study Logへ反映されます</span>
+                  {lastRoomSession ? (
+                    <strong>+{lastRoomSession.exp} EXP / {formatStayTime(lastRoomSession.minutes)}を記録</strong>
+                  ) : null}
                 </div>
 
-                <div className="presence-list" aria-label="People currently studying">
-                  {visibleMembers.map((member) => (
-                    <article className="presence-card" key={`${member.name}-${member.building}`}>
-                      <span className={`presence-avatar ${member.tone}`}>
-                        {member.name.slice(0, 1).toUpperCase()}
-                      </span>
-                      <div>
-                        <strong>{member.name}</strong>
-                        <span>作業中: {member.building}</span>
-                        <small>{member.elapsedMinutes}分経過 / 今日 +{member.expToday} EXP</small>
-                      </div>
-                    </article>
-                  ))}
+                <div className="presence-list" aria-label="Room presence">
+                  {visibleMembers.length > 0 ? (
+                    visibleMembers.map((member) => {
+                      const minutes = getElapsedMinutes(member.joinedAt, workspaceNow);
+                      return (
+                        <article className="presence-card" key={`${member.userId}-${member.joinedAt}`}>
+                          <span className={`presence-avatar ${member.tone}`}>
+                            {member.name.slice(0, 1).toUpperCase()}
+                          </span>
+                          <div>
+                            <strong>{member.name} — {member.building}</strong>
+                            <span>{formatStayTime(minutes)}滞在</span>
+                            <small>今日 +{getRoomSessionExp(minutes)} EXP</small>
+                          </div>
+                        </article>
+                      );
+                    })
+                  ) : (
+                    <div className="presence-empty">まだ誰も入室していません。</div>
+                  )}
                 </div>
+
+                {userRoomHistory.length > 0 ? (
+                  <div className="room-history-panel">
+                    <p className="card-kicker">学習履歴</p>
+                    {userRoomHistory.map((item) => (
+                      <article key={item.id}>
+                        <span>{new Date(item.leftAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                        <strong>{item.roomName}</strong>
+                        <small>{item.building} / {formatStayTime(item.minutes)} / +{item.exp} EXP</small>
+                      </article>
+                    ))}
+                  </div>
+                ) : null}
 
                 <div className="room-output-panel">
                   <div>
