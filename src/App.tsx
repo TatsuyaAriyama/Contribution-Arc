@@ -178,14 +178,6 @@ const workspaceRooms: WorkspaceRoom[] = [
   },
 ];
 
-const residentWorkspaceMember: WorkspaceMember = {
-  name: "Mika",
-  building: "Next.js dashboard",
-  elapsedMinutes: 42,
-  expToday: 180,
-  tone: "green",
-};
-
 const focusDurationSeconds = 50 * 60;
 const breakDurationSeconds = 10 * 60;
 
@@ -797,6 +789,8 @@ function App() {
   const [draftUserName, setDraftUserName] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedRoomId, setSelectedRoomId] = useState(workspaceRooms[0].id);
+  const [customRooms, setCustomRooms] = useState<WorkspaceRoom[]>([]);
+  const [newRoomName, setNewRoomName] = useState("");
   const [workspaceTask, setWorkspaceTask] = useState("React");
   const [focusMode, setFocusMode] = useState<"focus" | "break">("focus");
   const [focusRemaining, setFocusRemaining] = useState(focusDurationSeconds);
@@ -819,7 +813,9 @@ function App() {
     const savedLogs = window.localStorage.getItem(`contribution-arc-study-${currentUser.uid}`);
     const savedUserName = window.localStorage.getItem(`contribution-arc-name-${currentUser.uid}`);
     const savedRoomId = window.localStorage.getItem(`contribution-arc-room-${currentUser.uid}`);
+    const savedRooms = window.localStorage.getItem(`contribution-arc-rooms-${currentUser.uid}`);
     const savedWorkspaceTask = window.localStorage.getItem(`contribution-arc-workspace-task-${currentUser.uid}`);
+    const parsedRooms = savedRooms ? (JSON.parse(savedRooms) as WorkspaceRoom[]) : [];
     if (savedLogs) {
       setStudyLogs(JSON.parse(savedLogs) as StudyLog[]);
     } else {
@@ -827,7 +823,11 @@ function App() {
     }
     setCustomUserName(savedUserName || "");
     setDraftUserName(savedUserName || currentUser.displayName || currentUser.email?.split("@")[0] || "");
-    if (savedRoomId && workspaceRooms.some((room) => room.id === savedRoomId)) {
+    setCustomRooms(parsedRooms);
+    if (
+      savedRoomId &&
+      [...workspaceRooms, ...parsedRooms].some((room) => room.id === savedRoomId)
+    ) {
       setSelectedRoomId(savedRoomId);
     }
     setWorkspaceTask(savedWorkspaceTask || studySubject);
@@ -851,6 +851,17 @@ function App() {
 
     window.localStorage.setItem(`contribution-arc-room-${currentUser.uid}`, selectedRoomId);
   }, [currentUser, selectedRoomId]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      return;
+    }
+
+    window.localStorage.setItem(
+      `contribution-arc-rooms-${currentUser.uid}`,
+      JSON.stringify(customRooms),
+    );
+  }, [currentUser, customRooms]);
 
   useEffect(() => {
     if (!currentUser) {
@@ -921,7 +932,8 @@ function App() {
     [...titles].reverse().find((title) => title.unlocked)?.name || "Commit Knight";
   const recentLogs = studyLogs.slice(-3).reverse();
   const totalWeeklyHours = weeklyStudyHours.reduce((sum, item) => sum + item.hours, 0);
-  const selectedRoom = workspaceRooms.find((room) => room.id === selectedRoomId) || workspaceRooms[0];
+  const allWorkspaceRooms = [...workspaceRooms, ...customRooms];
+  const selectedRoom = allWorkspaceRooms.find((room) => room.id === selectedRoomId) || allWorkspaceRooms[0];
   const elapsedFocusMinutes =
     focusMode === "focus"
       ? Math.floor((focusDurationSeconds - focusRemaining) / 60)
@@ -935,7 +947,6 @@ function App() {
       expToday: Math.round(totalWeeklyHours * 80) + sessionExpGained,
       tone: "deep",
     },
-    residentWorkspaceMember,
   ];
   const roomTotalMinutes = selectedRoom.totalMinutes + Math.max(0, elapsedFocusMinutes);
   const roomContributions = selectedRoom.contributions + outputStats.contributions;
@@ -983,6 +994,27 @@ function App() {
     setFocusMode("focus");
     setFocusRemaining(focusDurationSeconds);
     setShowFocusComplete(false);
+  };
+
+  const handleRoomCreate = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const roomName = newRoomName.trim();
+    if (!roomName) {
+      return;
+    }
+
+    const room: WorkspaceRoom = {
+      id: `custom-${crypto.randomUUID()}`,
+      name: roomName,
+      totalMinutes: 0,
+      contributions: 0,
+      commits: 0,
+    };
+
+    setCustomRooms((rooms) => [...rooms, room]);
+    setSelectedRoomId(room.id);
+    setNewRoomName("");
   };
 
   return (
@@ -1232,7 +1264,20 @@ function App() {
 
         <div className="workspace-layout">
           <div className="room-list" aria-label="Workspace rooms">
-            {workspaceRooms.map((room) => (
+            <form className="room-create-form" onSubmit={handleRoomCreate}>
+              <label>
+                <span>Roomを作成</span>
+                <input
+                  value={newRoomName}
+                  onChange={(event) => setNewRoomName(event.target.value)}
+                  placeholder="例: 朝活Build"
+                  maxLength={32}
+                />
+              </label>
+              <button type="submit">作成</button>
+            </form>
+
+            {allWorkspaceRooms.map((room) => (
               <button
                 type="button"
                 key={room.id}
@@ -1240,7 +1285,7 @@ function App() {
                 onClick={() => setSelectedRoomId(room.id)}
               >
                 <span>{room.name}</span>
-                <strong>{room.id === selectedRoom.id ? roomOnlineCount : 1} online</strong>
+                <strong>{room.id === selectedRoom.id ? roomOnlineCount : 0} online</strong>
                 <small>{Math.round(room.totalMinutes / 60)}h learned / {room.contributions} contributions</small>
               </button>
             ))}
@@ -1249,8 +1294,8 @@ function App() {
           <div className="room-detail">
             <div className="room-detail-top">
               <div>
-                <p className="card-kicker">Now in {selectedRoom.name}</p>
-                <h3>{roomOnlineCount} builders are quietly working</h3>
+                <p className="card-kicker">入室中 / {selectedRoom.name}</p>
+                <h3>{roomOnlineCount}人が静かに作業中</h3>
               </div>
               <div className="focus-timer" aria-label="Focus session timer">
                 <span>{focusMode === "focus" ? "Focus" : "Break"}</span>
@@ -1259,23 +1304,23 @@ function App() {
             </div>
 
             <label className="workspace-task-field">
-              <span>Currently building</span>
+              <span>現在の作業</span>
               <input
                 value={workspaceTask}
                 onChange={(event) => setWorkspaceTask(event.target.value)}
-                placeholder="React / Java / API design"
+                placeholder="React / Java / API設計"
                 maxLength={48}
               />
             </label>
 
             <div className="focus-controls">
               <button type="button" onClick={() => setIsFocusRunning((running) => !running)}>
-                {isFocusRunning ? "Pause session" : "Start 50 / 10"}
+                {isFocusRunning ? "一時停止" : "開始 50 / 10"}
               </button>
               <button type="button" className="focus-reset" onClick={handleFocusReset}>
-                Reset
+                リセット
               </button>
-              {showFocusComplete ? <span className="focus-complete">+120 EXP quietly added</span> : null}
+              {showFocusComplete ? <span className="focus-complete">+120 EXPを静かに追加</span> : null}
             </div>
 
             <div className="presence-list" aria-label="People currently studying">
@@ -1286,8 +1331,8 @@ function App() {
                   </span>
                   <div>
                     <strong>{member.name}</strong>
-                    <span>Building: {member.building}</span>
-                    <small>{member.elapsedMinutes}m elapsed / +{member.expToday} EXP today</small>
+                    <span>作業中: {member.building}</span>
+                    <small>{member.elapsedMinutes}分経過 / 今日 +{member.expToday} EXP</small>
                   </div>
                 </article>
               ))}
