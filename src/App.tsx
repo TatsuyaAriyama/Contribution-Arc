@@ -299,6 +299,20 @@ function normalizeUserProfile(uid: string, data: Partial<UserProfile>): UserProf
   };
 }
 
+function getFirestoreErrorMessage(error: unknown, fallback: string, permissionFallback = fallback) {
+  const code =
+    typeof error === "object" && error !== null && "code" in error
+      ? String((error as { code?: unknown }).code)
+      : "";
+  const message = error instanceof Error ? error.message : "";
+
+  if (code.includes("permission-denied") || message.includes("Missing or insufficient permissions")) {
+    return permissionFallback;
+  }
+
+  return message || fallback;
+}
+
 function getLevelState(totalExp: number) {
   let level = 1;
   let spentExp = 0;
@@ -1275,7 +1289,13 @@ function App() {
       setUserId(nextUserId);
       window.localStorage.setItem(`contribution-arc-user-id-${currentUser.uid}`, nextUserId);
     } catch (error) {
-      setSettingsError(error instanceof Error ? error.message : "ユーザーIDを保存できませんでした。");
+      setSettingsError(
+        getFirestoreErrorMessage(
+          error,
+          "ユーザーIDを保存できませんでした。",
+          "ユーザーIDの保存権限が有効になっていません。少し時間を置いて再度お試しください。",
+        ),
+      );
       setIsSavingSettings(false);
       return;
     }
@@ -1316,8 +1336,14 @@ function App() {
       if (results.length === 0) {
         setSearchError("該当するユーザーが見つかりません。");
       }
-    } catch {
-      setSearchError("ユーザー検索に失敗しました。");
+    } catch (error) {
+      setSearchError(
+        getFirestoreErrorMessage(
+          error,
+          "ユーザー検索に失敗しました。",
+          "ユーザー検索の権限が有効になっていません。少し時間を置いて再度お試しください。",
+        ),
+      );
     } finally {
       setIsSearching(false);
     }
@@ -1331,7 +1357,6 @@ function App() {
 
     const isFollowing = following.includes(profile.uid);
     const currentRef = doc(db, "users", currentUser.uid);
-    const targetRef = doc(db, "users", profile.uid);
 
     try {
       await setDoc(
@@ -1351,28 +1376,18 @@ function App() {
         following: isFollowing ? arrayRemove(profile.uid) : arrayUnion(profile.uid),
         updatedAt: serverTimestamp(),
       });
-      await updateDoc(targetRef, {
-        followers: isFollowing ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid),
-        updatedAt: serverTimestamp(),
-      });
 
       setFollowing((items) =>
         isFollowing ? items.filter((item) => item !== profile.uid) : [...items, profile.uid],
       );
-      setSearchResults((items) =>
-        items.map((item) =>
-          item.uid === profile.uid
-            ? {
-                ...item,
-                followers: isFollowing
-                  ? item.followers.filter((uid) => uid !== currentUser.uid)
-                  : [...item.followers, currentUser.uid],
-              }
-            : item,
+    } catch (error) {
+      setSearchError(
+        getFirestoreErrorMessage(
+          error,
+          "フォロー状態を更新できませんでした。",
+          "フォロー状態を保存する権限が有効になっていません。少し時間を置いて再度お試しください。",
         ),
       );
-    } catch {
-      setSearchError("フォロー状態を更新できませんでした。");
     }
   };
 
