@@ -113,62 +113,12 @@ const studyColorOptions = [
   { name: "Gold", value: "#c8a95b" },
 ];
 
-const defaultStudyLogs: StudyLog[] = [
-  {
-    id: "seed-mon",
-    subject: "Java",
-    minutes: 120,
-    createdAt: "2026-05-11T09:00:00.000Z",
-    color: "#c8a95b",
-  },
-  {
-    id: "seed-tue",
-    subject: "React",
-    minutes: 90,
-    createdAt: "2026-05-12T09:00:00.000Z",
-    color: "#3f6f9f",
-  },
-  {
-    id: "seed-wed",
-    subject: "資格勉強",
-    minutes: 30,
-    createdAt: "2026-05-13T09:00:00.000Z",
-    color: "#7667a8",
-  },
-  {
-    id: "seed-thu",
-    subject: "React",
-    minutes: 180,
-    createdAt: "2026-05-14T09:00:00.000Z",
-    color: "#3f6f9f",
-  },
-  {
-    id: "seed-fri",
-    subject: "Java",
-    minutes: 60,
-    createdAt: "2026-05-15T09:00:00.000Z",
-    color: "#c8a95b",
-  },
-  {
-    id: "seed-sat",
-    subject: "Build",
-    minutes: 240,
-    createdAt: "2026-05-16T09:00:00.000Z",
-    color: "#2f8f83",
-  },
-  {
-    id: "seed-sun",
-    subject: "資格勉強",
-    minutes: 150,
-    createdAt: "2026-05-17T09:00:00.000Z",
-    color: "#7667a8",
-  },
-];
+const defaultStudyLogs: StudyLog[] = [];
 
 const outputStats = {
-  commits: 18,
-  contributions: 42,
-  pullRequests: 2,
+  commits: 0,
+  contributions: 0,
+  pullRequests: 0,
 };
 
 const workspaceRooms: WorkspaceRoom[] = [];
@@ -280,6 +230,10 @@ function getEffortExp(logs: StudyLog[]) {
 
 function getOutputExp() {
   return outputStats.commits * 90 + outputStats.contributions * 24 + outputStats.pullRequests * 160;
+}
+
+function removeSeedStudyLogs(logs: StudyLog[]) {
+  return logs.filter((log) => !log.id.startsWith("seed-"));
 }
 
 function getLevelState(totalExp: number) {
@@ -954,7 +908,7 @@ function App() {
       }
     });
     if (savedLogs) {
-      setStudyLogs(JSON.parse(savedLogs) as StudyLog[]);
+      setStudyLogs(removeSeedStudyLogs(JSON.parse(savedLogs) as StudyLog[]));
     } else {
       setStudyLogs(defaultStudyLogs);
     }
