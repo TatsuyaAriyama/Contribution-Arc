@@ -1373,19 +1373,6 @@ function App() {
         </div>
       </div>
 
-      <div className="status-title-panel">
-        <div className="profile-icon-stage status-title-stage">
-          <span className="profile-icon-preview">
-            {playerAvatar ? <img src={playerAvatar} alt="" /> : playerInitial}
-          </span>
-        </div>
-        <div className="status-title-content">
-          <p className="card-kicker">Profile Icon</p>
-          <h3>{playerName}</h3>
-          <p>Personal photo / Player identity</p>
-        </div>
-      </div>
-
       <div className="exp-area">
         <div className="exp-meta">
           <span>Next Level</span>
@@ -1496,6 +1483,23 @@ function App() {
             </div>
 
             <form className="settings-form" onSubmit={handleSettingsSubmit}>
+              <div className="settings-avatar-field">
+                <span className="settings-avatar-preview">
+                  {playerAvatar ? <img src={playerAvatar} alt="" /> : playerInitial}
+                </span>
+                <div className="settings-avatar-actions">
+                  <label>
+                    写真を選択
+                    <input type="file" accept="image/*" onChange={handleAvatarChange} />
+                  </label>
+                  {playerAvatar ? (
+                    <button type="button" onClick={handleAvatarRemove}>
+                      削除
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+
               <label>
                 <span>ユーザーネーム</span>
                 <input
@@ -1590,30 +1594,6 @@ function App() {
                 {playerStatusCard(false)}
 
                 <div className="profile-panel-stack">
-                  <article className="card profile-icon-card">
-                    <div>
-                      <p className="card-kicker">プロフィールアイコン</p>
-                      <h2>{playerName}</h2>
-                    </div>
-
-                    <div className="profile-icon-editor">
-                      <span className="profile-icon-large">
-                        {playerAvatar ? <img src={playerAvatar} alt="" /> : playerInitial}
-                      </span>
-                      <div className="profile-icon-actions">
-                        <label>
-                          写真を選択
-                          <input type="file" accept="image/*" onChange={handleAvatarChange} />
-                        </label>
-                        {playerAvatar ? (
-                          <button type="button" onClick={handleAvatarRemove}>
-                            削除
-                          </button>
-                        ) : null}
-                      </div>
-                    </div>
-                  </article>
-
                   <article className="card character-select-card guide-card">
                     <div>
                       <p className="card-kicker">案内人</p>
