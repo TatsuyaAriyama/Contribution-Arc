@@ -999,7 +999,7 @@ function App() {
   const titles = getTitleRanks(studyLogs, effortExp, outputExp);
   const currentTitle =
     [...titles].reverse().find((title) => title.unlocked)?.name || "Commit Knight";
-  const recentLogs = studyLogs.slice(-3).reverse();
+  const recentLogs = [...studyLogs].reverse();
   const totalWeeklyMinutes = weeklyStudyHours.reduce((sum, item) => sum + item.totalMinutes, 0);
   const totalWeeklyLabel =
     totalWeeklyMinutes > 0 && totalWeeklyMinutes < 60
@@ -1118,7 +1118,7 @@ function App() {
               totalMinutes: item.totalMinutes + minutes,
               contributions: item.contributions + 1,
               activeMembers: item.activeMembers.filter((activeMember) => activeMember.userId !== currentUser.uid),
-              history: [session, ...item.history].slice(0, 80),
+              history: [session, ...item.history],
             }
           : item,
       ),
