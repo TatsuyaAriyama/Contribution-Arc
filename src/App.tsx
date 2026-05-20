@@ -3746,11 +3746,37 @@ function App() {
                       >
                         <span className="room-card-top">
                           <span>{room.name}</span>
-                          <span className="room-join-badge">{isJoinedRoom ? "入室中" : "参加"}</span>
+                          <span className="room-join-badge">{isJoinedRoom ? "入室中" : "未入室"}</span>
                         </span>
                         <strong>{room.activeMembers.length} online</strong>
                         <small>{Math.round(room.totalMinutes / 60)}h learned / {room.contributions} contributions</small>
                       </button>
+
+                      <div className="room-card-actions">
+                        {isJoinedRoom ? (
+                          <button
+                            type="button"
+                            className="room-card-leave-button"
+                            onClick={() => {
+                              setSelectedRoomId(room.id);
+                              closeWorkspaceSession(room.id);
+                            }}
+                          >
+                            退出する
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="room-card-join-button"
+                            onClick={() => {
+                              setSelectedRoomId(room.id);
+                              handleRoomJoin(room.id);
+                            }}
+                          >
+                            入室する
+                          </button>
+                        )}
+                      </div>
 
                       {isOwnRoom ? (
                         <div className="room-owner-actions">
