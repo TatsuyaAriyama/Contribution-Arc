@@ -121,6 +121,7 @@ type RoomUser = {
   id: string;
   name: string;
   avatar?: string;
+  characterColor?: string;
   x: number;
   y: number;
   currentTask: string;
@@ -202,6 +203,21 @@ const studyColorOptions = [
   { name: "Gold", value: "#c8a95b" },
 ];
 
+const characterColorOptions = [
+  { name: "Forest", value: "#1f6f4a" },
+  { name: "Deep Green", value: "#176345" },
+  { name: "Mint", value: "#2f8f83" },
+  { name: "Blue", value: "#3f6f9f" },
+  { name: "Navy", value: "#20334a" },
+  { name: "Slate", value: "#475569" },
+  { name: "Violet", value: "#7667a8" },
+  { name: "Plum", value: "#7c3f6f" },
+  { name: "Rose", value: "#b05268" },
+  { name: "Amber", value: "#c8a95b" },
+  { name: "Moss", value: "#6f8f3f" },
+  { name: "Graphite", value: "#111827" },
+];
+
 const defaultStudyLogs: StudyLog[] = [];
 
 const outputStats = {
@@ -213,7 +229,7 @@ const outputStats = {
 const workspaceRooms: WorkspaceRoom[] = [];
 const workspaceRoomsStorageKey = "contribution-arc-workspace-rooms";
 const workspaceMovementKeys = new Set(["w", "a", "s", "d", "arrowup", "arrowleft", "arrowdown", "arrowright"]);
-const workspacePresetMessages = [
+const defaultWorkspacePresetMessages = [
   "進捗どうですか？",
   "おつかれさまです",
   "集中します",
@@ -755,6 +771,7 @@ function createDefaultWorkspaceRooms(): WorkspaceRoom[] {
           userId: "npc-ari",
           name: "Ari",
           avatar: "",
+          characterColor: "#1f6f4a",
           x: 28,
           y: 36,
           currentTask: "React",
@@ -768,6 +785,7 @@ function createDefaultWorkspaceRooms(): WorkspaceRoom[] {
           userId: "npc-yuki",
           name: "Yuki",
           avatar: "",
+          characterColor: "#3f6f9f",
           x: 62,
           y: 36,
           currentTask: "Java",
@@ -781,6 +799,7 @@ function createDefaultWorkspaceRooms(): WorkspaceRoom[] {
           userId: "npc-mina",
           name: "Mina",
           avatar: "",
+          characterColor: "#2f8f83",
           x: 72,
           y: 68,
           currentTask: "AWS",
@@ -867,6 +886,7 @@ function normalizeWorkspaceRoom(room: WorkspaceRoom): WorkspaceRoom {
         id: member.id || member.userId,
         userId: member.userId || member.id,
         avatar: member.avatar || "",
+        characterColor: member.characterColor || member.color || studyColorOptions[0].value,
         x: typeof member.x === "number" ? member.x : clampNumber(24 + index * 18, 12, 88),
         y: typeof member.y === "number" ? member.y : clampNumber(34 + index * 12, 16, 84),
         currentTask: task,
@@ -1418,6 +1438,7 @@ function App() {
   const [determination, setDetermination] = useState("");
   const [draftDetermination, setDraftDetermination] = useState("");
   const [playerAvatar, setPlayerAvatar] = useState("");
+  const [playerCharacterColor, setPlayerCharacterColor] = useState(characterColorOptions[0].value);
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [customRooms, setCustomRooms] = useState<WorkspaceRoom[]>([]);
   const [isWorkspaceLoaded, setIsWorkspaceLoaded] = useState(false);
@@ -1431,6 +1452,7 @@ function App() {
   const [playerPosition, setPlayerPosition] = useState({ x: 18, y: 72 });
   const [isPlayerWalking, setIsPlayerWalking] = useState(false);
   const [workspaceBubble, setWorkspaceBubble] = useState("");
+  const [workspacePresetMessages, setWorkspacePresetMessages] = useState(defaultWorkspacePresetMessages);
   const [knowledgeGraph, setKnowledgeGraph] = useState<KnowledgeGraphData>(emptyKnowledgeGraph);
   const [selectedKnowledgeId, setSelectedKnowledgeId] = useState("");
   const [hoveredKnowledgeId, setHoveredKnowledgeId] = useState("");
@@ -1461,11 +1483,15 @@ function App() {
     const savedUserId = window.localStorage.getItem(`contribution-arc-user-id-${currentUser.uid}`);
     const savedDetermination = window.localStorage.getItem(`contribution-arc-determination-${currentUser.uid}`);
     const savedAvatar = window.localStorage.getItem(`contribution-arc-avatar-${currentUser.uid}`);
+    const savedCharacterColor = window.localStorage.getItem(`contribution-arc-character-color-${currentUser.uid}`);
     const savedFriends = window.localStorage.getItem(`contribution-arc-friends-${currentUser.uid}`);
     const savedFriendRequests = window.localStorage.getItem(`contribution-arc-friend-requests-${currentUser.uid}`);
     const savedRoomId = window.localStorage.getItem(`contribution-arc-room-${currentUser.uid}`);
     const savedRooms = window.localStorage.getItem(`contribution-arc-rooms-${currentUser.uid}`);
     const savedWorkspaceTask = window.localStorage.getItem(`contribution-arc-workspace-task-${currentUser.uid}`);
+    const savedWorkspacePresetMessages = window.localStorage.getItem(
+      `contribution-arc-workspace-preset-messages-${currentUser.uid}`,
+    );
     const savedKnowledgeGraph = window.localStorage.getItem(`contribution-arc-knowledge-graph-${currentUser.uid}`);
     const sharedRooms = window.localStorage.getItem(workspaceRoomsStorageKey);
     const parsedSharedRooms = sharedRooms
@@ -1497,6 +1523,7 @@ function App() {
     setDetermination(savedDetermination || "");
     setDraftDetermination(savedDetermination || "");
     setPlayerAvatar(savedAvatar || currentUser.photoURL || "");
+    setPlayerCharacterColor(savedCharacterColor || characterColorOptions[0].value);
     setCustomRooms(seededRooms);
     if (savedRoomId && seededRooms.some((room) => room.id === savedRoomId)) {
       setSelectedRoomId(savedRoomId);
@@ -1508,6 +1535,14 @@ function App() {
     setWorkspaceTask(savedWorkspaceTask || studySubject);
     setWorkspaceDraftTask(savedWorkspaceTask || studySubject);
     setWorkspaceDraftColor(studyColorOptions[0].value);
+    setWorkspacePresetMessages(
+      savedWorkspacePresetMessages
+        ? [
+            ...(JSON.parse(savedWorkspacePresetMessages) as string[]).slice(0, 6),
+            ...defaultWorkspacePresetMessages,
+          ].slice(0, 6)
+        : defaultWorkspacePresetMessages,
+    );
     setKnowledgeGraph(savedKnowledgeGraph ? (JSON.parse(savedKnowledgeGraph) as KnowledgeGraphData) : emptyKnowledgeGraph);
     setSelectedKnowledgeId("");
     setHoveredKnowledgeId("");
@@ -1602,6 +1637,25 @@ function App() {
   }, [currentUser, workspaceTask]);
 
   useEffect(() => {
+    if (!currentUser) {
+      return;
+    }
+
+    window.localStorage.setItem(`contribution-arc-character-color-${currentUser.uid}`, playerCharacterColor);
+  }, [currentUser, playerCharacterColor]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      return;
+    }
+
+    window.localStorage.setItem(
+      `contribution-arc-workspace-preset-messages-${currentUser.uid}`,
+      JSON.stringify(workspacePresetMessages.slice(0, 6)),
+    );
+  }, [currentUser, workspacePresetMessages]);
+
+  useEffect(() => {
     const timerId = window.setInterval(() => setWorkspaceNow(Date.now()), 30000);
     return () => window.clearInterval(timerId);
   }, []);
@@ -1636,7 +1690,12 @@ function App() {
             return member;
           }
 
-          if (member.name === nextName && member.building === nextBuilding && member.avatar === playerAvatar) {
+          if (
+            member.name === nextName &&
+            member.building === nextBuilding &&
+            member.avatar === playerAvatar &&
+            member.characterColor === playerCharacterColor
+          ) {
             return member;
           }
 
@@ -1647,6 +1706,7 @@ function App() {
             building: nextBuilding,
             currentTask: nextBuilding,
             avatar: playerAvatar,
+            characterColor: playerCharacterColor,
           };
         });
 
@@ -1655,7 +1715,7 @@ function App() {
 
       return changed ? nextRooms : rooms;
     });
-  }, [currentUser, customUserName, isWorkspaceLoaded, playerAvatar, studySubject, workspaceTask]);
+  }, [currentUser, customUserName, isWorkspaceLoaded, playerAvatar, playerCharacterColor, studySubject, workspaceTask]);
 
   useEffect(() => {
     if (!currentUser) {
@@ -2326,6 +2386,7 @@ function App() {
               status: "working",
               tone: "deep",
               avatar: playerAvatar,
+              characterColor: playerCharacterColor,
             },
           ],
         };
@@ -2748,6 +2809,40 @@ function App() {
                 </div>
               </div>
 
+              <div className="settings-character-color-panel">
+                <div className="settings-character-color-head">
+                  <span>分身カラー</span>
+                  <div
+                    className="character-color-preview compact"
+                    style={{ "--actor-color": playerCharacterColor } as CSSProperties}
+                    aria-hidden="true"
+                  >
+                    <span className="actor-sprite deep">
+                      <span className="sprite-head" />
+                      <span className="sprite-body" />
+                      <span className="sprite-leg sprite-leg-left" />
+                      <span className="sprite-leg sprite-leg-right" />
+                    </span>
+                  </div>
+                </div>
+
+                <div className="character-color-grid compact" aria-label="分身カラー">
+                  {characterColorOptions.map((color) => (
+                    <button
+                      type="button"
+                      key={color.value}
+                      className={playerCharacterColor === color.value ? "active" : ""}
+                      onClick={() => setPlayerCharacterColor(color.value)}
+                      title={color.name}
+                      aria-label={`${color.name}を選択`}
+                    >
+                      <span style={{ background: color.value }} />
+                      <small>{color.name}</small>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <label>
                 <span>ユーザーネーム</span>
                 <input
@@ -3126,6 +3221,43 @@ function App() {
                 {playerStatusCard(false)}
 
                 <div className="profile-panel-stack">
+                  <article className="card character-color-card">
+                    <div className="character-color-head">
+                      <div>
+                        <p className="card-kicker">分身カラー</p>
+                        <h3>キャラクターの色を選択</h3>
+                      </div>
+                      <div
+                        className="character-color-preview"
+                        style={{ "--actor-color": playerCharacterColor } as CSSProperties}
+                        aria-hidden="true"
+                      >
+                        <span className="actor-sprite deep">
+                          <span className="sprite-head" />
+                          <span className="sprite-body" />
+                          <span className="sprite-leg sprite-leg-left" />
+                          <span className="sprite-leg sprite-leg-right" />
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="character-color-grid" aria-label="分身カラー">
+                      {characterColorOptions.map((color) => (
+                        <button
+                          type="button"
+                          key={color.value}
+                          className={playerCharacterColor === color.value ? "active" : ""}
+                          onClick={() => setPlayerCharacterColor(color.value)}
+                          title={color.name}
+                          aria-label={`${color.name}を選択`}
+                        >
+                          <span style={{ background: color.value }} />
+                          <small>{color.name}</small>
+                        </button>
+                      ))}
+                    </div>
+                  </article>
+
                   <article className="card determination-card">
                     <div>
                       <p className="card-kicker">決意</p>
@@ -3252,6 +3384,7 @@ function App() {
                       onJoin={() => handleRoomJoin(selectedRoom.id)}
                       onLeave={handleRoomLeave}
                       presetMessages={workspacePresetMessages}
+                      onPresetMessagesChange={setWorkspacePresetMessages}
                       onPresetMessage={handleWorkspacePresetMessage}
                       bubbleMessage={workspaceBubble}
                       isPlayerWalking={isPlayerWalking}
@@ -3328,6 +3461,7 @@ function App() {
             onJoin={() => handleRoomJoin(selectedRoom.id)}
             onLeave={handleRoomLeave}
             presetMessages={workspacePresetMessages}
+            onPresetMessagesChange={setWorkspacePresetMessages}
             onPresetMessage={handleWorkspacePresetMessage}
             bubbleMessage={workspaceBubble}
             isPlayerWalking={isPlayerWalking}

@@ -1,4 +1,4 @@
-import type { CSSProperties, ChangeEvent } from "react";
+import { useState, type CSSProperties, type ChangeEvent } from "react";
 
 export type RoomActivityItem = {
   id: string;
@@ -13,6 +13,7 @@ export type RoomActor = {
   userId: string;
   name: string;
   avatar?: string;
+  characterColor?: string;
   x: number;
   y: number;
   currentTask: string;
@@ -37,6 +38,7 @@ type SilentWorkspaceRoomProps = {
   onJoin: () => void;
   onLeave: () => void;
   presetMessages: string[];
+  onPresetMessagesChange: (messages: string[]) => void;
   onPresetMessage: (message: string) => void;
   bubbleMessage: string;
   isPlayerWalking: boolean;
@@ -67,6 +69,7 @@ export function SilentWorkspaceRoom({
   onJoin,
   onLeave,
   presetMessages,
+  onPresetMessagesChange,
   onPresetMessage,
   bubbleMessage,
   isPlayerWalking,
@@ -77,9 +80,18 @@ export function SilentWorkspaceRoom({
   contributionLabel,
 }: SilentWorkspaceRoomProps) {
   const isFocusPresentation = presentation === "focus";
+  const [isPresetEditorOpen, setIsPresetEditorOpen] = useState(false);
+  const presetSlots = [...presetMessages, "", "", "", "", "", ""].slice(0, 6);
+  const visiblePresetMessages = presetSlots.map((message) => message.trim()).filter(Boolean);
 
   const handleTaskChange = (event: ChangeEvent<HTMLInputElement>) => {
     onTaskChange(event.target.value);
+  };
+
+  const handlePresetChange = (index: number, value: string) => {
+    onPresetMessagesChange(
+      presetSlots.map((message, slotIndex) => (slotIndex === index ? value : message)).slice(0, 6),
+    );
   };
 
   return (
@@ -154,7 +166,7 @@ export function SilentWorkspaceRoom({
             const actorStyle = {
               "--actor-x": `${member.x}%`,
               "--actor-y": `${member.y}%`,
-              "--actor-color": member.color,
+              "--actor-color": member.characterColor || member.color,
             } as CSSProperties;
 
             return (
@@ -173,7 +185,7 @@ export function SilentWorkspaceRoom({
                 {isCurrentUser && bubbleMessage ? <span className="workspace-bubble">{bubbleMessage}</span> : null}
                 <span className="actor-shadow" />
                 <span className={`actor-sprite ${member.tone}`}>
-                  <span className="sprite-head">{member.name.slice(0, 1).toUpperCase()}</span>
+                  <span className="sprite-head" aria-hidden="true" />
                   <span className="sprite-body" />
                   <span className="sprite-leg sprite-leg-left" />
                   <span className="sprite-leg sprite-leg-right" />
@@ -187,12 +199,37 @@ export function SilentWorkspaceRoom({
           })}
         </div>
 
-        <div className="preset-message-bar" aria-label="定型コミュニケーション">
-          {presetMessages.map((message) => (
-            <button type="button" key={message} onClick={() => onPresetMessage(message)} disabled={!isJoined}>
+        <div className="preset-message-panel">
+          <div className="preset-message-bar" aria-label="定型コミュニケーション">
+          {visiblePresetMessages.map((message, index) => (
+            <button type="button" key={`${message}-${index}`} onClick={() => onPresetMessage(message)} disabled={!isJoined}>
               {message}
             </button>
           ))}
+            <button
+              type="button"
+              className="preset-edit-button"
+              onClick={() => setIsPresetEditorOpen((isOpen) => !isOpen)}
+            >
+              {isPresetEditorOpen ? "閉じる" : "定型文編集"}
+            </button>
+          </div>
+
+          {isPresetEditorOpen ? (
+            <div className="preset-message-editor" aria-label="定型文編集">
+              {presetSlots.map((message, index) => (
+                <label key={`preset-slot-${index}`}>
+                  <span>{index + 1}</span>
+                  <input
+                    value={message}
+                    onChange={(event) => handlePresetChange(index, event.target.value)}
+                    placeholder="定型文を入力"
+                    maxLength={24}
+                  />
+                </label>
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>
 
