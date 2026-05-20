@@ -655,6 +655,20 @@ function getFirestoreErrorMessage(error: unknown, fallback: string, permissionFa
   return message || fallback;
 }
 
+function canSaveProfileLocally(error: unknown) {
+  const code =
+    typeof error === "object" && error !== null && "code" in error
+      ? String((error as { code?: unknown }).code)
+      : "";
+  const message = error instanceof Error ? error.message : "";
+
+  return (
+    code.includes("permission-denied") ||
+    code.includes("unavailable") ||
+    message.includes("Missing or insufficient permissions")
+  );
+}
+
 function getLevelState(totalExp: number) {
   let level = 1;
   let spentExp = 0;
@@ -2110,6 +2124,7 @@ function App() {
     event.preventDefault();
 
     const nextName = draftUserName.trim();
+    const nextDisplayName = nextName || playerName || currentUser.email?.split("@")[0] || "Developer";
     const nextUserId = draftUserId.trim();
     const userIdError = validateUserId(nextUserId);
     if (userIdError) {
@@ -2153,9 +2168,9 @@ function App() {
           {
             uid: currentUser.uid,
             userId: nextUserId,
-            displayName: nextName || playerName,
+            displayName: nextDisplayName,
             photoURL: playerAvatar,
-            searchName: (nextName || playerName).toLowerCase(),
+            searchName: nextDisplayName.toLowerCase(),
             following: currentProfile.following,
             followers: currentProfile.followers,
             updatedAt: serverTimestamp(),
@@ -2163,23 +2178,37 @@ function App() {
           { merge: true },
         );
       });
+    } catch (error) {
+      if (!canSaveProfileLocally(error)) {
+        setSettingsError(
+          getFirestoreErrorMessage(
+            error,
+            "ユーザーIDを保存できませんでした。",
+            "ユーザーIDの保存権限が有効になっていません。少し時間を置いて再度お試しください。",
+          ),
+        );
+        setIsSavingSettings(false);
+        return;
+      }
 
+      console.info("Profile cloud sync skipped; saved locally.", error);
+    }
+
+    try {
       setUserId(nextUserId);
+      setCustomUserName(nextDisplayName);
       window.localStorage.setItem(`contribution-arc-user-id-${currentUser.uid}`, nextUserId);
+      window.localStorage.setItem(`contribution-arc-name-${currentUser.uid}`, nextDisplayName);
     } catch (error) {
       setSettingsError(
-        getFirestoreErrorMessage(
-          error,
-          "ユーザーIDを保存できませんでした。",
-          "ユーザーIDの保存権限が有効になっていません。少し時間を置いて再度お試しください。",
-        ),
+        error instanceof Error
+          ? error.message
+          : "プロフィールをこのブラウザに保存できませんでした。ブラウザのストレージ設定を確認してください。",
       );
       setIsSavingSettings(false);
       return;
     }
 
-    setCustomUserName(nextName);
-    window.localStorage.setItem(`contribution-arc-name-${currentUser.uid}`, nextName);
     setIsSavingSettings(false);
     setIsSettingsOpen(false);
   };
