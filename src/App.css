@@ -2374,7 +2374,18 @@
   min-height: 8px;
   overflow: hidden;
   border-radius: inherit;
-  animation: bar-grow 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: bottom center;
+  will-change: transform, opacity, filter;
+}
+
+.bar-stack::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.24), transparent 38%);
+  opacity: 0.58;
+  mix-blend-mode: soft-light;
 }
 
 .bar-stack span {

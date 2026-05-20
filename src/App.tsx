@@ -2219,7 +2219,7 @@ function App() {
           </div>
 
           <div className="bar-chart" aria-label="直近7日間の学習時間">
-            {weeklyStudyHours.map((item) => {
+            {weeklyStudyHours.map((item, index) => {
               const segments = getStudySegments(item.logs);
 
               return (
@@ -2254,11 +2254,30 @@ function App() {
                     }
                   >
                     {segments.length > 0 ? (
-                      <div className="bar-stack">
+                      <motion.div
+                        className="bar-stack"
+                        initial={{ scaleY: 0, opacity: 0.62, filter: "blur(2px)" }}
+                        animate={{ scaleY: 1, opacity: 1, filter: "blur(0px)" }}
+                        transition={{
+                          delay: 0.12 + index * 0.075,
+                          type: "spring",
+                          stiffness: 92,
+                          damping: 18,
+                          mass: 0.82,
+                        }}
+                        style={{ transformOrigin: "bottom center" }}
+                      >
                         {segments.map((segment) => (
-                          <span
+                          <motion.span
                             key={segment.key}
                             title={`${segment.subject} ${formatStudyTime(segment.minutes)}`}
+                            initial={{ opacity: 0.58 }}
+                            animate={{ opacity: 1 }}
+                            transition={{
+                              delay: 0.24 + index * 0.075,
+                              duration: 0.42,
+                              ease: [0.22, 1, 0.36, 1],
+                            }}
                             style={
                               {
                                 "--segment-ratio": `${(segment.minutes / item.totalMinutes) * 100}%`,
@@ -2267,7 +2286,7 @@ function App() {
                             }
                           />
                         ))}
-                      </div>
+                      </motion.div>
                     ) : null}
                   </div>
                   <div className="bar-tooltip" role="tooltip">
