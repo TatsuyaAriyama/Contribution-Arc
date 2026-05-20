@@ -26,7 +26,7 @@ import {
 } from "firebase/firestore";
 import { motion } from "framer-motion";
 import { auth, db, githubProvider, googleProvider } from "./firebase";
-import { PremiumSidebar, type AppView } from "./components/PremiumNavigation";
+import { PremiumSidebar, type AppView, type FriendPreview } from "./components/PremiumNavigation";
 import "./App.css";
 
 type QuestEvent = "chest" | "sword" | "flame" | "star";
@@ -85,6 +85,15 @@ type UserProfile = {
   searchName: string;
   following: string[];
   followers: string[];
+};
+
+type FriendRequestStatus = "pending" | "accepted";
+
+type FriendRequest = {
+  id: string;
+  profile: UserProfile;
+  status: FriendRequestStatus;
+  createdAt: string;
 };
 
 type CharacterOption = {
@@ -298,6 +307,22 @@ function normalizeUserProfile(uid: string, data: Partial<UserProfile>): UserProf
     searchName: data.searchName || (data.displayName || "Developer").toLowerCase(),
     following: Array.isArray(data.following) ? data.following : [],
     followers: Array.isArray(data.followers) ? data.followers : [],
+  };
+}
+
+function getFriendGithubUrl(userId: string) {
+  return userId ? `https://github.com/${userId}` : "";
+}
+
+function profileToFriend(profile: UserProfile): FriendPreview {
+  return {
+    uid: profile.uid,
+    userId: profile.userId,
+    name: profile.displayName,
+    avatar: profile.photoURL,
+    status: "offline",
+    activity: "オフライン",
+    githubUrl: getFriendGithubUrl(profile.userId),
   };
 }
 
@@ -946,8 +971,12 @@ function App() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
   const [following, setFollowing] = useState<string[]>([]);
+  const [friends, setFriends] = useState<FriendPreview[]>([]);
+  const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
+  const [friendMessage, setFriendMessage] = useState("");
   const [currentView, setCurrentView] = useState<AppView>("home");
   const [profileMember, setProfileMember] = useState<WorkspaceMember | null>(null);
+  const [profileUser, setProfileUser] = useState<UserProfile | null>(null);
   const [determination, setDetermination] = useState("");
   const [draftDetermination, setDraftDetermination] = useState("");
   const [playerAvatar, setPlayerAvatar] = useState("");
@@ -967,6 +996,7 @@ function App() {
       setIsWorkspaceLoaded(false);
       setCurrentView("home");
       setProfileMember(null);
+      setProfileUser(null);
       setCurrentUser(user);
       setIsAuthReady(true);
     });
@@ -982,6 +1012,8 @@ function App() {
     const savedUserId = window.localStorage.getItem(`contribution-arc-user-id-${currentUser.uid}`);
     const savedDetermination = window.localStorage.getItem(`contribution-arc-determination-${currentUser.uid}`);
     const savedAvatar = window.localStorage.getItem(`contribution-arc-avatar-${currentUser.uid}`);
+    const savedFriends = window.localStorage.getItem(`contribution-arc-friends-${currentUser.uid}`);
+    const savedFriendRequests = window.localStorage.getItem(`contribution-arc-friend-requests-${currentUser.uid}`);
     const savedRoomId = window.localStorage.getItem(`contribution-arc-room-${currentUser.uid}`);
     const savedRooms = window.localStorage.getItem(`contribution-arc-rooms-${currentUser.uid}`);
     const savedWorkspaceTask = window.localStorage.getItem(`contribution-arc-workspace-task-${currentUser.uid}`);
@@ -1008,6 +1040,9 @@ function App() {
     setUserId(savedUserId || "");
     setDraftUserId(savedUserId || "");
     setSettingsError("");
+    setFriendMessage("");
+    setFriends(savedFriends ? (JSON.parse(savedFriends) as FriendPreview[]) : []);
+    setFriendRequests(savedFriendRequests ? (JSON.parse(savedFriendRequests) as FriendRequest[]) : []);
     setDetermination(savedDetermination || "");
     setDraftDetermination(savedDetermination || "");
     setPlayerAvatar(savedAvatar || currentUser.photoURL || "");
@@ -1053,6 +1088,25 @@ function App() {
       JSON.stringify(studyLogs),
     );
   }, [currentUser, studyLogs]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      return;
+    }
+
+    window.localStorage.setItem(`contribution-arc-friends-${currentUser.uid}`, JSON.stringify(friends));
+  }, [currentUser, friends]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      return;
+    }
+
+    window.localStorage.setItem(
+      `contribution-arc-friend-requests-${currentUser.uid}`,
+      JSON.stringify(friendRequests),
+    );
+  }, [currentUser, friendRequests]);
 
   useEffect(() => {
     if (!currentUser) {
@@ -1199,6 +1253,19 @@ function App() {
     .flatMap((room) => room.history.filter((item) => item.userId === currentUser.uid))
     .sort((a, b) => new Date(b.leftAt).getTime() - new Date(a.leftAt).getTime())
     .slice(0, 4);
+  const activeMembers = customRooms.flatMap((room) => room.activeMembers);
+  const sidebarFriends = friends.map((friend) => {
+    const activeFriend = activeMembers.find((member) => member.userId === friend.uid);
+    if (activeFriend) {
+      return {
+        ...friend,
+        status: "online" as const,
+        activity: `学習中: ${activeFriend.building}`,
+      };
+    }
+
+    return friend;
+  });
   const pendingJoinRoom = pendingJoinRoomId
     ? allWorkspaceRooms.find((room) => room.id === pendingJoinRoomId)
     : null;
@@ -1352,6 +1419,71 @@ function App() {
     }
   };
 
+  const handleUserProfileOpen = (profile: UserProfile) => {
+    setProfileMember(null);
+    setProfileUser(profile);
+    setFriendMessage("");
+    setIsSearchOpen(false);
+    setCurrentView("profile");
+  };
+
+  const handleFriendRequest = (profile: UserProfile) => {
+    if (friends.length >= 20) {
+      setFriendMessage("フレンド上限に達しています。");
+      return;
+    }
+
+    if (friends.some((friend) => friend.uid === profile.uid)) {
+      setFriendMessage("すでにフレンドです。");
+      return;
+    }
+
+    if (friendRequests.some((request) => request.profile.uid === profile.uid && request.status === "pending")) {
+      setFriendMessage("フレンド申請を送信済みです。");
+      return;
+    }
+
+    setFriendRequests((requests) => [
+      {
+        id: crypto.randomUUID(),
+        profile,
+        status: "pending",
+        createdAt: new Date().toISOString(),
+      },
+      ...requests,
+    ]);
+    setFriendMessage("フレンド申請を送信しました。承認されるとFriendsに表示されます。");
+  };
+
+  const handleFriendAccept = (request: FriendRequest) => {
+    if (friends.length >= 20) {
+      setFriendMessage("フレンド上限に達しています。");
+      return;
+    }
+
+    const nextFriend = profileToFriend(request.profile);
+    setFriends((items) => (items.some((friend) => friend.uid === nextFriend.uid) ? items : [nextFriend, ...items]));
+    setFriendRequests((requests) =>
+      requests.map((item) => (item.id === request.id ? { ...item, status: "accepted" } : item)),
+    );
+    setFriendMessage("フレンドになりました。");
+  };
+
+  const handleFriendOpen = (friend: FriendPreview) => {
+    setProfileMember(null);
+    setProfileUser({
+      uid: friend.uid,
+      userId: friend.userId,
+      displayName: friend.name,
+      photoURL: friend.avatar,
+      searchName: friend.name.toLowerCase(),
+      following: [],
+      followers: [],
+    });
+    setFriendMessage("");
+    setCurrentView("profile");
+  };
+
   const handleFollowToggle = async (profile: UserProfile) => {
     if (!userId) {
       setSearchError("フォローする前に設定からユーザーIDを登録してください。");
@@ -1405,10 +1537,12 @@ function App() {
   const handleProfileBack = () => {
     setCurrentView("home");
     setProfileMember(null);
+    setProfileUser(null);
   };
 
   const handleMemberProfileOpen = (member: WorkspaceMember) => {
     setProfileMember(member.userId === currentUser.uid ? null : member);
+    setProfileUser(null);
     setCurrentView("profile");
   };
 
@@ -1696,6 +1830,64 @@ function App() {
     );
   };
 
+  const userProfileCard = (profile: UserProfile) => {
+    const pendingRequest = friendRequests.find(
+      (request) => request.profile.uid === profile.uid && request.status === "pending",
+    );
+    const acceptedRequest = friendRequests.find(
+      (request) => request.profile.uid === profile.uid && request.status === "accepted",
+    );
+    const isFriend = friends.some((friend) => friend.uid === profile.uid) || Boolean(acceptedRequest);
+    const githubUrl = getFriendGithubUrl(profile.userId);
+
+    return (
+      <article className="card member-profile-card friend-profile-card">
+        <div className="member-profile-hero">
+          <span className="presence-avatar green">
+            {profile.photoURL ? <img src={profile.photoURL} alt="" /> : profile.displayName.slice(0, 1).toUpperCase()}
+          </span>
+          <div>
+            <p className="card-kicker">Friend Profile</p>
+            <h2>{profile.displayName}</h2>
+            <small>@{profile.userId}</small>
+          </div>
+        </div>
+
+        <div className="friend-profile-actions">
+          <button type="button" disabled={isFriend || Boolean(pendingRequest)} onClick={() => handleFriendRequest(profile)}>
+            {isFriend ? "フレンド" : pendingRequest ? "申請中" : "フレンド申請"}
+          </button>
+          {pendingRequest ? (
+            <button type="button" onClick={() => handleFriendAccept(pendingRequest)}>
+              承認する
+            </button>
+          ) : null}
+          {githubUrl ? (
+            <a href={githubUrl} target="_blank" rel="noreferrer">
+              GitHub
+            </a>
+          ) : null}
+        </div>
+
+        {friendMessage ? <p className="friend-message">{friendMessage}</p> : null}
+
+        <div className="member-profile-grid">
+          <div>
+            <span>Status</span>
+            <strong>
+              <i style={{ background: isFriend ? "#1f6f4a" : "#d4d4d8" }} />
+              {isFriend ? "Friends" : pendingRequest ? "Pending" : "Not connected"}
+            </strong>
+          </div>
+          <div>
+            <span>Community</span>
+            <strong>静かな積み上げ</strong>
+          </div>
+        </div>
+      </article>
+    );
+  };
+
   return (
     <motion.main
       className="app-shell premium-shell"
@@ -1708,11 +1900,14 @@ function App() {
         logo={<ContributionArcLogo />}
         roomOnlineCount={roomOnlineCount}
         weeklyStudyLabel={formatStudyTimeJa(totalWeeklyMinutes)}
+        friends={sidebarFriends}
         onViewChange={setCurrentView}
         onProfileOpen={() => {
           setProfileMember(null);
+          setProfileUser(null);
           setCurrentView("profile");
         }}
+        onFriendOpen={handleFriendOpen}
       />
 
       <div className="app-main-panel">
@@ -1882,18 +2077,23 @@ function App() {
 
             <div className="user-search-results">
               {searchResults.map((profile) => {
-                const isFollowing = following.includes(profile.uid);
+                const isFriend = friends.some((friend) => friend.uid === profile.uid);
+                const isPending = friendRequests.some(
+                  (request) => request.profile.uid === profile.uid && request.status === "pending",
+                );
                 return (
                   <article key={profile.uid} className="user-result-card">
-                    <span className="user-result-avatar">
+                    <button type="button" className="user-result-profile" onClick={() => handleUserProfileOpen(profile)}>
+                      <span className="user-result-avatar">
                       {profile.photoURL ? <img src={profile.photoURL} alt="" /> : profile.displayName.slice(0, 1).toUpperCase()}
-                    </span>
-                    <div>
-                      <strong>{profile.displayName}</strong>
-                      <small>@{profile.userId}</small>
-                    </div>
-                    <button type="button" onClick={() => handleFollowToggle(profile)}>
-                      {isFollowing ? "Following" : "Follow"}
+                      </span>
+                      <span>
+                        <strong>{profile.displayName}</strong>
+                        <small>@{profile.userId}</small>
+                      </span>
+                    </button>
+                    <button type="button" onClick={() => handleFriendRequest(profile)} disabled={isFriend || isPending}>
+                      {isFriend ? "Friends" : isPending ? "Pending" : "Request"}
                     </button>
                   </article>
                 );
@@ -1974,6 +2174,8 @@ function App() {
           <div className="profile-layout">
             {profileMember ? (
               memberProfileCard(profileMember)
+            ) : profileUser ? (
+              userProfileCard(profileUser)
             ) : (
               <>
                 {playerStatusCard(false)}
