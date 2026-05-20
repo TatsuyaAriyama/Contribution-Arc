@@ -2663,10 +2663,6 @@ function App() {
       return;
     }
 
-    if (activeRoom && activeRoom.id !== roomId) {
-      closeWorkspaceSession(activeRoom.id);
-    }
-
     const joinedAt = new Date().toISOString();
     setSelectedRoomId(roomId);
     setWorkspaceTask(nextTask);
@@ -2674,16 +2670,27 @@ function App() {
     setStudyColor(color);
     setLastRoomSession(null);
     setPendingJoinRoomId(null);
-    setCustomRooms((rooms) =>
-      rooms.map((room) => {
+    setPlayerPosition({ x: 18, y: 72 });
+    pressedWorkspaceKeysRef.current.clear();
+    setIsPlayerWalking(false);
+    setCustomRooms((rooms) => {
+      const fallbackRoom = createDefaultWorkspaceRooms().find((room) => room.id === roomId);
+      const baseRooms =
+        rooms.some((room) => room.id === roomId) || !fallbackRoom
+          ? rooms
+          : [fallbackRoom, ...rooms.filter((room) => room.id !== roomId)];
+
+      return baseRooms.map((room) => {
+        const activeMembers = room.activeMembers.filter((member) => member.userId !== currentUser.uid);
+
         if (room.id !== roomId) {
-          return room;
+          return activeMembers.length === room.activeMembers.length ? room : { ...room, activeMembers };
         }
 
         return {
           ...room,
           activeMembers: [
-            ...room.activeMembers.filter((member) => member.userId !== currentUser.uid),
+            ...activeMembers,
             {
               id: currentUser.uid,
               userId: currentUser.uid,
@@ -2701,8 +2708,8 @@ function App() {
             },
           ],
         };
-      }),
-    );
+      });
+    });
   };
 
   const handleRoomJoin = (roomId: string) => {

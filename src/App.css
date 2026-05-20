@@ -3453,6 +3453,12 @@
   color: #ffffff;
 }
 
+.room-rejoin-button {
+  border: 0;
+  background: var(--green);
+  color: #ffffff;
+}
+
 .room-leave-button {
   border: 1px solid var(--line);
   background: var(--surface);

@@ -136,6 +136,9 @@ export function SilentWorkspaceRoom({
               </span>
               {isJoined ? (
                 <>
+                  <button type="button" className="room-rejoin-button" onClick={onJoin}>
+                    入室し直す
+                  </button>
                   <button type="button" className="room-leave-button" onClick={onLeave}>
                     退出する
                   </button>
