@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { motion } from "framer-motion";
 
 export type AppView = "home" | "profile" | "workspace";
 export type FriendPreviewStatus = "online" | "away" | "offline";
@@ -13,12 +14,22 @@ export type FriendPreview = {
   githubUrl?: string;
 };
 
+export type LiveActivity = {
+  id: string;
+  userName: string;
+  avatar?: string;
+  text: string;
+  meta: string;
+  status: "online" | "recent";
+};
+
 type PremiumSidebarProps = {
   currentView: AppView;
   logo: ReactNode;
   roomOnlineCount: number;
   weeklyStudyLabel: string;
   friends: FriendPreview[];
+  liveActivities: LiveActivity[];
   onViewChange: (view: AppView) => void;
   onProfileOpen: () => void;
   onFriendOpen: (friend: FriendPreview) => void;
@@ -30,6 +41,7 @@ export function PremiumSidebar({
   roomOnlineCount,
   weeklyStudyLabel,
   friends,
+  liveActivities,
   onViewChange,
   onProfileOpen,
   onFriendOpen,
@@ -98,6 +110,38 @@ export function PremiumSidebar({
             ))
           ) : (
             <p className="friend-empty">まだフレンドはいません。プロフィールから静かに申請できます。</p>
+          )}
+        </div>
+      </section>
+
+      <section className="live-activity-panel" aria-label="Live Activity">
+        <div className="live-activity-head">
+          <p className="card-kicker">Live Activity</p>
+          <span aria-hidden="true" />
+        </div>
+
+        <div className="live-activity-list">
+          {liveActivities.length > 0 ? (
+            liveActivities.slice(0, 5).map((activity, index) => (
+              <motion.article
+                className="live-activity-card"
+                key={activity.id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1], delay: index * 0.045 }}
+              >
+                <span className="live-activity-avatar">
+                  {activity.avatar ? <img src={activity.avatar} alt="" /> : activity.userName.slice(0, 1).toUpperCase()}
+                  <i className={`live-activity-dot ${activity.status}`} />
+                </span>
+                <span>
+                  <strong>{activity.text}</strong>
+                  <small>{activity.meta}</small>
+                </span>
+              </motion.article>
+            ))
+          ) : (
+            <p className="friend-empty">今は静かです。誰かの記録が始まるとここに流れます。</p>
           )}
         </div>
       </section>

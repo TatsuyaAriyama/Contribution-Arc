@@ -26,7 +26,7 @@ import {
 } from "firebase/firestore";
 import { motion } from "framer-motion";
 import { auth, db, githubProvider, googleProvider } from "./firebase";
-import { PremiumSidebar, type AppView, type FriendPreview } from "./components/PremiumNavigation";
+import { PremiumSidebar, type AppView, type FriendPreview, type LiveActivity } from "./components/PremiumNavigation";
 import "./App.css";
 
 type QuestEvent = "chest" | "sword" | "flame" | "star";
@@ -1266,6 +1266,26 @@ function App() {
 
     return friend;
   });
+  const recentStudyActivities: LiveActivity[] = [...studyLogs]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 3)
+    .map((log) => ({
+      id: `study-${log.id}`,
+      userName: playerName,
+      avatar: playerAvatar,
+      text: `${playerName} completed ${formatStudyTimeJa(log.minutes)} ${log.subject}`,
+      meta: new Date(log.createdAt).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
+      status: "recent",
+    }));
+  const onlineActivities: LiveActivity[] = activeMembers.slice(0, 3).map((member) => ({
+    id: `online-${member.userId}-${member.joinedAt}`,
+    userName: member.name,
+    avatar: member.avatar,
+    text: `${member.name} is studying ${member.building}`,
+    meta: `${formatStayTime(getElapsedMinutes(member.joinedAt, workspaceNow))} active`,
+    status: "online",
+  }));
+  const liveActivities = [...onlineActivities, ...recentStudyActivities].slice(0, 5);
   const pendingJoinRoom = pendingJoinRoomId
     ? allWorkspaceRooms.find((room) => room.id === pendingJoinRoomId)
     : null;
@@ -1901,6 +1921,7 @@ function App() {
         roomOnlineCount={roomOnlineCount}
         weeklyStudyLabel={formatStudyTimeJa(totalWeeklyMinutes)}
         friends={sidebarFriends}
+        liveActivities={liveActivities}
         onViewChange={setCurrentView}
         onProfileOpen={() => {
           setProfileMember(null);
