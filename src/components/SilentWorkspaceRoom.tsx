@@ -41,6 +41,7 @@ type SilentWorkspaceRoomProps = {
   onTaskChange: (value: string) => void;
   onJoin: () => void;
   onLeave: () => void;
+  onResetPresence: () => void;
   presetMessages: string[];
   onPresetMessagesChange: (messages: string[]) => void;
   onPresetMessage: (message: string) => void;
@@ -73,6 +74,7 @@ export function SilentWorkspaceRoom({
   onTaskChange,
   onJoin,
   onLeave,
+  onResetPresence,
   presetMessages,
   onPresetMessagesChange,
   onPresetMessage,
@@ -136,6 +138,11 @@ export function SilentWorkspaceRoom({
               >
                 {isJoined ? "退出して記録" : "ルームに入室"}
               </button>
+              {isJoined ? (
+                <button type="button" className="room-reset-button" onClick={onResetPresence}>
+                  入室状態をリセット
+                </button>
+              ) : null}
               <span>{isJoined ? `入室 ${joinedAtLabel} / ${currentStayLabel}` : "入室すると滞在時間を記録します"}</span>
               {lastSessionLabel ? <strong>{lastSessionLabel}</strong> : null}
             </div>

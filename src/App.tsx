@@ -230,6 +230,7 @@ const workspaceRooms: WorkspaceRoom[] = [];
 const workspaceRoomsStorageKey = "contribution-arc-workspace-rooms";
 const minaAvatarPath = "mina-icon.webp";
 const detaUserId = "npc-deta";
+const maxWorkspacePresenceMinutes = 12 * 60;
 const workspaceMovementKeys = new Set(["w", "a", "s", "d", "arrowup", "arrowleft", "arrowdown", "arrowright"]);
 const defaultWorkspacePresetMessages = [
   "進捗どうですか？",
@@ -861,6 +862,48 @@ function applyScheduledDetaPresence(room: WorkspaceRoom, nowMs: number): Workspa
     ...room,
     activeMembers: detaMember ? [detaMember, ...activeMembers] : activeMembers,
   };
+}
+
+function isValidWorkspacePresence(member: WorkspaceMember, userId: string, nowMs: number) {
+  if (member.userId !== userId) {
+    return true;
+  }
+
+  const joinedAtMs = new Date(member.joinedAt).getTime();
+  if (!Number.isFinite(joinedAtMs)) {
+    return false;
+  }
+
+  if (joinedAtMs > nowMs + 1000 * 60 * 5) {
+    return false;
+  }
+
+  return (nowMs - joinedAtMs) / 60000 <= maxWorkspacePresenceMinutes;
+}
+
+function cleanWorkspacePresenceForUser(rooms: WorkspaceRoom[], userId: string, nowMs = Date.now()) {
+  let foundActivePresence = false;
+  let changed = false;
+
+  const nextRooms = rooms.map((room) => {
+    const activeMembers = room.activeMembers.filter((member) => {
+      if (member.userId !== userId) {
+        return true;
+      }
+
+      if (foundActivePresence || !isValidWorkspacePresence(member, userId, nowMs)) {
+        changed = true;
+        return false;
+      }
+
+      foundActivePresence = true;
+      return true;
+    });
+
+    return activeMembers.length === room.activeMembers.length ? room : { ...room, activeMembers };
+  });
+
+  return changed ? nextRooms : rooms;
 }
 
 function createDefaultWorkspaceRooms(): WorkspaceRoom[] {
@@ -1604,7 +1647,7 @@ function App() {
         parsedRooms.push(room);
       }
     });
-    const seededRooms = seedWorkspaceRooms(parsedRooms);
+    const seededRooms = cleanWorkspacePresenceForUser(seedWorkspaceRooms(parsedRooms), currentUser.uid);
     if (savedLogs) {
       setStudyLogs(removeSeedStudyLogs(JSON.parse(savedLogs) as StudyLog[]));
     } else {
@@ -1759,17 +1802,35 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (!currentUser || !isWorkspaceLoaded) {
+      return;
+    }
+
+    setCustomRooms((rooms) => cleanWorkspacePresenceForUser(rooms, currentUser.uid, workspaceNow));
+  }, [currentUser, isWorkspaceLoaded, workspaceNow]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      return;
+    }
+
+    const currentUserId = currentUser.uid;
     const handleStorage = (event: StorageEvent) => {
       if (event.key !== workspaceRoomsStorageKey || !event.newValue) {
         return;
       }
 
-      setCustomRooms(seedWorkspaceRooms((JSON.parse(event.newValue) as WorkspaceRoom[]).map(normalizeWorkspaceRoom)));
+      setCustomRooms(
+        cleanWorkspacePresenceForUser(
+          seedWorkspaceRooms((JSON.parse(event.newValue) as WorkspaceRoom[]).map(normalizeWorkspaceRoom)),
+          currentUserId,
+        ),
+      );
     };
 
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
@@ -2513,6 +2574,18 @@ function App() {
     setLastRoomSession(session);
   };
 
+  const resetWorkspacePresence = () => {
+    pressedWorkspaceKeysRef.current.clear();
+    setIsPlayerWalking(false);
+    setPendingJoinRoomId(null);
+    setCustomRooms((rooms) =>
+      rooms.map((room) => {
+        const activeMembers = room.activeMembers.filter((member) => member.userId !== currentUser.uid);
+        return activeMembers.length === room.activeMembers.length ? room : { ...room, activeMembers };
+      }),
+    );
+  };
+
   const startWorkspaceSession = (roomId: string, task: string, color: string) => {
     const nextTask = task.trim();
     if (!nextTask) {
@@ -2577,6 +2650,13 @@ function App() {
 
   const handleRoomLeave = () => {
     if (!selectedRoom) {
+      return;
+    }
+
+    const selectedLocalRoom = customRooms.find((room) => room.id === selectedRoom.id);
+    const member = selectedLocalRoom?.activeMembers.find((item) => item.userId === currentUser.uid);
+    if (!member) {
+      resetWorkspacePresence();
       return;
     }
 
@@ -3605,6 +3685,7 @@ function App() {
                       onTaskChange={setWorkspaceTask}
                       onJoin={() => handleRoomJoin(selectedRoom.id)}
                       onLeave={handleRoomLeave}
+                      onResetPresence={resetWorkspacePresence}
                       presetMessages={workspacePresetMessages}
                       onPresetMessagesChange={setWorkspacePresetMessages}
                       onPresetMessage={handleWorkspacePresetMessage}
@@ -3683,6 +3764,7 @@ function App() {
             onTaskChange={setWorkspaceTask}
             onJoin={() => handleRoomJoin(selectedRoom.id)}
             onLeave={handleRoomLeave}
+            onResetPresence={resetWorkspacePresence}
             presetMessages={workspacePresetMessages}
             onPresetMessagesChange={setWorkspacePresetMessages}
             onPresetMessage={handleWorkspacePresetMessage}
