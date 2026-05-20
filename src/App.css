@@ -5824,9 +5824,9 @@
   pointer-events: none;
   content: "";
   background:
-    radial-gradient(circle at 74% 18%, rgba(31, 111, 74, 0.075), transparent 17rem),
-    radial-gradient(circle at 6% 92%, rgba(17, 24, 39, 0.04), transparent 22rem),
-    linear-gradient(120deg, rgba(255, 255, 255, 0.78), rgba(244, 244, 245, 0.52));
+    radial-gradient(circle at 82% 12%, rgba(31, 111, 74, 0.035), transparent 20rem),
+    radial-gradient(circle at 10% 94%, rgba(17, 24, 39, 0.025), transparent 24rem),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(244, 247, 245, 0.58));
 }
 
 .knowledge-card > * {
@@ -5917,22 +5917,24 @@
   overflow: hidden;
   min-height: 560px;
   background:
-    radial-gradient(circle at 50% 50%, rgba(31, 111, 74, 0.08), transparent 18rem),
-    linear-gradient(90deg, rgba(17, 24, 39, 0.035) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(17, 24, 39, 0.03) 1px, transparent 1px),
+    radial-gradient(circle at 24% 24%, rgba(31, 111, 74, 0.04), transparent 13rem),
+    radial-gradient(circle at 76% 78%, rgba(17, 24, 39, 0.025), transparent 15rem),
+    linear-gradient(90deg, rgba(17, 24, 39, 0.024) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(17, 24, 39, 0.022) 1px, transparent 1px),
     #fbfbfb;
-  background-size: auto, 42px 42px, 42px 42px, auto;
+  background-size: auto, auto, 38px 38px, 38px 38px, auto;
 }
 
 .knowledge-graph-panel::before {
   position: absolute;
-  inset: 8%;
+  inset: auto 10% 7% 12%;
+  height: 34%;
   pointer-events: none;
   content: "";
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(31, 111, 74, 0.08), transparent 62%);
-  filter: blur(24px);
-  animation: knowledgeBreath 6s ease-in-out infinite;
+  background: radial-gradient(ellipse, rgba(31, 111, 74, 0.035), transparent 70%);
+  filter: blur(18px);
+  animation: knowledgeBreath 8s ease-in-out infinite;
 }
 
 .knowledge-graph {
@@ -5949,15 +5951,15 @@
 }
 
 .knowledge-link {
-  stroke: rgba(17, 24, 39, 0.2);
-  stroke-width: 1.45;
+  stroke: rgba(17, 24, 39, 0.22);
+  stroke-width: 1.1;
   stroke-linecap: round;
 }
 
 .knowledge-link.active {
-  stroke: rgba(31, 111, 74, 0.82);
-  stroke-width: 2.1;
-  filter: drop-shadow(0 0 8px rgba(31, 111, 74, 0.24));
+  stroke: rgba(31, 111, 74, 0.72);
+  stroke-width: 1.65;
+  filter: drop-shadow(0 0 5px rgba(31, 111, 74, 0.16));
 }
 
 .knowledge-node {
@@ -5967,11 +5969,11 @@
 }
 
 .knowledge-node circle {
-  fill: rgba(255, 255, 255, 0.96);
-  stroke: rgba(17, 24, 39, 0.16);
-  stroke-width: 1.4;
+  fill: rgba(31, 111, 74, 0.9);
+  stroke: rgba(15, 61, 42, 0.46);
+  stroke-width: 1.05;
   filter:
-    drop-shadow(0 14px 22px rgba(17, 24, 39, 0.1))
+    drop-shadow(0 10px 18px rgba(17, 24, 39, 0.08))
     drop-shadow(0 1px 0 rgba(255, 255, 255, 0.92));
   transition:
     fill 0.2s ease,
@@ -5980,24 +5982,24 @@
 }
 
 .knowledge-node text {
-  fill: #18181b;
-  font-size: 13px;
+  fill: #27272a;
+  font-size: 11px;
   font-weight: 850;
   letter-spacing: 0;
   paint-order: stroke;
   pointer-events: none;
-  stroke: rgba(255, 255, 255, 0.88);
-  stroke-width: 4px;
+  stroke: rgba(255, 255, 255, 0.92);
+  stroke-width: 3.5px;
   text-anchor: middle;
 }
 
 .knowledge-node.selected circle,
 .knowledge-node.related circle {
-  fill: rgba(31, 111, 74, 0.94);
+  fill: rgba(15, 61, 42, 0.96);
   stroke: rgba(31, 111, 74, 0.98);
   filter:
-    drop-shadow(0 18px 28px rgba(31, 111, 74, 0.18))
-    drop-shadow(0 0 12px rgba(31, 111, 74, 0.18));
+    drop-shadow(0 15px 24px rgba(31, 111, 74, 0.15))
+    drop-shadow(0 0 8px rgba(31, 111, 74, 0.14));
 }
 
 .knowledge-node.selected text,

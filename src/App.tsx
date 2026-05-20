@@ -157,6 +157,7 @@ type KnowledgeNode = {
   size: number;
   x: number;
   y: number;
+  cluster?: string;
 };
 
 type KnowledgeLink = {
@@ -195,6 +196,77 @@ const outputStats = {
 const workspaceRooms: WorkspaceRoom[] = [];
 const workspaceRoomsStorageKey = "contribution-arc-workspace-rooms";
 const emptyKnowledgeGraph: KnowledgeGraphData = { nodes: [], links: [] };
+const knowledgeClusterAnchors: Record<string, { x: number; y: number }> = {
+  frontend: { x: 322, y: 198 },
+  backend: { x: 456, y: 198 },
+  platform: { x: 410, y: 304 },
+  language: { x: 270, y: 320 },
+  product: { x: 520, y: 312 },
+};
+const defaultKnowledgeNodes: Array<Omit<KnowledgeNode, "minutes" | "size"> & { weight: number }> = [
+  { id: "React", title: "React", cluster: "frontend", x: 310, y: 190, weight: 6 },
+  { id: "useState", title: "useState", cluster: "frontend", x: 250, y: 158, weight: 2 },
+  { id: "Hooks", title: "Hooks", cluster: "frontend", x: 265, y: 218, weight: 3 },
+  { id: "Component", title: "Component", cluster: "frontend", x: 338, y: 142, weight: 3 },
+  { id: "UI", title: "UI", cluster: "frontend", x: 365, y: 222, weight: 4 },
+  { id: "State", title: "State", cluster: "frontend", x: 318, y: 258, weight: 3 },
+  { id: "TypeScript", title: "TypeScript", cluster: "language", x: 244, y: 305, weight: 5 },
+  { id: "JavaScript", title: "JavaScript", cluster: "language", x: 195, y: 260, weight: 4 },
+  { id: "Java", title: "Java", cluster: "language", x: 192, y: 356, weight: 4 },
+  { id: "Generics", title: "Generics", cluster: "language", x: 286, y: 362, weight: 2 },
+  { id: "API", title: "API", cluster: "backend", x: 455, y: 198, weight: 5 },
+  { id: "Firebase", title: "Firebase", cluster: "backend", x: 512, y: 156, weight: 5 },
+  { id: "Firestore", title: "Firestore", cluster: "backend", x: 562, y: 210, weight: 3 },
+  { id: "Authentication", title: "Authentication", cluster: "backend", x: 492, y: 252, weight: 3 },
+  { id: "Security", title: "Security", cluster: "backend", x: 420, y: 142, weight: 3 },
+  { id: "Cloud Functions", title: "Cloud Functions", cluster: "backend", x: 586, y: 146, weight: 2 },
+  { id: "GitHub", title: "GitHub", cluster: "platform", x: 395, y: 302, weight: 5 },
+  { id: "Contribution", title: "Contribution", cluster: "platform", x: 438, y: 358, weight: 4 },
+  { id: "Pull Request", title: "Pull Request", cluster: "platform", x: 356, y: 370, weight: 3 },
+  { id: "CI/CD", title: "CI/CD", cluster: "platform", x: 480, y: 318, weight: 3 },
+  { id: "Docker", title: "Docker", cluster: "platform", x: 420, y: 408, weight: 3 },
+  { id: "Linux", title: "Linux", cluster: "platform", x: 520, y: 398, weight: 2 },
+  { id: "Learning Log", title: "Learning Log", cluster: "platform", x: 322, y: 426, weight: 3 },
+  { id: "Architecture", title: "Architecture", cluster: "product", x: 574, y: 306, weight: 4 },
+  { id: "Database", title: "Database", cluster: "product", x: 632, y: 262, weight: 3 },
+  { id: "Performance", title: "Performance", cluster: "product", x: 626, y: 358, weight: 3 },
+  { id: "Accessibility", title: "Accessibility", cluster: "product", x: 542, y: 364, weight: 2 },
+  { id: "Testing", title: "Testing", cluster: "product", x: 552, y: 254, weight: 3 },
+  { id: "Design System", title: "Design System", cluster: "frontend", x: 388, y: 280, weight: 3 },
+];
+const defaultKnowledgeLinks: KnowledgeLink[] = [
+  { source: "React", target: "Hooks" },
+  { source: "React", target: "Component" },
+  { source: "React", target: "UI" },
+  { source: "React", target: "State" },
+  { source: "Hooks", target: "useState" },
+  { source: "Hooks", target: "State" },
+  { source: "TypeScript", target: "React" },
+  { source: "TypeScript", target: "Generics" },
+  { source: "JavaScript", target: "TypeScript" },
+  { source: "Java", target: "Generics" },
+  { source: "UI", target: "Design System" },
+  { source: "UI", target: "Accessibility" },
+  { source: "Design System", target: "Component" },
+  { source: "API", target: "Firebase" },
+  { source: "API", target: "Authentication" },
+  { source: "API", target: "Security" },
+  { source: "Firebase", target: "Firestore" },
+  { source: "Firebase", target: "Cloud Functions" },
+  { source: "Firestore", target: "Database" },
+  { source: "Authentication", target: "Security" },
+  { source: "GitHub", target: "Contribution" },
+  { source: "GitHub", target: "Pull Request" },
+  { source: "GitHub", target: "CI/CD" },
+  { source: "CI/CD", target: "Docker" },
+  { source: "Docker", target: "Linux" },
+  { source: "Architecture", target: "API" },
+  { source: "Architecture", target: "Database" },
+  { source: "Architecture", target: "Performance" },
+  { source: "Testing", target: "CI/CD" },
+  { source: "Testing", target: "React" },
+  { source: "Contribution", target: "Learning Log" },
+];
 
 const characterOptions: CharacterOption[] = [
   {
@@ -299,21 +371,31 @@ function getObsidianLinks(content: string) {
   return [...links];
 }
 
-function withKnowledgeLayout(data: Omit<KnowledgeGraphData, "nodes"> & { nodes: Array<Omit<KnowledgeNode, "x" | "y">> }): KnowledgeGraphData {
-  const centerX = 380;
-  const centerY = 230;
-  const nodeCount = Math.max(data.nodes.length, 1);
+function withKnowledgeLayout(
+  data: Omit<KnowledgeGraphData, "nodes"> & {
+    nodes: Array<Partial<Pick<KnowledgeNode, "x" | "y">> & Omit<KnowledgeNode, "x" | "y">>;
+  },
+): KnowledgeGraphData {
+  const clusterCounts = new Map<string, number>();
+  const fallbackCenter = { x: 380, y: 252 };
 
   return {
     links: data.links,
     nodes: data.nodes.map((node, index) => {
-      const angle = (index / nodeCount) * Math.PI * 2 - Math.PI / 2;
-      const ring = index % 3;
-      const radius = 72 + Math.floor(index / 3) * 34 + ring * 22;
+      if (typeof node.x === "number" && typeof node.y === "number") {
+        return { ...node, x: node.x, y: node.y };
+      }
+
+      const cluster = node.cluster || "product";
+      const clusterIndex = clusterCounts.get(cluster) || 0;
+      clusterCounts.set(cluster, clusterIndex + 1);
+      const anchor = knowledgeClusterAnchors[cluster] || fallbackCenter;
+      const angle = clusterIndex * 1.45 + (index % 2) * 0.42 - Math.PI / 2;
+      const radius = 28 + Math.floor(clusterIndex / 2) * 28 + (clusterIndex % 2) * 18;
       return {
         ...node,
-        x: centerX + Math.cos(angle) * radius,
-        y: centerY + Math.sin(angle) * radius,
+        x: anchor.x + Math.cos(angle) * radius,
+        y: anchor.y + Math.sin(angle) * radius,
       };
     }),
   };
@@ -326,7 +408,7 @@ function buildObsidianGraph(notes: ObsidianNoteSource[]): KnowledgeGraphData {
 
   notes.forEach((note) => {
     if (!nodeMap.has(note.title)) {
-      nodeMap.set(note.title, { id: note.title, title: note.title, minutes: 0, size: 18 });
+      nodeMap.set(note.title, { id: note.title, title: note.title, minutes: 0, size: 13 });
     }
 
     getObsidianLinks(note.content).forEach((targetTitle) => {
@@ -335,7 +417,7 @@ function buildObsidianGraph(notes: ObsidianNoteSource[]): KnowledgeGraphData {
       }
 
       if (!nodeMap.has(targetTitle)) {
-        nodeMap.set(targetTitle, { id: targetTitle, title: targetTitle, minutes: 0, size: 18 });
+        nodeMap.set(targetTitle, { id: targetTitle, title: targetTitle, minutes: 0, size: 13 });
       }
 
       linkSet.add(`${note.title}::${targetTitle}`);
@@ -347,7 +429,7 @@ function buildObsidianGraph(notes: ObsidianNoteSource[]): KnowledgeGraphData {
   return withKnowledgeLayout({
     nodes: [...nodeMap.values()].map((node) => ({
       ...node,
-      size: Math.min(42, 18 + (connectionCount.get(node.id) || 0) * 4),
+      size: Math.min(32, 11 + (connectionCount.get(node.id) || 0) * 3.2),
     })),
     links: [...linkSet].map((key) => {
       const [source, target] = key.split("::");
@@ -366,19 +448,45 @@ function buildStudyKnowledgeGraph(logs: StudyLog[]): KnowledgeGraphData {
     grouped.set(subject, (grouped.get(subject) || 0) + log.minutes);
   });
 
-  const nodes = [...grouped.entries()].map(([subject, minutes]) => ({
-    id: subject,
-    title: subject,
-    minutes,
-    size: Math.min(46, 18 + Math.sqrt(minutes) * 2.1),
-  }));
+  const nodes = defaultKnowledgeNodes.map((node) => {
+    const learnedMinutes = grouped.get(node.id) || 0;
+    return {
+      id: node.id,
+      title: node.title,
+      cluster: node.cluster,
+      minutes: learnedMinutes,
+      size: Math.min(30, 9 + node.weight * 2.1 + Math.sqrt(learnedMinutes) * 0.5),
+      x: node.x,
+      y: node.y,
+    };
+  });
 
-  const links = nodes.slice(1).map((node, index) => ({
-    source: nodes[index].id,
+  const knownNodeIds = new Set(nodes.map((node) => node.id));
+  const extraNodes = [...grouped.entries()]
+    .filter(([subject]) => !knownNodeIds.has(subject))
+    .map(([subject, minutes], index) => {
+      const angle = index * 1.2 - Math.PI / 3;
+      const radius = 56 + (index % 4) * 18;
+      return {
+        id: subject,
+        title: subject,
+        cluster: "product",
+        minutes,
+        size: Math.min(28, 11 + Math.sqrt(minutes) * 0.62),
+        x: knowledgeClusterAnchors.product.x + Math.cos(angle) * radius,
+        y: knowledgeClusterAnchors.product.y + Math.sin(angle) * radius,
+      };
+    });
+
+  const extraLinks = extraNodes.map((node) => ({
+    source: "Learning Log",
     target: node.id,
   }));
 
-  return withKnowledgeLayout({ nodes, links });
+  return withKnowledgeLayout({
+    nodes: [...nodes, ...extraNodes],
+    links: [...defaultKnowledgeLinks, ...extraLinks],
+  });
 }
 
 function getWeeklyStudyHours(logs: StudyLog[]): WeeklyStudyDay[] {
@@ -1480,6 +1588,17 @@ function App() {
       relatedKnowledgeIds.add(link.source);
     }
   });
+  const selectedKnowledgeRelatedIds = new Set<string>();
+  if (selectedKnowledgeNode) {
+    activeKnowledgeGraph.links.forEach((link) => {
+      if (link.source === selectedKnowledgeNode.id) {
+        selectedKnowledgeRelatedIds.add(link.target);
+      }
+      if (link.target === selectedKnowledgeNode.id) {
+        selectedKnowledgeRelatedIds.add(link.source);
+      }
+    });
+  }
   const pendingJoinRoom = pendingJoinRoomId
     ? allWorkspaceRooms.find((room) => room.id === pendingJoinRoomId)
     : null;
@@ -2509,8 +2628,14 @@ function App() {
                             x2={target.x}
                             y2={target.y}
                             initial={{ pathLength: 0, opacity: 0 }}
-                            animate={{ pathLength: 1, opacity: isActive ? 0.82 : 0.28 }}
-                            transition={{ duration: 0.7, delay: index * 0.035, ease: [0.22, 1, 0.36, 1] }}
+                            animate={{
+                              pathLength: 1,
+                              opacity: isActive ? [0.68, 0.88, 0.68] : [0.16, 0.24, 0.16],
+                            }}
+                            transition={{
+                              pathLength: { duration: 0.7, delay: index * 0.025, ease: [0.22, 1, 0.36, 1] },
+                              opacity: { duration: 4.8, repeat: Infinity, ease: "easeInOut" },
+                            }}
                           />
                         );
                       })}
@@ -2528,6 +2653,7 @@ function App() {
                               isSelected ? "selected" : "",
                               isRelated ? "related" : "",
                               isDimmed ? "dimmed" : "",
+                              node.cluster ? `cluster-${node.cluster}` : "",
                             ]
                               .filter(Boolean)
                               .join(" ")}
@@ -2552,7 +2678,15 @@ function App() {
                             }}
                             onClick={() => setSelectedKnowledgeId(node.id)}
                           >
-                            <circle r={node.size} />
+                            <motion.circle
+                              r={node.size}
+                              animate={{ r: [node.size, node.size + 0.65, node.size] }}
+                              transition={{
+                                duration: 5 + (index % 5) * 0.35,
+                                repeat: Infinity,
+                                ease: "easeInOut",
+                              }}
+                            />
                             <text y={node.size + 17}>{node.title}</text>
                           </motion.g>
                         );
@@ -2589,7 +2723,7 @@ function App() {
                       </div>
                     </dl>
                     <div className="knowledge-related-list">
-                      {[...relatedKnowledgeIds].slice(0, 8).map((id) => (
+                      {[...selectedKnowledgeRelatedIds].slice(0, 8).map((id) => (
                         <button type="button" key={id} onClick={() => setSelectedKnowledgeId(id)}>
                           {id}
                         </button>
