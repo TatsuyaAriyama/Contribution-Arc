@@ -1467,18 +1467,18 @@ function LoginScreen() {
         <ContributionArcLogo />
 
         <div className="login-brand">
-          <p className="eyebrow">Learning Workspace</p>
+          <p className="eyebrow">Developer Learning Graph</p>
           <h1>Contribution Arc</h1>
-          <p>学習ログ、知識、集中時間をひとつの成長記録へ。</p>
+          <p>学習の積み重ねを記録し、仲間と進捗を共有するための場所。</p>
         </div>
       </section>
 
       <section className="card login-card">
-        <p className="card-kicker">Sign in</p>
-        <h2>今日の積み上げを、残そう。</h2>
+        <p className="card-kicker">Authentication</p>
+        <h2>記録を始めよう。</h2>
         <p className="login-copy">
-          <span>学習時間、作業部屋、知識のつながりを静かに記録します。</span>
-          <span className="login-copy-highlight">メール、Google、GitHubで続行できます。</span>
+          <span>メール、Google、GitHubでログインできます。</span>
+          <span className="login-copy-highlight">今日の学習ログを明日の成長へ。</span>
         </p>
 
         <div className="auth-mode-tabs" aria-label="認証モード">
@@ -1487,14 +1487,14 @@ function LoginScreen() {
             className={authMode === "login" ? "active" : ""}
             onClick={() => setAuthMode("login")}
           >
-            ログイン
+            Login
           </button>
           <button
             type="button"
             className={authMode === "signup" ? "active" : ""}
             onClick={() => setAuthMode("signup")}
           >
-            新規作成
+            Sign up
           </button>
         </div>
 
@@ -1523,15 +1523,15 @@ function LoginScreen() {
           </label>
           <button className="login-submit" type="submit" disabled={isSubmitting}>
             {isSubmitting
-              ? "接続中..."
+              ? "Connecting..."
               : authMode === "signup"
-                ? "アカウントを作成"
-                : "メールでログイン"}
+                ? "Create account"
+                : "Login with email"}
           </button>
         </form>
 
         <div className="login-divider">
-          <span>または</span>
+          <span>or continue with</span>
         </div>
 
         <div className="provider-grid">
