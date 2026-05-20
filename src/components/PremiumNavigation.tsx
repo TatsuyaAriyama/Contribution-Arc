@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 
-export type AppView = "home" | "profile" | "workspace";
+export type AppView = "home" | "profile" | "workspace" | "knowledge";
 export type FriendPreviewStatus = "online" | "away" | "offline";
 
 export type FriendPreview = {
@@ -74,6 +74,14 @@ export function PremiumSidebar({
         >
           <span />
           Silent Workspace
+        </button>
+        <button
+          type="button"
+          className={currentView === "knowledge" ? "active" : ""}
+          onClick={() => onViewChange("knowledge")}
+        >
+          <span />
+          Knowledge Graph
         </button>
         <button type="button" className={currentView === "profile" ? "active" : ""} onClick={onProfileOpen}>
           <span />

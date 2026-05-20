@@ -1,4 +1,13 @@
-import { useEffect, useState, type CSSProperties, type ChangeEvent, type FormEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ChangeEvent,
+  type FormEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
@@ -141,6 +150,30 @@ type WorkspaceRoom = {
   history: WorkspaceSessionHistory[];
 };
 
+type KnowledgeNode = {
+  id: string;
+  title: string;
+  minutes: number;
+  size: number;
+  x: number;
+  y: number;
+};
+
+type KnowledgeLink = {
+  source: string;
+  target: string;
+};
+
+type KnowledgeGraphData = {
+  nodes: KnowledgeNode[];
+  links: KnowledgeLink[];
+};
+
+type ObsidianNoteSource = {
+  title: string;
+  content: string;
+};
+
 const dayLabels = ["月", "火", "水", "木", "金", "土", "日"];
 const studyColorOptions = [
   { name: "Forest", value: "#1f6f4a" },
@@ -161,6 +194,7 @@ const outputStats = {
 
 const workspaceRooms: WorkspaceRoom[] = [];
 const workspaceRoomsStorageKey = "contribution-arc-workspace-rooms";
+const emptyKnowledgeGraph: KnowledgeGraphData = { nodes: [], links: [] };
 
 const characterOptions: CharacterOption[] = [
   {
@@ -228,6 +262,123 @@ function getWeekStart(date = new Date()) {
   weekStart.setDate(weekStart.getDate() + mondayOffset);
   weekStart.setHours(0, 0, 0, 0);
   return weekStart;
+}
+
+function normalizeKnowledgeTitle(value: string) {
+  const withoutHash = value.split("#")[0] || value;
+  const withoutAlias = withoutHash.split("|")[0] || withoutHash;
+  const decoded = decodeURIComponent(withoutAlias).replace(/\\/g, "/");
+  const filename = decoded.split("/").filter(Boolean).pop() || decoded;
+  return filename.replace(/\.md$/i, "").trim();
+}
+
+function getNoteTitle(file: File) {
+  const rawPath = (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
+  return normalizeKnowledgeTitle(rawPath);
+}
+
+function getObsidianLinks(content: string) {
+  const links = new Set<string>();
+  const wikiLinkPattern = /\[\[([^\]]+)\]\]/g;
+  const markdownLinkPattern = /\[[^\]]+\]\((?!https?:\/\/|mailto:)([^)#]+)(?:#[^)]+)?\)/g;
+
+  for (const match of content.matchAll(wikiLinkPattern)) {
+    const title = normalizeKnowledgeTitle(match[1] || "");
+    if (title) {
+      links.add(title);
+    }
+  }
+
+  for (const match of content.matchAll(markdownLinkPattern)) {
+    const title = normalizeKnowledgeTitle(match[1] || "");
+    if (title) {
+      links.add(title);
+    }
+  }
+
+  return [...links];
+}
+
+function withKnowledgeLayout(data: Omit<KnowledgeGraphData, "nodes"> & { nodes: Array<Omit<KnowledgeNode, "x" | "y">> }): KnowledgeGraphData {
+  const centerX = 380;
+  const centerY = 230;
+  const nodeCount = Math.max(data.nodes.length, 1);
+
+  return {
+    links: data.links,
+    nodes: data.nodes.map((node, index) => {
+      const angle = (index / nodeCount) * Math.PI * 2 - Math.PI / 2;
+      const ring = index % 3;
+      const radius = 72 + Math.floor(index / 3) * 34 + ring * 22;
+      return {
+        ...node,
+        x: centerX + Math.cos(angle) * radius,
+        y: centerY + Math.sin(angle) * radius,
+      };
+    }),
+  };
+}
+
+function buildObsidianGraph(notes: ObsidianNoteSource[]): KnowledgeGraphData {
+  const nodeMap = new Map<string, Omit<KnowledgeNode, "x" | "y">>();
+  const linkSet = new Set<string>();
+  const connectionCount = new Map<string, number>();
+
+  notes.forEach((note) => {
+    if (!nodeMap.has(note.title)) {
+      nodeMap.set(note.title, { id: note.title, title: note.title, minutes: 0, size: 18 });
+    }
+
+    getObsidianLinks(note.content).forEach((targetTitle) => {
+      if (!targetTitle || targetTitle === note.title) {
+        return;
+      }
+
+      if (!nodeMap.has(targetTitle)) {
+        nodeMap.set(targetTitle, { id: targetTitle, title: targetTitle, minutes: 0, size: 18 });
+      }
+
+      linkSet.add(`${note.title}::${targetTitle}`);
+      connectionCount.set(note.title, (connectionCount.get(note.title) || 0) + 1);
+      connectionCount.set(targetTitle, (connectionCount.get(targetTitle) || 0) + 1);
+    });
+  });
+
+  return withKnowledgeLayout({
+    nodes: [...nodeMap.values()].map((node) => ({
+      ...node,
+      size: Math.min(42, 18 + (connectionCount.get(node.id) || 0) * 4),
+    })),
+    links: [...linkSet].map((key) => {
+      const [source, target] = key.split("::");
+      return { source, target };
+    }),
+  });
+}
+
+function buildStudyKnowledgeGraph(logs: StudyLog[]): KnowledgeGraphData {
+  const grouped = new Map<string, number>();
+  logs.forEach((log) => {
+    const subject = log.subject.trim();
+    if (!subject) {
+      return;
+    }
+    grouped.set(subject, (grouped.get(subject) || 0) + log.minutes);
+  });
+
+  const nodes = [...grouped.entries()].map(([subject, minutes]) => ({
+    id: subject,
+    title: subject,
+    minutes,
+    size: Math.min(46, 18 + Math.sqrt(minutes) * 2.1),
+  }));
+
+  const links = nodes.slice(1).map((node, index) => ({
+    source: nodes[index].id,
+    target: node.id,
+  }));
+
+  return withKnowledgeLayout({ nodes, links });
 }
 
 function getWeeklyStudyHours(logs: StudyLog[]): WeeklyStudyDay[] {
@@ -990,6 +1141,13 @@ function App() {
   const [pendingJoinRoomId, setPendingJoinRoomId] = useState<string | null>(null);
   const [workspaceNow, setWorkspaceNow] = useState(Date.now());
   const [lastRoomSession, setLastRoomSession] = useState<WorkspaceSessionHistory | null>(null);
+  const [knowledgeGraph, setKnowledgeGraph] = useState<KnowledgeGraphData>(emptyKnowledgeGraph);
+  const [selectedKnowledgeId, setSelectedKnowledgeId] = useState("");
+  const [hoveredKnowledgeId, setHoveredKnowledgeId] = useState("");
+  const [knowledgeScale, setKnowledgeScale] = useState(1);
+  const [knowledgePositions, setKnowledgePositions] = useState<Record<string, { x: number; y: number }>>({});
+  const [draggingKnowledgeId, setDraggingKnowledgeId] = useState("");
+  const graphSvgRef = useRef<SVGSVGElement | null>(null);
 
   useEffect(() => {
     return onAuthStateChanged(auth, (user) => {
@@ -1017,6 +1175,7 @@ function App() {
     const savedRoomId = window.localStorage.getItem(`contribution-arc-room-${currentUser.uid}`);
     const savedRooms = window.localStorage.getItem(`contribution-arc-rooms-${currentUser.uid}`);
     const savedWorkspaceTask = window.localStorage.getItem(`contribution-arc-workspace-task-${currentUser.uid}`);
+    const savedKnowledgeGraph = window.localStorage.getItem(`contribution-arc-knowledge-graph-${currentUser.uid}`);
     const sharedRooms = window.localStorage.getItem(workspaceRoomsStorageKey);
     const parsedSharedRooms = sharedRooms
       ? (JSON.parse(sharedRooms) as WorkspaceRoom[]).map(normalizeWorkspaceRoom)
@@ -1057,6 +1216,10 @@ function App() {
     setWorkspaceTask(savedWorkspaceTask || studySubject);
     setWorkspaceDraftTask(savedWorkspaceTask || studySubject);
     setWorkspaceDraftColor(studyColorOptions[0].value);
+    setKnowledgeGraph(savedKnowledgeGraph ? (JSON.parse(savedKnowledgeGraph) as KnowledgeGraphData) : emptyKnowledgeGraph);
+    setSelectedKnowledgeId("");
+    setHoveredKnowledgeId("");
+    setKnowledgePositions({});
     setIsWorkspaceLoaded(true);
 
     getDoc(doc(db, "users", currentUser.uid))
@@ -1088,6 +1251,17 @@ function App() {
       JSON.stringify(studyLogs),
     );
   }, [currentUser, studyLogs]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      return;
+    }
+
+    window.localStorage.setItem(
+      `contribution-arc-knowledge-graph-${currentUser.uid}`,
+      JSON.stringify(knowledgeGraph),
+    );
+  }, [currentUser, knowledgeGraph]);
 
   useEffect(() => {
     if (!currentUser) {
@@ -1190,6 +1364,8 @@ function App() {
     });
   }, [currentUser, customUserName, isWorkspaceLoaded, playerAvatar, studySubject, workspaceTask]);
 
+  const studyKnowledgeGraph = useMemo(() => buildStudyKnowledgeGraph(studyLogs), [studyLogs]);
+
   if (window.location.pathname === githubCallbackPath) {
     return <GitHubCallbackPage />;
   }
@@ -1286,6 +1462,24 @@ function App() {
     status: "online",
   }));
   const liveActivities = [...onlineActivities, ...recentStudyActivities].slice(0, 5);
+  const activeKnowledgeGraph = knowledgeGraph.nodes.length > 0 ? knowledgeGraph : studyKnowledgeGraph;
+  const graphNodes = activeKnowledgeGraph.nodes.map((node) => ({
+    ...node,
+    ...(knowledgePositions[node.id] || {}),
+  }));
+  const knowledgeNodeMap = new Map(graphNodes.map((node) => [node.id, node]));
+  const selectedKnowledgeNode =
+    graphNodes.find((node) => node.id === selectedKnowledgeId) || graphNodes[0] || null;
+  const activeKnowledgeId = hoveredKnowledgeId || selectedKnowledgeNode?.id || "";
+  const relatedKnowledgeIds = new Set<string>();
+  activeKnowledgeGraph.links.forEach((link) => {
+    if (link.source === activeKnowledgeId) {
+      relatedKnowledgeIds.add(link.target);
+    }
+    if (link.target === activeKnowledgeId) {
+      relatedKnowledgeIds.add(link.source);
+    }
+  });
   const pendingJoinRoom = pendingJoinRoomId
     ? allWorkspaceRooms.find((room) => room.id === pendingJoinRoomId)
     : null;
@@ -1739,6 +1933,53 @@ function App() {
     }
   };
 
+  const handleKnowledgeImport = async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []).filter((file) => file.name.toLowerCase().endsWith(".md"));
+    if (files.length === 0) {
+      return;
+    }
+
+    const notes = await Promise.all(
+      files.map(async (file) => ({
+        title: getNoteTitle(file),
+        content: await file.text(),
+      })),
+    );
+    const nextGraph = buildObsidianGraph(notes);
+    setKnowledgeGraph(nextGraph);
+    setSelectedKnowledgeId(nextGraph.nodes[0]?.id || "");
+    setHoveredKnowledgeId("");
+    setKnowledgePositions({});
+    event.target.value = "";
+  };
+
+  const getKnowledgePoint = (event: ReactPointerEvent<SVGSVGElement>) => {
+    const svg = graphSvgRef.current;
+    if (!svg) {
+      return { x: 0, y: 0 };
+    }
+
+    const rect = svg.getBoundingClientRect();
+    const x = ((event.clientX - rect.left) / rect.width) * 760;
+    const y = ((event.clientY - rect.top) / rect.height) * 460;
+    return {
+      x: 380 + (x - 380) / knowledgeScale,
+      y: 230 + (y - 230) / knowledgeScale,
+    };
+  };
+
+  const handleKnowledgeDrag = (event: ReactPointerEvent<SVGSVGElement>) => {
+    if (!draggingKnowledgeId) {
+      return;
+    }
+
+    const point = getKnowledgePoint(event);
+    setKnowledgePositions((positions) => ({
+      ...positions,
+      [draggingKnowledgeId]: point,
+    }));
+  };
+
   const playerStatusCard = (isInteractive = false) => (
     <article
       className={isInteractive ? "card status-card status-card-link" : "card status-card"}
@@ -1943,9 +2184,11 @@ function App() {
           <strong>
             {currentView === "workspace"
               ? "Silent Workspace"
-              : currentView === "profile"
-                ? "Profile"
-                : "Dashboard"}
+              : currentView === "knowledge"
+                ? "Knowledge Graph"
+                : currentView === "profile"
+                  ? "Profile"
+                  : "Dashboard"}
           </strong>
         </div>
         <div className="user-session">
@@ -2178,7 +2421,189 @@ function App() {
         </div>
       ) : null}
 
-      {currentView === "profile" ? (
+      {currentView === "knowledge" ? (
+        <motion.section
+          className="knowledge-screen"
+          aria-label="Knowledge Graph"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <section className="card knowledge-card">
+            <div className="knowledge-heading">
+              <div>
+                <p className="card-kicker">Obsidian Knowledge Graph</p>
+                <h2>知識のつながりを育てる。</h2>
+              </div>
+              <div className="knowledge-actions">
+                <label>
+                  Obsidianノートを読み込む
+                  <input type="file" accept=".md,text/markdown" multiple onChange={handleKnowledgeImport} />
+                </label>
+                {knowledgeGraph.nodes.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setKnowledgeGraph(emptyKnowledgeGraph);
+                      setSelectedKnowledgeId("");
+                      setHoveredKnowledgeId("");
+                      setKnowledgePositions({});
+                    }}
+                  >
+                    学習ログ表示
+                  </button>
+                ) : null}
+                <button type="button" onClick={() => setKnowledgeScale((scale) => Math.min(1.7, scale + 0.12))}>
+                  +
+                </button>
+                <button type="button" onClick={() => setKnowledgeScale((scale) => Math.max(0.72, scale - 0.12))}>
+                  -
+                </button>
+              </div>
+            </div>
+
+            <div className="knowledge-layout">
+              <div className="knowledge-graph-panel">
+                {graphNodes.length > 0 ? (
+                  <svg
+                    ref={graphSvgRef}
+                    className="knowledge-graph"
+                    viewBox="0 0 760 460"
+                    role="img"
+                    aria-label="Knowledge Graph"
+                    onPointerMove={handleKnowledgeDrag}
+                    onPointerUp={() => setDraggingKnowledgeId("")}
+                    onPointerLeave={() => setDraggingKnowledgeId("")}
+                    onPointerCancel={() => setDraggingKnowledgeId("")}
+                    onWheel={(event) => {
+                      event.preventDefault();
+                      setKnowledgeScale((scale) =>
+                        Math.min(1.7, Math.max(0.72, scale + (event.deltaY < 0 ? 0.08 : -0.08))),
+                      );
+                    }}
+                  >
+                    <motion.g
+                      animate={{ scale: knowledgeScale }}
+                      transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                      style={{ transformOrigin: "380px 230px" }}
+                    >
+                      {activeKnowledgeGraph.links.map((link, index) => {
+                        const source = knowledgeNodeMap.get(link.source);
+                        const target = knowledgeNodeMap.get(link.target);
+                        if (!source || !target) {
+                          return null;
+                        }
+
+                        const isActive =
+                          activeKnowledgeId &&
+                          (link.source === activeKnowledgeId ||
+                            link.target === activeKnowledgeId ||
+                            (relatedKnowledgeIds.has(link.source) && relatedKnowledgeIds.has(link.target)));
+
+                        return (
+                          <motion.line
+                            key={`${link.source}-${link.target}`}
+                            className={isActive ? "knowledge-link active" : "knowledge-link"}
+                            x1={source.x}
+                            y1={source.y}
+                            x2={target.x}
+                            y2={target.y}
+                            initial={{ pathLength: 0, opacity: 0 }}
+                            animate={{ pathLength: 1, opacity: isActive ? 0.82 : 0.28 }}
+                            transition={{ duration: 0.7, delay: index * 0.035, ease: [0.22, 1, 0.36, 1] }}
+                          />
+                        );
+                      })}
+
+                      {graphNodes.map((node, index) => {
+                        const isSelected = selectedKnowledgeNode?.id === node.id;
+                        const isRelated = relatedKnowledgeIds.has(node.id);
+                        const isDimmed = activeKnowledgeId && !isSelected && !isRelated && activeKnowledgeId !== node.id;
+
+                        return (
+                          <motion.g
+                            key={node.id}
+                            className={[
+                              "knowledge-node",
+                              isSelected ? "selected" : "",
+                              isRelated ? "related" : "",
+                              isDimmed ? "dimmed" : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            initial={{ opacity: 0, scale: 0.82 }}
+                            animate={{ opacity: isDimmed ? 0.34 : 1, scale: isSelected ? 1.08 : 1 }}
+                            transition={{
+                              duration: 0.42,
+                              delay: 0.1 + index * 0.04,
+                              ease: [0.22, 1, 0.36, 1],
+                            }}
+                            transform={`translate(${node.x} ${node.y})`}
+                            onPointerEnter={() => setHoveredKnowledgeId(node.id)}
+                            onPointerLeave={() => setHoveredKnowledgeId("")}
+                            onPointerDown={(event) => {
+                              event.currentTarget.setPointerCapture(event.pointerId);
+                              setDraggingKnowledgeId(node.id);
+                              setSelectedKnowledgeId(node.id);
+                            }}
+                            onPointerUp={(event) => {
+                              event.currentTarget.releasePointerCapture(event.pointerId);
+                              setDraggingKnowledgeId("");
+                            }}
+                            onClick={() => setSelectedKnowledgeId(node.id)}
+                          >
+                            <circle r={node.size} />
+                            <text y={node.size + 17}>{node.title}</text>
+                          </motion.g>
+                        );
+                      })}
+                    </motion.g>
+                  </svg>
+                ) : (
+                  <div className="knowledge-empty">
+                    <p className="card-kicker">Knowledge Graph</p>
+                    <strong>ObsidianのMarkdownを読み込むと、知識空間が立ち上がります。</strong>
+                  </div>
+                )}
+              </div>
+
+              <aside className="knowledge-detail">
+                <p className="card-kicker">Selected Node</p>
+                {selectedKnowledgeNode ? (
+                  <>
+                    <h3>{selectedKnowledgeNode.title}</h3>
+                    <dl>
+                      <div>
+                        <dt>学習量</dt>
+                        <dd>{formatStudyTimeJa(selectedKnowledgeNode.minutes)}</dd>
+                      </div>
+                      <div>
+                        <dt>接続</dt>
+                        <dd>
+                          {
+                            activeKnowledgeGraph.links.filter(
+                              (link) => link.source === selectedKnowledgeNode.id || link.target === selectedKnowledgeNode.id,
+                            ).length
+                          }
+                        </dd>
+                      </div>
+                    </dl>
+                    <div className="knowledge-related-list">
+                      {[...relatedKnowledgeIds].slice(0, 8).map((id) => (
+                        <button type="button" key={id} onClick={() => setSelectedKnowledgeId(id)}>
+                          {id}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <span>ノードを選択してください。</span>
+                )}
+              </aside>
+            </div>
+          </section>
+        </motion.section>
+      ) : currentView === "profile" ? (
         <motion.section
           className="profile-screen"
           aria-label="Profile"
