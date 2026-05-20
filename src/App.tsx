@@ -130,7 +130,7 @@ type WorkspaceRoom = {
   history: WorkspaceSessionHistory[];
 };
 
-const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const dayLabels = ["月", "火", "水", "木", "金", "土", "日"];
 const studyColorOptions = [
   { name: "Forest", value: "#1f6f4a" },
   { name: "Lime", value: "#83bb70" },
@@ -368,6 +368,15 @@ function formatStudyTime(minutes: number) {
 
   const hours = Math.round((minutes / 60) * 10) / 10;
   return `${hours}h`;
+}
+
+function formatStudyTimeJa(minutes: number) {
+  if (minutes < 60) {
+    return `${minutes}分`;
+  }
+
+  const hours = Math.round((minutes / 60) * 10) / 10;
+  return `${hours}時間`;
 }
 
 function formatStayTime(minutes: number) {
@@ -2153,13 +2162,13 @@ function App() {
         <article className="card hours-card weekly-card">
           <div className="section-heading compact">
             <div>
-              <p className="card-kicker">Weekly Study Log</p>
-              <p className="study-total">{totalWeeklyLabel} this week</p>
+              <p className="card-kicker">学習ログ</p>
+              <p className="study-total">今週 {formatStudyTimeJa(totalWeeklyMinutes)}</p>
             </div>
-            <span className="soft-pill">7 days</span>
+            <span className="soft-pill">7日間</span>
           </div>
 
-          <div className="bar-chart" aria-label="Learning hours for the last seven days">
+          <div className="bar-chart" aria-label="直近7日間の学習時間">
             {weeklyStudyHours.map((item) => {
               const segments = getStudySegments(item.logs);
 
@@ -2182,7 +2191,7 @@ function App() {
                       setSelectedStudyDay(item.day);
                     }
                   }}
-                  aria-label={`${item.day}の学習詳細を表示`}
+                  aria-label={`${item.day}曜日の学習詳細を表示`}
                 >
                   <div
                     className="bar-shell"
@@ -2214,12 +2223,12 @@ function App() {
                   <div className="bar-tooltip" role="tooltip">
                     <div>
                       <strong>
-                        {item.day} / {item.dateLabel}
+                        {item.dateLabel}（{item.day}）
                       </strong>
-                      <span>{formatStudyTime(item.totalMinutes)} logged</span>
+                      <span>{formatStudyTimeJa(item.totalMinutes)} 学習</span>
                     </div>
                     <p>{getSubjectSummary(item.logs)}</p>
-                    <small>+{Math.round(item.hours * 80)} Effort EXP</small>
+                    <small>+{Math.round(item.hours * 80)} EXP</small>
                   </div>
                   <strong>{item.day}</strong>
                   <small>{item.totalMinutes > 0 ? formatStudyTime(item.totalMinutes) : "0h"}</small>
@@ -2231,7 +2240,7 @@ function App() {
           <div className="progress-console">
             <form className="study-form" onSubmit={handleStudySubmit}>
               <label>
-                <span>Quest</span>
+                <span>学習内容</span>
                 <input
                   value={studySubject}
                   onChange={(event) => setStudySubject(event.target.value)}
@@ -2239,7 +2248,7 @@ function App() {
                 />
               </label>
               <label>
-                <span>Time</span>
+                <span>時間</span>
                 <input
                   type="number"
                   min="0.1"
@@ -2249,7 +2258,7 @@ function App() {
                 />
               </label>
               <label>
-                <span>Unit</span>
+                <span>単位</span>
                 <select
                   value={studyUnit}
                   onChange={(event) => setStudyUnit(event.target.value as "hours" | "minutes")}
@@ -2259,7 +2268,7 @@ function App() {
                 </select>
               </label>
               <fieldset className="study-color-field">
-                <legend>Color</legend>
+                <legend>カラー</legend>
                 <div className="study-color-options">
                   {studyColorOptions.map((color) => (
                     <label key={color.value} title={color.name}>
@@ -2275,15 +2284,15 @@ function App() {
                   ))}
                 </div>
               </fieldset>
-              <button type="submit">Log +EXP</button>
+              <button type="submit">記録 +EXP</button>
             </form>
 
             {selectedStudyDayData ? (
-              <div className="study-day-detail" aria-label={`${selectedStudyDayData.day} study detail`}>
+              <div className="study-day-detail" aria-label={`${selectedStudyDayData.day}曜日の学習詳細`}>
                 <div className="study-day-detail-head">
                   <div>
-                    <p className="card-kicker">{selectedStudyDayData.day} / {selectedStudyDayData.dateLabel}</p>
-                    <strong>{formatStudyTime(selectedStudyDayData.totalMinutes)} logged</strong>
+                    <p className="card-kicker">{selectedStudyDayData.dateLabel}（{selectedStudyDayData.day}）</p>
+                    <strong>{formatStudyTimeJa(selectedStudyDayData.totalMinutes)} 学習</strong>
                   </div>
                   <span>+{Math.round(selectedStudyDayData.hours * 80)} EXP</span>
                 </div>
@@ -2301,7 +2310,7 @@ function App() {
                     ))}
                   </div>
                 ) : (
-                  <p className="study-day-empty">No study logged yet</p>
+                  <p className="study-day-empty">この日の学習記録はまだありません</p>
                 )}
               </div>
             ) : null}
