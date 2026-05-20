@@ -168,6 +168,8 @@ type WorkspaceRoom = {
   history: WorkspaceSessionHistory[];
 };
 
+type OnboardingStep = "idle" | "welcome" | "settings";
+
 type KnowledgeNode = {
   id: string;
   title: string;
@@ -231,6 +233,7 @@ const workspaceRoomsStorageKey = "contribution-arc-workspace-rooms";
 const minaAvatarPath = "mina-icon.webp";
 const detaUserId = "npc-deta";
 const maxWorkspacePresenceMinutes = 12 * 60;
+const onboardingMessage = "ようこそContribution Arcへ";
 const workspaceMovementKeys = new Set(["w", "a", "s", "d", "arrowup", "arrowleft", "arrowdown", "arrowright"]);
 const defaultWorkspacePresetMessages = [
   "進捗どうですか？",
@@ -1564,6 +1567,7 @@ function App() {
   const [settingsError, setSettingsError] = useState("");
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("idle");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
@@ -1609,6 +1613,8 @@ function App() {
       setCurrentView("home");
       setProfileMember(null);
       setProfileUser(null);
+      setOnboardingStep("idle");
+      setIsSettingsOpen(false);
       setCurrentUser(user);
       setIsAuthReady(true);
     });
@@ -1627,6 +1633,7 @@ function App() {
     const savedCharacterColor = window.localStorage.getItem(`contribution-arc-character-color-${currentUser.uid}`);
     const savedFriends = window.localStorage.getItem(`contribution-arc-friends-${currentUser.uid}`);
     const savedFriendRequests = window.localStorage.getItem(`contribution-arc-friend-requests-${currentUser.uid}`);
+    const savedOnboardingComplete = window.localStorage.getItem(`contribution-arc-onboarding-complete-${currentUser.uid}`);
     const savedRoomId = window.localStorage.getItem(`contribution-arc-room-${currentUser.uid}`);
     const savedRooms = window.localStorage.getItem(`contribution-arc-rooms-${currentUser.uid}`);
     const savedWorkspaceTask = window.localStorage.getItem(`contribution-arc-workspace-task-${currentUser.uid}`);
@@ -1692,22 +1699,60 @@ function App() {
 
     getDoc(doc(db, "users", currentUser.uid))
       .then((snapshot) => {
+        let resolvedUserId = savedUserId || "";
         if (!snapshot.exists()) {
+          if (!resolvedUserId) {
+            setOnboardingStep("welcome");
+          } else if (!savedOnboardingComplete) {
+            window.localStorage.setItem(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
+          }
           return;
         }
 
         const profile = normalizeUserProfile(currentUser.uid, snapshot.data() as Partial<UserProfile>);
-        setUserId(profile.userId);
-        setDraftUserId(profile.userId);
+        resolvedUserId = profile.userId || resolvedUserId;
+        setUserId(resolvedUserId);
+        setDraftUserId(resolvedUserId);
         setFollowing(profile.following);
-        if (profile.userId) {
-          window.localStorage.setItem(`contribution-arc-user-id-${currentUser.uid}`, profile.userId);
+        if (resolvedUserId) {
+          window.localStorage.setItem(`contribution-arc-user-id-${currentUser.uid}`, resolvedUserId);
+          window.localStorage.setItem(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
+          setOnboardingStep("idle");
+        } else {
+          setOnboardingStep("welcome");
         }
       })
       .catch(() => {
-        setSettingsError("ユーザーID情報を読み込めませんでした。");
+        if (!savedUserId) {
+          setOnboardingStep("welcome");
+        } else if (!savedOnboardingComplete) {
+          window.localStorage.setItem(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
+        }
       });
   }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser || onboardingStep !== "welcome") {
+      return;
+    }
+
+    setCurrentView("home");
+    setProfileMember(null);
+    setProfileUser(null);
+    setIsSearchOpen(false);
+    setPendingJoinRoomId(null);
+    setIsSettingsOpen(false);
+
+    const timeoutId = window.setTimeout(() => {
+      setDraftUserName(customUserName || currentUser.displayName || currentUser.email?.split("@")[0] || "");
+      setDraftUserId(userId);
+      setSettingsError("ユーザーIDを入力するとContribution Arcを開始できます。");
+      setIsSettingsOpen(true);
+      setOnboardingStep("settings");
+    }, 2700);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [currentUser, customUserName, onboardingStep, userId]);
 
   useEffect(() => {
     if (!currentUser) {
@@ -2003,6 +2048,7 @@ function App() {
   const playerName =
     customUserName.trim() || currentUser.displayName || currentUser.email?.split("@")[0] || "Developer";
   const playerInitial = playerName.slice(0, 1).toUpperCase();
+  const isOnboardingSettings = onboardingStep === "settings";
   const weeklyStudyHours = getWeeklyStudyHours(studyLogs);
   const maxStudyMinutes = Math.max(1, ...weeklyStudyHours.map((item) => item.totalMinutes));
   const effortExp = getEffortExp(studyLogs);
@@ -2260,6 +2306,7 @@ function App() {
       setCustomUserName(nextDisplayName);
       window.localStorage.setItem(`contribution-arc-user-id-${currentUser.uid}`, nextUserId);
       window.localStorage.setItem(`contribution-arc-name-${currentUser.uid}`, nextDisplayName);
+      window.localStorage.setItem(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
     } catch (error) {
       setSettingsError(
         error instanceof Error
@@ -2271,6 +2318,7 @@ function App() {
     }
 
     setIsSavingSettings(false);
+    setOnboardingStep("idle");
     setIsSettingsOpen(false);
   };
 
@@ -3010,6 +3058,16 @@ function App() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
     >
+      {onboardingStep === "welcome" ? (
+        <div className="onboarding-welcome" role="status" aria-live="polite">
+          <section>
+            <p className="card-kicker">Contribution Arc</p>
+            <h1>{onboardingMessage}</h1>
+            <span>最初にあなたのプロフィールを整えます。</span>
+          </section>
+        </div>
+      ) : null}
+
       <PremiumSidebar
         currentView={currentView}
         logo={<ContributionArcLogo />}
@@ -3095,10 +3153,20 @@ function App() {
 
       {isSettingsOpen ? (
         <div className="settings-modal-backdrop" role="presentation">
-          <section className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+          <section
+            className={`settings-modal ${isOnboardingSettings ? "onboarding-settings-modal" : ""}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="settings-title"
+          >
             <div>
-              <p className="card-kicker">Settings</p>
+              <p className="card-kicker">{isOnboardingSettings ? "Welcome Setup" : "Settings"}</p>
               <h2 id="settings-title">プロフィール設定</h2>
+              {isOnboardingSettings ? (
+                <p className="onboarding-settings-copy">
+                  Contribution Arcで使う名前とユーザーIDを設定してください。ユーザーIDはフレンド申請やプロフィール表示に使います。
+                </p>
+              ) : null}
             </div>
 
             <form className="settings-form" onSubmit={handleSettingsSubmit}>
@@ -3171,17 +3239,21 @@ function App() {
                   onChange={(event) => setDraftUserId(event.target.value.toLowerCase())}
                   placeholder="ari.dev"
                   maxLength={30}
+                  required
                 />
+                {isOnboardingSettings ? <small>小文字の半角英数字、_、. が使えます。</small> : null}
               </label>
 
               {settingsError ? <p className="settings-error">{settingsError}</p> : null}
 
               <div className="settings-actions">
-                <button type="button" className="settings-secondary" onClick={() => setIsSettingsOpen(false)}>
-                  Cancel
-                </button>
+                {!isOnboardingSettings ? (
+                  <button type="button" className="settings-secondary" onClick={() => setIsSettingsOpen(false)}>
+                    Cancel
+                  </button>
+                ) : null}
                 <button type="submit" className="settings-primary" disabled={isSavingSettings}>
-                  {isSavingSettings ? "Saving..." : "Save"}
+                  {isSavingSettings ? "Saving..." : isOnboardingSettings ? "Contribution Arcを始める" : "Save"}
                 </button>
               </div>
             </form>
