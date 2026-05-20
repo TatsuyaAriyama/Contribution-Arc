@@ -36,6 +36,7 @@ import {
 import { motion } from "framer-motion";
 import { auth, db, githubProvider, googleProvider } from "./firebase";
 import { PremiumSidebar, type AppView, type FriendPreview, type LiveActivity } from "./components/PremiumNavigation";
+import { SilentWorkspaceRoom, type RoomActivityItem } from "./components/SilentWorkspaceRoom";
 import "./App.css";
 
 type QuestEvent = "chest" | "sword" | "flame" | "star";
@@ -114,26 +115,42 @@ type CharacterOption = {
   evolution: string;
 };
 
-type WorkspaceMember = {
-  userId: string;
+type RoomUserStatus = "working" | "deep-work" | "on-break";
+
+type RoomUser = {
+  id: string;
   name: string;
-  building: string;
-  color: string;
-  joinedAt: string;
-  tone: "deep" | "green" | "soft" | "blue";
   avatar?: string;
+  x: number;
+  y: number;
+  currentTask: string;
+  status: RoomUserStatus;
+  joinedAt: string;
 };
 
-type WorkspaceSessionHistory = {
-  id: string;
+type WorkspaceMember = RoomUser & {
   userId: string;
-  userName: string;
+  building: string;
+  color: string;
+  tone: "deep" | "green" | "soft" | "blue";
+};
+
+type WorkspaceSession = {
   roomId: string;
+  userId: string;
+  task: string;
+  joinedAt: string;
+  leftAt: string;
+  durationMinutes: number;
+  earnedExp: number;
+};
+
+type WorkspaceSessionHistory = WorkspaceSession & {
+  id: string;
+  userName: string;
   roomName: string;
   building: string;
   color: string;
-  joinedAt: string;
-  leftAt: string;
   minutes: number;
   exp: number;
 };
@@ -195,6 +212,15 @@ const outputStats = {
 
 const workspaceRooms: WorkspaceRoom[] = [];
 const workspaceRoomsStorageKey = "contribution-arc-workspace-rooms";
+const workspaceMovementKeys = new Set(["w", "a", "s", "d", "arrowup", "arrowleft", "arrowdown", "arrowright"]);
+const workspacePresetMessages = [
+  "進捗どうですか？",
+  "おつかれさまです",
+  "集中します",
+  "休憩します",
+  "一緒にやろう",
+  "今日はReactやります",
+];
 const emptyKnowledgeGraph: KnowledgeGraphData = { nodes: [], links: [] };
 const knowledgeClusterAnchors: Record<string, { x: number; y: number }> = {
   frontend: { x: 322, y: 198 },
@@ -683,6 +709,144 @@ function getRoomSessionExp(minutes: number) {
   return Math.max(20, Math.round((minutes / 60) * 80));
 }
 
+function clampNumber(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function getWorkspaceStatusFromMessage(message: string): RoomUserStatus {
+  if (message.includes("休憩")) {
+    return "on-break";
+  }
+
+  if (message.includes("集中")) {
+    return "deep-work";
+  }
+
+  return "working";
+}
+
+function createWorkspaceMember(
+  member: Omit<WorkspaceMember, "currentTask" | "building"> & { currentTask: string; building?: string },
+): WorkspaceMember {
+  const task = member.currentTask || member.building || "Deep Work";
+  return {
+    ...member,
+    id: member.id || member.userId,
+    building: member.building || task,
+    currentTask: task,
+  };
+}
+
+function createDefaultWorkspaceRooms(): WorkspaceRoom[] {
+  const now = Date.now();
+
+  return [
+    {
+      id: "deep-work-studio",
+      name: "Deep Work Studio",
+      totalMinutes: 1860,
+      contributions: 24,
+      commits: 0,
+      createdAt: new Date(now - 1000 * 60 * 60 * 24 * 8).toISOString(),
+      createdBy: "system",
+      activeMembers: [
+        createWorkspaceMember({
+          id: "npc-ari",
+          userId: "npc-ari",
+          name: "Ari",
+          avatar: "",
+          x: 28,
+          y: 36,
+          currentTask: "React",
+          color: "#1f6f4a",
+          joinedAt: new Date(now - 1000 * 60 * 44).toISOString(),
+          status: "deep-work",
+          tone: "green",
+        }),
+        createWorkspaceMember({
+          id: "npc-yuki",
+          userId: "npc-yuki",
+          name: "Yuki",
+          avatar: "",
+          x: 62,
+          y: 36,
+          currentTask: "Java",
+          color: "#3f6f9f",
+          joinedAt: new Date(now - 1000 * 60 * 66).toISOString(),
+          status: "working",
+          tone: "blue",
+        }),
+        createWorkspaceMember({
+          id: "npc-mina",
+          userId: "npc-mina",
+          name: "Mina",
+          avatar: "",
+          x: 72,
+          y: 68,
+          currentTask: "AWS",
+          color: "#2f8f83",
+          joinedAt: new Date(now - 1000 * 60 * 31).toISOString(),
+          status: "working",
+          tone: "deep",
+        }),
+      ],
+      history: [
+        {
+          id: "seed-yuki-java",
+          userId: "npc-yuki",
+          userName: "Yuki",
+          roomId: "deep-work-studio",
+          roomName: "Deep Work Studio",
+          task: "Java",
+          building: "Java",
+          color: "#3f6f9f",
+          joinedAt: new Date(now - 1000 * 60 * 160).toISOString(),
+          leftAt: new Date(now - 1000 * 60 * 100).toISOString(),
+          durationMinutes: 60,
+          earnedExp: getRoomSessionExp(60),
+          minutes: 60,
+          exp: getRoomSessionExp(60),
+        },
+        {
+          id: "seed-mina-joined",
+          userId: "npc-mina",
+          userName: "Mina",
+          roomId: "deep-work-studio",
+          roomName: "Deep Work Studio",
+          task: "Deep Work",
+          building: "Deep Work",
+          color: "#2f8f83",
+          joinedAt: new Date(now - 1000 * 60 * 240).toISOString(),
+          leftAt: new Date(now - 1000 * 60 * 210).toISOString(),
+          durationMinutes: 30,
+          earnedExp: getRoomSessionExp(30),
+          minutes: 30,
+          exp: getRoomSessionExp(30),
+        },
+      ],
+    },
+  ];
+}
+
+function seedWorkspaceRooms(rooms: WorkspaceRoom[]): WorkspaceRoom[] {
+  const seedRoom = createDefaultWorkspaceRooms()[0];
+  const existingRoom = rooms.find((room) => room.id === seedRoom.id);
+
+  if (!existingRoom) {
+    return [seedRoom, ...rooms];
+  }
+
+  const activeIds = new Set(existingRoom.activeMembers.map((member) => member.userId));
+  const missingSeedMembers = seedRoom.activeMembers.filter((member) => !activeIds.has(member.userId));
+  const mergedRoom = normalizeWorkspaceRoom({
+    ...existingRoom,
+    activeMembers: [...missingSeedMembers, ...existingRoom.activeMembers],
+    history: existingRoom.history.length > 0 ? existingRoom.history : seedRoom.history,
+  });
+
+  return [mergedRoom, ...rooms.filter((room) => room.id !== seedRoom.id)];
+}
+
 function getTodayKey(date = new Date()) {
   return date.toDateString();
 }
@@ -695,12 +859,27 @@ function normalizeWorkspaceRoom(room: WorkspaceRoom): WorkspaceRoom {
     commits: room.commits || 0,
     createdAt: room.createdAt || new Date().toISOString(),
     createdBy: room.createdBy || "legacy",
-    activeMembers: (room.activeMembers || []).map((member) => ({
-      ...member,
-      color: member.color || studyColorOptions[0].value,
-    })),
+    activeMembers: (room.activeMembers || []).map((member, index) => {
+      const task = member.currentTask || member.building || "Deep Work";
+
+      return {
+        ...member,
+        id: member.id || member.userId,
+        userId: member.userId || member.id,
+        avatar: member.avatar || "",
+        x: typeof member.x === "number" ? member.x : clampNumber(24 + index * 18, 12, 88),
+        y: typeof member.y === "number" ? member.y : clampNumber(34 + index * 12, 16, 84),
+        currentTask: task,
+        status: member.status || "working",
+        building: member.building || task,
+        color: member.color || studyColorOptions[0].value,
+      };
+    }),
     history: (room.history || []).map((item) => ({
       ...item,
+      task: item.task || item.building || "Deep Work",
+      durationMinutes: item.durationMinutes || item.minutes || 0,
+      earnedExp: item.earnedExp || item.exp || 0,
       color: item.color || studyColorOptions[0].value,
     })),
   };
@@ -1249,12 +1428,16 @@ function App() {
   const [pendingJoinRoomId, setPendingJoinRoomId] = useState<string | null>(null);
   const [workspaceNow, setWorkspaceNow] = useState(Date.now());
   const [lastRoomSession, setLastRoomSession] = useState<WorkspaceSessionHistory | null>(null);
+  const [playerPosition, setPlayerPosition] = useState({ x: 18, y: 72 });
+  const [isPlayerWalking, setIsPlayerWalking] = useState(false);
+  const [workspaceBubble, setWorkspaceBubble] = useState("");
   const [knowledgeGraph, setKnowledgeGraph] = useState<KnowledgeGraphData>(emptyKnowledgeGraph);
   const [selectedKnowledgeId, setSelectedKnowledgeId] = useState("");
   const [hoveredKnowledgeId, setHoveredKnowledgeId] = useState("");
   const [knowledgeScale, setKnowledgeScale] = useState(1);
   const [knowledgePositions, setKnowledgePositions] = useState<Record<string, { x: number; y: number }>>({});
   const [draggingKnowledgeId, setDraggingKnowledgeId] = useState("");
+  const pressedWorkspaceKeysRef = useRef<Set<string>>(new Set());
   const graphSvgRef = useRef<SVGSVGElement | null>(null);
 
   useEffect(() => {
@@ -1297,6 +1480,7 @@ function App() {
         parsedRooms.push(room);
       }
     });
+    const seededRooms = seedWorkspaceRooms(parsedRooms);
     if (savedLogs) {
       setStudyLogs(removeSeedStudyLogs(JSON.parse(savedLogs) as StudyLog[]));
     } else {
@@ -1313,11 +1497,11 @@ function App() {
     setDetermination(savedDetermination || "");
     setDraftDetermination(savedDetermination || "");
     setPlayerAvatar(savedAvatar || currentUser.photoURL || "");
-    setCustomRooms(parsedRooms);
-    if (savedRoomId && parsedRooms.some((room) => room.id === savedRoomId)) {
+    setCustomRooms(seededRooms);
+    if (savedRoomId && seededRooms.some((room) => room.id === savedRoomId)) {
       setSelectedRoomId(savedRoomId);
-    } else if (parsedRooms[0]) {
-      setSelectedRoomId(parsedRooms[0].id);
+    } else if (seededRooms[0]) {
+      setSelectedRoomId(seededRooms[0].id);
     } else {
       setSelectedRoomId("");
     }
@@ -1428,7 +1612,7 @@ function App() {
         return;
       }
 
-      setCustomRooms((JSON.parse(event.newValue) as WorkspaceRoom[]).map(normalizeWorkspaceRoom));
+      setCustomRooms(seedWorkspaceRooms((JSON.parse(event.newValue) as WorkspaceRoom[]).map(normalizeWorkspaceRoom)));
     };
 
     window.addEventListener("storage", handleStorage);
@@ -1461,6 +1645,7 @@ function App() {
             ...member,
             name: nextName,
             building: nextBuilding,
+            currentTask: nextBuilding,
             avatar: playerAvatar,
           };
         });
@@ -1471,6 +1656,109 @@ function App() {
       return changed ? nextRooms : rooms;
     });
   }, [currentUser, customUserName, isWorkspaceLoaded, playerAvatar, studySubject, workspaceTask]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      return;
+    }
+
+    const selectedLocalRoom = customRooms.find((room) => room.id === selectedRoomId);
+    const member = selectedLocalRoom?.activeMembers.find((item) => item.userId === currentUser.uid);
+    if (!member) {
+      pressedWorkspaceKeysRef.current.clear();
+      setIsPlayerWalking(false);
+      return;
+    }
+
+    setPlayerPosition({
+      x: typeof member.x === "number" ? member.x : 18,
+      y: typeof member.y === "number" ? member.y : 72,
+    });
+  }, [currentUser, customRooms, selectedRoomId]);
+
+  useEffect(() => {
+    if (!workspaceBubble) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => setWorkspaceBubble(""), 3600);
+    return () => window.clearTimeout(timeoutId);
+  }, [workspaceBubble]);
+
+  useEffect(() => {
+    if (!currentUser || (currentView !== "workspace" && currentView !== "home")) {
+      pressedWorkspaceKeysRef.current.clear();
+      setIsPlayerWalking(false);
+      return;
+    }
+
+    const selectedLocalRoom = customRooms.find((room) => room.id === selectedRoomId);
+    const canMove = Boolean(selectedLocalRoom?.activeMembers.some((member) => member.userId === currentUser.uid));
+    if (!canMove) {
+      pressedWorkspaceKeysRef.current.clear();
+      setIsPlayerWalking(false);
+      return;
+    }
+
+    const isTypingTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) {
+        return false;
+      }
+
+      return ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+      if (!workspaceMovementKeys.has(key) || isTypingTarget(event.target)) {
+        return;
+      }
+
+      event.preventDefault();
+      pressedWorkspaceKeysRef.current.add(key);
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+      if (!workspaceMovementKeys.has(key)) {
+        return;
+      }
+
+      event.preventDefault();
+      pressedWorkspaceKeysRef.current.delete(key);
+    };
+
+    let frameId = 0;
+    const tick = () => {
+      const keys = pressedWorkspaceKeysRef.current;
+      const dx = (keys.has("d") || keys.has("arrowright") ? 1 : 0) - (keys.has("a") || keys.has("arrowleft") ? 1 : 0);
+      const dy = (keys.has("s") || keys.has("arrowdown") ? 1 : 0) - (keys.has("w") || keys.has("arrowup") ? 1 : 0);
+      const isMoving = dx !== 0 || dy !== 0;
+
+      setIsPlayerWalking(isMoving);
+      if (isMoving) {
+        const length = Math.hypot(dx, dy) || 1;
+        setPlayerPosition((position) => ({
+          x: clampNumber(position.x + (dx / length) * 0.42, 7, 93),
+          y: clampNumber(position.y + (dy / length) * 0.42, 14, 88),
+        }));
+      }
+
+      frameId = window.requestAnimationFrame(tick);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    frameId = window.requestAnimationFrame(tick);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      window.cancelAnimationFrame(frameId);
+      pressedWorkspaceKeysRef.current.clear();
+      setIsPlayerWalking(false);
+    };
+  }, [currentUser, currentView, customRooms, selectedRoomId]);
 
   const studyKnowledgeGraph = useMemo(() => buildStudyKnowledgeGraph(studyLogs), [studyLogs]);
 
@@ -1524,6 +1812,38 @@ function App() {
   const visibleMembers = selectedRoom?.activeMembers || [];
   const currentPresence = visibleMembers.find((member) => member.userId === currentUser.uid) || null;
   const currentStayMinutes = currentPresence ? getElapsedMinutes(currentPresence.joinedAt, workspaceNow) : 0;
+  const workspaceActors = visibleMembers.map((member) =>
+    member.userId === currentUser.uid
+      ? {
+          ...member,
+          x: playerPosition.x,
+          y: playerPosition.y,
+        }
+      : member,
+  );
+  const roomActivityItems: RoomActivityItem[] = [
+    ...visibleMembers.map((member) => {
+      const task = member.currentTask || member.building;
+      const text =
+        member.status === "on-break"
+          ? `${member.name} is taking a break`
+          : `${member.name} is building ${task}`;
+
+      return {
+        id: `active-${member.userId}-${member.joinedAt}`,
+        text,
+        meta: `${formatStayTime(getElapsedMinutes(member.joinedAt, workspaceNow))} active`,
+      };
+    }),
+    ...((selectedRoom?.history || []).slice(0, 4).map((item) => ({
+      id: `history-${item.id}`,
+      text:
+        item.id === "seed-mina-joined"
+          ? `${item.userName} joined ${item.building}`
+          : `${item.userName} logged ${formatStayTime(item.minutes)} ${item.building}`,
+      meta: new Date(item.leftAt).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
+    })) satisfies RoomActivityItem[]),
+  ].slice(0, 7);
   const roomTotalMinutes =
     (selectedRoom?.totalMinutes || 0) +
     visibleMembers.reduce((sum, member) => sum + getElapsedMinutes(member.joinedAt, workspaceNow), 0);
@@ -1915,10 +2235,13 @@ function App() {
       userName: member.name,
       roomId: room.id,
       roomName: room.name,
+      task: member.currentTask || member.building,
       building: member.building,
       color: member.color,
       joinedAt: member.joinedAt,
       leftAt,
+      durationMinutes: minutes,
+      earnedExp: getRoomSessionExp(minutes),
       minutes,
       exp: getRoomSessionExp(minutes),
     };
@@ -1991,11 +2314,16 @@ function App() {
           activeMembers: [
             ...room.activeMembers,
             {
+              id: currentUser.uid,
               userId: currentUser.uid,
               name: playerName,
               building: nextTask,
+              currentTask: nextTask,
               color: workspaceDraftColor,
               joinedAt,
+              x: 18,
+              y: 72,
+              status: "working",
               tone: "deep",
               avatar: playerAvatar,
             },
@@ -2011,6 +2339,43 @@ function App() {
     }
 
     closeWorkspaceSession(selectedRoom.id);
+  };
+
+  const handleWorkspacePresetMessage = (message: string) => {
+    if (!currentUser || !selectedRoom || !isInSelectedRoom) {
+      return;
+    }
+
+    const nextStatus = getWorkspaceStatusFromMessage(message);
+    const nextTask = message === "今日はReactやります" ? "React" : workspaceTask.trim() || currentBuilding;
+    setWorkspaceBubble(message);
+
+    if (message === "今日はReactやります") {
+      setWorkspaceTask("React");
+      setStudySubject("React");
+    }
+
+    setCustomRooms((rooms) =>
+      rooms.map((room) =>
+        room.id === selectedRoom.id
+          ? {
+              ...room,
+              activeMembers: room.activeMembers.map((member) =>
+                member.userId === currentUser.uid
+                  ? {
+                      ...member,
+                      status: nextStatus,
+                      currentTask: nextTask,
+                      building: nextTask,
+                      x: playerPosition.x,
+                      y: playerPosition.y,
+                    }
+                  : member,
+              ),
+            }
+          : room,
+      ),
+    );
   };
 
   const handleRoomCreate = (event: FormEvent<HTMLFormElement>) => {
@@ -2798,7 +3163,7 @@ function App() {
             </button>
           </div>
 
-          <section className="card silent-workspace" aria-label="Silent Workspace">
+          <section className="card silent-workspace workspace-2d-card" aria-label="Silent Workspace">
             <div className="workspace-heading">
               <div>
                 <p className="card-kicker">Silent Workspace</p>
@@ -2867,106 +3232,39 @@ function App() {
               <div className="room-detail">
                 {selectedRoom ? (
                   <>
-                    <div className="room-detail-top">
-                      <div>
-                        <p className="card-kicker">{isInSelectedRoom ? "入室中" : "Room"} / {selectedRoom.name}</p>
-                      </div>
-                      <div className="room-stay-panel" aria-label="Room stay status">
-                        <span>{isInSelectedRoom ? "滞在時間" : "参加者"}</span>
-                        <strong>{isInSelectedRoom ? formatStayTime(currentStayMinutes) : `${roomOnlineCount}人`}</strong>
-                      </div>
-                    </div>
-
-                    <label className="workspace-task-field">
-                      <span>現在の作業</span>
-                      <input
-                        value={workspaceTask}
-                        onChange={(event) => setWorkspaceTask(event.target.value)}
-                        placeholder="React / Java / API設計"
-                        maxLength={48}
-                      />
-                    </label>
-
-                    <div className="room-actions">
-                      <button
-                        type="button"
-                        className={isInSelectedRoom ? "room-leave-button" : "room-join-button"}
-                        onClick={() => (isInSelectedRoom ? handleRoomLeave() : handleRoomJoin(selectedRoom.id))}
-                      >
-                        {isInSelectedRoom ? "退出して学習を記録" : "このRoomに入室"}
-                      </button>
-                      <span>退出時に滞在時間がWeekly Study Logへ反映されます</span>
-                      {lastRoomSession ? (
-                        <strong>+{lastRoomSession.exp} EXP / {formatStayTime(lastRoomSession.minutes)}を記録</strong>
-                      ) : null}
-                    </div>
-
-                    <div className="presence-list" aria-label="Room presence">
-                      {visibleMembers.length > 0 ? (
-                        visibleMembers.map((member) => {
-                          const minutes = getElapsedMinutes(member.joinedAt, workspaceNow);
-                          return (
-                            <button
-                              type="button"
-                              className="presence-card"
-                              key={`${member.userId}-${member.joinedAt}`}
-                              onClick={() => handleMemberProfileOpen(member)}
-                            >
-                              <span className={`presence-avatar ${member.tone}`}>
-                                {member.avatar ? <img src={member.avatar} alt="" /> : member.name.slice(0, 1).toUpperCase()}
-                              </span>
-                              <div>
-                                <strong>
-                                  <i style={{ background: member.color }} />
-                                  {member.name} — {member.building}
-                                </strong>
-                                <span>{formatStayTime(minutes)}滞在</span>
-                                <small>今日 +{getRoomSessionExp(minutes)} EXP</small>
-                              </div>
-                            </button>
-                          );
-                        })
-                      ) : (
-                        <div className="presence-empty">まだ誰も入室していません。</div>
-                      )}
-                    </div>
-
-                    {userRoomHistory.length > 0 ? (
-                      <div className="room-history-panel">
-                        <p className="card-kicker">学習履歴</p>
-                        {userRoomHistory.map((item) => (
-                          <article key={item.id}>
-                            <span>{new Date(item.leftAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                            <strong>{item.roomName}</strong>
-                            <small>
-                              <i style={{ background: item.color }} />
-                              {item.building} / {formatStayTime(item.minutes)} / +{item.exp} EXP
-                            </small>
-                          </article>
-                        ))}
-                      </div>
-                    ) : null}
-
-                    <div className="room-output-panel">
-                      <div>
-                        <p className="card-kicker">Tonight's Output</p>
-                        <h3>{roomCommits.toLocaleString()} commits</h3>
-                        <span>{Math.round(roomTotalMinutes / 60).toLocaleString()}h learned</span>
-                      </div>
-                      <div className="room-heatmap" aria-hidden="true">
-                        {Array.from({ length: 42 }, (_, index) => (
-                          <span
-                            key={index}
-                            className={`heat-${(index + roomOnlineCount + selectedRoom.contributions) % 5}`}
-                            style={{ animationDelay: `${index * 18}ms` }}
-                          />
-                        ))}
-                      </div>
-                      <div className="room-output-meta">
-                        <strong>{roomContributions.toLocaleString()}</strong>
-                        <span>contributions today</span>
-                      </div>
-                    </div>
+                    <SilentWorkspaceRoom
+                      roomName={selectedRoom.name}
+                      onlineCount={roomOnlineCount}
+                      members={workspaceActors}
+                      currentUserId={currentUser.uid}
+                      isJoined={isInSelectedRoom}
+                      currentStayLabel={formatStayTime(currentStayMinutes)}
+                      joinedAtLabel={
+                        currentPresence
+                          ? new Date(currentPresence.joinedAt).toLocaleTimeString("ja-JP", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : ""
+                      }
+                      taskValue={workspaceTask}
+                      onTaskChange={setWorkspaceTask}
+                      onJoin={() => handleRoomJoin(selectedRoom.id)}
+                      onLeave={handleRoomLeave}
+                      presetMessages={workspacePresetMessages}
+                      onPresetMessage={handleWorkspacePresetMessage}
+                      bubbleMessage={workspaceBubble}
+                      isPlayerWalking={isPlayerWalking}
+                      activityItems={roomActivityItems}
+                      onMemberOpen={handleMemberProfileOpen}
+                      lastSessionLabel={
+                        lastRoomSession
+                          ? `+${lastRoomSession.exp} EXP / ${formatStayTime(lastRoomSession.minutes)}を記録`
+                          : ""
+                      }
+                      totalLearnedLabel={`${Math.round(roomTotalMinutes / 60).toLocaleString()}h learned`}
+                      contributionLabel={`${roomContributions.toLocaleString()} contributions today`}
+                    />
                   </>
                 ) : (
                   <div className="room-empty-detail">
@@ -2986,6 +3284,64 @@ function App() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
       >
+      <section className="home-workspace-focus card workspace-2d-card" aria-label="Silent Workspace live view">
+        <div className="home-workspace-header">
+          <div>
+            <p className="card-kicker">Silent Workspace</p>
+            <h2>{selectedRoom?.name || "Deep Work Studio"}</h2>
+            <p>
+              {isInSelectedRoom
+                ? `入室中 ${currentStayMinutes > 0 ? formatStayTime(currentStayMinutes) : ""}`
+                : "状況確認と定型コミュニケーション。入室やRoom管理は詳細画面で行います。"}
+            </p>
+          </div>
+          <div className="home-workspace-actions">
+            <span className="workspace-online-pill">
+              <span>{roomOnlineCount}</span>
+              online
+            </span>
+            <button type="button" onClick={() => setCurrentView("workspace")}>
+              詳細設定
+            </button>
+          </div>
+        </div>
+
+        {selectedRoom ? (
+          <SilentWorkspaceRoom
+            presentation="focus"
+            roomName={selectedRoom.name}
+            onlineCount={roomOnlineCount}
+            members={workspaceActors}
+            currentUserId={currentUser.uid}
+            isJoined={isInSelectedRoom}
+            currentStayLabel={formatStayTime(currentStayMinutes)}
+            joinedAtLabel={
+              currentPresence
+                ? new Date(currentPresence.joinedAt).toLocaleTimeString("ja-JP", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : ""
+            }
+            taskValue={workspaceTask}
+            onTaskChange={setWorkspaceTask}
+            onJoin={() => handleRoomJoin(selectedRoom.id)}
+            onLeave={handleRoomLeave}
+            presetMessages={workspacePresetMessages}
+            onPresetMessage={handleWorkspacePresetMessage}
+            bubbleMessage={workspaceBubble}
+            isPlayerWalking={isPlayerWalking}
+            activityItems={roomActivityItems}
+            onMemberOpen={handleMemberProfileOpen}
+            lastSessionLabel={
+              lastRoomSession ? `+${lastRoomSession.exp} EXP / ${formatStayTime(lastRoomSession.minutes)}を記録` : ""
+            }
+            totalLearnedLabel={`${Math.round(roomTotalMinutes / 60).toLocaleString()}h learned`}
+            contributionLabel={`${roomContributions.toLocaleString()} contributions today`}
+          />
+        ) : null}
+      </section>
+
       <section className="hero-grid" aria-label="Contribution Arc overview">
         <div className="overview-stack">
           {playerStatusCard(true)}
