@@ -16,6 +16,7 @@ export type FriendPreview = {
 
 export type LiveActivity = {
   id: string;
+  userId: string;
   userName: string;
   avatar?: string;
   text: string;
@@ -33,6 +34,7 @@ type PremiumSidebarProps = {
   onViewChange: (view: AppView) => void;
   onProfileOpen: () => void;
   onFriendOpen: (friend: FriendPreview) => void;
+  onActivityOpen: (activity: LiveActivity) => void;
 };
 
 export function PremiumSidebar({
@@ -45,6 +47,7 @@ export function PremiumSidebar({
   onViewChange,
   onProfileOpen,
   onFriendOpen,
+  onActivityOpen,
 }: PremiumSidebarProps) {
   const visibleFriends = friends.slice(0, 5);
 
@@ -131,9 +134,11 @@ export function PremiumSidebar({
         <div className="live-activity-list">
           {liveActivities.length > 0 ? (
             liveActivities.slice(0, 5).map((activity, index) => (
-              <motion.article
+              <motion.button
+                type="button"
                 className="live-activity-card"
                 key={activity.id}
+                onClick={() => onActivityOpen(activity)}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1], delay: index * 0.045 }}
@@ -146,7 +151,7 @@ export function PremiumSidebar({
                   <strong>{activity.text}</strong>
                   <small>{activity.meta}</small>
                 </span>
-              </motion.article>
+              </motion.button>
             ))
           ) : (
             <p className="friend-empty">今は静かです。誰かの記録が始まるとここに流れます。</p>

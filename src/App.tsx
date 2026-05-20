@@ -613,7 +613,7 @@ function normalizeUserProfile(uid: string, data: Partial<UserProfile>): UserProf
 }
 
 function getFriendGithubUrl(userId: string) {
-  return userId ? `https://github.com/${userId}` : "";
+  return userId && !userId.startsWith("npc-") ? `https://github.com/${userId}` : "";
 }
 
 function profileToFriend(profile: UserProfile): FriendPreview {
@@ -625,6 +625,18 @@ function profileToFriend(profile: UserProfile): FriendPreview {
     status: "offline",
     activity: "オフライン",
     githubUrl: getFriendGithubUrl(profile.userId),
+  };
+}
+
+function workspaceMemberToProfile(member: WorkspaceMember): UserProfile {
+  return {
+    uid: member.userId,
+    userId: member.userId.startsWith("npc-") ? member.name.toLowerCase() : member.userId,
+    displayName: member.name,
+    photoURL: member.avatar || "",
+    searchName: member.name.toLowerCase(),
+    following: [],
+    followers: [],
   };
 }
 
@@ -1894,14 +1906,17 @@ function App() {
 
       return {
         id: `active-${member.userId}-${member.joinedAt}`,
+        userId: member.userId,
         userName: member.name,
         avatar: member.avatar,
         text,
         meta: `${formatStayTime(getElapsedMinutes(member.joinedAt, workspaceNow))} active`,
+        member,
       };
     }),
     ...((selectedRoom?.history || []).slice(0, 4).map((item) => ({
       id: `history-${item.id}`,
+      userId: item.userId,
       userName: item.userName,
       avatar: item.userName === "Mina" || item.userId === "npc-mina" ? minaAvatarPath : "",
       text:
@@ -1942,6 +1957,7 @@ function App() {
     .slice(0, 3)
     .map((log) => ({
       id: `study-${log.id}`,
+      userId: currentUser.uid,
       userName: playerName,
       avatar: playerAvatar,
       text: `${playerName} completed ${formatStudyTimeJa(log.minutes)} ${log.subject}`,
@@ -1950,6 +1966,7 @@ function App() {
     }));
   const onlineActivities: LiveActivity[] = activeMembers.slice(0, 3).map((member) => ({
     id: `online-${member.userId}-${member.joinedAt}`,
+    userId: member.userId,
     userName: member.name,
     avatar: member.avatar,
     text: `${member.name} is studying ${member.building}`,
@@ -2263,6 +2280,62 @@ function App() {
   const handleMemberProfileOpen = (member: WorkspaceMember) => {
     setProfileMember(member.userId === currentUser.uid ? null : member);
     setProfileUser(null);
+    setCurrentView("profile");
+  };
+
+  const handleRoomActivityOpen = (item: RoomActivityItem) => {
+    if (item.userId === currentUser.uid) {
+      setProfileMember(null);
+      setProfileUser(null);
+      setCurrentView("profile");
+      return;
+    }
+
+    const activeMember = item.member || activeMembers.find((member) => member.userId === item.userId);
+    if (activeMember) {
+      handleMemberProfileOpen(activeMember);
+      return;
+    }
+
+    setProfileMember(null);
+    setProfileUser({
+      uid: item.userId,
+      userId: item.userId.startsWith("npc-") ? item.userName.toLowerCase() : item.userId,
+      displayName: item.userName,
+      photoURL: item.avatar || "",
+      searchName: item.userName.toLowerCase(),
+      following: [],
+      followers: [],
+    });
+    setFriendMessage("");
+    setCurrentView("profile");
+  };
+
+  const handleLiveActivityOpen = (activity: LiveActivity) => {
+    if (activity.userId === currentUser.uid) {
+      setProfileMember(null);
+      setProfileUser(null);
+      setCurrentView("profile");
+      return;
+    }
+
+    const activeMember = activeMembers.find((member) => member.userId === activity.userId);
+    if (activeMember) {
+      handleMemberProfileOpen(activeMember);
+      return;
+    }
+
+    setProfileMember(null);
+    setProfileUser({
+      uid: activity.userId,
+      userId: activity.userId.startsWith("npc-") ? activity.userName.toLowerCase() : activity.userId,
+      displayName: activity.userName,
+      photoURL: activity.avatar || "",
+      searchName: activity.userName.toLowerCase(),
+      following: [],
+      followers: [],
+    });
+    setFriendMessage("");
     setCurrentView("profile");
   };
 
@@ -2619,9 +2692,17 @@ function App() {
       customRooms.find((room) => room.activeMembers.some((item) => item.userId === member.userId)) ||
       selectedRoom;
     const elapsedMinutes = getElapsedMinutes(member.joinedAt, workspaceNow);
+    const memberProfile = workspaceMemberToProfile(member);
+    const pendingRequest = friendRequests.find(
+      (request) => request.profile.uid === memberProfile.uid && request.status === "pending",
+    );
+    const acceptedRequest = friendRequests.find(
+      (request) => request.profile.uid === memberProfile.uid && request.status === "accepted",
+    );
+    const isFriend = friends.some((friend) => friend.uid === memberProfile.uid) || Boolean(acceptedRequest);
 
     return (
-      <article className="card member-profile-card">
+      <article className="card member-profile-card workspace-member-profile-card">
         <div className="member-profile-hero">
           <span className={`presence-avatar ${member.tone}`}>
             {member.avatar ? <img src={member.avatar} alt="" /> : member.name.slice(0, 1).toUpperCase()}
@@ -2629,8 +2710,27 @@ function App() {
           <div>
             <p className="card-kicker">Profile</p>
             <h2>{member.name}</h2>
+            <small>@{memberProfile.userId}</small>
           </div>
         </div>
+
+        <div className="friend-profile-actions member-profile-actions">
+          <button
+            type="button"
+            disabled={isFriend || Boolean(pendingRequest)}
+            onClick={() => handleFriendRequest(memberProfile)}
+          >
+            {isFriend ? "フレンド" : pendingRequest ? "申請中" : "フレンド申請"}
+          </button>
+          {pendingRequest ? (
+            <button type="button" onClick={() => handleFriendAccept(pendingRequest)}>
+              承認する
+            </button>
+          ) : null}
+          <span>{isFriend ? "つながっています" : pendingRequest ? "申請を送信済み" : "静かに作業仲間へ追加"}</span>
+        </div>
+
+        {friendMessage ? <p className="friend-message">{friendMessage}</p> : null}
 
         <div className="member-profile-grid">
           <div>
@@ -2651,6 +2751,13 @@ function App() {
           <div>
             <span>Today</span>
             <strong>+{getRoomSessionExp(elapsedMinutes)} EXP</strong>
+          </div>
+          <div>
+            <span>Connection</span>
+            <strong>
+              <i style={{ background: isFriend ? "#1f6f4a" : pendingRequest ? "#c8a95b" : "#d4d4d8" }} />
+              {isFriend ? "Friends" : pendingRequest ? "Pending" : "Not connected"}
+            </strong>
           </div>
         </div>
       </article>
@@ -2736,6 +2843,7 @@ function App() {
           setCurrentView("profile");
         }}
         onFriendOpen={handleFriendOpen}
+        onActivityOpen={handleLiveActivityOpen}
       />
 
       <div className="app-main-panel">
@@ -3403,6 +3511,7 @@ function App() {
                       isPlayerWalking={isPlayerWalking}
                       activityItems={roomActivityItems}
                       onMemberOpen={handleMemberProfileOpen}
+                      onActivityOpen={handleRoomActivityOpen}
                       lastSessionLabel={
                         lastRoomSession
                           ? `+${lastRoomSession.exp} EXP / ${formatStayTime(lastRoomSession.minutes)}を記録`
@@ -3480,6 +3589,7 @@ function App() {
             isPlayerWalking={isPlayerWalking}
             activityItems={roomActivityItems}
             onMemberOpen={handleMemberProfileOpen}
+            onActivityOpen={handleRoomActivityOpen}
             lastSessionLabel={
               lastRoomSession ? `+${lastRoomSession.exp} EXP / ${formatStayTime(lastRoomSession.minutes)}を記録` : ""
             }

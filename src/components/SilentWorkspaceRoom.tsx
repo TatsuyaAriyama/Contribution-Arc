@@ -2,10 +2,12 @@ import { useState, type CSSProperties, type ChangeEvent } from "react";
 
 export type RoomActivityItem = {
   id: string;
+  userId: string;
   userName: string;
   avatar?: string;
   text: string;
   meta: string;
+  member?: RoomActor;
 };
 
 type RoomActorStatus = "working" | "deep-work" | "on-break";
@@ -46,6 +48,7 @@ type SilentWorkspaceRoomProps = {
   isPlayerWalking: boolean;
   activityItems: RoomActivityItem[];
   onMemberOpen: (member: RoomActor) => void;
+  onActivityOpen: (item: RoomActivityItem) => void;
   lastSessionLabel: string;
   totalLearnedLabel: string;
   contributionLabel: string;
@@ -77,6 +80,7 @@ export function SilentWorkspaceRoom({
   isPlayerWalking,
   activityItems,
   onMemberOpen,
+  onActivityOpen,
   lastSessionLabel,
   totalLearnedLabel,
   contributionLabel,
@@ -244,7 +248,7 @@ export function SilentWorkspaceRoom({
           </div>
           <div className="workspace-activity-list">
             {activityItems.map((item) => (
-              <article key={item.id}>
+              <button type="button" key={item.id} onClick={() => onActivityOpen(item)}>
                 <span className="workspace-activity-avatar">
                   {item.avatar ? <img src={item.avatar} alt="" /> : item.userName.slice(0, 1).toUpperCase()}
                 </span>
@@ -252,7 +256,7 @@ export function SilentWorkspaceRoom({
                   <p>{item.text}</p>
                   <small>{item.meta}</small>
                 </span>
-              </article>
+              </button>
             ))}
           </div>
         </aside>
