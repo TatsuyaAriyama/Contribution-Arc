@@ -2513,25 +2513,12 @@ function App() {
     setLastRoomSession(session);
   };
 
-  const handleRoomJoin = (roomId: string) => {
-    setPendingJoinRoomId(roomId);
-    setWorkspaceDraftTask(workspaceTask || studySubject || "");
-    setWorkspaceDraftColor(studyColor);
-  };
-
-  const handleWorkspaceStart = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!pendingJoinRoomId) {
-      return;
-    }
-
-    const nextTask = workspaceDraftTask.trim();
+  const startWorkspaceSession = (roomId: string, task: string, color: string) => {
+    const nextTask = task.trim();
     if (!nextTask) {
       return;
     }
 
-    const roomId = pendingJoinRoomId;
     if (activeRoom && activeRoom.id !== roomId) {
       closeWorkspaceSession(activeRoom.id);
     }
@@ -2540,26 +2527,26 @@ function App() {
     setSelectedRoomId(roomId);
     setWorkspaceTask(nextTask);
     setStudySubject(nextTask);
-    setStudyColor(workspaceDraftColor);
+    setStudyColor(color);
     setLastRoomSession(null);
     setPendingJoinRoomId(null);
     setCustomRooms((rooms) =>
       rooms.map((room) => {
-        if (room.id !== roomId || room.activeMembers.some((member) => member.userId === currentUser.uid)) {
+        if (room.id !== roomId) {
           return room;
         }
 
         return {
           ...room,
           activeMembers: [
-            ...room.activeMembers,
+            ...room.activeMembers.filter((member) => member.userId !== currentUser.uid),
             {
               id: currentUser.uid,
               userId: currentUser.uid,
               name: playerName,
               building: nextTask,
               currentTask: nextTask,
-              color: workspaceDraftColor,
+              color,
               joinedAt,
               x: 18,
               y: 72,
@@ -2572,6 +2559,20 @@ function App() {
         };
       }),
     );
+  };
+
+  const handleRoomJoin = (roomId: string) => {
+    startWorkspaceSession(roomId, workspaceTask || studySubject || "Deep work", studyColor);
+  };
+
+  const handleWorkspaceStart = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!pendingJoinRoomId) {
+      return;
+    }
+
+    startWorkspaceSession(pendingJoinRoomId, workspaceDraftTask, workspaceDraftColor);
   };
 
   const handleRoomLeave = () => {
