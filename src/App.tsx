@@ -1724,7 +1724,12 @@ function App() {
       />
 
       <div className="app-main-panel">
-      <header className="site-header">
+      <motion.header
+        className="site-header premium-dashboard-header"
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.06 }}
+      >
         <div className="topbar-context">
           <p className="card-kicker">Contribution Arc</p>
           <strong>
@@ -1744,6 +1749,7 @@ function App() {
           >
             <span aria-hidden="true" />
             <strong>Search</strong>
+            <em>⌘K</em>
           </button>
           <button
             type="button"
@@ -1751,6 +1757,11 @@ function App() {
             onClick={() => setCurrentView("workspace")}
             aria-label="Silent Workspaceを開く"
           >
+            <span className="workspace-live-strip" aria-hidden="true">
+              <b />
+              <b />
+              <b />
+            </span>
             <span className="workspace-nav-icon" aria-hidden="true">
               <span />
               <span />
@@ -1774,7 +1785,7 @@ function App() {
             Sign out
           </button>
         </div>
-      </header>
+      </motion.header>
 
       {isSettingsOpen ? (
         <div className="settings-modal-backdrop" role="presentation">
