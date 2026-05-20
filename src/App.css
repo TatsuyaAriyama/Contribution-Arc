@@ -2850,9 +2850,9 @@
 }
 
 .study-day-detail-list article {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
   min-width: 0;
   min-height: 34px;
@@ -2895,6 +2895,32 @@
   flex: 0 0 auto;
   color: var(--green);
   font-size: 13px;
+}
+
+.study-log-delete-button {
+  min-height: 26px;
+  padding: 0 9px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #71717a;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 850;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease;
+}
+
+.study-log-delete-button:hover,
+.study-log-delete-button:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(17, 24, 39, 0.16);
+  background: #f4f4f5;
+  color: #111827;
+  outline: none;
 }
 
 .study-day-empty {
@@ -3019,13 +3045,11 @@
   display: grid;
   gap: 6px;
   width: 100%;
-  min-height: 82px;
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 18px;
   background: rgba(250, 250, 248, 0.86);
   color: var(--muted);
-  cursor: pointer;
   text-align: left;
   transition:
     transform 0.18s ease,
@@ -3044,9 +3068,23 @@
   box-shadow: 0 16px 36px rgba(17, 24, 39, 0.07);
 }
 
-.room-card span,
-.room-card strong,
-.room-card small {
+.room-select-button {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  min-height: 58px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.room-select-button span,
+.room-select-button strong,
+.room-select-button small {
   display: block;
 }
 
@@ -3068,13 +3106,6 @@
   white-space: nowrap;
 }
 
-.room-card-actions {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
 .room-join-badge {
   flex: 0 0 auto;
   display: inline-flex;
@@ -3090,18 +3121,34 @@
   font-weight: 900;
 }
 
+.room-owner-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 34px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(17, 24, 39, 0.07);
+}
+
+.room-owner-actions > span {
+  color: #71717a;
+  font-size: 11px;
+  font-weight: 850;
+}
+
 .room-delete-button {
-  display: inline-grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
+  flex: 0 0 auto;
+  min-height: 28px;
+  padding: 0 10px;
   border: 1px solid rgba(17, 24, 39, 0.08);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.76);
   color: var(--muted);
-  font-size: 15px;
-  font-weight: 900;
-  line-height: 1;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 850;
   transition:
     transform 0.16s ease,
     border-color 0.16s ease,
@@ -3112,8 +3159,8 @@
 .room-delete-button:hover,
 .room-delete-button:focus-visible {
   transform: translateY(-1px);
-  border-color: rgba(31, 111, 74, 0.22);
-  background: rgba(220, 232, 225, 0.62);
+  border-color: rgba(17, 24, 39, 0.18);
+  background: #f4f4f5;
   color: var(--ink);
   outline: none;
 }
@@ -4749,11 +4796,35 @@
 
 .workspace-activity-list article {
   display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
   gap: 4px;
   padding: 10px;
   border: 1px solid rgba(17, 24, 39, 0.07);
   border-radius: 12px;
   background: #fafafa;
+}
+
+.workspace-activity-avatar {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  overflow: hidden;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 12px;
+  background: #ffffff;
+  color: #111827;
+  font-size: 12px;
+  font-weight: 900;
+  box-shadow: 0 8px 16px rgba(17, 24, 39, 0.06);
+}
+
+.workspace-activity-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .workspace-activity-list p {
@@ -4764,7 +4835,9 @@
   line-height: 1.45;
 }
 
-.workspace-activity-list span {
+.workspace-activity-list small {
+  display: block;
+  margin-top: 3px;
   color: #71717a;
   font-size: 11px;
   font-weight: 800;
@@ -5228,8 +5301,8 @@
   }
 
   .room-delete-button {
-    width: 24px;
-    height: 24px;
+    min-height: 28px;
+    padding: 0 10px;
   }
 
   .room-detail {

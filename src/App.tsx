@@ -228,6 +228,7 @@ const outputStats = {
 
 const workspaceRooms: WorkspaceRoom[] = [];
 const workspaceRoomsStorageKey = "contribution-arc-workspace-rooms";
+const minaAvatarPath = "mina-icon.webp";
 const workspaceMovementKeys = new Set(["w", "a", "s", "d", "arrowup", "arrowleft", "arrowdown", "arrowright"]);
 const defaultWorkspacePresetMessages = [
   "進捗どうですか？",
@@ -798,7 +799,7 @@ function createDefaultWorkspaceRooms(): WorkspaceRoom[] {
           id: "npc-mina",
           userId: "npc-mina",
           name: "Mina",
-          avatar: "",
+          avatar: minaAvatarPath,
           characterColor: "#2f8f83",
           x: 72,
           y: 68,
@@ -881,11 +882,13 @@ function normalizeWorkspaceRoom(room: WorkspaceRoom): WorkspaceRoom {
     activeMembers: (room.activeMembers || []).map((member, index) => {
       const task = member.currentTask || member.building || "Deep Work";
 
+      const isMina = member.userId === "npc-mina" || member.id === "npc-mina" || member.name === "Mina";
+
       return {
         ...member,
         id: member.id || member.userId,
         userId: member.userId || member.id,
-        avatar: member.avatar || "",
+        avatar: isMina ? minaAvatarPath : member.avatar || "",
         characterColor: member.characterColor || member.color || studyColorOptions[0].value,
         x: typeof member.x === "number" ? member.x : clampNumber(24 + index * 18, 12, 88),
         y: typeof member.y === "number" ? member.y : clampNumber(34 + index * 12, 16, 84),
@@ -1891,12 +1894,16 @@ function App() {
 
       return {
         id: `active-${member.userId}-${member.joinedAt}`,
+        userName: member.name,
+        avatar: member.avatar,
         text,
         meta: `${formatStayTime(getElapsedMinutes(member.joinedAt, workspaceNow))} active`,
       };
     }),
     ...((selectedRoom?.history || []).slice(0, 4).map((item) => ({
       id: `history-${item.id}`,
+      userName: item.userName,
+      avatar: item.userName === "Mina" || item.userId === "npc-mina" ? minaAvatarPath : "",
       text:
         item.id === "seed-mina-joined"
           ? `${item.userName} joined ${item.building}`
@@ -2470,12 +2477,26 @@ function App() {
       return;
     }
 
+    const isConfirmed = window.confirm(`${room.name}を削除しますか？このRoomは一覧から消えます。`);
+    if (!isConfirmed) {
+      return;
+    }
+
     const nextRooms = customRooms.filter((item) => item.id !== roomId);
     setCustomRooms(nextRooms);
 
     if (selectedRoomId === roomId) {
-      setSelectedRoomId(nextRooms[0]?.id || "");
+      setSelectedRoomId(nextRooms[0]?.id || createDefaultWorkspaceRooms()[0].id);
     }
+
+    if (pendingJoinRoomId === roomId) {
+      setPendingJoinRoomId(null);
+    }
+    setLastRoomSession(null);
+  };
+
+  const handleStudyLogDelete = (logId: string) => {
+    setStudyLogs((logs) => logs.filter((log) => log.id !== logId));
   };
 
   const handleKnowledgeImport = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -3319,46 +3340,38 @@ function App() {
                   <button type="submit">作成</button>
                 </form>
 
-                {allWorkspaceRooms.map((room) => (
-                  <button
-                    type="button"
-                    key={room.id}
-                    className={room.id === selectedRoom?.id ? "room-card active" : "room-card"}
-                    onClick={() => setSelectedRoomId(room.id)}
-                  >
-                    <span className="room-card-top">
-                      <span>{room.name}</span>
-                      <span className="room-card-actions">
-                        <span className="room-join-badge">
-                          {room.activeMembers.some((member) => member.userId === currentUser.uid) ? "入室中" : "参加"}
+                {allWorkspaceRooms.map((room) => {
+                  const isOwnRoom = room.createdBy === currentUser.uid;
+                  const isActiveRoom = room.id === selectedRoom?.id;
+                  const isJoinedRoom = room.activeMembers.some((member) => member.userId === currentUser.uid);
+
+                  return (
+                    <article key={room.id} className={isActiveRoom ? "room-card active" : "room-card"}>
+                      <button
+                        type="button"
+                        className="room-select-button"
+                        onClick={() => setSelectedRoomId(room.id)}
+                        aria-label={`${room.name}を表示`}
+                      >
+                        <span className="room-card-top">
+                          <span>{room.name}</span>
+                          <span className="room-join-badge">{isJoinedRoom ? "入室中" : "参加"}</span>
                         </span>
-                        {room.createdBy === currentUser.uid ? (
-                          <span
-                            className="room-delete-button"
-                            role="button"
-                            tabIndex={0}
-                            aria-label={`${room.name}を削除`}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              handleRoomDelete(room.id);
-                            }}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter" || event.key === " ") {
-                                event.preventDefault();
-                                event.stopPropagation();
-                                handleRoomDelete(room.id);
-                              }
-                            }}
-                          >
-                            ×
-                          </span>
-                        ) : null}
-                      </span>
-                    </span>
-                    <strong>{room.activeMembers.length} online</strong>
-                    <small>{Math.round(room.totalMinutes / 60)}h learned / {room.contributions} contributions</small>
-                  </button>
-                ))}
+                        <strong>{room.activeMembers.length} online</strong>
+                        <small>{Math.round(room.totalMinutes / 60)}h learned / {room.contributions} contributions</small>
+                      </button>
+
+                      {isOwnRoom ? (
+                        <div className="room-owner-actions">
+                          <span>あなたが作成</span>
+                          <button type="button" className="room-delete-button" onClick={() => handleRoomDelete(room.id)}>
+                            削除
+                          </button>
+                        </div>
+                      ) : null}
+                    </article>
+                  );
+                })}
               </div>
 
               <div className="room-detail">
@@ -3647,6 +3660,14 @@ function App() {
                           <b>{log.subject}</b>
                         </span>
                         <strong>{formatStudyTime(log.minutes)}</strong>
+                        <button
+                          type="button"
+                          className="study-log-delete-button"
+                          onClick={() => handleStudyLogDelete(log.id)}
+                          aria-label={`${log.subject}の学習記録を削除`}
+                        >
+                          削除
+                        </button>
                       </article>
                     ))}
                   </div>

@@ -2,6 +2,8 @@ import { useState, type CSSProperties, type ChangeEvent } from "react";
 
 export type RoomActivityItem = {
   id: string;
+  userName: string;
+  avatar?: string;
   text: string;
   meta: string;
 };
@@ -243,8 +245,13 @@ export function SilentWorkspaceRoom({
           <div className="workspace-activity-list">
             {activityItems.map((item) => (
               <article key={item.id}>
-                <p>{item.text}</p>
-                <span>{item.meta}</span>
+                <span className="workspace-activity-avatar">
+                  {item.avatar ? <img src={item.avatar} alt="" /> : item.userName.slice(0, 1).toUpperCase()}
+                </span>
+                <span>
+                  <p>{item.text}</p>
+                  <small>{item.meta}</small>
+                </span>
               </article>
             ))}
           </div>
