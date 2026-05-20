@@ -1768,8 +1768,8 @@ function App() {
               <span />
             </span>
             <span className="workspace-nav-copy">
-              <strong>Silent Workspace</strong>
-              <small>静かに積み上げる作業空間</small>
+              <strong>Workspace</strong>
+              <small>誰かの学習が今も積み上がっている</small>
             </span>
             <i>{activeRoom ? "入室中" : `${allWorkspaceRooms.length} Rooms`}</i>
           </button>
