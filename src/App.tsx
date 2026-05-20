@@ -229,6 +229,7 @@ const outputStats = {
 const workspaceRooms: WorkspaceRoom[] = [];
 const workspaceRoomsStorageKey = "contribution-arc-workspace-rooms";
 const minaAvatarPath = "mina-icon.webp";
+const detaUserId = "npc-deta";
 const workspaceMovementKeys = new Set(["w", "a", "s", "d", "arrowup", "arrowleft", "arrowdown", "arrowright"]);
 const defaultWorkspacePresetMessages = [
   "進捗どうですか？",
@@ -738,6 +739,21 @@ function getRoomSessionExp(minutes: number) {
   return Math.max(20, Math.round((minutes / 60) * 80));
 }
 
+function getStableHash(value: string) {
+  return Array.from(value).reduce((hash, character) => {
+    return (hash * 31 + character.charCodeAt(0)) >>> 0;
+  }, 2166136261);
+}
+
+function seededRandom(seed: number) {
+  let value = seed || 1;
+
+  return () => {
+    value = (value * 1664525 + 1013904223) >>> 0;
+    return value / 4294967296;
+  };
+}
+
 function clampNumber(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
@@ -766,6 +782,73 @@ function createWorkspaceMember(
   };
 }
 
+function createDetaMember(joinedAt: Date): WorkspaceMember {
+  return createWorkspaceMember({
+    id: detaUserId,
+    userId: detaUserId,
+    name: "deta",
+    avatar: "",
+    characterColor: "#1f6f4a",
+    x: 28,
+    y: 36,
+    currentTask: "React",
+    color: "#1f6f4a",
+    joinedAt: joinedAt.toISOString(),
+    status: "deep-work",
+    tone: "green",
+  });
+}
+
+function getScheduledDetaMember(nowMs: number): WorkspaceMember | null {
+  const now = new Date(nowMs);
+  const hour = now.getHours();
+
+  if (hour < 6) {
+    return null;
+  }
+
+  const dayStart = new Date(now);
+  dayStart.setHours(6, 0, 0, 0);
+  const dayEnd = new Date(now);
+  dayEnd.setHours(24, 0, 0, 0);
+
+  const dateKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+  const random = seededRandom(getStableHash(`deta-${dateKey}`));
+  let cursor = dayStart.getTime() + Math.floor(random() * 90) * 60000;
+
+  while (cursor < dayEnd.getTime()) {
+    const durationMinutes = 60 + Math.floor(random() * 121);
+    const sessionEnd = cursor + durationMinutes * 60000;
+
+    if (nowMs >= cursor && nowMs < sessionEnd) {
+      return createDetaMember(new Date(cursor));
+    }
+
+    const breakMinutes = 25 + Math.floor(random() * 156);
+    cursor = sessionEnd + breakMinutes * 60000;
+  }
+
+  return null;
+}
+
+function isDetaLikeMember(member: Pick<WorkspaceMember, "userId" | "id" | "name">) {
+  return member.userId === detaUserId || member.userId === "npc-ari" || member.id === "npc-ari" || member.name === "Ari";
+}
+
+function applyScheduledDetaPresence(room: WorkspaceRoom, nowMs: number): WorkspaceRoom {
+  if (room.id !== "deep-work-studio") {
+    return room;
+  }
+
+  const detaMember = getScheduledDetaMember(nowMs);
+  const activeMembers = room.activeMembers.filter((member) => !isDetaLikeMember(member));
+
+  return {
+    ...room,
+    activeMembers: detaMember ? [detaMember, ...activeMembers] : activeMembers,
+  };
+}
+
 function createDefaultWorkspaceRooms(): WorkspaceRoom[] {
   const now = Date.now();
 
@@ -779,20 +862,6 @@ function createDefaultWorkspaceRooms(): WorkspaceRoom[] {
       createdAt: new Date(now - 1000 * 60 * 60 * 24 * 8).toISOString(),
       createdBy: "system",
       activeMembers: [
-        createWorkspaceMember({
-          id: "npc-ari",
-          userId: "npc-ari",
-          name: "Ari",
-          avatar: "",
-          characterColor: "#1f6f4a",
-          x: 28,
-          y: 36,
-          currentTask: "React",
-          color: "#1f6f4a",
-          joinedAt: new Date(now - 1000 * 60 * 44).toISOString(),
-          status: "deep-work",
-          tone: "green",
-        }),
         createWorkspaceMember({
           id: "npc-yuki",
           userId: "npc-yuki",
@@ -824,14 +893,14 @@ function createDefaultWorkspaceRooms(): WorkspaceRoom[] {
       ],
       history: [
         {
-          id: "seed-yuki-java",
-          userId: "npc-yuki",
-          userName: "Yuki",
+          id: "seed-deta-react",
+          userId: detaUserId,
+          userName: "deta",
           roomId: "deep-work-studio",
           roomName: "Deep Work Studio",
-          task: "Java",
-          building: "Java",
-          color: "#3f6f9f",
+          task: "React",
+          building: "React",
+          color: "#1f6f4a",
           joinedAt: new Date(now - 1000 * 60 * 160).toISOString(),
           leftAt: new Date(now - 1000 * 60 * 100).toISOString(),
           durationMinutes: 60,
@@ -1876,7 +1945,9 @@ function App() {
     totalWeeklyMinutes > 0 && totalWeeklyMinutes < 60
       ? formatStudyTime(totalWeeklyMinutes)
       : `${(Math.round((totalWeeklyMinutes / 60) * 10) / 10).toLocaleString()}h`;
-  const allWorkspaceRooms = [...workspaceRooms, ...customRooms];
+  const allWorkspaceRooms = [...workspaceRooms, ...customRooms].map((room) =>
+    applyScheduledDetaPresence(room, workspaceNow),
+  );
   const selectedRoom = allWorkspaceRooms.find((room) => room.id === selectedRoomId) || allWorkspaceRooms[0];
   const currentBuilding = workspaceTask.trim() || studySubject.trim() || "Deep work";
   const activeRoom =
@@ -1939,7 +2010,7 @@ function App() {
     .flatMap((room) => room.history.filter((item) => item.userId === currentUser.uid))
     .sort((a, b) => new Date(b.leftAt).getTime() - new Date(a.leftAt).getTime())
     .slice(0, 4);
-  const activeMembers = customRooms.flatMap((room) => room.activeMembers);
+  const activeMembers = allWorkspaceRooms.flatMap((room) => room.activeMembers);
   const sidebarFriends = friends.map((friend) => {
     const activeFriend = activeMembers.find((member) => member.userId === friend.uid);
     if (activeFriend) {
