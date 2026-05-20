@@ -24,7 +24,9 @@ import {
   endAt,
   updateDoc,
 } from "firebase/firestore";
+import { motion } from "framer-motion";
 import { auth, db, githubProvider, googleProvider } from "./firebase";
+import { PremiumSidebar, type AppView } from "./components/PremiumNavigation";
 import "./App.css";
 
 type QuestEvent = "chest" | "sword" | "flame" | "star";
@@ -952,7 +954,7 @@ function App() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
   const [following, setFollowing] = useState<string[]>([]);
-  const [currentView, setCurrentView] = useState<"home" | "profile" | "workspace">("home");
+  const [currentView, setCurrentView] = useState<AppView>("home");
   const [profileMember, setProfileMember] = useState<WorkspaceMember | null>(null);
   const [determination, setDetermination] = useState("");
   const [draftDetermination, setDraftDetermination] = useState("");
@@ -1703,8 +1705,36 @@ function App() {
   };
 
   return (
-    <main className="app-shell">
+    <motion.main
+      className="app-shell premium-shell"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+    >
+      <PremiumSidebar
+        currentView={currentView}
+        logo={<ContributionArcLogo />}
+        roomOnlineCount={roomOnlineCount}
+        weeklyStudyLabel={formatStudyTimeJa(totalWeeklyMinutes)}
+        onViewChange={setCurrentView}
+        onProfileOpen={() => {
+          setProfileMember(null);
+          setCurrentView("profile");
+        }}
+      />
+
+      <div className="app-main-panel">
       <header className="site-header">
+        <div className="topbar-context">
+          <p className="card-kicker">Contribution Arc</p>
+          <strong>
+            {currentView === "workspace"
+              ? "Silent Workspace"
+              : currentView === "profile"
+                ? "Profile"
+                : "Dashboard"}
+          </strong>
+        </div>
         <div className="user-session">
           <button
             type="button"
@@ -1925,7 +1955,13 @@ function App() {
       ) : null}
 
       {currentView === "profile" ? (
-        <section className="profile-screen" aria-label="Profile">
+        <motion.section
+          className="profile-screen"
+          aria-label="Profile"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+        >
           <div className="profile-topbar">
             <button type="button" onClick={handleProfileBack}>
               ← Home
@@ -1962,9 +1998,15 @@ function App() {
               </>
             )}
           </div>
-        </section>
+        </motion.section>
       ) : currentView === "workspace" ? (
-        <section className="workspace-screen" aria-label="Silent Workspace screen">
+        <motion.section
+          className="workspace-screen"
+          aria-label="Silent Workspace screen"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+        >
           <div className="profile-topbar">
             <button type="button" onClick={() => setCurrentView("home")}>
               ← Home
@@ -2151,9 +2193,14 @@ function App() {
               </div>
             </div>
           </section>
-        </section>
+        </motion.section>
       ) : (
-      <>
+      <motion.div
+        className="home-screen"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      >
       <section className="hero-grid" aria-label="Contribution Arc overview">
         <div className="overview-stack">
           {playerStatusCard(true)}
@@ -2318,9 +2365,10 @@ function App() {
         </article>
       </section>
 
-      </>
+      </motion.div>
       )}
-    </main>
+      </div>
+    </motion.main>
   );
 }
 
