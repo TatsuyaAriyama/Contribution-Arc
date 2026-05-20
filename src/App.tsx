@@ -234,6 +234,7 @@ const minaAvatarPath = "mina-icon.webp";
 const detaUserId = "npc-deta";
 const maxWorkspacePresenceMinutes = 12 * 60;
 const onboardingMessage = "ようこそContribution Arcへ";
+const workspacePresenceResetVersion = "2026-05-20-clear-stuck-presence";
 const workspaceMovementKeys = new Set(["w", "a", "s", "d", "arrowup", "arrowleft", "arrowdown", "arrowright"]);
 const defaultWorkspacePresetMessages = [
   "進捗どうですか？",
@@ -904,6 +905,22 @@ function cleanWorkspacePresenceForUser(rooms: WorkspaceRoom[], userId: string, n
     });
 
     return activeMembers.length === room.activeMembers.length ? room : { ...room, activeMembers };
+  });
+
+  return changed ? nextRooms : rooms;
+}
+
+function removeWorkspacePresenceForUser(rooms: WorkspaceRoom[], userId: string) {
+  let changed = false;
+
+  const nextRooms = rooms.map((room) => {
+    const activeMembers = room.activeMembers.filter((member) => member.userId !== userId);
+    if (activeMembers.length !== room.activeMembers.length) {
+      changed = true;
+      return { ...room, activeMembers };
+    }
+
+    return room;
   });
 
   return changed ? nextRooms : rooms;
@@ -1654,7 +1671,17 @@ function App() {
         parsedRooms.push(room);
       }
     });
-    const seededRooms = cleanWorkspacePresenceForUser(seedWorkspaceRooms(parsedRooms), currentUser.uid);
+    const presenceResetKey = `contribution-arc-workspace-presence-reset-${currentUser.uid}-${workspacePresenceResetVersion}`;
+    const shouldResetPresence = !window.localStorage.getItem(presenceResetKey);
+    const seededRooms = cleanWorkspacePresenceForUser(
+      shouldResetPresence
+        ? removeWorkspacePresenceForUser(seedWorkspaceRooms(parsedRooms), currentUser.uid)
+        : seedWorkspaceRooms(parsedRooms),
+      currentUser.uid,
+    );
+    if (shouldResetPresence) {
+      window.localStorage.setItem(presenceResetKey, "true");
+    }
     if (savedLogs) {
       setStudyLogs(removeSeedStudyLogs(JSON.parse(savedLogs) as StudyLog[]));
     } else {
@@ -2626,12 +2653,8 @@ function App() {
     pressedWorkspaceKeysRef.current.clear();
     setIsPlayerWalking(false);
     setPendingJoinRoomId(null);
-    setCustomRooms((rooms) =>
-      rooms.map((room) => {
-        const activeMembers = room.activeMembers.filter((member) => member.userId !== currentUser.uid);
-        return activeMembers.length === room.activeMembers.length ? room : { ...room, activeMembers };
-      }),
-    );
+    setLastRoomSession(null);
+    setCustomRooms((rooms) => removeWorkspacePresenceForUser(rooms, currentUser.uid));
   };
 
   const startWorkspaceSession = (roomId: string, task: string, color: string) => {

@@ -131,18 +131,23 @@ export function SilentWorkspaceRoom({
             </label>
 
             <div className="room-actions">
-              <button
-                type="button"
-                className={isJoined ? "room-leave-button" : "room-join-button"}
-                onClick={isJoined ? onLeave : onJoin}
-              >
-                {isJoined ? "退出して記録" : "ルームに入室"}
-              </button>
+              <span className={`room-presence-state ${isJoined ? "joined" : "outside"}`}>
+                {isJoined ? "現在: 入室中" : "現在: 未入室"}
+              </span>
               {isJoined ? (
-                <button type="button" className="room-reset-button" onClick={onResetPresence}>
-                  入室状態をリセット
+                <>
+                  <button type="button" className="room-leave-button" onClick={onLeave}>
+                    退出する
+                  </button>
+                  <button type="button" className="room-reset-button" onClick={onResetPresence}>
+                    入室状態をリセット
+                  </button>
+                </>
+              ) : (
+                <button type="button" className="room-join-button" onClick={onJoin}>
+                  入室する
                 </button>
-              ) : null}
+              )}
               <span>{isJoined ? `入室 ${joinedAtLabel} / ${currentStayLabel}` : "入室すると滞在時間を記録します"}</span>
               {lastSessionLabel ? <strong>{lastSessionLabel}</strong> : null}
             </div>
