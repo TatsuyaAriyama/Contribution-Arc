@@ -69,25 +69,25 @@ const workspaceSeats = [
     id: "frontend",
     name: "作業",
     task: "React",
-    note: "React",
+    note: "Work",
   },
   {
     id: "java",
     name: "仕事",
     task: "Java",
-    note: "Java",
+    note: "Job",
   },
   {
     id: "deep",
     name: "休憩",
     task: "Deep Work",
-    note: "Deep Work",
+    note: "Break",
   },
   {
     id: "cloud",
     name: "学習",
     task: "AWS",
-    note: "AWS",
+    note: "Study",
   },
 ];
 
