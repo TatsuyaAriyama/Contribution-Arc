@@ -1030,16 +1030,18 @@ function isDetaLikeMember(member: Pick<WorkspaceMember, "userId" | "id" | "name"
 }
 
 function applyScheduledDetaPresence(room: WorkspaceRoom, nowMs: number): WorkspaceRoom {
+  const activeMembers = Array.isArray(room.activeMembers) ? room.activeMembers : [];
+
   if (room.id !== "deep-work-studio") {
     return room;
   }
 
   const detaMember = getScheduledDetaMember(nowMs);
-  const activeMembers = room.activeMembers.filter((member) => !isDetaLikeMember(member));
+  const nextActiveMembers = activeMembers.filter((member) => member && !isDetaLikeMember(member));
 
   return {
     ...room,
-    activeMembers: detaMember ? [detaMember, ...activeMembers] : activeMembers,
+    activeMembers: detaMember ? [detaMember, ...nextActiveMembers] : nextActiveMembers,
   };
 }
 
@@ -1211,47 +1213,75 @@ function getTodayKey(date = new Date()) {
   return date.toDateString();
 }
 
-function normalizeWorkspaceRoom(room: WorkspaceRoom): WorkspaceRoom {
+function normalizeWorkspaceRoom(room: Partial<WorkspaceRoom> | null | undefined): WorkspaceRoom {
+  const safeRoom = room || {};
+  const roomId =
+    typeof safeRoom.id === "string" && safeRoom.id.trim()
+      ? safeRoom.id
+      : createWorkspaceRoomId();
+  const roomName =
+    typeof safeRoom.name === "string" && safeRoom.name.trim()
+      ? safeRoom.name
+      : "Untitled Room";
+  const activeMembers = Array.isArray(safeRoom.activeMembers) ? safeRoom.activeMembers : [];
+  const history = Array.isArray(safeRoom.history) ? safeRoom.history : [];
+
   return {
-    ...room,
-    totalMinutes: room.totalMinutes || 0,
-    contributions: room.contributions || 0,
-    commits: room.commits || 0,
-    createdAt: room.createdAt || new Date().toISOString(),
-    createdBy: room.createdBy || "legacy",
-    ownerName: room.ownerName || "Developer",
-    ownerAvatar: room.ownerAvatar || "",
+    ...safeRoom,
+    id: roomId,
+    name: roomName,
+    totalMinutes: safeRoom.totalMinutes || 0,
+    contributions: safeRoom.contributions || 0,
+    commits: safeRoom.commits || 0,
+    createdAt: safeRoom.createdAt || new Date().toISOString(),
+    createdBy: safeRoom.createdBy || "legacy",
+    ownerName: safeRoom.ownerName || "Developer",
+    ownerAvatar: safeRoom.ownerAvatar || "",
     seatLabels: {
       ...defaultWorkspaceSeatLabels,
-      ...(room.seatLabels || {}),
+      ...(safeRoom.seatLabels || {}),
     },
-    activeMembers: (room.activeMembers || []).map((member, index) => {
+    activeMembers: activeMembers.filter(Boolean).map((member, index) => {
       const task = member.currentTask || member.building || "Deep Work";
 
       const isMina = member.userId === "npc-mina" || member.id === "npc-mina" || member.name === "Mina";
+      const memberId = member.userId || member.id || `member-${roomId}-${index}`;
 
       return {
         ...member,
-        id: member.id || member.userId,
-        userId: member.userId || member.id,
+        id: member.id || memberId,
+        userId: memberId,
+        name: member.name || "Developer",
         avatar: isMina ? minaAvatarPath : member.avatar || "",
         characterColor: member.characterColor || member.color || studyColorOptions[0].value,
         x: typeof member.x === "number" ? member.x : clampNumber(24 + index * 18, 12, 88),
         y: typeof member.y === "number" ? member.y : clampNumber(34 + index * 12, 16, 84),
         currentTask: task,
         status: member.status || "working",
-        activeStartedAt: member.activeStartedAt || member.joinedAt,
+        joinedAt: member.joinedAt || new Date().toISOString(),
+        activeStartedAt: member.activeStartedAt || member.joinedAt || new Date().toISOString(),
         accumulatedActiveMinutes: member.accumulatedActiveMinutes || 0,
         breakStartedAt: member.breakStartedAt || "",
         building: member.building || task,
         color: member.color || studyColorOptions[0].value,
+        tone: member.tone || "deep",
       };
     }),
-    history: (room.history || []).map((item) => ({
+    history: history.filter(Boolean).map((item, index) => ({
       ...item,
+      id: item.id || `history-${roomId}-${index}`,
+      roomId: item.roomId || roomId,
+      roomName: item.roomName || roomName,
+      userId: item.userId || "unknown",
+      userName: item.userName || "Developer",
       task: item.task || item.building || "Deep Work",
       durationMinutes: item.durationMinutes || item.minutes || 0,
       earnedExp: item.earnedExp || item.exp || 0,
+      leftAt: item.leftAt || new Date().toISOString(),
+      joinedAt: item.joinedAt || item.leftAt || new Date().toISOString(),
+      building: item.building || item.task || "Deep Work",
+      minutes: item.minutes || item.durationMinutes || 0,
+      exp: item.exp || item.earnedExp || 0,
       color: item.color || studyColorOptions[0].value,
     })),
   };
