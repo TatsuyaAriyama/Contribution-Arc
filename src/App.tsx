@@ -5003,7 +5003,7 @@ function App() {
             <div className="log-composer-head">
               <div>
                 <p className="card-kicker">Quiet Logs</p>
-                <h2>今日の積み上げを静かに残す。</h2>
+                <h2>今日の学びを共有する</h2>
               </div>
               <span>{posts.length.toLocaleString()} logs</span>
             </div>
