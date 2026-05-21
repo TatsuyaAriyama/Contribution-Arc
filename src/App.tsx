@@ -127,6 +127,9 @@ type RoomUser = {
   currentTask: string;
   status: RoomUserStatus;
   joinedAt: string;
+  activeStartedAt?: string;
+  accumulatedActiveMinutes?: number;
+  breakStartedAt?: string;
 };
 
 type WorkspaceMember = RoomUser & {
@@ -756,6 +759,20 @@ function getElapsedMinutes(joinedAt: string, nowMs = Date.now()) {
   return Math.max(1, Math.floor((nowMs - new Date(joinedAt).getTime()) / 60000));
 }
 
+function getWorkspaceActiveMinutes(member: Pick<WorkspaceMember, "joinedAt" | "status" | "activeStartedAt" | "accumulatedActiveMinutes">, nowMs = Date.now()) {
+  const accumulated = member.accumulatedActiveMinutes;
+
+  if (typeof accumulated !== "number") {
+    return getElapsedMinutes(member.joinedAt, nowMs);
+  }
+
+  if (member.status === "on-break" || !member.activeStartedAt) {
+    return Math.max(0, Math.floor(accumulated));
+  }
+
+  return Math.max(1, Math.floor(accumulated + (nowMs - new Date(member.activeStartedAt).getTime()) / 60000));
+}
+
 function getRoomSessionExp(minutes: number) {
   return Math.max(20, Math.round((minutes / 60) * 80));
 }
@@ -857,6 +874,8 @@ function createDetaMember(joinedAt: Date): WorkspaceMember {
     currentTask: "React",
     color: "#1f6f4a",
     joinedAt: joinedAt.toISOString(),
+    activeStartedAt: joinedAt.toISOString(),
+    accumulatedActiveMinutes: 0,
     status: "deep-work",
     tone: "green",
   });
@@ -996,6 +1015,8 @@ function createDefaultWorkspaceRooms(): WorkspaceRoom[] {
           currentTask: "Java",
           color: "#3f6f9f",
           joinedAt: new Date(now - 1000 * 60 * 66).toISOString(),
+          activeStartedAt: new Date(now - 1000 * 60 * 66).toISOString(),
+          accumulatedActiveMinutes: 0,
           status: "working",
           tone: "blue",
         }),
@@ -1010,6 +1031,8 @@ function createDefaultWorkspaceRooms(): WorkspaceRoom[] {
           currentTask: "AWS",
           color: "#2f8f83",
           joinedAt: new Date(now - 1000 * 60 * 31).toISOString(),
+          activeStartedAt: new Date(now - 1000 * 60 * 31).toISOString(),
+          accumulatedActiveMinutes: 0,
           status: "working",
           tone: "deep",
         }),
@@ -1100,6 +1123,9 @@ function normalizeWorkspaceRoom(room: WorkspaceRoom): WorkspaceRoom {
         y: typeof member.y === "number" ? member.y : clampNumber(34 + index * 12, 16, 84),
         currentTask: task,
         status: member.status || "working",
+        activeStartedAt: member.activeStartedAt || member.joinedAt,
+        accumulatedActiveMinutes: member.accumulatedActiveMinutes || 0,
+        breakStartedAt: member.breakStartedAt || "",
         building: member.building || task,
         color: member.color || studyColorOptions[0].value,
       };
@@ -2172,7 +2198,7 @@ function App() {
   );
   const visibleMembers = selectedRoom?.activeMembers || [];
   const currentPresence = visibleMembers.find((member) => member.userId === currentUser.uid) || null;
-  const currentStayMinutes = currentPresence ? getElapsedMinutes(currentPresence.joinedAt, workspaceNow) : 0;
+  const currentStayMinutes = currentPresence ? getWorkspaceActiveMinutes(currentPresence, workspaceNow) : 0;
   const workspaceActors = visibleMembers.map((member) =>
     member.userId === currentUser.uid
       ? {
@@ -2185,11 +2211,12 @@ function App() {
   const roomActivityItems: RoomActivityItem[] = [
     ...visibleMembers.map((member) => {
       const task = member.currentTask || member.building;
-      const stayLabel = formatStayTime(getElapsedMinutes(member.joinedAt, workspaceNow));
+      const activeMinutes = getWorkspaceActiveMinutes(member, workspaceNow);
+      const stayLabel = formatStayTime(activeMinutes);
       const text =
         member.status === "on-break"
           ? `${member.name} stepped away for a quiet break`
-          : getElapsedMinutes(member.joinedAt, workspaceNow) >= 180
+          : activeMinutes >= 180
             ? `${member.name} reached ${stayLabel} focus`
             : `${member.name} started building ${task}`;
 
@@ -2217,7 +2244,7 @@ function App() {
   ].slice(0, 7);
   const roomTotalMinutes =
     (selectedRoom?.totalMinutes || 0) +
-    visibleMembers.reduce((sum, member) => sum + getElapsedMinutes(member.joinedAt, workspaceNow), 0);
+    visibleMembers.reduce((sum, member) => sum + getWorkspaceActiveMinutes(member, workspaceNow), 0);
   const todayRoomHistory = selectedRoom
     ? selectedRoom.history.filter((item) => getTodayKey(new Date(item.leftAt)) === getTodayKey())
     : [];
@@ -2674,7 +2701,7 @@ function App() {
     }
 
     const leftAt = new Date().toISOString();
-    const minutes = getElapsedMinutes(member.joinedAt);
+    const minutes = getWorkspaceActiveMinutes(member);
     const session: WorkspaceSessionHistory = {
       id: crypto.randomUUID(),
       userId: currentUser.uid,
@@ -2770,6 +2797,9 @@ function App() {
               currentTask: nextTask,
               color,
               joinedAt,
+              activeStartedAt: joinedAt,
+              accumulatedActiveMinutes: 0,
+              breakStartedAt: "",
               x: seatPosition.x,
               y: seatPosition.y,
               status: "working",
@@ -2819,6 +2849,8 @@ function App() {
 
     const nextStatus = getWorkspaceStatusFromMessage(message);
     const nextTask = message === "今日はReactやります" ? "React" : workspaceTask.trim() || currentBuilding;
+    const now = new Date();
+    const nowIso = now.toISOString();
     setWorkspaceBubble(message);
 
     if (message === "今日はReactやります") {
@@ -2833,14 +2865,26 @@ function App() {
               ...room,
               activeMembers: room.activeMembers.map((member) =>
                 member.userId === currentUser.uid
-                  ? {
-                      ...member,
-                      status: nextStatus,
-                      currentTask: nextTask,
-                      building: nextTask,
-                      x: playerPosition.x,
-                      y: playerPosition.y,
-                    }
+                  ? (() => {
+                      const wasOnBreak = member.status === "on-break";
+                      const isStartingBreak = nextStatus === "on-break" && !wasOnBreak;
+                      const isEndingBreak = nextStatus !== "on-break" && wasOnBreak;
+                      const accumulatedActiveMinutes = isStartingBreak
+                        ? getWorkspaceActiveMinutes(member, now.getTime())
+                        : member.accumulatedActiveMinutes || 0;
+
+                      return {
+                        ...member,
+                        status: nextStatus,
+                        currentTask: nextTask,
+                        building: nextTask,
+                        activeStartedAt: isStartingBreak ? "" : isEndingBreak ? nowIso : member.activeStartedAt || member.joinedAt,
+                        accumulatedActiveMinutes,
+                        breakStartedAt: isStartingBreak ? nowIso : nextStatus === "on-break" ? member.breakStartedAt || nowIso : "",
+                        x: playerPosition.x,
+                        y: playerPosition.y,
+                      };
+                    })()
                   : member,
               ),
             }

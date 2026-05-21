@@ -24,6 +24,9 @@ export type RoomActor = {
   building: string;
   status: RoomActorStatus;
   joinedAt: string;
+  activeStartedAt?: string;
+  accumulatedActiveMinutes?: number;
+  breakStartedAt?: string;
   color: string;
   tone: "deep" | "green" | "soft" | "blue";
 };
@@ -85,8 +88,21 @@ const workspaceSeats = [
   },
 ];
 
-function getShortStayLabel(joinedAt: string) {
-  const minutes = Math.max(1, Math.floor((Date.now() - new Date(joinedAt).getTime()) / 60000));
+function getActorStayLabel(member: RoomActor) {
+  if (member.status === "on-break") {
+    return "休憩中";
+  }
+
+  const minutes =
+    typeof member.accumulatedActiveMinutes === "number"
+      ? Math.max(
+          1,
+          Math.floor(
+            member.accumulatedActiveMinutes +
+              (member.activeStartedAt ? (Date.now() - new Date(member.activeStartedAt).getTime()) / 60000 : 0),
+          ),
+        )
+      : Math.max(1, Math.floor((Date.now() - new Date(member.joinedAt).getTime()) / 60000));
   const hours = Math.floor(minutes / 60);
   const restMinutes = minutes % 60;
 
@@ -126,6 +142,8 @@ export function SilentWorkspaceRoom({
   const [isPresetEditorOpen, setIsPresetEditorOpen] = useState(false);
   const presetSlots = [...presetMessages, "", "", "", "", "", ""].slice(0, 6);
   const visiblePresetMessages = presetSlots.map((message) => message.trim()).filter(Boolean);
+  const currentMember = members.find((member) => member.userId === currentUserId);
+  const isCurrentUserOnBreak = currentMember?.status === "on-break";
 
   const handleTaskChange = (event: ChangeEvent<HTMLInputElement>) => {
     onTaskChange(event.target.value);
@@ -238,6 +256,7 @@ export function SilentWorkspaceRoom({
                 className={[
                   "workspace-actor",
                   isCurrentUser ? "is-player" : "is-npc",
+                  member.status === "on-break" ? "is-resting" : "",
                   isCurrentUser && isPlayerWalking ? "is-walking" : "",
                 ].join(" ")}
                 style={actorStyle}
@@ -245,6 +264,7 @@ export function SilentWorkspaceRoom({
                 aria-label={`${member.name} ${member.currentTask}`}
               >
                 {isCurrentUser && bubbleMessage ? <span className="workspace-bubble">{bubbleMessage}</span> : null}
+                {member.status === "on-break" ? <span className="actor-rest-mark" aria-hidden="true">Zz</span> : null}
                 <span className="actor-shadow" />
                 <span className={`actor-sprite ${member.tone}`}>
                   <span className="sprite-head" aria-hidden="true" />
@@ -255,7 +275,7 @@ export function SilentWorkspaceRoom({
                 <span className="actor-name">{member.name}</span>
                 <span className="actor-task">
                   <strong>{member.currentTask}</strong>
-                  <small>{getShortStayLabel(member.joinedAt)}</small>
+                  <small>{getActorStayLabel(member)}</small>
                 </span>
               </button>
             );
@@ -269,6 +289,15 @@ export function SilentWorkspaceRoom({
               {message}
             </button>
           ))}
+            {isJoined ? (
+              <button
+                type="button"
+                className="preset-break-toggle"
+                onClick={() => onPresetMessage(isCurrentUserOnBreak ? "集中します" : "休憩します")}
+              >
+                {isCurrentUserOnBreak ? "休憩終了" : "休憩"}
+              </button>
+            ) : null}
             <button
               type="button"
               className="preset-edit-button"
