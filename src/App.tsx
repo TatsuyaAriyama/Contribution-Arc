@@ -98,6 +98,8 @@ type UserProfile = {
   searchName: string;
   following: string[];
   followers: string[];
+  determination?: string;
+  characterColor?: string;
 };
 
 type FriendRequestStatus = "pending" | "accepted";
@@ -639,6 +641,8 @@ function normalizeUserProfile(uid: string, data: Partial<UserProfile>): UserProf
     searchName: data.searchName || (data.displayName || "Developer").toLowerCase(),
     following: Array.isArray(data.following) ? data.following : [],
     followers: Array.isArray(data.followers) ? data.followers : [],
+    determination: data.determination || "",
+    characterColor: data.characterColor || characterColorOptions[0].value,
   };
 }
 
@@ -653,7 +657,7 @@ function profileToFriend(profile: UserProfile): FriendPreview {
     name: profile.displayName,
     avatar: profile.photoURL,
     status: "offline",
-    activity: "オフライン",
+    activity: profile.determination || "オフライン",
     githubUrl: getFriendGithubUrl(profile.userId),
   };
 }
@@ -662,13 +666,22 @@ function getFriendRequestDocId(fromUid: string, toUid: string) {
   return `${fromUid}_${toUid}`;
 }
 
-function getCurrentProfile(user: User, displayName: string, currentUserId: string, avatar: string): UserProfile {
+function getCurrentProfile(
+  user: User,
+  displayName: string,
+  currentUserId: string,
+  avatar: string,
+  currentDetermination = "",
+  currentCharacterColor = characterColorOptions[0].value,
+): UserProfile {
   const nextName = displayName.trim() || user.displayName || user.email?.split("@")[0] || "Developer";
 
   return normalizeUserProfile(user.uid, {
     userId: currentUserId,
     displayName: nextName,
     photoURL: avatar || user.photoURL || "",
+    determination: currentDetermination,
+    characterColor: currentCharacterColor,
   });
 }
 
@@ -711,7 +724,30 @@ function workspaceMemberToProfile(member: WorkspaceMember): UserProfile {
     searchName: member.name.toLowerCase(),
     following: [],
     followers: [],
+    determination: member.status === "on-break" ? "少し休憩中です。" : `${member.building}を積み上げています。`,
+    characterColor: member.characterColor || member.color || characterColorOptions[0].value,
   };
+}
+
+function profileResolveText(profile: UserProfile) {
+  return profile.determination?.trim() || "静かに積み上げています。";
+}
+
+function ProfileCharacterPreview({ color }: { color?: string }) {
+  return (
+    <div
+      className="profile-character-preview"
+      style={{ "--actor-color": color || characterColorOptions[0].value } as CSSProperties}
+      aria-hidden="true"
+    >
+      <span className="actor-sprite deep">
+        <span className="sprite-head" />
+        <span className="sprite-body" />
+        <span className="sprite-leg sprite-leg-left" />
+        <span className="sprite-leg sprite-leg-right" />
+      </span>
+    </div>
+  );
 }
 
 function getFirestoreErrorMessage(error: unknown, fallback: string, permissionFallback = fallback) {
@@ -1976,6 +2012,9 @@ function App() {
         setUserId(resolvedUserId);
         setDraftUserId(resolvedUserId);
         setFollowing(profile.following);
+        setDetermination(profile.determination || savedDetermination || "");
+        setDraftDetermination(profile.determination || savedDetermination || "");
+        setPlayerCharacterColor(profile.characterColor || savedCharacterColor || characterColorOptions[0].value);
         if (resolvedUserId) {
           window.localStorage.setItem(`contribution-arc-user-id-${currentUser.uid}`, resolvedUserId);
           window.localStorage.setItem(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
@@ -2693,6 +2732,8 @@ function App() {
               displayName: playerName,
               following,
               photoURL: playerAvatar,
+              determination,
+              characterColor: playerCharacterColor,
             });
         const currentUserId = currentProfile.userId || userId;
         const nextUserIdRef = doc(db, "usernames", nextUserId);
@@ -2717,6 +2758,8 @@ function App() {
             userId: nextUserId,
             displayName: nextDisplayName,
             photoURL: playerAvatar,
+            determination,
+            characterColor: playerCharacterColor,
             searchName: nextDisplayName.toLowerCase(),
             following: currentProfile.following,
             followers: currentProfile.followers,
@@ -2847,7 +2890,14 @@ function App() {
       direction: "outgoing",
       createdAt: new Date().toISOString(),
     };
-    const currentProfile = getCurrentProfile(currentUser, playerName, userId, playerAvatar);
+    const currentProfile = getCurrentProfile(
+      currentUser,
+      playerName,
+      userId,
+      playerAvatar,
+      determination,
+      playerCharacterColor,
+    );
     const incomingRequest: FriendRequest = {
       id: requestId,
       profile: currentProfile,
@@ -2896,7 +2946,14 @@ function App() {
     }
 
     const nextFriend = profileToFriend(request.profile);
-    const currentProfile = getCurrentProfile(currentUser, playerName, userId, playerAvatar);
+    const currentProfile = getCurrentProfile(
+      currentUser,
+      playerName,
+      userId,
+      playerAvatar,
+      determination,
+      playerCharacterColor,
+    );
     setFriends((items) => (items.some((friend) => friend.uid === nextFriend.uid) ? items : [nextFriend, ...items]));
     setFriendRequests((requests) =>
       requests.map((item) => (item.id === request.id ? { ...item, status: "accepted" } : item)),
@@ -2956,6 +3013,8 @@ function App() {
           displayName: playerName,
           photoURL: playerAvatar,
           searchName: playerName.toLowerCase(),
+          determination,
+          characterColor: playerCharacterColor,
           following,
           updatedAt: serverTimestamp(),
         },
@@ -2987,6 +3046,24 @@ function App() {
     const accountScope = getAccountStorageScope(currentUser.uid, userId);
     setDetermination(nextDetermination);
     window.localStorage.setItem(getAccountStorageKey(accountScope, "determination"), nextDetermination);
+    if (userId) {
+      void setDoc(
+        doc(db, "users", currentUser.uid),
+        {
+          uid: currentUser.uid,
+          userId,
+          displayName: playerName,
+          photoURL: playerAvatar,
+          determination: nextDetermination,
+          characterColor: playerCharacterColor,
+          searchName: playerName.toLowerCase(),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      ).catch((error) => {
+        console.info("Determination cloud sync skipped.", error);
+      });
+    }
   };
 
   const handleProfileBack = () => {
@@ -2995,9 +3072,20 @@ function App() {
     setProfileUser(null);
   };
 
-  const handleMemberProfileOpen = (member: WorkspaceMember) => {
+  const handleMemberProfileOpen = async (member: WorkspaceMember) => {
     setProfileMember(member.userId === currentUser.uid ? null : member);
     setProfileUser(null);
+    if (member.userId !== currentUser.uid && !member.userId.startsWith("npc-")) {
+      try {
+        const snapshot = await getDoc(doc(db, "users", member.userId));
+        if (snapshot.exists()) {
+          setProfileUser(normalizeUserProfile(member.userId, snapshot.data() as Partial<UserProfile>));
+          setProfileMember(null);
+        }
+      } catch (error) {
+        console.info("Member profile cloud load skipped.", error);
+      }
+    }
     setCurrentView("profile");
   };
 
@@ -3024,6 +3112,8 @@ function App() {
       searchName: item.userName.toLowerCase(),
       following: [],
       followers: [],
+      determination: item.text,
+      characterColor: characterColorOptions[0].value,
     });
     setFriendMessage("");
     setCurrentView("profile");
@@ -3052,6 +3142,8 @@ function App() {
       searchName: activity.userName.toLowerCase(),
       following: [],
       followers: [],
+      determination: activity.text,
+      characterColor: characterColorOptions[0].value,
     });
     setFriendMessage("");
     setCurrentView("profile");
@@ -3522,14 +3614,17 @@ function App() {
     return (
       <article className="card member-profile-card workspace-member-profile-card">
         <div className="member-profile-hero">
-          <span className={`presence-avatar ${member.tone}`}>
-            {member.avatar ? <img src={member.avatar} alt="" /> : member.name.slice(0, 1).toUpperCase()}
-          </span>
+          <ProfileCharacterPreview color={memberProfile.characterColor} />
           <div>
             <p className="card-kicker">Profile</p>
             <h2>{member.name}</h2>
             <small>@{memberProfile.userId}</small>
           </div>
+        </div>
+
+        <div className="profile-resolve-panel">
+          <span>決意</span>
+          <p>{profileResolveText(memberProfile)}</p>
         </div>
 
         <div className="friend-profile-actions member-profile-actions">
@@ -3607,14 +3702,17 @@ function App() {
     return (
       <article className="card member-profile-card friend-profile-card">
         <div className="member-profile-hero">
-          <span className="presence-avatar green">
-            {profile.photoURL ? <img src={profile.photoURL} alt="" /> : profile.displayName.slice(0, 1).toUpperCase()}
-          </span>
+          <ProfileCharacterPreview color={profile.characterColor} />
           <div>
             <p className="card-kicker">Friend Profile</p>
             <h2>{profile.displayName}</h2>
             <small>@{profile.userId}</small>
           </div>
+        </div>
+
+        <div className="profile-resolve-panel">
+          <span>決意</span>
+          <p>{profileResolveText(profile)}</p>
         </div>
 
         <div className="friend-profile-actions">
