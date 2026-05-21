@@ -646,8 +646,14 @@ function normalizeUserProfile(uid: string, data: Partial<UserProfile>): UserProf
     following: Array.isArray(data.following) ? data.following : [],
     followers: Array.isArray(data.followers) ? data.followers : [],
     determination: data.determination || "",
-    characterColor: data.characterColor || characterColorOptions[0].value,
+    characterColor: getSafeCharacterColor(data.characterColor),
   };
+}
+
+function getSafeCharacterColor(color: string | undefined): string {
+  return color && characterColorOptions.some((option) => option.value === color)
+    ? color
+    : characterColorOptions[0].value;
 }
 
 function getFriendGithubUrl(userId: string) {
@@ -694,7 +700,7 @@ function getCurrentProfile(
     displayName: nextName,
     photoURL: avatar || user.photoURL || "",
     determination: currentDetermination,
-    characterColor: currentCharacterColor,
+    characterColor: getSafeCharacterColor(currentCharacterColor),
   });
 }
 
@@ -766,7 +772,7 @@ function workspaceMemberToProfile(member: WorkspaceMember): UserProfile {
     following: [],
     followers: [],
     determination: member.status === "on-break" ? "少し休憩中です。" : `${member.building}を積み上げています。`,
-    characterColor: member.characterColor || member.color || characterColorOptions[0].value,
+    characterColor: getSafeCharacterColor(member.characterColor || member.color),
   };
 }
 
@@ -1281,7 +1287,7 @@ function normalizeWorkspaceRoom(room: Partial<WorkspaceRoom> | null | undefined)
         userId: memberId,
         name: member.name || "Developer",
         avatar: isMina ? minaAvatarPath : member.avatar || "",
-        characterColor: member.characterColor || member.color || studyColorOptions[0].value,
+        characterColor: getSafeCharacterColor(member.characterColor || member.color),
         x: typeof member.x === "number" ? member.x : clampNumber(24 + index * 18, 12, 88),
         y: typeof member.y === "number" ? member.y : clampNumber(34 + index * 12, 16, 84),
         currentTask: task,
@@ -1904,6 +1910,7 @@ function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
+  const [workspaceProfiles, setWorkspaceProfiles] = useState<Record<string, UserProfile>>({});
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
   const [following, setFollowing] = useState<string[]>([]);
@@ -1960,6 +1967,7 @@ function App() {
       setIsSearchOpen(false);
       setSearchQuery("");
       setSearchResults([]);
+      setWorkspaceProfiles({});
       setSearchError("");
       setStudyLogs(defaultStudyLogs);
       setCustomUserName("");
@@ -2487,6 +2495,30 @@ function App() {
       return;
     }
 
+    const unsubscribe = onSnapshot(
+      collection(db, "users"),
+      (snapshot) => {
+        const nextProfiles: Record<string, UserProfile> = {};
+
+        snapshot.docs.forEach((item) => {
+          nextProfiles[item.id] = normalizeUserProfile(item.id, item.data() as Partial<UserProfile>);
+        });
+
+        setWorkspaceProfiles(nextProfiles);
+      },
+      (error) => {
+        console.info("Workspace profile realtime sync skipped.", error);
+      },
+    );
+
+    return () => unsubscribe();
+  }, [currentUser, isWorkspaceLoaded]);
+
+  useEffect(() => {
+    if (!currentUser || !isWorkspaceLoaded) {
+      return;
+    }
+
     const nextName =
       customUserName.trim() || currentUser.displayName || currentUser.email?.split("@")[0] || "Developer";
     const nextBuilding = workspaceTask.trim() || studySubject.trim() || "Deep work";
@@ -2537,9 +2569,13 @@ function App() {
           changed = true;
         }
 
-        return nextRoomOwner || memberChanged
-          ? normalizeWorkspaceRoom({ ...normalizedRoom, ...nextRoomOwner, activeMembers: nextMembers })
-          : normalizedRoom;
+        if (!nextRoomOwner && !memberChanged) {
+          return normalizedRoom;
+        }
+
+        const nextRoom = normalizeWorkspaceRoom({ ...normalizedRoom, ...nextRoomOwner, activeMembers: nextMembers });
+        pendingWorkspaceRoomsRef.current.set(nextRoom.id, nextRoom);
+        return nextRoom;
       });
 
       return changed ? nextRooms : rooms;
@@ -2704,7 +2740,23 @@ function App() {
   const visibleMembers = selectedRoom?.activeMembers || [];
   const currentPresence = visibleMembers.find((member) => member.userId === currentUser.uid) || null;
   const currentStayMinutes = currentPresence ? getWorkspaceActiveMinutes(currentPresence, workspaceNow) : 0;
-  const workspaceActors = visibleMembers.map((member) =>
+  const resolvedVisibleMembers = visibleMembers.map((member) => {
+    const profile = workspaceProfiles[member.userId];
+    const isCurrentUserMember = member.userId === currentUser.uid;
+    const nextName = isCurrentUserMember ? playerName : profile?.displayName || member.name;
+    const nextCharacterColor = isCurrentUserMember
+      ? playerCharacterColor
+      : getSafeCharacterColor(profile?.characterColor || member.characterColor || member.color);
+
+    return {
+      ...member,
+      name: nextName,
+      characterColor: nextCharacterColor,
+      color: nextCharacterColor,
+      avatar: "",
+    };
+  });
+  const workspaceActors = resolvedVisibleMembers.map((member) =>
     member.userId === currentUser.uid
       ? {
           ...member,
@@ -2714,7 +2766,7 @@ function App() {
       : member,
   );
   const roomActivityItems: RoomActivityItem[] = [
-    ...visibleMembers.map((member) => {
+    ...resolvedVisibleMembers.map((member) => {
       const task = member.currentTask || member.building;
       const activeMinutes = getWorkspaceActiveMinutes(member, workspaceNow);
       const stayLabel = formatStayTime(activeMinutes);
@@ -2729,7 +2781,7 @@ function App() {
         id: `active-${member.userId}-${member.joinedAt}`,
         userId: member.userId,
         userName: member.name,
-        avatar: member.avatar,
+        avatar: "",
         text,
         meta: `${stayLabel} in ${selectedRoom?.name || "room"}`,
         member,
