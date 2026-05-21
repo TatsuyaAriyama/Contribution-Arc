@@ -119,6 +119,9 @@ function getActorStayLabel(member: RoomActor) {
 export function SilentWorkspaceRoom({
   presentation = "full",
   roomName,
+  roomDescription,
+  onlineCount,
+  commitLabel,
   members,
   currentUserId,
   isJoined,
@@ -142,6 +145,7 @@ export function SilentWorkspaceRoom({
   onMemberOpen,
   onActivityOpen,
   lastSessionLabel,
+  totalLearnedLabel,
   contributionLabel,
 }: SilentWorkspaceRoomProps) {
   const isFocusPresentation = presentation === "focus";
@@ -211,13 +215,51 @@ export function SilentWorkspaceRoom({
           </div>
         ) : null}
 
-        <div className="workspace-stage" aria-label="2.5D silent workspace">
+        <div className="workspace-stage" aria-label="2.5D cozy developer cafe">
+          <div className="cafe-rain-layer" aria-hidden="true" />
           <div className="workspace-floor-grid" aria-hidden="true" />
           <div className="workspace-ambient-glow" aria-hidden="true" />
           <div className="workspace-ambient-dust" aria-hidden="true" />
+          <div className="cafe-arc-light" aria-hidden="true" />
           <div className="workspace-back-wall" aria-hidden="true">
             <span />
             <span />
+          </div>
+          <div className="cafe-window-view" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+            <span />
+          </div>
+          <div className="cafe-room-sign">
+            <span>Now in</span>
+            <strong>{roomName}</strong>
+            <small>{roomDescription || "Late night cozy developer cafe"}</small>
+          </div>
+          <div className="cafe-entrance-sign">
+            <i aria-hidden="true" />
+            <strong>{onlineCount}</strong>
+            <em>inside</em>
+          </div>
+          <div className="cafe-contribution-wall">
+            <span>Contribution Wall</span>
+            <strong>{commitLabel}</strong>
+            <small>{contributionLabel}</small>
+            <div aria-hidden="true">
+              <i />
+              <i />
+              <i />
+              <i />
+              <i />
+              <i />
+              <i />
+              <i />
+            </div>
+          </div>
+          <div className="cafe-focus-panel">
+            <span>Focus</span>
+            <strong>{isJoined ? currentStayLabel : totalLearnedLabel}</strong>
+            <small>{isJoined ? "building now" : "room total"}</small>
           </div>
           <div className="workspace-light light-a" aria-hidden="true" />
           <div className="workspace-light light-b" aria-hidden="true" />
@@ -229,6 +271,16 @@ export function SilentWorkspaceRoom({
           <div className="workspace-whiteboard" aria-hidden="true">
             <span />
             <span />
+            <span />
+          </div>
+          <div className="cafe-counter" aria-hidden="true">
+            <span className="cafe-counter-top" />
+            <span className="cafe-counter-shelf" />
+            <span className="cafe-coffee-steam steam-a" />
+            <span className="cafe-coffee-steam steam-b" />
+          </div>
+          <div className="cafe-sofa" aria-hidden="true" />
+          <div className="cafe-side-table" aria-hidden="true">
             <span />
           </div>
           {workspaceSeats.map((seat) => {
@@ -258,6 +310,14 @@ export function SilentWorkspaceRoom({
           <div className="workspace-plant plant-b" aria-hidden="true" />
           <div className="workspace-plant plant-c" aria-hidden="true" />
           <div className="workspace-rug" aria-hidden="true" />
+          <div className="cafe-activity-whispers" aria-label="Room activity">
+            {activityItems.slice(0, 3).map((item) => (
+              <button type="button" key={item.id} onClick={() => onActivityOpen(item)}>
+                <strong>{item.text}</strong>
+                <span>{item.meta}</span>
+              </button>
+            ))}
+          </div>
 
           {members.map((member) => {
             const isCurrentUser = member.userId === currentUserId;

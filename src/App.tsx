@@ -3030,6 +3030,7 @@ function App() {
     },
   ).length;
   const hasUnreadNotifications = unreadNotificationCount > 0;
+  const isCafeView = currentView === "home" || currentView === "workspace";
   const handleNotificationsToggle = () => {
     const nextIsOpen = !isNotificationsOpen;
     setIsNotificationsOpen(nextIsOpen);
@@ -4332,11 +4333,25 @@ function App() {
 
   return (
     <motion.main
-      className={isDesktopApp ? "app-shell premium-shell desktop-shell" : "app-shell premium-shell"}
+      className={[
+        "app-shell premium-shell",
+        isDesktopApp ? "desktop-shell" : "",
+        isCafeView ? "cafe-shell" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
     >
+      {isCafeView ? (
+        <div className="cafe-app-ambient" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
+      ) : null}
+
       {isDesktopApp ? (
         <header className="desktop-app-header" aria-label="Contribution Arc desktop header">
           <div className="desktop-app-brand">
@@ -5268,12 +5283,30 @@ function App() {
         </motion.section>
       ) : (
       <motion.div
-        className="home-screen"
+        className="home-screen cafe-home-screen"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
       >
       <section className="home-workspace-focus card workspace-2d-card" aria-label="Silent Workspace live view">
+        <div className="cafe-space-bar" aria-label="Contribution Arc cafe status">
+          <button type="button" onClick={() => setCurrentView("workspace")}>
+            <span>Areas</span>
+            <strong>{allWorkspaceRooms.length}</strong>
+          </button>
+          <button type="button" onClick={() => setCurrentView("profile")}>
+            <span>Profile</span>
+            <strong>{currentTitle}</strong>
+          </button>
+          <div>
+            <span>Tonight</span>
+            <strong>{formatStudyTimeJa(totalWeeklyMinutes)}</strong>
+          </div>
+          <div>
+            <span>GitHub</span>
+            <strong>{githubId ? "Connected" : "Ready"}</strong>
+          </div>
+        </div>
         <div className="home-workspace-header">
           <div>
             <p className="card-kicker">Silent Workspace</p>
