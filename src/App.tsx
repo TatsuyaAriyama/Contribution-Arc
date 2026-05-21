@@ -3488,11 +3488,8 @@ function App() {
     );
   };
 
-  const handleRoomCreate = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (!currentUser || roomCreateState === "saving") {
+  const handleRoomCreate = () => {
+    if (!currentUser) {
       return;
     }
 
@@ -3502,9 +3499,6 @@ function App() {
       setRoomCreateMessage("Room名を入力してください。");
       return;
     }
-
-    setRoomCreateState("saving");
-    setRoomCreateMessage("");
 
     const room: WorkspaceRoom = {
       id: createWorkspaceRoomId(),
@@ -3529,17 +3523,18 @@ function App() {
     setIsSearchOpen(false);
     setIsNotificationsOpen(false);
     setNewRoomName("");
+    setRoomCreateState("saved");
+    setRoomCreateMessage("Roomを作成しました。");
 
-    try {
-      await saveWorkspaceRoomToCloud(room);
-      pendingWorkspaceRoomIdsRef.current.delete(room.id);
-      setRoomCreateState("saved");
-      setRoomCreateMessage("Roomを作成しました。");
-    } catch (error) {
-      console.info("Workspace room create cloud sync skipped.", error);
-      setRoomCreateState("offline");
-      setRoomCreateMessage("この端末には作成しました。オンライン反映は接続回復後に再試行します。");
-    }
+    void saveWorkspaceRoomToCloud(room)
+      .then(() => {
+        pendingWorkspaceRoomIdsRef.current.delete(room.id);
+      })
+      .catch((error) => {
+        console.info("Workspace room create cloud sync skipped.", error);
+        setRoomCreateState("offline");
+        setRoomCreateMessage("Roomは作成済みです。オンライン反映は接続回復後に再試行します。");
+      });
   };
 
   const handleSeatLabelsChange = (roomId: string, labels: WorkspaceSeatLabels) => {
@@ -4599,7 +4594,7 @@ function App() {
                   <p className="card-kicker">Spaces</p>
                   <span>静かに積み上げる場所を選ぶ</span>
                 </div>
-                <form className="room-create-form" onSubmit={handleRoomCreate}>
+                <div className="room-create-form">
                   <label>
                     <span>Roomを作成</span>
                     <input
@@ -4613,13 +4608,18 @@ function App() {
                       }}
                       placeholder="例: 朝活Build"
                       maxLength={32}
-                      disabled={roomCreateState === "saving"}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          handleRoomCreate();
+                        }
+                      }}
                     />
                   </label>
-                  <button type="submit" disabled={roomCreateState === "saving"}>
-                    {roomCreateState === "saving" ? "作成中" : "作成"}
+                  <button type="button" onClick={handleRoomCreate}>
+                    作成
                   </button>
-                </form>
+                </div>
                 {roomCreateMessage ? (
                   <p className={`room-create-message ${roomCreateState}`}>{roomCreateMessage}</p>
                 ) : null}
