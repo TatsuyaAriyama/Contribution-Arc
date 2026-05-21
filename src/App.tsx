@@ -1866,7 +1866,7 @@ function App() {
       setSettingsError("ユーザーIDを入力するとContribution Arcを開始できます。");
       setIsSettingsOpen(true);
       setOnboardingStep("settings");
-    }, 2700);
+    }, 5000);
 
     return () => window.clearTimeout(timeoutId);
   }, [currentUser, customUserName, onboardingStep, userId]);
