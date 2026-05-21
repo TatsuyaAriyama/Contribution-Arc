@@ -4842,7 +4842,7 @@ function App() {
                         <textarea
                           value={draftDetermination}
                           onChange={(event) => setDraftDetermination(event.target.value)}
-                          rows={8}
+                          rows={4}
                         />
                       </label>
                       <button type="submit">保存</button>

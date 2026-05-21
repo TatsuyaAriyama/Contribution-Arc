@@ -1750,8 +1750,8 @@
 
 .determination-card {
   display: grid;
-  gap: 18px;
-  padding: clamp(22px, 4vw, 34px);
+  gap: 12px;
+  padding: clamp(16px, 2vw, 22px);
 }
 
 .profile-panel-stack {
@@ -2062,11 +2062,11 @@
 
 .determination-card > div > p:last-child {
   max-width: 720px;
-  margin: 14px 0 0;
+  margin: 8px 0 0;
   color: var(--muted);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 750;
-  line-height: 1.8;
+  line-height: 1.55;
   white-space: pre-wrap;
 }
 
@@ -2088,17 +2088,17 @@
 
 .determination-form textarea {
   width: 100%;
-  min-height: 190px;
+  min-height: 104px;
   resize: vertical;
-  padding: 14px;
+  padding: 12px 14px;
   border: 1px solid rgba(31, 111, 74, 0.12);
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.78);
   color: var(--ink);
   font: inherit;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 750;
-  line-height: 1.7;
+  line-height: 1.55;
   outline: none;
 }
 
@@ -2109,14 +2109,14 @@
 
 .determination-form button {
   justify-self: start;
-  min-height: 42px;
-  padding: 0 18px;
+  min-height: 38px;
+  padding: 0 16px;
   border: 0;
   border-radius: 999px;
   background: var(--ink);
   color: #ffffff;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 850;
 }
 
@@ -6129,7 +6129,7 @@
   }
 
   .determination-form textarea {
-    min-height: 170px;
+    min-height: 96px;
   }
 }
 
