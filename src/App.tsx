@@ -2841,27 +2841,9 @@ function App() {
 
   const studyKnowledgeGraph = useMemo(() => buildStudyKnowledgeGraph(studyLogs), [studyLogs]);
 
-  if (window.location.pathname === githubCallbackPath) {
-    return <GitHubCallbackPage />;
-  }
-
-  if (!isAuthReady) {
-    return (
-      <main className="login-shell loading-auth">
-        <section className="card login-card">
-          <p className="card-kicker">Contribution Arc</p>
-          <h2>Loading your workspace...</h2>
-        </section>
-      </main>
-    );
-  }
-
-  if (!currentUser) {
-    return <LoginScreen />;
-  }
-
+  const currentUserUid = currentUser?.uid || "";
   const playerName =
-    customUserName.trim() || currentUser.displayName || currentUser.email?.split("@")[0] || "Developer";
+    customUserName.trim() || currentUser?.displayName || currentUser?.email?.split("@")[0] || "Developer";
   const playerInitial = playerName.slice(0, 1).toUpperCase();
   const isDesktopApp = Boolean(window.contributionArcDesktop?.isElectron);
   const isOnboardingSettings = onboardingStep === "settings";
@@ -2874,7 +2856,7 @@ function App() {
   const currentTitle =
     [...titles].reverse().find((title) => title.unlocked)?.name || "Commit Knight";
   const studyStreak = getStudyStreak(studyLogs);
-  const githubProviderInfo = currentUser.providerData.find((provider) => provider.providerId === "github.com");
+  const githubProviderInfo = currentUser?.providerData.find((provider) => provider.providerId === "github.com");
   const githubId = githubProviderInfo?.uid || "";
   const githubUsername = githubProviderInfo?.displayName || (githubProviderInfo ? userId : "");
   const totalWeeklyMinutes = weeklyStudyHours.reduce((sum, item) => sum + item.totalMinutes, 0);
@@ -2892,17 +2874,17 @@ function App() {
   const selectedRoom = allWorkspaceRooms.find((room) => room.id === selectedRoomId) || allWorkspaceRooms[0];
   const currentBuilding = workspaceTask.trim() || studySubject.trim() || "Deep work";
   const activeRoom =
-    allWorkspaceRooms.find((room) => room.activeMembers.some((member) => member.userId === currentUser.uid)) || null;
+    allWorkspaceRooms.find((room) => room.activeMembers.some((member) => member.userId === currentUserUid)) || null;
   const githubConnectionLabel = githubId ? "GitHub connected" : "GitHub ready";
   const isInSelectedRoom = Boolean(
-    selectedRoom?.activeMembers.some((member) => member.userId === currentUser.uid),
+    selectedRoom?.activeMembers.some((member) => member.userId === currentUserUid),
   );
   const visibleMembers = selectedRoom?.activeMembers || [];
-  const currentPresence = visibleMembers.find((member) => member.userId === currentUser.uid) || null;
+  const currentPresence = visibleMembers.find((member) => member.userId === currentUserUid) || null;
   const currentStayMinutes = currentPresence ? getWorkspaceActiveMinutes(currentPresence, workspaceNow) : 0;
   const resolvedVisibleMembers = visibleMembers.map((member) => {
     const profile = workspaceProfiles[member.userId];
-    const isCurrentUserMember = member.userId === currentUser.uid;
+    const isCurrentUserMember = member.userId === currentUserUid;
     const nextName = isCurrentUserMember ? playerName : profile?.displayName || member.name;
     const nextCharacterColor = isCurrentUserMember
       ? playerCharacterColor
@@ -2917,7 +2899,7 @@ function App() {
     };
   });
   const workspaceActors = resolvedVisibleMembers.map((member) =>
-    member.userId === currentUser.uid
+    member.userId === currentUserUid
       ? {
           ...member,
           x: playerPosition.x,
@@ -2969,13 +2951,13 @@ function App() {
   const roomCommits = (selectedRoom?.commits || 0) + outputStats.commits;
   const roomOnlineCount = visibleMembers.length;
   const userRoomHistory = allWorkspaceRooms
-    .flatMap((room) => room.history.filter((item) => item.userId === currentUser.uid))
+    .flatMap((room) => room.history.filter((item) => item.userId === currentUserUid))
     .sort((a, b) => new Date(b.leftAt).getTime() - new Date(a.leftAt).getTime())
     .slice(0, 4);
   const activeMembers = allWorkspaceRooms.flatMap((room) => room.activeMembers);
   const friendIds = new Set(friends.map((friend) => friend.uid));
   const personalActivityMembers = activeMembers.filter(
-    (member) => member.userId === currentUser.uid || friendIds.has(member.userId),
+    (member) => member.userId === currentUserUid || friendIds.has(member.userId),
   );
   const sidebarFriends = friends.map((friend) => {
     const activeFriend = activeMembers.find((member) => member.userId === friend.uid);
@@ -2994,7 +2976,7 @@ function App() {
     .slice(0, 3)
     .map((log) => ({
       id: `study-${log.id}`,
-      userId: currentUser.uid,
+      userId: currentUserUid,
       userName: playerName,
       avatar: playerAvatar,
       text: `${playerName} completed ${formatStudyTimeJa(log.minutes)} ${log.subject}`,
@@ -3011,7 +2993,7 @@ function App() {
     status: "online",
   }));
   const liveActivities = [...onlineActivities, ...recentStudyActivities].slice(0, 5);
-  const accountScope = getAccountStorageScope(currentUser.uid, userId);
+  const accountScope = getAccountStorageScope(currentUserUid, userId);
   const notificationItems = friendRequests
     .filter((request) => request.direction === "incoming" || request.status === "accepted")
     .sort((a, b) => new Date(b.acceptedAt || b.createdAt).getTime() - new Date(a.acceptedAt || a.createdAt).getTime())
@@ -3076,6 +3058,10 @@ function App() {
   const handleStudySubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
+    if (!currentUser) {
+      return;
+    }
+
     const amount = Number(studyAmount);
     if (!studySubject.trim() || Number.isNaN(amount) || amount <= 0) {
       return;
@@ -3113,7 +3099,7 @@ function App() {
 
     const timerId = window.setTimeout(() => setIsDesktopWelcomeVisible(false), 2600);
     return () => window.clearTimeout(timerId);
-  }, [isDesktopApp, currentUser.uid]);
+  }, [isDesktopApp, currentUser?.uid]);
 
   useEffect(() => {
     if (!isDesktopApp || !window.contributionArcDesktop?.onOpenSettings) {
@@ -3189,6 +3175,25 @@ function App() {
     studyStreak,
     userId,
   ]);
+
+  if (window.location.pathname === githubCallbackPath) {
+    return <GitHubCallbackPage />;
+  }
+
+  if (!isAuthReady) {
+    return (
+      <main className="login-shell loading-auth">
+        <section className="card login-card">
+          <p className="card-kicker">Contribution Arc</p>
+          <h2>Loading your workspace...</h2>
+        </section>
+      </main>
+    );
+  }
+
+  if (!currentUser) {
+    return <LoginScreen />;
+  }
 
   const handleSettingsSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
