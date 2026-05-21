@@ -237,7 +237,7 @@ const outputStats = {
 };
 
 const workspaceRooms: WorkspaceRoom[] = [];
-const workspaceRoomsStorageKey = "contribution-arc-workspace-rooms";
+const getWorkspaceRoomsStorageKey = (uid: string) => `contribution-arc-workspace-rooms-${uid}`;
 const minaAvatarPath = "mina-icon.webp";
 const detaUserId = "npc-deta";
 const maxWorkspacePresenceMinutes = 12 * 60;
@@ -1722,6 +1722,37 @@ function App() {
       setProfileUser(null);
       setOnboardingStep("idle");
       setIsSettingsOpen(false);
+      setIsSearchOpen(false);
+      setSearchQuery("");
+      setSearchResults([]);
+      setSearchError("");
+      setStudyLogs(defaultStudyLogs);
+      setCustomUserName("");
+      setDraftUserName("");
+      setUserId("");
+      setDraftUserId("");
+      setSettingsError("");
+      setFollowing([]);
+      setFriends([]);
+      setFriendRequests([]);
+      setFriendMessage("");
+      setDetermination("");
+      setDraftDetermination("");
+      setPlayerAvatar("");
+      setPlayerCharacterColor(characterColorOptions[0].value);
+      setSelectedRoomId("");
+      setCustomRooms([]);
+      setPendingJoinRoomId(null);
+      setLastRoomSession(null);
+      setWorkspaceTask("React");
+      setWorkspaceDraftTask("React");
+      setWorkspacePresetMessages(defaultWorkspacePresetMessages);
+      setKnowledgeGraph(emptyKnowledgeGraph);
+      setSelectedKnowledgeId("");
+      setHoveredKnowledgeId("");
+      setKnowledgePositions({});
+      setWorkspaceBubble("");
+      setPlayerPosition({ x: 18, y: 72 });
       setCurrentUser(user);
       setIsAuthReady(true);
     });
@@ -1742,25 +1773,22 @@ function App() {
     const savedFriendRequests = window.localStorage.getItem(`contribution-arc-friend-requests-${currentUser.uid}`);
     const savedOnboardingComplete = window.localStorage.getItem(`contribution-arc-onboarding-complete-${currentUser.uid}`);
     const savedRoomId = window.localStorage.getItem(`contribution-arc-room-${currentUser.uid}`);
-    const savedRooms = window.localStorage.getItem(`contribution-arc-rooms-${currentUser.uid}`);
+    const workspaceRoomsStorageKey = getWorkspaceRoomsStorageKey(currentUser.uid);
+    const savedRooms = window.localStorage.getItem(workspaceRoomsStorageKey);
     const savedWorkspaceTask = window.localStorage.getItem(`contribution-arc-workspace-task-${currentUser.uid}`);
     const savedWorkspacePresetMessages = window.localStorage.getItem(
       `contribution-arc-workspace-preset-messages-${currentUser.uid}`,
     );
     const savedKnowledgeGraph = window.localStorage.getItem(`contribution-arc-knowledge-graph-${currentUser.uid}`);
-    const sharedRooms = window.localStorage.getItem(workspaceRoomsStorageKey);
-    const parsedSharedRooms = sharedRooms
-      ? (JSON.parse(sharedRooms) as WorkspaceRoom[]).map(normalizeWorkspaceRoom)
-      : [];
-    const legacyRooms = savedRooms
+    const legacyRooms = window.localStorage.getItem(`contribution-arc-rooms-${currentUser.uid}`);
+    const parsedRooms = savedRooms
       ? (JSON.parse(savedRooms) as WorkspaceRoom[]).map(normalizeWorkspaceRoom)
       : [];
-    const parsedRooms = [...parsedSharedRooms];
-    legacyRooms.forEach((room) => {
-      if (!parsedRooms.some((sharedRoom) => sharedRoom.id === room.id)) {
+    if (!savedRooms && legacyRooms) {
+      (JSON.parse(legacyRooms) as WorkspaceRoom[]).map(normalizeWorkspaceRoom).forEach((room) => {
         parsedRooms.push(room);
-      }
-    });
+      });
+    }
     const presenceResetKey = `contribution-arc-workspace-presence-reset-${currentUser.uid}-${workspacePresenceResetVersion}`;
     const shouldResetPresence = !window.localStorage.getItem(presenceResetKey);
     const seededRooms = cleanWorkspacePresenceForUser(
@@ -1925,7 +1953,7 @@ function App() {
       return;
     }
 
-    window.localStorage.setItem(workspaceRoomsStorageKey, JSON.stringify(customRooms));
+    window.localStorage.setItem(getWorkspaceRoomsStorageKey(currentUser.uid), JSON.stringify(customRooms));
   }, [currentUser, customRooms, isWorkspaceLoaded]);
 
   useEffect(() => {
@@ -1977,6 +2005,7 @@ function App() {
     }
 
     const currentUserId = currentUser.uid;
+    const workspaceRoomsStorageKey = getWorkspaceRoomsStorageKey(currentUserId);
     const handleStorage = (event: StorageEvent) => {
       if (event.key !== workspaceRoomsStorageKey || !event.newValue) {
         return;
