@@ -9030,6 +9030,34 @@
   border-radius: 22px;
 }
 
+.room-card.joined {
+  border-color: rgba(31, 143, 95, 0.22);
+  box-shadow:
+    0 22px 56px rgba(31, 143, 95, 0.09),
+    0 0 0 1px rgba(31, 143, 95, 0.1),
+    0 0 28px rgba(31, 143, 95, 0.08),
+    0 1px 0 rgba(255, 255, 255, 0.96) inset;
+}
+
+.room-card.joined::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(31, 143, 95, 0.12);
+  border-radius: 18px;
+  pointer-events: none;
+}
+
+.room-card.joined:hover,
+.room-card.joined.active {
+  border-color: rgba(31, 143, 95, 0.3);
+  box-shadow:
+    0 28px 68px rgba(31, 143, 95, 0.11),
+    0 0 0 1px rgba(31, 143, 95, 0.13),
+    0 0 32px rgba(31, 143, 95, 0.1),
+    0 1px 0 rgba(255, 255, 255, 0.96) inset;
+}
+
 .room-select-button {
   grid-column: 1;
   display: grid;

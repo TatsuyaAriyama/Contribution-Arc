@@ -3844,7 +3844,12 @@ function App() {
                   const isJoinedRoom = room.activeMembers.some((member) => member.userId === currentUser.uid);
 
                   return (
-                    <article key={room.id} className={isActiveRoom ? "room-card active" : "room-card"}>
+                    <article
+                      key={room.id}
+                      className={["room-card", isActiveRoom ? "active" : "", isJoinedRoom ? "joined" : ""]
+                        .filter(Boolean)
+                        .join(" ")}
+                    >
                       <button
                         type="button"
                         className={`room-select-button room-accent-${getRoomAccent(room)}`}
