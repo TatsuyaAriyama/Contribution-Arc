@@ -100,9 +100,6 @@ function getShortStayLabel(joinedAt: string) {
 export function SilentWorkspaceRoom({
   presentation = "full",
   roomName,
-  roomDescription = "A quiet shared room for builders stacking focused work.",
-  onlineCount,
-  commitLabel,
   members,
   currentUserId,
   isJoined,
@@ -123,7 +120,6 @@ export function SilentWorkspaceRoom({
   onMemberOpen,
   onActivityOpen,
   lastSessionLabel,
-  totalLearnedLabel,
   contributionLabel,
 }: SilentWorkspaceRoomProps) {
   const isFocusPresentation = presentation === "focus";
@@ -144,30 +140,6 @@ export function SilentWorkspaceRoom({
   return (
     <div className={`workspace-2d-shell ${isFocusPresentation ? "focus-presentation" : ""}`}>
       <div className="workspace-2d-main">
-        {!isFocusPresentation ? (
-          <div className="workspace-room-header">
-            <div className="workspace-room-title">
-              <p className="card-kicker">Silent Workspace</p>
-              <h3>{roomName}</h3>
-              <span>{roomDescription}</span>
-            </div>
-            <div className="workspace-room-stats" aria-label="Room stats">
-              <div>
-                <strong>{onlineCount}</strong>
-                <span>developers building</span>
-              </div>
-              <div>
-                <strong>{commitLabel}</strong>
-                <span>commits tonight</span>
-              </div>
-              <div>
-                <strong>{totalLearnedLabel}</strong>
-                <span>focused</span>
-              </div>
-            </div>
-          </div>
-        ) : null}
-
         {!isFocusPresentation ? (
           <div className="workspace-session-panel">
             <label className="workspace-task-field">

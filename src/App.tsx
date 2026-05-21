@@ -846,7 +846,7 @@ function getWorkspaceSeatPosition(task: string) {
 }
 
 function getRoomOwnerInitial(room: WorkspaceRoom) {
-  return (room.ownerName || room.name || "Room").slice(0, 1).toUpperCase();
+  return (room.name || room.ownerName || "Room").slice(0, 1).toUpperCase();
 }
 
 function createDetaMember(joinedAt: Date): WorkspaceMember {
@@ -3862,8 +3862,13 @@ function App() {
                           <span>{room.name}</span>
                           <span className="room-join-badge">{isJoinedRoom ? "入室中" : "未入室"}</span>
                         </span>
-                        <strong>{room.activeMembers.length} online</strong>
-                        <small>{Math.round(room.totalMinutes / 60)}h learned / {room.contributions} contributions</small>
+                        <span className="room-online-count">
+                          <strong>{room.activeMembers.length}</strong>
+                          <em>online</em>
+                        </span>
+                        <small className="room-supporting-meta">
+                          {Math.round(room.totalMinutes / 60)}h learned ・ {room.contributions} contributions
+                        </small>
                       </button>
 
                       <div className="room-card-actions">
