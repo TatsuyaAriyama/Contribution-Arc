@@ -20,10 +20,12 @@ import {
   arrayRemove,
   arrayUnion,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
   limit,
+  onSnapshot,
   orderBy,
   query,
   runTransaction,
@@ -244,7 +246,8 @@ const sanitizeStoragePart = (value: string) => value.trim().toLowerCase().replac
 const getAccountStorageScope = (uid: string, registeredUserId: string) =>
   sanitizeStoragePart(registeredUserId) || `uid-${uid}`;
 const getAccountStorageKey = (scope: string, key: string) => `contribution-arc-${scope}-${key}`;
-const getWorkspaceRoomsStorageKey = (scope: string) => getAccountStorageKey(scope, "workspace-rooms");
+const sharedWorkspaceRoomsStorageKey = "contribution-arc-shared-workspace-rooms-cache";
+const workspaceRoomsCollectionName = "workspaceRooms";
 const minaAvatarPath = "mina-icon.webp";
 const detaUserId = "npc-deta";
 const maxWorkspacePresenceMinutes = 12 * 60;
@@ -1205,6 +1208,37 @@ function normalizeWorkspaceRoom(room: WorkspaceRoom): WorkspaceRoom {
   };
 }
 
+function serializeWorkspaceRoom(room: WorkspaceRoom): WorkspaceRoom {
+  return {
+    id: room.id,
+    name: room.name,
+    ownerName: room.ownerName || "Developer",
+    ownerAvatar: room.ownerAvatar || "",
+    seatLabels: {
+      ...defaultWorkspaceSeatLabels,
+      ...(room.seatLabels || {}),
+    },
+    totalMinutes: room.totalMinutes || 0,
+    contributions: room.contributions || 0,
+    commits: room.commits || 0,
+    createdAt: room.createdAt || new Date().toISOString(),
+    createdBy: room.createdBy || "legacy",
+    activeMembers: room.activeMembers || [],
+    history: room.history || [],
+  };
+}
+
+async function saveWorkspaceRoomToCloud(room: WorkspaceRoom) {
+  await setDoc(
+    doc(db, workspaceRoomsCollectionName, room.id),
+    {
+      ...serializeWorkspaceRoom(room),
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+}
+
 function getSubjectSummary(logs: StudyLog[]) {
   if (logs.length === 0) {
     return "No study logged yet";
@@ -1764,6 +1798,8 @@ function App() {
   const [draggingKnowledgeId, setDraggingKnowledgeId] = useState("");
   const pressedWorkspaceKeysRef = useRef<Set<string>>(new Set());
   const graphSvgRef = useRef<SVGSVGElement | null>(null);
+  const isApplyingRemoteRoomsRef = useRef(false);
+  const lastSyncedWorkspaceRoomsRef = useRef("");
 
   useEffect(() => {
     return onAuthStateChanged(auth, (user) => {
@@ -1840,7 +1876,7 @@ function App() {
     const savedRoomId =
       window.localStorage.getItem(getAccountStorageKey(accountScope, "room")) ||
       (shouldUseLegacyUserStorage ? window.localStorage.getItem(`contribution-arc-room-${currentUser.uid}`) : null);
-    const workspaceRoomsStorageKey = getWorkspaceRoomsStorageKey(accountScope);
+    const workspaceRoomsStorageKey = sharedWorkspaceRoomsStorageKey;
     const savedRooms = window.localStorage.getItem(workspaceRoomsStorageKey);
     const savedWorkspaceTask =
       window.localStorage.getItem(getAccountStorageKey(accountScope, "workspace-task")) ||
@@ -2132,9 +2168,27 @@ function App() {
     if (!currentUser || !isWorkspaceLoaded) {
       return;
     }
-    const accountScope = getAccountStorageScope(currentUser.uid, userId);
 
-    window.localStorage.setItem(getWorkspaceRoomsStorageKey(accountScope), JSON.stringify(customRooms));
+    const serializedRooms = customRooms.map(serializeWorkspaceRoom);
+    const serializedRoomText = JSON.stringify(serializedRooms);
+    window.localStorage.setItem(sharedWorkspaceRoomsStorageKey, serializedRoomText);
+
+    if (isApplyingRemoteRoomsRef.current) {
+      isApplyingRemoteRoomsRef.current = false;
+      lastSyncedWorkspaceRoomsRef.current = serializedRoomText;
+      return;
+    }
+
+    if (lastSyncedWorkspaceRoomsRef.current === serializedRoomText) {
+      return;
+    }
+
+    lastSyncedWorkspaceRoomsRef.current = serializedRoomText;
+    customRooms.forEach((room) => {
+      void saveWorkspaceRoomToCloud(room).catch((error) => {
+        console.info("Workspace room cloud sync skipped.", error);
+      });
+    });
   }, [currentUser, customRooms, isWorkspaceLoaded, userId]);
 
   useEffect(() => {
@@ -2184,12 +2238,43 @@ function App() {
   }, [currentUser, isWorkspaceLoaded, workspaceNow]);
 
   useEffect(() => {
+    if (!currentUser || !isWorkspaceLoaded) {
+      return;
+    }
+
+    const unsubscribe = onSnapshot(
+      collection(db, workspaceRoomsCollectionName),
+      (snapshot) => {
+        const remoteRooms = snapshot.docs.map((item) =>
+          normalizeWorkspaceRoom({
+            ...(item.data() as Partial<WorkspaceRoom>),
+            id: item.id,
+          } as WorkspaceRoom),
+        );
+        const nextRooms = cleanWorkspacePresenceForUser(seedWorkspaceRooms(remoteRooms), currentUser.uid, Date.now());
+        isApplyingRemoteRoomsRef.current = true;
+        lastSyncedWorkspaceRoomsRef.current = JSON.stringify(nextRooms.map(serializeWorkspaceRoom));
+        setCustomRooms(nextRooms);
+
+        setSelectedRoomId((currentRoomId) =>
+          nextRooms.some((room) => room.id === currentRoomId) ? currentRoomId : nextRooms[0]?.id || "",
+        );
+      },
+      (error) => {
+        console.info("Workspace room realtime sync skipped.", error);
+      },
+    );
+
+    return () => unsubscribe();
+  }, [currentUser, isWorkspaceLoaded]);
+
+  useEffect(() => {
     if (!currentUser) {
       return;
     }
 
     const currentUserId = currentUser.uid;
-    const workspaceRoomsStorageKey = getWorkspaceRoomsStorageKey(getAccountStorageScope(currentUserId, userId));
+    const workspaceRoomsStorageKey = sharedWorkspaceRoomsStorageKey;
     const handleStorage = (event: StorageEvent) => {
       if (event.key !== workspaceRoomsStorageKey || !event.newValue) {
         return;
@@ -3219,6 +3304,9 @@ function App() {
     };
 
     setCustomRooms((rooms) => [...rooms, room]);
+    void saveWorkspaceRoomToCloud(room).catch((error) => {
+      console.info("Workspace room create cloud sync skipped.", error);
+    });
     setSelectedRoomId(room.id);
     setNewRoomName("");
   };
@@ -3274,6 +3362,9 @@ function App() {
 
     const nextRooms = customRooms.filter((item) => item.id !== roomId);
     setCustomRooms(nextRooms);
+    void deleteDoc(doc(db, workspaceRoomsCollectionName, roomId)).catch((error) => {
+      console.info("Workspace room delete cloud sync skipped.", error);
+    });
 
     if (selectedRoomId === roomId) {
       setSelectedRoomId(nextRooms[0]?.id || createDefaultWorkspaceRooms()[0].id);
