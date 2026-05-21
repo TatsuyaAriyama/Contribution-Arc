@@ -2610,12 +2610,12 @@ function App() {
       ? formatStudyTime(totalWeeklyMinutes)
       : `${(Math.round((totalWeeklyMinutes / 60) * 10) / 10).toLocaleString()}h`;
   const allWorkspaceRooms = [...workspaceRooms, ...customRooms].map((room) =>
-    applyScheduledDetaPresence(room, workspaceNow),
+    normalizeWorkspaceRoom(applyScheduledDetaPresence(normalizeWorkspaceRoom(room), workspaceNow)),
   );
   const selectedRoom = allWorkspaceRooms.find((room) => room.id === selectedRoomId) || allWorkspaceRooms[0];
   const currentBuilding = workspaceTask.trim() || studySubject.trim() || "Deep work";
   const activeRoom =
-    customRooms.find((room) => room.activeMembers.some((member) => member.userId === currentUser.uid)) || null;
+    allWorkspaceRooms.find((room) => room.activeMembers.some((member) => member.userId === currentUser.uid)) || null;
   const isInSelectedRoom = Boolean(
     selectedRoom?.activeMembers.some((member) => member.userId === currentUser.uid),
   );
@@ -3528,6 +3528,7 @@ function App() {
     setProfileUser(null);
     setIsSearchOpen(false);
     setIsNotificationsOpen(false);
+    setCurrentView("workspace");
     setNewRoomName("");
     setRoomCreateState("saved");
     setRoomCreateMessage("Roomを作成しました。");
@@ -4633,7 +4634,8 @@ function App() {
                 {allWorkspaceRooms.map((room) => {
                   const isOwnRoom = room.createdBy === currentUser.uid;
                   const isActiveRoom = room.id === selectedRoom?.id;
-                  const isJoinedRoom = room.activeMembers.some((member) => member.userId === currentUser.uid);
+                  const roomMembers = room.activeMembers || [];
+                  const isJoinedRoom = roomMembers.some((member) => member.userId === currentUser.uid);
 
                   return (
                     <article
@@ -4657,7 +4659,7 @@ function App() {
                         aria-label={`${room.name}を表示`}
                       >
                         <span className="room-online-count">
-                          <strong>{room.activeMembers.length}</strong>
+                          <strong>{roomMembers.length}</strong>
                           <em>online</em>
                         </span>
                         <small className="room-supporting-meta">
