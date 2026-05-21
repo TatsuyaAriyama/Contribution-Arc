@@ -2674,7 +2674,7 @@ function App() {
   const roomContributions = todayRoomHistory.length + (isInSelectedRoom ? 1 : 0);
   const roomCommits = (selectedRoom?.commits || 0) + outputStats.commits;
   const roomOnlineCount = visibleMembers.length;
-  const userRoomHistory = customRooms
+  const userRoomHistory = allWorkspaceRooms
     .flatMap((room) => room.history.filter((item) => item.userId === currentUser.uid))
     .sort((a, b) => new Date(b.leftAt).getTime() - new Date(a.leftAt).getTime())
     .slice(0, 4);
@@ -3735,7 +3735,7 @@ function App() {
 
   const memberProfileCard = (member: WorkspaceMember) => {
     const memberRoom =
-      customRooms.find((room) => room.activeMembers.some((item) => item.userId === member.userId)) ||
+      allWorkspaceRooms.find((room) => room.activeMembers.some((item) => item.userId === member.userId)) ||
       selectedRoom;
     const elapsedMinutes = getElapsedMinutes(member.joinedAt, workspaceNow);
     const memberProfile = workspaceMemberToProfile(member);
