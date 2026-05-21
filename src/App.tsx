@@ -801,6 +801,48 @@ function createWorkspaceMember(
   };
 }
 
+function getRoomDescription(room: WorkspaceRoom) {
+  if (room.id === "deep-work-studio") {
+    return "深夜でも静かに手を動かせる、Contribution Arcの基点となる開発室。";
+  }
+
+  if (room.name.toLowerCase().includes("night")) {
+    return "夜の集中作業に向いた、ゆっくり流れるビルドルーム。";
+  }
+
+  return "小さく集中し、積み上げを共有するための静かな空間。";
+}
+
+function getRoomAccent(room: WorkspaceRoom) {
+  if (room.id === "deep-work-studio") {
+    return "studio";
+  }
+
+  if (room.name.toLowerCase().includes("night")) {
+    return "night";
+  }
+
+  return "garden";
+}
+
+function getWorkspaceSeatPosition(task: string) {
+  const normalizedTask = task.toLowerCase();
+
+  if (normalizedTask.includes("java")) {
+    return { x: 63, y: 47 };
+  }
+
+  if (normalizedTask.includes("aws") || normalizedTask.includes("cloud")) {
+    return { x: 73, y: 69 };
+  }
+
+  if (normalizedTask.includes("deep") || normalizedTask.includes("focus")) {
+    return { x: 44, y: 67 };
+  }
+
+  return { x: 30, y: 47 };
+}
+
 function createDetaMember(joinedAt: Date): WorkspaceMember {
   return createWorkspaceMember({
     id: detaUserId,
@@ -808,8 +850,8 @@ function createDetaMember(joinedAt: Date): WorkspaceMember {
     name: "deta",
     avatar: "",
     characterColor: "#1f6f4a",
-    x: 28,
-    y: 36,
+    x: 30,
+    y: 47,
     currentTask: "React",
     color: "#1f6f4a",
     joinedAt: joinedAt.toISOString(),
@@ -946,7 +988,7 @@ function createDefaultWorkspaceRooms(): WorkspaceRoom[] {
           avatar: "",
           characterColor: "#3f6f9f",
           x: 62,
-          y: 36,
+          y: 47,
           currentTask: "Java",
           color: "#3f6f9f",
           joinedAt: new Date(now - 1000 * 60 * 66).toISOString(),
@@ -960,7 +1002,7 @@ function createDefaultWorkspaceRooms(): WorkspaceRoom[] {
           avatar: minaAvatarPath,
           characterColor: "#2f8f83",
           x: 72,
-          y: 68,
+          y: 69,
           currentTask: "AWS",
           color: "#2f8f83",
           joinedAt: new Date(now - 1000 * 60 * 31).toISOString(),
@@ -2118,10 +2160,13 @@ function App() {
   const roomActivityItems: RoomActivityItem[] = [
     ...visibleMembers.map((member) => {
       const task = member.currentTask || member.building;
+      const stayLabel = formatStayTime(getElapsedMinutes(member.joinedAt, workspaceNow));
       const text =
         member.status === "on-break"
-          ? `${member.name} is taking a break`
-          : `${member.name} is building ${task}`;
+          ? `${member.name} stepped away for a quiet break`
+          : getElapsedMinutes(member.joinedAt, workspaceNow) >= 180
+            ? `${member.name} reached ${stayLabel} focus`
+            : `${member.name} started building ${task}`;
 
       return {
         id: `active-${member.userId}-${member.joinedAt}`,
@@ -2129,7 +2174,7 @@ function App() {
         userName: member.name,
         avatar: member.avatar,
         text,
-        meta: `${formatStayTime(getElapsedMinutes(member.joinedAt, workspaceNow))} active`,
+        meta: `${stayLabel} in ${selectedRoom?.name || "room"}`,
         member,
       };
     }),
@@ -2140,8 +2185,8 @@ function App() {
       avatar: item.userName === "Mina" || item.userId === "npc-mina" ? minaAvatarPath : "",
       text:
         item.id === "seed-mina-joined"
-          ? `${item.userName} joined ${item.building}`
-          : `${item.userName} logged ${formatStayTime(item.minutes)} ${item.building}`,
+          ? `${item.userName} committed to Contribution Arc`
+          : `${item.userName} closed a ${formatStayTime(item.minutes)} ${item.building} session`,
       meta: new Date(item.leftAt).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
     })) satisfies RoomActivityItem[]),
   ].slice(0, 7);
@@ -2670,7 +2715,8 @@ function App() {
     setStudyColor(color);
     setLastRoomSession(null);
     setPendingJoinRoomId(null);
-    setPlayerPosition({ x: 18, y: 72 });
+    const seatPosition = getWorkspaceSeatPosition(nextTask);
+    setPlayerPosition(seatPosition);
     pressedWorkspaceKeysRef.current.clear();
     setIsPlayerWalking(false);
     setCustomRooms((rooms) => {
@@ -2699,8 +2745,8 @@ function App() {
               currentTask: nextTask,
               color,
               joinedAt,
-              x: 18,
-              y: 72,
+              x: seatPosition.x,
+              y: seatPosition.y,
               status: "working",
               tone: "deep",
               avatar: playerAvatar,
@@ -3718,6 +3764,10 @@ function App() {
 
             <div className="workspace-layout">
               <div className="room-list" aria-label="Workspace rooms">
+                <div className="room-space-list-head">
+                  <p className="card-kicker">Spaces</p>
+                  <span>静かに積み上げる場所を選ぶ</span>
+                </div>
                 <form className="room-create-form" onSubmit={handleRoomCreate}>
                   <label>
                     <span>Roomを作成</span>
@@ -3740,14 +3790,16 @@ function App() {
                     <article key={room.id} className={isActiveRoom ? "room-card active" : "room-card"}>
                       <button
                         type="button"
-                        className="room-select-button"
+                        className={`room-select-button room-accent-${getRoomAccent(room)}`}
                         onClick={() => setSelectedRoomId(room.id)}
                         aria-label={`${room.name}を表示`}
                       >
+                        <span className="room-space-orb" aria-hidden="true" />
                         <span className="room-card-top">
                           <span>{room.name}</span>
                           <span className="room-join-badge">{isJoinedRoom ? "入室中" : "未入室"}</span>
                         </span>
+                        <em>{getRoomDescription(room)}</em>
                         <strong>{room.activeMembers.length} online</strong>
                         <small>{Math.round(room.totalMinutes / 60)}h learned / {room.contributions} contributions</small>
                       </button>
@@ -3796,7 +3848,9 @@ function App() {
                   <>
                     <SilentWorkspaceRoom
                       roomName={selectedRoom.name}
+                      roomDescription={getRoomDescription(selectedRoom)}
                       onlineCount={roomOnlineCount}
+                      commitLabel={roomCommits.toLocaleString()}
                       members={workspaceActors}
                       currentUserId={currentUser.uid}
                       isJoined={isInSelectedRoom}
@@ -3814,6 +3868,7 @@ function App() {
                       onJoin={() => handleRoomJoin(selectedRoom.id)}
                       onLeave={handleRoomLeave}
                       onResetPresence={resetWorkspacePresence}
+                      onSeatSelect={(task) => startWorkspaceSession(selectedRoom.id, task, studyColor)}
                       presetMessages={workspacePresetMessages}
                       onPresetMessagesChange={setWorkspacePresetMessages}
                       onPresetMessage={handleWorkspacePresetMessage}
@@ -3857,7 +3912,7 @@ function App() {
             <p>
               {isInSelectedRoom
                 ? `入室中 ${currentStayMinutes > 0 ? formatStayTime(currentStayMinutes) : ""}`
-                : "状況確認と定型コミュニケーション。入室やRoom管理は詳細画面で行います。"}
+                : "席を選び、定型文だけで気配を届ける。詳細なRoom設定は専用画面で整えます。"}
             </p>
           </div>
           <div className="home-workspace-actions">
@@ -3875,7 +3930,9 @@ function App() {
           <SilentWorkspaceRoom
             presentation="focus"
             roomName={selectedRoom.name}
+            roomDescription={getRoomDescription(selectedRoom)}
             onlineCount={roomOnlineCount}
+            commitLabel={roomCommits.toLocaleString()}
             members={workspaceActors}
             currentUserId={currentUser.uid}
             isJoined={isInSelectedRoom}
@@ -3893,6 +3950,7 @@ function App() {
             onJoin={() => handleRoomJoin(selectedRoom.id)}
             onLeave={handleRoomLeave}
             onResetPresence={resetWorkspacePresence}
+            onSeatSelect={(task) => startWorkspaceSession(selectedRoom.id, task, studyColor)}
             presetMessages={workspacePresetMessages}
             onPresetMessagesChange={setWorkspacePresetMessages}
             onPresetMessage={handleWorkspacePresetMessage}

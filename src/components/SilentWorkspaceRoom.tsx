@@ -31,7 +31,9 @@ export type RoomActor = {
 type SilentWorkspaceRoomProps = {
   presentation?: "full" | "focus";
   roomName: string;
+  roomDescription?: string;
   onlineCount: number;
+  commitLabel: string;
   members: RoomActor[];
   currentUserId: string;
   isJoined: boolean;
@@ -42,6 +44,7 @@ type SilentWorkspaceRoomProps = {
   onJoin: () => void;
   onLeave: () => void;
   onResetPresence: () => void;
+  onSeatSelect: (task: string) => void;
   presetMessages: string[];
   onPresetMessagesChange: (messages: string[]) => void;
   onPresetMessage: (message: string) => void;
@@ -55,16 +58,51 @@ type SilentWorkspaceRoomProps = {
   contributionLabel: string;
 };
 
-const statusLabels: Record<RoomActorStatus, string> = {
-  working: "working",
-  "deep-work": "deep work",
-  "on-break": "break",
-};
+const workspaceSeats = [
+  {
+    id: "frontend",
+    name: "Frontend",
+    task: "React",
+    note: "UI / React",
+  },
+  {
+    id: "java",
+    name: "Java",
+    task: "Java",
+    note: "API / backend",
+  },
+  {
+    id: "deep",
+    name: "Deep Work",
+    task: "Deep Work",
+    note: "focus block",
+  },
+  {
+    id: "cloud",
+    name: "Cloud",
+    task: "AWS",
+    note: "infra / deploy",
+  },
+];
+
+function getShortStayLabel(joinedAt: string) {
+  const minutes = Math.max(1, Math.floor((Date.now() - new Date(joinedAt).getTime()) / 60000));
+  const hours = Math.floor(minutes / 60);
+  const restMinutes = minutes % 60;
+
+  if (hours <= 0) {
+    return `${restMinutes}m`;
+  }
+
+  return restMinutes > 0 ? `${hours}h ${restMinutes}m` : `${hours}h`;
+}
 
 export function SilentWorkspaceRoom({
   presentation = "full",
   roomName,
+  roomDescription = "A quiet shared room for builders stacking focused work.",
   onlineCount,
+  commitLabel,
   members,
   currentUserId,
   isJoined,
@@ -75,6 +113,7 @@ export function SilentWorkspaceRoom({
   onJoin,
   onLeave,
   onResetPresence,
+  onSeatSelect,
   presetMessages,
   onPresetMessagesChange,
   onPresetMessage,
@@ -106,14 +145,25 @@ export function SilentWorkspaceRoom({
     <div className={`workspace-2d-shell ${isFocusPresentation ? "focus-presentation" : ""}`}>
       <div className="workspace-2d-main">
         {!isFocusPresentation ? (
-          <div className="workspace-2d-topbar">
-            <div>
-              <p className="card-kicker">Room</p>
+          <div className="workspace-room-header">
+            <div className="workspace-room-title">
+              <p className="card-kicker">Silent Workspace</p>
               <h3>{roomName}</h3>
+              <span>{roomDescription}</span>
             </div>
-            <div className="workspace-online-pill">
-              <span>{onlineCount}</span>
-              online
+            <div className="workspace-room-stats" aria-label="Room stats">
+              <div>
+                <strong>{onlineCount}</strong>
+                <span>developers building</span>
+              </div>
+              <div>
+                <strong>{commitLabel}</strong>
+                <span>commits tonight</span>
+              </div>
+              <div>
+                <strong>{totalLearnedLabel}</strong>
+                <span>focused</span>
+              </div>
             </div>
           </div>
         ) : null}
@@ -143,7 +193,7 @@ export function SilentWorkspaceRoom({
                     退出する
                   </button>
                   <button type="button" className="room-reset-button" onClick={onResetPresence}>
-                    入室状態をリセット
+                    接続を整える
                   </button>
                 </>
               ) : (
@@ -157,29 +207,48 @@ export function SilentWorkspaceRoom({
           </div>
         ) : null}
 
-        <div className="workspace-stage" aria-label="2D silent workspace">
+        <div className="workspace-stage" aria-label="2.5D silent workspace">
           <div className="workspace-floor-grid" aria-hidden="true" />
+          <div className="workspace-ambient-glow" aria-hidden="true" />
+          <div className="workspace-ambient-dust" aria-hidden="true" />
+          <div className="workspace-back-wall" aria-hidden="true">
+            <span />
+            <span />
+          </div>
           <div className="workspace-light light-a" aria-hidden="true" />
           <div className="workspace-light light-b" aria-hidden="true" />
+          <div className="workspace-window" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
           <div className="workspace-whiteboard" aria-hidden="true">
             <span />
             <span />
             <span />
           </div>
-          <div className="workspace-desk desk-a" aria-hidden="true">
-            <span />
-          </div>
-          <div className="workspace-desk desk-b" aria-hidden="true">
-            <span />
-          </div>
-          <div className="workspace-desk desk-c" aria-hidden="true">
-            <span />
-          </div>
-          <div className="workspace-chair chair-a" aria-hidden="true" />
-          <div className="workspace-chair chair-b" aria-hidden="true" />
-          <div className="workspace-chair chair-c" aria-hidden="true" />
+          {workspaceSeats.map((seat) => (
+            <button
+              type="button"
+              key={seat.id}
+              className={`workspace-seat seat-${seat.id}`}
+              onClick={() => onSeatSelect(seat.task)}
+              aria-label={`${seat.name}席に着席して${seat.task}を開始`}
+            >
+              <span className="seat-desk">
+                <span className="seat-screen" />
+                <span className="seat-mug" />
+              </span>
+              <span className="seat-chair" />
+              <span className="seat-caption">
+                <strong>{seat.name}</strong>
+                <small>{seat.note}</small>
+              </span>
+            </button>
+          ))}
           <div className="workspace-plant plant-a" aria-hidden="true" />
           <div className="workspace-plant plant-b" aria-hidden="true" />
+          <div className="workspace-plant plant-c" aria-hidden="true" />
           <div className="workspace-rug" aria-hidden="true" />
 
           {members.map((member) => {
@@ -213,7 +282,8 @@ export function SilentWorkspaceRoom({
                 </span>
                 <span className="actor-name">{member.name}</span>
                 <span className="actor-task">
-                  {statusLabels[member.status]} / {member.currentTask}
+                  <strong>{member.currentTask}</strong>
+                  <small>{getShortStayLabel(member.joinedAt)}</small>
                 </span>
               </button>
             );
@@ -257,8 +327,8 @@ export function SilentWorkspaceRoom({
       {!isFocusPresentation ? (
         <aside className="workspace-activity-panel">
           <div>
-            <p className="card-kicker">Room Activity</p>
-            <strong>{totalLearnedLabel}</strong>
+            <p className="card-kicker">Quiet Stream</p>
+            <strong>{roomName}</strong>
             <span>{contributionLabel}</span>
           </div>
           <div className="workspace-activity-list">
