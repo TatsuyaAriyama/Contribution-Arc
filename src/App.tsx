@@ -43,6 +43,20 @@ import { PremiumSidebar, type AppView, type FriendPreview, type LiveActivity } f
 import { SilentWorkspaceRoom, type RoomActivityItem } from "./components/SilentWorkspaceRoom";
 import "./App.css";
 
+declare global {
+  interface Window {
+    contributionArcDesktop?: {
+      isElectron: boolean;
+      platform: NodeJS.Platform;
+      versions: {
+        electron?: string;
+        chrome?: string;
+      };
+      onOpenSettings?: (callback: () => void) => () => void;
+    };
+  }
+}
+
 type QuestEvent = "chest" | "sword" | "flame" | "star";
 type Terrain = "trail" | "plain" | "grove" | "ridge" | "citadel";
 
@@ -1944,6 +1958,7 @@ function App() {
   const [isPlayerWalking, setIsPlayerWalking] = useState(false);
   const [workspaceBubble, setWorkspaceBubble] = useState("");
   const [workspacePresetMessages, setWorkspacePresetMessages] = useState(defaultWorkspacePresetMessages);
+  const [isDesktopWelcomeVisible, setIsDesktopWelcomeVisible] = useState(true);
   const [knowledgeGraph, setKnowledgeGraph] = useState<KnowledgeGraphData>(emptyKnowledgeGraph);
   const [selectedKnowledgeId, setSelectedKnowledgeId] = useState("");
   const [hoveredKnowledgeId, setHoveredKnowledgeId] = useState("");
@@ -1994,6 +2009,7 @@ function App() {
       setWorkspaceTask("React");
       setWorkspaceDraftTask("React");
       setWorkspacePresetMessages(defaultWorkspacePresetMessages);
+      setIsDesktopWelcomeVisible(true);
       setKnowledgeGraph(emptyKnowledgeGraph);
       setSelectedKnowledgeId("");
       setHoveredKnowledgeId("");
@@ -2709,6 +2725,7 @@ function App() {
   const playerName =
     customUserName.trim() || currentUser.displayName || currentUser.email?.split("@")[0] || "Developer";
   const playerInitial = playerName.slice(0, 1).toUpperCase();
+  const isDesktopApp = Boolean(window.contributionArcDesktop?.isElectron);
   const isOnboardingSettings = onboardingStep === "settings";
   const weeklyStudyHours = getWeeklyStudyHours(studyLogs);
   const maxStudyMinutes = Math.max(1, ...weeklyStudyHours.map((item) => item.totalMinutes));
@@ -2734,6 +2751,9 @@ function App() {
   const currentBuilding = workspaceTask.trim() || studySubject.trim() || "Deep work";
   const activeRoom =
     allWorkspaceRooms.find((room) => room.activeMembers.some((member) => member.userId === currentUser.uid)) || null;
+  const githubConnectionLabel = currentUser.providerData.some((provider) => provider.providerId === "github.com")
+    ? "GitHub connected"
+    : "GitHub ready";
   const isInSelectedRoom = Boolean(
     selectedRoom?.activeMembers.some((member) => member.userId === currentUser.uid),
   );
@@ -2940,6 +2960,28 @@ function App() {
     setSettingsError("");
     setIsSettingsOpen(true);
   };
+
+  useEffect(() => {
+    if (!isDesktopApp) {
+      return;
+    }
+
+    const timerId = window.setTimeout(() => setIsDesktopWelcomeVisible(false), 2600);
+    return () => window.clearTimeout(timerId);
+  }, [isDesktopApp, currentUser.uid]);
+
+  useEffect(() => {
+    if (!isDesktopApp || !window.contributionArcDesktop?.onOpenSettings) {
+      return;
+    }
+
+    return window.contributionArcDesktop.onOpenSettings(() => {
+      setDraftUserName(playerName);
+      setDraftUserId(userId);
+      setSettingsError("");
+      setIsSettingsOpen(true);
+    });
+  }, [isDesktopApp, playerName, userId]);
 
   const handleSettingsSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -4044,11 +4086,47 @@ function App() {
 
   return (
     <motion.main
-      className="app-shell premium-shell"
+      className={isDesktopApp ? "app-shell premium-shell desktop-shell" : "app-shell premium-shell"}
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
     >
+      {isDesktopApp ? (
+        <header className="desktop-app-header" aria-label="Contribution Arc desktop header">
+          <div className="desktop-app-brand">
+            <span className="desktop-app-logo" aria-hidden="true">
+              <ContributionArcLogo />
+            </span>
+            <span>
+              <strong>Contribution Arc</strong>
+              <small>Quiet developer workspace</small>
+            </span>
+          </div>
+
+          <div className="desktop-app-context">
+            <span>{activeRoom ? "In room" : "Viewing"}</span>
+            <strong>{activeRoom?.name || selectedRoom?.name || "Deep Work Studio"}</strong>
+          </div>
+
+          <div className="desktop-app-actions">
+            <span className="desktop-status-pill">
+              <i aria-hidden="true" />
+              {activeRoom ? `${formatStayTime(currentStayMinutes)} focused` : `${roomOnlineCount} online`}
+            </span>
+            <span className="desktop-github-pill">{githubConnectionLabel}</span>
+            <button type="button" onClick={handleSettingsOpen}>
+              Profile
+            </button>
+          </div>
+        </header>
+      ) : null}
+
+      {isDesktopApp && isDesktopWelcomeVisible ? (
+        <div className="desktop-welcome-toast" role="status" aria-live="polite">
+          Welcome back, {playerName}.
+        </div>
+      ) : null}
+
       {onboardingStep === "welcome" ? (
         <div className="onboarding-welcome" role="status" aria-live="polite">
           <section>

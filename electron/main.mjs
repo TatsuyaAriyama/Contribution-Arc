@@ -4,7 +4,11 @@ import path from "node:path";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isDev = !app.isPackaged;
-const devServerUrl = process.env.VITE_DEV_SERVER_URL || "http://localhost:5173";
+const devServerUrl = process.env.VITE_DEV_SERVER_URL || "http://localhost:5173/Contribution-Arc/";
+
+function openSettings() {
+  BrowserWindow.getFocusedWindow()?.webContents.send("contribution-arc:open-settings");
+}
 
 function createApplicationMenu() {
   const template = [
@@ -14,6 +18,12 @@ function createApplicationMenu() {
             label: app.name,
             submenu: [
               { role: "about" },
+              { type: "separator" },
+              {
+                label: "Settings...",
+                accelerator: "Command+,",
+                click: openSettings,
+              },
               { type: "separator" },
               { role: "services" },
               { type: "separator" },
@@ -26,10 +36,26 @@ function createApplicationMenu() {
           },
         ]
       : []),
+    ...(process.platform !== "darwin"
+      ? [
+          {
+            label: "File",
+            submenu: [
+              {
+                label: "Settings...",
+                accelerator: "Control+,",
+                click: openSettings,
+              },
+              { type: "separator" },
+              { role: "quit" },
+            ],
+          },
+        ]
+      : []),
     {
       label: "View",
       submenu: [
-        { role: "reload" },
+        { role: "reload", accelerator: "CommandOrControl+R" },
         { role: "forceReload" },
         { type: "separator" },
         { role: "resetZoom" },
@@ -44,10 +70,11 @@ function createApplicationMenu() {
       label: "Window",
       submenu: [
         { role: "minimize" },
+        { role: "close", accelerator: "CommandOrControl+W" },
         { role: "zoom" },
         ...(process.platform === "darwin"
           ? [{ type: "separator" }, { role: "front" }, { type: "separator" }, { role: "window" }]
-          : [{ role: "close" }]),
+          : []),
       ],
     },
   ];
@@ -74,7 +101,8 @@ function createMainWindow() {
     backgroundColor: "#FAFAF8",
     title: "Contribution Arc",
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
-    trafficLightPosition: { x: 18, y: 18 },
+    trafficLightPosition: { x: 22, y: 20 },
+    icon: path.join(__dirname, "..", "assets", "icon.icns"),
     vibrancy: process.platform === "darwin" ? "under-window" : undefined,
     visualEffectState: process.platform === "darwin" ? "active" : undefined,
     webPreferences: {
