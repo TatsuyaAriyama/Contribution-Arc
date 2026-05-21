@@ -711,6 +711,34 @@ function readStoredFriendRequests(scope: string) {
   }
 }
 
+function safeSetLocalStorage(key: string, value: string) {
+  try {
+    window.localStorage.setItem(key, value);
+    return true;
+  } catch (error) {
+    if (key === sharedWorkspaceRoomsStorageKey) {
+      try {
+        window.localStorage.removeItem(key);
+        window.localStorage.setItem(key, value);
+        return true;
+      } catch (retryError) {
+        console.info("Shared workspace cache write skipped.", retryError);
+      }
+    }
+
+    console.info("Local storage write skipped.", { key, error });
+    return false;
+  }
+}
+
+function getSerializableAvatar(avatar: string | undefined) {
+  if (!avatar || avatar.startsWith("data:")) {
+    return "";
+  }
+
+  return avatar;
+}
+
 function upsertStoredFriendRequest(scope: string, nextRequest: FriendRequest) {
   try {
     const requests = readStoredFriendRequests(scope);
@@ -722,7 +750,7 @@ function upsertStoredFriendRequest(scope: string, nextRequest: FriendRequest) {
       ),
     ];
 
-    window.localStorage.setItem(getFriendRequestsStorageKey(scope), JSON.stringify(nextRequests));
+    safeSetLocalStorage(getFriendRequestsStorageKey(scope), JSON.stringify(nextRequests));
   } catch {
     // Local mirror is a convenience for same-browser account switching.
   }
@@ -1294,7 +1322,7 @@ function serializeWorkspaceRoom(room: WorkspaceRoom): WorkspaceRoom {
     id: normalizedRoom.id,
     name: normalizedRoom.name,
     ownerName: normalizedRoom.ownerName || "Developer",
-    ownerAvatar: normalizedRoom.ownerAvatar || "",
+    ownerAvatar: getSerializableAvatar(normalizedRoom.ownerAvatar),
     seatLabels: {
       ...defaultWorkspaceSeatLabels,
       ...(normalizedRoom.seatLabels || {}),
@@ -1304,7 +1332,10 @@ function serializeWorkspaceRoom(room: WorkspaceRoom): WorkspaceRoom {
     commits: normalizedRoom.commits || 0,
     createdAt: normalizedRoom.createdAt || new Date().toISOString(),
     createdBy: normalizedRoom.createdBy || "legacy",
-    activeMembers: normalizedRoom.activeMembers || [],
+    activeMembers: (normalizedRoom.activeMembers || []).map((member) => ({
+      ...member,
+      avatar: member.userId === "npc-mina" ? member.avatar : getSerializableAvatar(member.avatar),
+    })),
     history: normalizedRoom.history || [],
   };
 }
@@ -2022,7 +2053,7 @@ function App() {
       currentUser.uid,
     );
     if (shouldResetPresence) {
-      window.localStorage.setItem(presenceResetKey, "true");
+      safeSetLocalStorage(presenceResetKey, "true");
     }
     if (savedLogs) {
       setStudyLogs(removeSeedStudyLogs(JSON.parse(savedLogs) as StudyLog[]));
@@ -2081,7 +2112,7 @@ function App() {
           if (!resolvedUserId) {
             setOnboardingStep("welcome");
           } else if (!savedOnboardingComplete) {
-            window.localStorage.setItem(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
+            safeSetLocalStorage(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
           }
           return;
         }
@@ -2095,8 +2126,8 @@ function App() {
         setDraftDetermination(profile.determination || savedDetermination || "");
         setPlayerCharacterColor(profile.characterColor || savedCharacterColor || characterColorOptions[0].value);
         if (resolvedUserId) {
-          window.localStorage.setItem(`contribution-arc-user-id-${currentUser.uid}`, resolvedUserId);
-          window.localStorage.setItem(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
+          safeSetLocalStorage(`contribution-arc-user-id-${currentUser.uid}`, resolvedUserId);
+          safeSetLocalStorage(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
           setOnboardingStep("idle");
         } else {
           setOnboardingStep("welcome");
@@ -2106,7 +2137,7 @@ function App() {
         if (!savedUserId) {
           setOnboardingStep("welcome");
         } else if (!savedOnboardingComplete) {
-          window.localStorage.setItem(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
+          safeSetLocalStorage(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
         }
       });
   }, [currentUser]);
@@ -2140,7 +2171,7 @@ function App() {
     }
     const accountScope = getAccountStorageScope(currentUser.uid, userId);
 
-    window.localStorage.setItem(
+    safeSetLocalStorage(
       getAccountStorageKey(accountScope, "study"),
       JSON.stringify(studyLogs),
     );
@@ -2152,7 +2183,7 @@ function App() {
     }
     const accountScope = getAccountStorageScope(currentUser.uid, userId);
 
-    window.localStorage.setItem(
+    safeSetLocalStorage(
       getAccountStorageKey(accountScope, "knowledge-graph"),
       JSON.stringify(knowledgeGraph),
     );
@@ -2164,7 +2195,7 @@ function App() {
     }
     const accountScope = getAccountStorageScope(currentUser.uid, userId);
 
-    window.localStorage.setItem(getAccountStorageKey(accountScope, "friends"), JSON.stringify(friends));
+    safeSetLocalStorage(getAccountStorageKey(accountScope, "friends"), JSON.stringify(friends));
   }, [currentUser, friends, isWorkspaceLoaded, userId]);
 
   useEffect(() => {
@@ -2173,7 +2204,7 @@ function App() {
     }
     const accountScope = getAccountStorageScope(currentUser.uid, userId);
 
-    window.localStorage.setItem(
+    safeSetLocalStorage(
       getFriendRequestsStorageKey(accountScope),
       JSON.stringify(friendRequests),
     );
@@ -2285,7 +2316,7 @@ function App() {
     }
     const accountScope = getAccountStorageScope(currentUser.uid, userId);
 
-    window.localStorage.setItem(getAccountStorageKey(accountScope, "room"), selectedRoomId);
+    safeSetLocalStorage(getAccountStorageKey(accountScope, "room"), selectedRoomId);
   }, [currentUser, selectedRoomId, isWorkspaceLoaded, userId]);
 
   useEffect(() => {
@@ -2295,7 +2326,7 @@ function App() {
 
     const serializedRooms = customRooms.map(serializeWorkspaceRoom);
     const serializedRoomText = JSON.stringify(serializedRooms);
-    window.localStorage.setItem(sharedWorkspaceRoomsStorageKey, serializedRoomText);
+    safeSetLocalStorage(sharedWorkspaceRoomsStorageKey, serializedRoomText);
 
     if (isApplyingRemoteRoomsRef.current) {
       isApplyingRemoteRoomsRef.current = false;
@@ -2321,7 +2352,7 @@ function App() {
     }
     const accountScope = getAccountStorageScope(currentUser.uid, userId);
 
-    window.localStorage.setItem(
+    safeSetLocalStorage(
       getAccountStorageKey(accountScope, "workspace-task"),
       workspaceTask,
     );
@@ -2333,7 +2364,7 @@ function App() {
     }
     const accountScope = getAccountStorageScope(currentUser.uid, userId);
 
-    window.localStorage.setItem(getAccountStorageKey(accountScope, "character-color"), playerCharacterColor);
+    safeSetLocalStorage(getAccountStorageKey(accountScope, "character-color"), playerCharacterColor);
   }, [currentUser, playerCharacterColor, isWorkspaceLoaded, userId]);
 
   useEffect(() => {
@@ -2342,7 +2373,7 @@ function App() {
     }
     const accountScope = getAccountStorageScope(currentUser.uid, userId);
 
-    window.localStorage.setItem(
+    safeSetLocalStorage(
       getAccountStorageKey(accountScope, "workspace-preset-messages"),
       JSON.stringify(workspacePresetMessages.slice(0, 6)),
     );
@@ -2778,7 +2809,7 @@ function App() {
     if (nextIsOpen) {
       const nextReadAt = new Date().toISOString();
       setLastNotificationReadAt(nextReadAt);
-      window.localStorage.setItem(getAccountStorageKey(accountScope, "notifications-read-at"), nextReadAt);
+      safeSetLocalStorage(getAccountStorageKey(accountScope, "notifications-read-at"), nextReadAt);
     }
   };
   const activeKnowledgeGraph = knowledgeGraph.nodes.length > 0 ? knowledgeGraph : studyKnowledgeGraph;
@@ -2924,9 +2955,9 @@ function App() {
       const accountScope = getAccountStorageScope(currentUser.uid, nextUserId);
       setUserId(nextUserId);
       setCustomUserName(nextDisplayName);
-      window.localStorage.setItem(`contribution-arc-user-id-${currentUser.uid}`, nextUserId);
-      window.localStorage.setItem(getAccountStorageKey(accountScope, "name"), nextDisplayName);
-      window.localStorage.setItem(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
+      safeSetLocalStorage(`contribution-arc-user-id-${currentUser.uid}`, nextUserId);
+      safeSetLocalStorage(getAccountStorageKey(accountScope, "name"), nextDisplayName);
+      safeSetLocalStorage(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
     } catch (error) {
       setSettingsError(
         error instanceof Error
@@ -3202,7 +3233,7 @@ function App() {
     const nextDetermination = draftDetermination.trim();
     const accountScope = getAccountStorageScope(currentUser.uid, userId);
     setDetermination(nextDetermination);
-    window.localStorage.setItem(getAccountStorageKey(accountScope, "determination"), nextDetermination);
+    safeSetLocalStorage(getAccountStorageKey(accountScope, "determination"), nextDetermination);
     if (userId) {
       void setDoc(
         doc(db, "users", currentUser.uid),
@@ -3317,7 +3348,7 @@ function App() {
       const nextAvatar = typeof reader.result === "string" ? reader.result : "";
       const accountScope = getAccountStorageScope(currentUser.uid, userId);
       setPlayerAvatar(nextAvatar);
-      window.localStorage.setItem(getAccountStorageKey(accountScope, "avatar"), nextAvatar);
+      safeSetLocalStorage(getAccountStorageKey(accountScope, "avatar"), nextAvatar);
     };
     reader.readAsDataURL(file);
     event.target.value = "";
