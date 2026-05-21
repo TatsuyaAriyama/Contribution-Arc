@@ -4366,7 +4366,7 @@ function App() {
             </span>
             <span className="desktop-github-pill">{githubConnectionLabel}</span>
             <button type="button" onClick={handleSettingsOpen}>
-              Profile
+              プロフィール
             </button>
           </div>
         </header>
@@ -4416,12 +4416,10 @@ function App() {
           <p className="card-kicker">Contribution Arc</p>
           <strong>
             {currentView === "workspace"
-              ? "Silent Workspace"
-              : currentView === "knowledge"
-                ? "Knowledge Graph"
-                : currentView === "profile"
-                  ? "Profile"
-                  : "Dashboard"}
+              ? "作業部屋"
+              : currentView === "profile"
+                ? "プロフィール"
+                : "ホーム"}
           </strong>
         </div>
         <div className="user-session">
@@ -4452,7 +4450,7 @@ function App() {
               <span />
             </span>
             <span className="workspace-nav-copy">
-              <strong>Workspace</strong>
+              <strong>作業部屋</strong>
               <small>誰かの学習が今も積み上がっている</small>
             </span>
             <i>{activeRoom ? "入室中" : `${allWorkspaceRooms.length} Rooms`}</i>
@@ -4770,204 +4768,8 @@ function App() {
         </div>
       ) : null}
 
-      {currentView === "knowledge" ? (
-        <motion.section
-          className="knowledge-screen"
-          aria-label="Knowledge Graph"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <section className="card knowledge-card">
-            <div className="knowledge-heading">
-              <div>
-                <p className="card-kicker">Obsidian Knowledge Graph</p>
-                <h2>知識のつながりを育てる。</h2>
-              </div>
-              <div className="knowledge-actions">
-                <label>
-                  Obsidianノートを読み込む
-                  <input type="file" accept=".md,text/markdown" multiple onChange={handleKnowledgeImport} />
-                </label>
-                {knowledgeGraph.nodes.length > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setKnowledgeGraph(emptyKnowledgeGraph);
-                      setSelectedKnowledgeId("");
-                      setHoveredKnowledgeId("");
-                      setKnowledgePositions({});
-                    }}
-                  >
-                    学習ログ表示
-                  </button>
-                ) : null}
-                <button type="button" onClick={() => setKnowledgeScale((scale) => Math.min(1.7, scale + 0.12))}>
-                  +
-                </button>
-                <button type="button" onClick={() => setKnowledgeScale((scale) => Math.max(0.72, scale - 0.12))}>
-                  -
-                </button>
-              </div>
-            </div>
+      {currentView === "profile" ? (
 
-            <div className="knowledge-layout">
-              <div className="knowledge-graph-panel">
-                {graphNodes.length > 0 ? (
-                  <svg
-                    ref={graphSvgRef}
-                    className="knowledge-graph"
-                    viewBox="0 0 760 460"
-                    role="img"
-                    aria-label="Knowledge Graph"
-                    onPointerMove={handleKnowledgeDrag}
-                    onPointerUp={() => setDraggingKnowledgeId("")}
-                    onPointerLeave={() => setDraggingKnowledgeId("")}
-                    onPointerCancel={() => setDraggingKnowledgeId("")}
-                    onWheel={(event) => {
-                      event.preventDefault();
-                      setKnowledgeScale((scale) =>
-                        Math.min(1.7, Math.max(0.72, scale + (event.deltaY < 0 ? 0.08 : -0.08))),
-                      );
-                    }}
-                  >
-                    <motion.g
-                      animate={{ scale: knowledgeScale }}
-                      transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-                      style={{ transformOrigin: "380px 230px" }}
-                    >
-                      {activeKnowledgeGraph.links.map((link, index) => {
-                        const source = knowledgeNodeMap.get(link.source);
-                        const target = knowledgeNodeMap.get(link.target);
-                        if (!source || !target) {
-                          return null;
-                        }
-
-                        const isActive =
-                          activeKnowledgeId &&
-                          (link.source === activeKnowledgeId ||
-                            link.target === activeKnowledgeId ||
-                            (relatedKnowledgeIds.has(link.source) && relatedKnowledgeIds.has(link.target)));
-
-                        return (
-                          <motion.line
-                            key={`${link.source}-${link.target}`}
-                            className={isActive ? "knowledge-link active" : "knowledge-link"}
-                            x1={source.x}
-                            y1={source.y}
-                            x2={target.x}
-                            y2={target.y}
-                            initial={{ pathLength: 0, opacity: 0 }}
-                            animate={{
-                              pathLength: 1,
-                              opacity: isActive ? [0.68, 0.88, 0.68] : [0.16, 0.24, 0.16],
-                            }}
-                            transition={{
-                              pathLength: { duration: 0.7, delay: index * 0.025, ease: [0.22, 1, 0.36, 1] },
-                              opacity: { duration: 4.8, repeat: Infinity, ease: "easeInOut" },
-                            }}
-                          />
-                        );
-                      })}
-
-                      {graphNodes.map((node, index) => {
-                        const isSelected = selectedKnowledgeNode?.id === node.id;
-                        const isRelated = relatedKnowledgeIds.has(node.id);
-                        const isDimmed = activeKnowledgeId && !isSelected && !isRelated && activeKnowledgeId !== node.id;
-
-                        return (
-                          <motion.g
-                            key={node.id}
-                            className={[
-                              "knowledge-node",
-                              isSelected ? "selected" : "",
-                              isRelated ? "related" : "",
-                              isDimmed ? "dimmed" : "",
-                              node.cluster ? `cluster-${node.cluster}` : "",
-                            ]
-                              .filter(Boolean)
-                              .join(" ")}
-                            initial={{ opacity: 0, scale: 0.82 }}
-                            animate={{ opacity: isDimmed ? 0.34 : 1, scale: isSelected ? 1.08 : 1 }}
-                            transition={{
-                              duration: 0.42,
-                              delay: 0.1 + index * 0.04,
-                              ease: [0.22, 1, 0.36, 1],
-                            }}
-                            transform={`translate(${node.x} ${node.y})`}
-                            onPointerEnter={() => setHoveredKnowledgeId(node.id)}
-                            onPointerLeave={() => setHoveredKnowledgeId("")}
-                            onPointerDown={(event) => {
-                              event.currentTarget.setPointerCapture(event.pointerId);
-                              setDraggingKnowledgeId(node.id);
-                              setSelectedKnowledgeId(node.id);
-                            }}
-                            onPointerUp={(event) => {
-                              event.currentTarget.releasePointerCapture(event.pointerId);
-                              setDraggingKnowledgeId("");
-                            }}
-                            onClick={() => setSelectedKnowledgeId(node.id)}
-                          >
-                            <motion.circle
-                              r={node.size}
-                              animate={{ r: [node.size, node.size + 0.65, node.size] }}
-                              transition={{
-                                duration: 5 + (index % 5) * 0.35,
-                                repeat: Infinity,
-                                ease: "easeInOut",
-                              }}
-                            />
-                            <text y={node.size + 17}>{node.title}</text>
-                          </motion.g>
-                        );
-                      })}
-                    </motion.g>
-                  </svg>
-                ) : (
-                  <div className="knowledge-empty">
-                    <p className="card-kicker">Knowledge Graph</p>
-                    <strong>ObsidianのMarkdownを読み込むと、知識空間が立ち上がります。</strong>
-                  </div>
-                )}
-              </div>
-
-              <aside className="knowledge-detail">
-                <p className="card-kicker">Selected Node</p>
-                {selectedKnowledgeNode ? (
-                  <>
-                    <h3>{selectedKnowledgeNode.title}</h3>
-                    <dl>
-                      <div>
-                        <dt>学習量</dt>
-                        <dd>{formatStudyTimeJa(selectedKnowledgeNode.minutes)}</dd>
-                      </div>
-                      <div>
-                        <dt>接続</dt>
-                        <dd>
-                          {
-                            activeKnowledgeGraph.links.filter(
-                              (link) => link.source === selectedKnowledgeNode.id || link.target === selectedKnowledgeNode.id,
-                            ).length
-                          }
-                        </dd>
-                      </div>
-                    </dl>
-                    <div className="knowledge-related-list">
-                      {[...selectedKnowledgeRelatedIds].slice(0, 8).map((id) => (
-                        <button type="button" key={id} onClick={() => setSelectedKnowledgeId(id)}>
-                          {id}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                ) : (
-                  <span>ノードを選択してください。</span>
-                )}
-              </aside>
-            </div>
-          </section>
-        </motion.section>
-      ) : currentView === "profile" ? (
         <motion.section
           className="profile-screen"
           aria-label="Profile"
@@ -4977,7 +4779,7 @@ function App() {
         >
           <div className="profile-topbar">
             <button type="button" onClick={handleProfileBack}>
-              ← Home
+              ← ホーム
             </button>
           </div>
 
