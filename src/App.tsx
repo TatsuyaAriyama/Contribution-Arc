@@ -845,10 +845,6 @@ function getWorkspaceSeatPosition(task: string) {
   return { x: 30, y: 47 };
 }
 
-function getRoomOwnerInitial(room: WorkspaceRoom) {
-  return (room.name || room.ownerName || "Room").slice(0, 1).toUpperCase();
-}
-
 function createDetaMember(joinedAt: Date): WorkspaceMember {
   return createWorkspaceMember({
     id: detaUserId,
@@ -3855,9 +3851,6 @@ function App() {
                         onClick={() => setSelectedRoomId(room.id)}
                         aria-label={`${room.name}を表示`}
                       >
-                        <span className="room-space-orb" aria-hidden="true">
-                          {room.ownerAvatar ? <img src={room.ownerAvatar} alt="" /> : <span>{getRoomOwnerInitial(room)}</span>}
-                        </span>
                         <span className="room-card-top">
                           <span>{room.name}</span>
                           <span className="room-join-badge">{isJoinedRoom ? "入室中" : "未入室"}</span>
