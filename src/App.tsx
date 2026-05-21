@@ -6,6 +6,7 @@ import {
   type CSSProperties,
   type ChangeEvent,
   type FormEvent,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import {
@@ -185,6 +186,8 @@ type WorkspaceRoom = {
 type WorkspaceSeatLabels = Record<string, string>;
 
 type OnboardingStep = "idle" | "welcome" | "settings";
+
+type RoomCreateState = "idle" | "saving" | "saved" | "offline";
 
 type KnowledgeNode = {
   id: string;
@@ -665,6 +668,15 @@ function profileToFriend(profile: UserProfile): FriendPreview {
 
 function getFriendRequestDocId(fromUid: string, toUid: string) {
   return `${fromUid}_${toUid}`;
+}
+
+function createWorkspaceRoomId() {
+  const randomId =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+
+  return `custom-${randomId}`;
 }
 
 function getCurrentProfile(
@@ -1840,6 +1852,8 @@ function App() {
   const [customRooms, setCustomRooms] = useState<WorkspaceRoom[]>([]);
   const [isWorkspaceLoaded, setIsWorkspaceLoaded] = useState(false);
   const [newRoomName, setNewRoomName] = useState("");
+  const [roomCreateState, setRoomCreateState] = useState<RoomCreateState>("idle");
+  const [roomCreateMessage, setRoomCreateMessage] = useState("");
   const [editingRoomId, setEditingRoomId] = useState("");
   const [editingRoomName, setEditingRoomName] = useState("");
   const [workspaceTask, setWorkspaceTask] = useState("React");
@@ -1894,6 +1908,8 @@ function App() {
       setPlayerCharacterColor(characterColorOptions[0].value);
       setSelectedRoomId("");
       setCustomRooms([]);
+      setRoomCreateState("idle");
+      setRoomCreateMessage("");
       setPendingJoinRoomId(null);
       setLastRoomSession(null);
       setWorkspaceTask("React");
@@ -2933,6 +2949,7 @@ function App() {
     setProfileUser(profile);
     setFriendMessage("");
     setIsSearchOpen(false);
+    setIsNotificationsOpen(false);
     setCurrentView("profile");
   };
 
@@ -3049,16 +3066,34 @@ function App() {
     });
 
     try {
-      await updateDoc(doc(db, "friendRequests", request.id), {
-        status: "accepted",
-        acceptedAt,
-        updatedAt: serverTimestamp(),
-      });
+      await setDoc(
+        doc(db, "friendRequests", request.id),
+        {
+          fromUid: request.profile.uid,
+          toUid: currentUser.uid,
+          fromProfile: request.profile,
+          toProfile: currentProfile,
+          status: "accepted",
+          createdAt: request.createdAt,
+          acceptedAt,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
     } catch (error) {
       console.info("Friend request accept cloud sync skipped.", error);
     }
 
     setFriendMessage("フレンドになりました。");
+  };
+
+  const handleNotificationFriendAccept = (
+    event: ReactMouseEvent<HTMLButtonElement>,
+    request: FriendRequest,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    void handleFriendAccept(request);
   };
 
   const handleFriendOpen = (friend: FriendPreview) => {
@@ -3453,17 +3488,26 @@ function App() {
     );
   };
 
-  const handleRoomCreate = (event: FormEvent<HTMLFormElement>) => {
+  const handleRoomCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     event.stopPropagation();
 
-    const roomName = newRoomName.trim();
-    if (!roomName) {
+    if (!currentUser || roomCreateState === "saving") {
       return;
     }
 
+    const roomName = newRoomName.trim();
+    if (!roomName) {
+      setRoomCreateState("offline");
+      setRoomCreateMessage("Room名を入力してください。");
+      return;
+    }
+
+    setRoomCreateState("saving");
+    setRoomCreateMessage("");
+
     const room: WorkspaceRoom = {
-      id: `custom-${crypto.randomUUID()}`,
+      id: createWorkspaceRoomId(),
       name: roomName,
       ownerName: playerName,
       ownerAvatar: playerAvatar,
@@ -3480,15 +3524,22 @@ function App() {
     pendingWorkspaceRoomIdsRef.current.add(room.id);
     setCustomRooms((rooms) => (rooms.some((item) => item.id === room.id) ? rooms : [...rooms, room]));
     setSelectedRoomId(room.id);
-    setCurrentView("workspace");
+    setProfileMember(null);
+    setProfileUser(null);
+    setIsSearchOpen(false);
+    setIsNotificationsOpen(false);
     setNewRoomName("");
-    void saveWorkspaceRoomToCloud(room)
-      .then(() => {
-        pendingWorkspaceRoomIdsRef.current.delete(room.id);
-      })
-      .catch((error) => {
-        console.info("Workspace room create cloud sync skipped.", error);
-      });
+
+    try {
+      await saveWorkspaceRoomToCloud(room);
+      pendingWorkspaceRoomIdsRef.current.delete(room.id);
+      setRoomCreateState("saved");
+      setRoomCreateMessage("Roomを作成しました。");
+    } catch (error) {
+      console.info("Workspace room create cloud sync skipped.", error);
+      setRoomCreateState("offline");
+      setRoomCreateMessage("この端末には作成しました。オンライン反映は接続回復後に再試行します。");
+    }
   };
 
   const handleSeatLabelsChange = (roomId: string, labels: WorkspaceSeatLabels) => {
@@ -3973,7 +4024,11 @@ function App() {
                           </span>
                         </button>
                         {request.direction === "incoming" && request.status === "pending" ? (
-                          <button type="button" className="notification-accept" onClick={() => handleFriendAccept(request)}>
+                          <button
+                            type="button"
+                            className="notification-accept"
+                            onClick={(event) => handleNotificationFriendAccept(event, request)}
+                          >
                             承認
                           </button>
                         ) : null}
@@ -4549,13 +4604,25 @@ function App() {
                     <span>Roomを作成</span>
                     <input
                       value={newRoomName}
-                      onChange={(event) => setNewRoomName(event.target.value)}
+                      onChange={(event) => {
+                        setNewRoomName(event.target.value);
+                        if (roomCreateState !== "saving") {
+                          setRoomCreateState("idle");
+                          setRoomCreateMessage("");
+                        }
+                      }}
                       placeholder="例: 朝活Build"
                       maxLength={32}
+                      disabled={roomCreateState === "saving"}
                     />
                   </label>
-                  <button type="submit">作成</button>
+                  <button type="submit" disabled={roomCreateState === "saving"}>
+                    {roomCreateState === "saving" ? "作成中" : "作成"}
+                  </button>
                 </form>
+                {roomCreateMessage ? (
+                  <p className={`room-create-message ${roomCreateState}`}>{roomCreateMessage}</p>
+                ) : null}
 
                 {allWorkspaceRooms.map((room) => {
                   const isOwnRoom = room.createdBy === currentUser.uid;

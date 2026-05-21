@@ -3424,6 +3424,11 @@
   box-shadow: 0 0 0 4px rgba(31, 111, 74, 0.08);
 }
 
+.room-create-form input:disabled {
+  color: rgba(17, 24, 39, 0.48);
+  cursor: wait;
+}
+
 .room-create-form button {
   min-height: 36px;
   border: 0;
@@ -3443,6 +3448,29 @@
   transform: translateY(-1px);
   background: var(--green);
   box-shadow: 0 14px 28px rgba(31, 111, 74, 0.14);
+}
+
+.room-create-form button:disabled {
+  transform: none;
+  background: rgba(17, 24, 39, 0.28);
+  cursor: wait;
+  box-shadow: none;
+}
+
+.room-create-message {
+  margin: -2px 4px 4px;
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.5;
+}
+
+.room-create-message.saved {
+  color: #1f6f4a;
+}
+
+.room-create-message.offline {
+  color: #9a6a17;
 }
 
 .room-card {
