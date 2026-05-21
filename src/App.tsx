@@ -1876,7 +1876,7 @@ function App() {
   const graphSvgRef = useRef<SVGSVGElement | null>(null);
   const isApplyingRemoteRoomsRef = useRef(false);
   const lastSyncedWorkspaceRoomsRef = useRef("");
-  const pendingWorkspaceRoomIdsRef = useRef<Set<string>>(new Set());
+  const pendingWorkspaceRoomsRef = useRef<Map<string, WorkspaceRoom>>(new Map());
 
   useEffect(() => {
     return onAuthStateChanged(auth, (user) => {
@@ -2344,14 +2344,20 @@ function App() {
           } as WorkspaceRoom),
         );
         const remoteRoomIds = new Set(remoteRooms.map((room) => room.id));
-        remoteRoomIds.forEach((roomId) => pendingWorkspaceRoomIdsRef.current.delete(roomId));
+        remoteRoomIds.forEach((roomId) => pendingWorkspaceRoomsRef.current.delete(roomId));
 
         setCustomRooms((currentRooms) => {
-          const pendingLocalRooms = currentRooms.filter(
-            (room) => pendingWorkspaceRoomIdsRef.current.has(room.id) && !remoteRoomIds.has(room.id),
+          const pendingLocalRooms = Array.from(pendingWorkspaceRoomsRef.current.values()).filter(
+            (room) => !remoteRoomIds.has(room.id),
+          );
+          const localOnlyRooms = currentRooms.filter(
+            (room) =>
+              !remoteRoomIds.has(room.id) &&
+              !pendingWorkspaceRoomsRef.current.has(room.id) &&
+              room.createdBy === currentUser.uid,
           );
           const nextRooms = cleanWorkspacePresenceForUser(
-            seedWorkspaceRooms([...remoteRooms, ...pendingLocalRooms]),
+            seedWorkspaceRooms([...remoteRooms, ...pendingLocalRooms, ...localOnlyRooms]),
             currentUser.uid,
             Date.now(),
           );
@@ -3515,7 +3521,7 @@ function App() {
       history: [],
     };
 
-    pendingWorkspaceRoomIdsRef.current.add(room.id);
+    pendingWorkspaceRoomsRef.current.set(room.id, room);
     setCustomRooms((rooms) => (rooms.some((item) => item.id === room.id) ? rooms : [...rooms, room]));
     setSelectedRoomId(room.id);
     setProfileMember(null);
@@ -3528,7 +3534,7 @@ function App() {
 
     void saveWorkspaceRoomToCloud(room)
       .then(() => {
-        pendingWorkspaceRoomIdsRef.current.delete(room.id);
+        setRoomCreateMessage("Roomを作成しました。同期中でもこのまま使えます。");
       })
       .catch((error) => {
         console.info("Workspace room create cloud sync skipped.", error);
@@ -3586,7 +3592,7 @@ function App() {
       return;
     }
 
-    pendingWorkspaceRoomIdsRef.current.delete(roomId);
+    pendingWorkspaceRoomsRef.current.delete(roomId);
     const nextRooms = customRooms.filter((item) => item.id !== roomId);
     setCustomRooms(nextRooms);
     void deleteDoc(doc(db, workspaceRoomsCollectionName, roomId)).catch((error) => {
