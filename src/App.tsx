@@ -240,7 +240,11 @@ const outputStats = {
 };
 
 const workspaceRooms: WorkspaceRoom[] = [];
-const getWorkspaceRoomsStorageKey = (uid: string) => `contribution-arc-workspace-rooms-${uid}`;
+const sanitizeStoragePart = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9_.-]/g, "_");
+const getAccountStorageScope = (uid: string, registeredUserId: string) =>
+  sanitizeStoragePart(registeredUserId) || `uid-${uid}`;
+const getAccountStorageKey = (scope: string, key: string) => `contribution-arc-${scope}-${key}`;
+const getWorkspaceRoomsStorageKey = (scope: string) => getAccountStorageKey(scope, "workspace-rooms");
 const minaAvatarPath = "mina-icon.webp";
 const detaUserId = "npc-deta";
 const maxWorkspacePresenceMinutes = 12 * 60;
@@ -665,22 +669,22 @@ function getCurrentProfile(user: User, displayName: string, currentUserId: strin
   });
 }
 
-function getFriendRequestsStorageKey(uid: string) {
-  return `contribution-arc-friend-requests-${uid}`;
+function getFriendRequestsStorageKey(scope: string) {
+  return getAccountStorageKey(scope, "friend-requests");
 }
 
-function readStoredFriendRequests(uid: string) {
+function readStoredFriendRequests(scope: string) {
   try {
-    const savedRequests = window.localStorage.getItem(getFriendRequestsStorageKey(uid));
+    const savedRequests = window.localStorage.getItem(getFriendRequestsStorageKey(scope));
     return savedRequests ? (JSON.parse(savedRequests) as FriendRequest[]) : [];
   } catch {
     return [];
   }
 }
 
-function upsertStoredFriendRequest(uid: string, nextRequest: FriendRequest) {
+function upsertStoredFriendRequest(scope: string, nextRequest: FriendRequest) {
   try {
-    const requests = readStoredFriendRequests(uid);
+    const requests = readStoredFriendRequests(scope);
     const nextRequests = [
       nextRequest,
       ...requests.filter(
@@ -689,7 +693,7 @@ function upsertStoredFriendRequest(uid: string, nextRequest: FriendRequest) {
       ),
     ];
 
-    window.localStorage.setItem(getFriendRequestsStorageKey(uid), JSON.stringify(nextRequests));
+    window.localStorage.setItem(getFriendRequestsStorageKey(scope), JSON.stringify(nextRequests));
   } catch {
     // Local mirror is a convenience for same-browser account switching.
   }
@@ -1806,28 +1810,48 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!currentUser || !isWorkspaceLoaded) {
+    if (!currentUser) {
       return;
     }
 
-    const savedLogs = window.localStorage.getItem(`contribution-arc-study-${currentUser.uid}`);
-    const savedUserName = window.localStorage.getItem(`contribution-arc-name-${currentUser.uid}`);
     const savedUserId = window.localStorage.getItem(`contribution-arc-user-id-${currentUser.uid}`);
-    const savedDetermination = window.localStorage.getItem(`contribution-arc-determination-${currentUser.uid}`);
-    const savedAvatar = window.localStorage.getItem(`contribution-arc-avatar-${currentUser.uid}`);
-    const savedCharacterColor = window.localStorage.getItem(`contribution-arc-character-color-${currentUser.uid}`);
-    const savedFriends = window.localStorage.getItem(`contribution-arc-friends-${currentUser.uid}`);
-    const savedFriendRequests = window.localStorage.getItem(getFriendRequestsStorageKey(currentUser.uid));
+    const accountScope = getAccountStorageScope(currentUser.uid, savedUserId || "");
+    const shouldUseLegacyUserStorage = !savedUserId;
+    const savedLogs =
+      window.localStorage.getItem(getAccountStorageKey(accountScope, "study")) ||
+      (shouldUseLegacyUserStorage ? window.localStorage.getItem(`contribution-arc-study-${currentUser.uid}`) : null);
+    const savedUserName =
+      window.localStorage.getItem(getAccountStorageKey(accountScope, "name")) ||
+      (shouldUseLegacyUserStorage ? window.localStorage.getItem(`contribution-arc-name-${currentUser.uid}`) : null);
+    const savedDetermination =
+      window.localStorage.getItem(getAccountStorageKey(accountScope, "determination")) ||
+      (shouldUseLegacyUserStorage ? window.localStorage.getItem(`contribution-arc-determination-${currentUser.uid}`) : null);
+    const savedAvatar =
+      window.localStorage.getItem(getAccountStorageKey(accountScope, "avatar")) ||
+      (shouldUseLegacyUserStorage ? window.localStorage.getItem(`contribution-arc-avatar-${currentUser.uid}`) : null);
+    const savedCharacterColor =
+      window.localStorage.getItem(getAccountStorageKey(accountScope, "character-color")) ||
+      (shouldUseLegacyUserStorage ? window.localStorage.getItem(`contribution-arc-character-color-${currentUser.uid}`) : null);
+    const savedFriends =
+      window.localStorage.getItem(getAccountStorageKey(accountScope, "friends")) ||
+      (shouldUseLegacyUserStorage ? window.localStorage.getItem(`contribution-arc-friends-${currentUser.uid}`) : null);
+    const savedFriendRequests = window.localStorage.getItem(getFriendRequestsStorageKey(accountScope));
     const savedOnboardingComplete = window.localStorage.getItem(`contribution-arc-onboarding-complete-${currentUser.uid}`);
-    const savedRoomId = window.localStorage.getItem(`contribution-arc-room-${currentUser.uid}`);
-    const workspaceRoomsStorageKey = getWorkspaceRoomsStorageKey(currentUser.uid);
+    const savedRoomId =
+      window.localStorage.getItem(getAccountStorageKey(accountScope, "room")) ||
+      (shouldUseLegacyUserStorage ? window.localStorage.getItem(`contribution-arc-room-${currentUser.uid}`) : null);
+    const workspaceRoomsStorageKey = getWorkspaceRoomsStorageKey(accountScope);
     const savedRooms = window.localStorage.getItem(workspaceRoomsStorageKey);
-    const savedWorkspaceTask = window.localStorage.getItem(`contribution-arc-workspace-task-${currentUser.uid}`);
+    const savedWorkspaceTask =
+      window.localStorage.getItem(getAccountStorageKey(accountScope, "workspace-task")) ||
+      (shouldUseLegacyUserStorage ? window.localStorage.getItem(`contribution-arc-workspace-task-${currentUser.uid}`) : null);
     const savedWorkspacePresetMessages = window.localStorage.getItem(
-      `contribution-arc-workspace-preset-messages-${currentUser.uid}`,
+      getAccountStorageKey(accountScope, "workspace-preset-messages"),
     );
-    const savedKnowledgeGraph = window.localStorage.getItem(`contribution-arc-knowledge-graph-${currentUser.uid}`);
-    const legacyRooms = window.localStorage.getItem(`contribution-arc-rooms-${currentUser.uid}`);
+    const savedKnowledgeGraph =
+      window.localStorage.getItem(getAccountStorageKey(accountScope, "knowledge-graph")) ||
+      (shouldUseLegacyUserStorage ? window.localStorage.getItem(`contribution-arc-knowledge-graph-${currentUser.uid}`) : null);
+    const legacyRooms = shouldUseLegacyUserStorage ? window.localStorage.getItem(`contribution-arc-rooms-${currentUser.uid}`) : null;
     const parsedRooms = savedRooms
       ? (JSON.parse(savedRooms) as WorkspaceRoom[]).map(normalizeWorkspaceRoom)
       : [];
@@ -1836,7 +1860,10 @@ function App() {
         parsedRooms.push(room);
       });
     }
-    const presenceResetKey = `contribution-arc-workspace-presence-reset-${currentUser.uid}-${workspacePresenceResetVersion}`;
+    const presenceResetKey = getAccountStorageKey(
+      accountScope,
+      `workspace-presence-reset-${workspacePresenceResetVersion}`,
+    );
     const shouldResetPresence = !window.localStorage.getItem(presenceResetKey);
     const seededRooms = cleanWorkspacePresenceForUser(
       shouldResetPresence
@@ -1954,45 +1981,49 @@ function App() {
   }, [currentUser, customUserName, onboardingStep, userId]);
 
   useEffect(() => {
-    if (!currentUser) {
+    if (!currentUser || !isWorkspaceLoaded) {
       return;
     }
+    const accountScope = getAccountStorageScope(currentUser.uid, userId);
 
     window.localStorage.setItem(
-      `contribution-arc-study-${currentUser.uid}`,
+      getAccountStorageKey(accountScope, "study"),
       JSON.stringify(studyLogs),
     );
-  }, [currentUser, studyLogs, isWorkspaceLoaded]);
+  }, [currentUser, studyLogs, isWorkspaceLoaded, userId]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
       return;
     }
+    const accountScope = getAccountStorageScope(currentUser.uid, userId);
 
     window.localStorage.setItem(
-      `contribution-arc-knowledge-graph-${currentUser.uid}`,
+      getAccountStorageKey(accountScope, "knowledge-graph"),
       JSON.stringify(knowledgeGraph),
     );
-  }, [currentUser, knowledgeGraph, isWorkspaceLoaded]);
+  }, [currentUser, knowledgeGraph, isWorkspaceLoaded, userId]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
       return;
     }
+    const accountScope = getAccountStorageScope(currentUser.uid, userId);
 
-    window.localStorage.setItem(`contribution-arc-friends-${currentUser.uid}`, JSON.stringify(friends));
-  }, [currentUser, friends, isWorkspaceLoaded]);
+    window.localStorage.setItem(getAccountStorageKey(accountScope, "friends"), JSON.stringify(friends));
+  }, [currentUser, friends, isWorkspaceLoaded, userId]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
       return;
     }
+    const accountScope = getAccountStorageScope(currentUser.uid, userId);
 
     window.localStorage.setItem(
-      getFriendRequestsStorageKey(currentUser.uid),
+      getFriendRequestsStorageKey(accountScope),
       JSON.stringify(friendRequests),
     );
-  }, [currentUser, friendRequests, isWorkspaceLoaded]);
+  }, [currentUser, friendRequests, isWorkspaceLoaded, userId]);
 
   useEffect(() => {
     if (!currentUser) {
@@ -2092,47 +2123,52 @@ function App() {
     if (!currentUser || !isWorkspaceLoaded) {
       return;
     }
+    const accountScope = getAccountStorageScope(currentUser.uid, userId);
 
-    window.localStorage.setItem(`contribution-arc-room-${currentUser.uid}`, selectedRoomId);
-  }, [currentUser, selectedRoomId, isWorkspaceLoaded]);
-
-  useEffect(() => {
-    if (!currentUser || !isWorkspaceLoaded) {
-      return;
-    }
-
-    window.localStorage.setItem(getWorkspaceRoomsStorageKey(currentUser.uid), JSON.stringify(customRooms));
-  }, [currentUser, customRooms, isWorkspaceLoaded]);
+    window.localStorage.setItem(getAccountStorageKey(accountScope, "room"), selectedRoomId);
+  }, [currentUser, selectedRoomId, isWorkspaceLoaded, userId]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
       return;
     }
+    const accountScope = getAccountStorageScope(currentUser.uid, userId);
+
+    window.localStorage.setItem(getWorkspaceRoomsStorageKey(accountScope), JSON.stringify(customRooms));
+  }, [currentUser, customRooms, isWorkspaceLoaded, userId]);
+
+  useEffect(() => {
+    if (!currentUser || !isWorkspaceLoaded) {
+      return;
+    }
+    const accountScope = getAccountStorageScope(currentUser.uid, userId);
 
     window.localStorage.setItem(
-      `contribution-arc-workspace-task-${currentUser.uid}`,
+      getAccountStorageKey(accountScope, "workspace-task"),
       workspaceTask,
     );
-  }, [currentUser, workspaceTask, isWorkspaceLoaded]);
+  }, [currentUser, workspaceTask, isWorkspaceLoaded, userId]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
       return;
     }
+    const accountScope = getAccountStorageScope(currentUser.uid, userId);
 
-    window.localStorage.setItem(`contribution-arc-character-color-${currentUser.uid}`, playerCharacterColor);
-  }, [currentUser, playerCharacterColor, isWorkspaceLoaded]);
+    window.localStorage.setItem(getAccountStorageKey(accountScope, "character-color"), playerCharacterColor);
+  }, [currentUser, playerCharacterColor, isWorkspaceLoaded, userId]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
       return;
     }
+    const accountScope = getAccountStorageScope(currentUser.uid, userId);
 
     window.localStorage.setItem(
-      `contribution-arc-workspace-preset-messages-${currentUser.uid}`,
+      getAccountStorageKey(accountScope, "workspace-preset-messages"),
       JSON.stringify(workspacePresetMessages.slice(0, 6)),
     );
-  }, [currentUser, workspacePresetMessages, isWorkspaceLoaded]);
+  }, [currentUser, workspacePresetMessages, isWorkspaceLoaded, userId]);
 
   useEffect(() => {
     const timerId = window.setInterval(() => setWorkspaceNow(Date.now()), 30000);
@@ -2153,7 +2189,7 @@ function App() {
     }
 
     const currentUserId = currentUser.uid;
-    const workspaceRoomsStorageKey = getWorkspaceRoomsStorageKey(currentUserId);
+    const workspaceRoomsStorageKey = getWorkspaceRoomsStorageKey(getAccountStorageScope(currentUserId, userId));
     const handleStorage = (event: StorageEvent) => {
       if (event.key !== workspaceRoomsStorageKey || !event.newValue) {
         return;
@@ -2169,7 +2205,7 @@ function App() {
 
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
-  }, [currentUser]);
+  }, [currentUser, userId]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
@@ -2447,6 +2483,10 @@ function App() {
     .sort((a, b) => new Date(b.leftAt).getTime() - new Date(a.leftAt).getTime())
     .slice(0, 4);
   const activeMembers = allWorkspaceRooms.flatMap((room) => room.activeMembers);
+  const friendIds = new Set(friends.map((friend) => friend.uid));
+  const personalActivityMembers = activeMembers.filter(
+    (member) => member.userId === currentUser.uid || friendIds.has(member.userId),
+  );
   const sidebarFriends = friends.map((friend) => {
     const activeFriend = activeMembers.find((member) => member.userId === friend.uid);
     if (activeFriend) {
@@ -2471,7 +2511,7 @@ function App() {
       meta: new Date(log.createdAt).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
       status: "recent",
     }));
-  const onlineActivities: LiveActivity[] = activeMembers.slice(0, 3).map((member) => ({
+  const onlineActivities: LiveActivity[] = personalActivityMembers.slice(0, 3).map((member) => ({
     id: `online-${member.userId}-${member.joinedAt}`,
     userId: member.userId,
     userName: member.name,
@@ -2617,10 +2657,11 @@ function App() {
     }
 
     try {
+      const accountScope = getAccountStorageScope(currentUser.uid, nextUserId);
       setUserId(nextUserId);
       setCustomUserName(nextDisplayName);
       window.localStorage.setItem(`contribution-arc-user-id-${currentUser.uid}`, nextUserId);
-      window.localStorage.setItem(`contribution-arc-name-${currentUser.uid}`, nextDisplayName);
+      window.localStorage.setItem(getAccountStorageKey(accountScope, "name"), nextDisplayName);
       window.localStorage.setItem(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
     } catch (error) {
       setSettingsError(
@@ -2734,8 +2775,8 @@ function App() {
       outgoingRequest,
       ...requests,
     ]);
-    upsertStoredFriendRequest(currentUser.uid, outgoingRequest);
-    upsertStoredFriendRequest(profile.uid, incomingRequest);
+    upsertStoredFriendRequest(getAccountStorageScope(currentUser.uid, userId), outgoingRequest);
+    upsertStoredFriendRequest(getAccountStorageScope(profile.uid, profile.userId), incomingRequest);
 
     try {
       await setDoc(doc(db, "friendRequests", requestId), {
@@ -2775,8 +2816,8 @@ function App() {
     setFriendRequests((requests) =>
       requests.map((item) => (item.id === request.id ? { ...item, status: "accepted" } : item)),
     );
-    upsertStoredFriendRequest(currentUser.uid, { ...request, status: "accepted" });
-    upsertStoredFriendRequest(request.profile.uid, {
+    upsertStoredFriendRequest(getAccountStorageScope(currentUser.uid, userId), { ...request, status: "accepted" });
+    upsertStoredFriendRequest(getAccountStorageScope(request.profile.uid, request.profile.userId), {
       id: request.id,
       profile: currentProfile,
       status: "accepted",
@@ -2858,8 +2899,9 @@ function App() {
     event.preventDefault();
 
     const nextDetermination = draftDetermination.trim();
+    const accountScope = getAccountStorageScope(currentUser.uid, userId);
     setDetermination(nextDetermination);
-    window.localStorage.setItem(`contribution-arc-determination-${currentUser.uid}`, nextDetermination);
+    window.localStorage.setItem(getAccountStorageKey(accountScope, "determination"), nextDetermination);
   };
 
   const handleProfileBack = () => {
@@ -2939,16 +2981,18 @@ function App() {
     const reader = new FileReader();
     reader.onload = () => {
       const nextAvatar = typeof reader.result === "string" ? reader.result : "";
+      const accountScope = getAccountStorageScope(currentUser.uid, userId);
       setPlayerAvatar(nextAvatar);
-      window.localStorage.setItem(`contribution-arc-avatar-${currentUser.uid}`, nextAvatar);
+      window.localStorage.setItem(getAccountStorageKey(accountScope, "avatar"), nextAvatar);
     };
     reader.readAsDataURL(file);
     event.target.value = "";
   };
 
   const handleAvatarRemove = () => {
+    const accountScope = getAccountStorageScope(currentUser.uid, userId);
     setPlayerAvatar("");
-    window.localStorage.removeItem(`contribution-arc-avatar-${currentUser.uid}`);
+    window.localStorage.removeItem(getAccountStorageKey(accountScope, "avatar"));
   };
 
   const closeWorkspaceSession = (roomId: string) => {
