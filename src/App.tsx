@@ -3890,13 +3890,18 @@ function App() {
                     >
                       <button
                         type="button"
+                        className="room-title-display"
+                        onClick={() => setSelectedRoomId(room.id)}
+                        aria-label={`${room.name}を選択`}
+                      >
+                        {room.name}
+                      </button>
+                      <button
+                        type="button"
                         className={`room-select-button room-accent-${getRoomAccent(room)}`}
                         onClick={() => setSelectedRoomId(room.id)}
                         aria-label={`${room.name}を表示`}
                       >
-                        <span className="room-card-top">
-                          <span>{room.name}</span>
-                        </span>
                         <span className="room-online-count">
                           <strong>{room.activeMembers.length}</strong>
                           <em>online</em>

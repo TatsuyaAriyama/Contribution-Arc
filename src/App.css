@@ -9067,7 +9067,7 @@
 .room-card {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px 14px;
-  min-height: 92px;
+  min-height: 104px;
   padding: 14px 16px;
   border-radius: 22px;
   transition:
@@ -9118,12 +9118,40 @@
     0 1px 0 rgba(255, 255, 255, 0.96) inset;
 }
 
+.room-title-display {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: block;
+  min-width: 0;
+  width: 100%;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #111827;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 820;
+  line-height: 1.25;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-title-display:hover,
+.room-title-display:focus-visible {
+  color: #0f6f48;
+  outline: none;
+}
+
 .room-select-button {
   grid-column: 1;
+  grid-row: 2;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 6px;
-  min-height: 64px;
+  min-height: 42px;
   align-content: center;
   align-items: start;
 }
@@ -9196,7 +9224,7 @@
 
 .room-card-actions {
   grid-column: 2;
-  grid-row: 1;
+  grid-row: 2;
   align-self: center;
 }
 
@@ -9209,4 +9237,5 @@
 
 .room-owner-actions {
   grid-column: 1 / -1;
+  grid-row: 3;
 }
