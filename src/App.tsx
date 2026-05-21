@@ -111,6 +111,7 @@ type FriendRequest = {
   status: FriendRequestStatus;
   direction: FriendRequestDirection;
   createdAt: string;
+  acceptedAt?: string;
 };
 
 type CharacterOption = {
@@ -1451,6 +1452,29 @@ function SettingsIcon() {
   );
 }
 
+function BellIcon() {
+  return (
+    <svg className="bell-icon" viewBox="0 0 64 64" aria-hidden="true">
+      <path
+        d="M22 26c0-7.7 4.2-13.4 10-13.4S42 18.3 42 26v12.4l7 9.8H15l7-9.8V26Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="4"
+      />
+      <path
+        d="M28 12.8V9.6c0-2.2 1.8-4 4-4s4 1.8 4 4v3.2M27.2 48.2c.8 3 2.4 4.8 4.8 4.8s4-1.8 4.8-4.8M14 24.5c-2.9 2.8-4.6 6.5-4.9 10.7M50 24.5c2.9 2.8 4.6 6.5 4.9 10.7"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="4"
+      />
+    </svg>
+  );
+}
+
 function ContributionArcLogo() {
   return (
     <div className="brand-logo-stage" aria-label="Contribution Arc logo">
@@ -1803,6 +1827,8 @@ function App() {
   const [friends, setFriends] = useState<FriendPreview[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [friendMessage, setFriendMessage] = useState("");
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [lastNotificationReadAt, setLastNotificationReadAt] = useState("");
   const [currentView, setCurrentView] = useState<AppView>("home");
   const [profileMember, setProfileMember] = useState<WorkspaceMember | null>(null);
   const [profileUser, setProfileUser] = useState<UserProfile | null>(null);
@@ -1860,6 +1886,8 @@ function App() {
       setFriends([]);
       setFriendRequests([]);
       setFriendMessage("");
+      setIsNotificationsOpen(false);
+      setLastNotificationReadAt("");
       setDetermination("");
       setDraftDetermination("");
       setPlayerAvatar("");
@@ -1909,6 +1937,7 @@ function App() {
       window.localStorage.getItem(getAccountStorageKey(accountScope, "friends")) ||
       (shouldUseLegacyUserStorage ? window.localStorage.getItem(`contribution-arc-friends-${currentUser.uid}`) : null);
     const savedFriendRequests = window.localStorage.getItem(getFriendRequestsStorageKey(accountScope));
+    const savedNotificationReadAt = window.localStorage.getItem(getAccountStorageKey(accountScope, "notifications-read-at"));
     const savedOnboardingComplete = window.localStorage.getItem(`contribution-arc-onboarding-complete-${currentUser.uid}`);
     const savedRoomId =
       window.localStorage.getItem(getAccountStorageKey(accountScope, "room")) ||
@@ -1958,6 +1987,7 @@ function App() {
     setDraftUserId(savedUserId || "");
     setSettingsError("");
     setFriendMessage("");
+    setLastNotificationReadAt(savedNotificationReadAt || "");
     setFriends(savedFriends ? (JSON.parse(savedFriends) as FriendPreview[]) : []);
     setFriendRequests(
       savedFriendRequests
@@ -2106,27 +2136,46 @@ function App() {
       return;
     }
 
-    let isCancelled = false;
+    const applyCloudRequests = (direction: FriendRequestDirection, cloudRequests: FriendRequest[]) => {
+      setFriendRequests((requests) => {
+        const localRequests = requests
+          .map((request) => ({
+            ...request,
+            direction: request.direction || "outgoing",
+          }))
+          .filter((request) => request.direction !== direction);
+        const nextRequests = [...cloudRequests, ...localRequests];
 
-    const loadCloudFriendRequests = async () => {
-      try {
-        const outgoingQuery = query(collection(db, "friendRequests"), where("fromUid", "==", currentUser.uid));
-        const incomingQuery = query(collection(db, "friendRequests"), where("toUid", "==", currentUser.uid));
-        const [outgoingSnapshot, incomingSnapshot] = await Promise.all([
-          getDocs(outgoingQuery),
-          getDocs(incomingQuery),
-        ]);
+        return nextRequests.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      });
+      setFriends((items) => {
+        const nextFriends = [...items];
+        cloudRequests
+          .filter((request) => request.status === "accepted")
+          .forEach((request) => {
+            const nextFriend = profileToFriend(request.profile);
+            if (!nextFriends.some((friend) => friend.uid === nextFriend.uid)) {
+              nextFriends.unshift(nextFriend);
+            }
+          });
 
-        if (isCancelled) {
-          return;
-        }
+        return nextFriends;
+      });
+    };
 
-        const cloudRequests: FriendRequest[] = [
-          ...outgoingSnapshot.docs.map((item) => {
+    const outgoingQuery = query(collection(db, "friendRequests"), where("fromUid", "==", currentUser.uid));
+    const incomingQuery = query(collection(db, "friendRequests"), where("toUid", "==", currentUser.uid));
+
+    const unsubscribeOutgoing = onSnapshot(
+      outgoingQuery,
+      (snapshot) => {
+        const cloudRequests: FriendRequest[] = snapshot.docs
+          .map((item) => {
             const data = item.data() as {
               toProfile?: Partial<UserProfile>;
               status?: FriendRequestStatus;
               createdAt?: string;
+              acceptedAt?: string;
             };
 
             return {
@@ -2135,13 +2184,27 @@ function App() {
               status: (data.status === "accepted" ? "accepted" : "pending") as FriendRequestStatus,
               direction: "outgoing" as const,
               createdAt: data.createdAt || new Date().toISOString(),
+              acceptedAt: data.acceptedAt,
             };
-          }),
-          ...incomingSnapshot.docs.map((item) => {
+          })
+          .filter((request) => request.profile.uid);
+
+        applyCloudRequests("outgoing", cloudRequests);
+      },
+      (error) => {
+        console.info("Outgoing friend request realtime sync skipped.", error);
+      },
+    );
+    const unsubscribeIncoming = onSnapshot(
+      incomingQuery,
+      (snapshot) => {
+        const cloudRequests: FriendRequest[] = snapshot.docs
+          .map((item) => {
             const data = item.data() as {
               fromProfile?: Partial<UserProfile>;
               status?: FriendRequestStatus;
               createdAt?: string;
+              acceptedAt?: string;
             };
 
             return {
@@ -2150,48 +2213,21 @@ function App() {
               status: (data.status === "accepted" ? "accepted" : "pending") as FriendRequestStatus,
               direction: "incoming" as const,
               createdAt: data.createdAt || new Date().toISOString(),
+              acceptedAt: data.acceptedAt,
             };
-          }),
-        ].filter((request) => request.profile.uid);
+          })
+          .filter((request) => request.profile.uid);
 
-        setFriendRequests((requests) => {
-          const merged = new Map<string, FriendRequest>();
-          requests.forEach((request) => {
-            merged.set(`${request.direction}-${request.profile.uid}`, {
-              ...request,
-              direction: request.direction || "outgoing",
-            });
-          });
-          cloudRequests.forEach((request) => {
-            merged.set(`${request.direction}-${request.profile.uid}`, request);
-          });
-
-          return Array.from(merged.values()).sort(
-            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-          );
-        });
-        setFriends((items) => {
-          const nextFriends = [...items];
-          cloudRequests
-            .filter((request) => request.status === "accepted")
-            .forEach((request) => {
-              const nextFriend = profileToFriend(request.profile);
-              if (!nextFriends.some((friend) => friend.uid === nextFriend.uid)) {
-                nextFriends.unshift(nextFriend);
-              }
-            });
-
-          return nextFriends;
-        });
-      } catch (error) {
-        console.info("Friend request cloud sync skipped.", error);
-      }
-    };
-
-    void loadCloudFriendRequests();
+        applyCloudRequests("incoming", cloudRequests);
+      },
+      (error) => {
+        console.info("Incoming friend request realtime sync skipped.", error);
+      },
+    );
 
     return () => {
-      isCancelled = true;
+      unsubscribeOutgoing();
+      unsubscribeIncoming();
     };
   }, [currentUser]);
 
@@ -2659,6 +2695,35 @@ function App() {
     status: "online",
   }));
   const liveActivities = [...onlineActivities, ...recentStudyActivities].slice(0, 5);
+  const accountScope = getAccountStorageScope(currentUser.uid, userId);
+  const notificationItems = friendRequests
+    .filter((request) => request.direction === "incoming" || request.status === "accepted")
+    .sort((a, b) => new Date(b.acceptedAt || b.createdAt).getTime() - new Date(a.acceptedAt || a.createdAt).getTime())
+    .slice(0, 8);
+  const unreadNotificationCount = friendRequests.filter(
+    (request) => {
+      const notificationAt = request.acceptedAt || request.createdAt;
+      const shouldNotify =
+        (request.direction === "incoming" && request.status === "pending") ||
+        (request.direction === "outgoing" && request.status === "accepted");
+
+      return (
+        shouldNotify &&
+        (!lastNotificationReadAt || new Date(notificationAt).getTime() > new Date(lastNotificationReadAt).getTime())
+      );
+    },
+  ).length;
+  const hasUnreadNotifications = unreadNotificationCount > 0;
+  const handleNotificationsToggle = () => {
+    const nextIsOpen = !isNotificationsOpen;
+    setIsNotificationsOpen(nextIsOpen);
+
+    if (nextIsOpen) {
+      const nextReadAt = new Date().toISOString();
+      setLastNotificationReadAt(nextReadAt);
+      window.localStorage.setItem(getAccountStorageKey(accountScope, "notifications-read-at"), nextReadAt);
+    }
+  };
   const activeKnowledgeGraph = knowledgeGraph.nodes.length > 0 ? knowledgeGraph : studyKnowledgeGraph;
   const graphNodes = activeKnowledgeGraph.nodes.map((node) => ({
     ...node,
@@ -2969,22 +3034,24 @@ function App() {
       playerCharacterColor,
     );
     setFriends((items) => (items.some((friend) => friend.uid === nextFriend.uid) ? items : [nextFriend, ...items]));
+    const acceptedAt = new Date().toISOString();
     setFriendRequests((requests) =>
-      requests.map((item) => (item.id === request.id ? { ...item, status: "accepted" } : item)),
+      requests.map((item) => (item.id === request.id ? { ...item, status: "accepted", acceptedAt } : item)),
     );
-    upsertStoredFriendRequest(getAccountStorageScope(currentUser.uid, userId), { ...request, status: "accepted" });
+    upsertStoredFriendRequest(getAccountStorageScope(currentUser.uid, userId), { ...request, status: "accepted", acceptedAt });
     upsertStoredFriendRequest(getAccountStorageScope(request.profile.uid, request.profile.userId), {
       id: request.id,
       profile: currentProfile,
       status: "accepted",
       direction: "outgoing",
       createdAt: request.createdAt,
+      acceptedAt,
     });
 
     try {
       await updateDoc(doc(db, "friendRequests", request.id), {
         status: "accepted",
-        acceptedAt: new Date().toISOString(),
+        acceptedAt,
         updatedAt: serverTimestamp(),
       });
     } catch (error) {
@@ -3858,6 +3925,67 @@ function App() {
             </span>
             <i>{activeRoom ? "入室中" : `${allWorkspaceRooms.length} Rooms`}</i>
           </button>
+          <div className="notification-wrap">
+            <button
+              type="button"
+              className={hasUnreadNotifications ? "notification-button has-unread" : "notification-button"}
+              aria-label={`お知らせ${unreadNotificationCount > 0 ? ` ${unreadNotificationCount}件の未読` : ""}`}
+              aria-expanded={isNotificationsOpen}
+              onClick={handleNotificationsToggle}
+            >
+              <BellIcon />
+              {unreadNotificationCount > 0 ? <span>{unreadNotificationCount}</span> : null}
+            </button>
+
+            {isNotificationsOpen ? (
+              <section className="notification-panel" aria-label="お知らせ">
+                <div className="notification-head">
+                  <p className="card-kicker">Notifications</p>
+                  <strong>お知らせ</strong>
+                </div>
+
+                <div className="notification-list">
+                  {notificationItems.length > 0 ? (
+                    notificationItems.map((request) => (
+                      <article key={`${request.direction}-${request.id}`} className="notification-item">
+                        <button type="button" onClick={() => handleUserProfileOpen(request.profile)}>
+                          <span className="notification-avatar">
+                            {request.profile.photoURL ? (
+                              <img src={request.profile.photoURL} alt="" />
+                            ) : (
+                              request.profile.displayName.slice(0, 1).toUpperCase()
+                            )}
+                          </span>
+                          <span>
+                            <strong>
+                              {request.status === "accepted"
+                                ? `${request.profile.displayName}とフレンドになりました`
+                                : `${request.profile.displayName}からフレンド申請`}
+                            </strong>
+                            <small>
+                              {new Date(request.acceptedAt || request.createdAt).toLocaleString("ja-JP", {
+                                month: "2-digit",
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </small>
+                          </span>
+                        </button>
+                        {request.direction === "incoming" && request.status === "pending" ? (
+                          <button type="button" className="notification-accept" onClick={() => handleFriendAccept(request)}>
+                            承認
+                          </button>
+                        ) : null}
+                      </article>
+                    ))
+                  ) : (
+                    <p className="notification-empty">新しいお知らせはありません。</p>
+                  )}
+                </div>
+              </section>
+            ) : null}
+          </div>
           <button
             type="button"
             className="settings-button"
