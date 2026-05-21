@@ -9046,8 +9046,7 @@
 .room-card-top {
   grid-column: 1;
   grid-row: 1;
-  display: flex;
-  align-items: center;
+  display: block;
   min-width: 0;
 }
 
@@ -9062,13 +9061,6 @@
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.room-join-badge {
-  flex: 0 0 auto;
-  min-height: 20px;
-  padding: 0 8px;
-  font-size: 10px;
 }
 
 .room-online-count {
@@ -9108,7 +9100,8 @@
   grid-row: 2;
   color: rgba(17, 24, 39, 0.42);
   font-size: 11px;
-  font-weight: 680;
+  font-weight: 720;
+  letter-spacing: 0;
 }
 
 .room-card-actions {

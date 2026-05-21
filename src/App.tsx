@@ -3853,14 +3853,13 @@ function App() {
                       >
                         <span className="room-card-top">
                           <span>{room.name}</span>
-                          <span className="room-join-badge">{isJoinedRoom ? "入室中" : "未入室"}</span>
                         </span>
                         <span className="room-online-count">
                           <strong>{room.activeMembers.length}</strong>
                           <em>online</em>
                         </span>
                         <small className="room-supporting-meta">
-                          {Math.round(room.totalMinutes / 60)}h learned ・ {room.contributions} contributions
+                          {Math.round(room.totalMinutes / 60)}h / {room.contributions} contributions
                         </small>
                       </button>
 
