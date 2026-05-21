@@ -39,6 +39,15 @@ import {
 } from "firebase/firestore";
 import { motion } from "framer-motion";
 import { auth, db, githubProvider, googleProvider } from "./firebase";
+import {
+  deleteStudyLogFromCloud,
+  migrateStudyLogsToCloud,
+  saveGithubActivitySummary,
+  saveStudyLogToCloud,
+  saveUserProgressToCloud,
+  saveWorkspaceSessionToCloud,
+  subscribeStudyLogsFromCloud,
+} from "./services/cloudData";
 import { PremiumSidebar, type AppView, type FriendPreview, type LiveActivity } from "./components/PremiumNavigation";
 import { SilentWorkspaceRoom, type RoomActivityItem } from "./components/SilentWorkspaceRoom";
 import "./App.css";
@@ -109,12 +118,26 @@ type UserProfile = {
   uid: string;
   userId: string;
   displayName: string;
+  email?: string;
+  avatarUrl?: string;
   photoURL: string;
   searchName: string;
   following: string[];
   followers: string[];
   determination?: string;
   characterColor?: string;
+  level?: number;
+  effortExp?: number;
+  outputExp?: number;
+  currentTitle?: string;
+  currentCharacter?: string;
+  streak?: number;
+  unlockedCharacters?: string[];
+  characterExp?: number;
+  githubId?: string;
+  githubUsername?: string;
+  contributionCount?: number;
+  lastSyncedAt?: string;
 };
 
 type FriendRequestStatus = "pending" | "accepted";
@@ -267,7 +290,8 @@ const getAccountStorageScope = (uid: string, registeredUserId: string) =>
   sanitizeStoragePart(registeredUserId) || `uid-${uid}`;
 const getAccountStorageKey = (scope: string, key: string) => `contribution-arc-${scope}-${key}`;
 const sharedWorkspaceRoomsStorageKey = "contribution-arc-shared-workspace-rooms-cache";
-const workspaceRoomsCollectionName = "workspaceRooms";
+const workspaceRoomsCollectionName = "rooms";
+const legacyWorkspaceRoomsCollectionName = "workspaceRooms";
 const minaAvatarPath = "mina-icon.webp";
 const detaUserId = "npc-deta";
 const maxWorkspacePresenceMinutes = 12 * 60;
@@ -618,6 +642,26 @@ function getEffortExp(logs: StudyLog[]) {
   return Math.round((studyMinutes / 60) * 80 + activeDays * 20);
 }
 
+function getStudyStreak(logs: StudyLog[]) {
+  const studiedDays = new Set(
+    logs.map((log) => {
+      const date = new Date(log.createdAt);
+      date.setHours(0, 0, 0, 0);
+      return date.getTime();
+    }),
+  );
+  let cursor = new Date();
+  cursor.setHours(0, 0, 0, 0);
+  let streak = 0;
+
+  while (studiedDays.has(cursor.getTime())) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  return streak;
+}
+
 function getOutputExp() {
   return outputStats.commits * 90 + outputStats.contributions * 24 + outputStats.pullRequests * 160;
 }
@@ -655,12 +699,26 @@ function normalizeUserProfile(uid: string, data: Partial<UserProfile>): UserProf
     uid,
     userId: data.userId || "",
     displayName: data.displayName || "Developer",
-    photoURL: data.photoURL || "",
+    email: data.email || "",
+    avatarUrl: data.avatarUrl || "",
+    photoURL: data.photoURL || data.avatarUrl || "",
     searchName: data.searchName || (data.displayName || "Developer").toLowerCase(),
     following: Array.isArray(data.following) ? data.following : [],
     followers: Array.isArray(data.followers) ? data.followers : [],
     determination: data.determination || "",
     characterColor: getSafeCharacterColor(data.characterColor),
+    level: data.level || 1,
+    effortExp: data.effortExp || 0,
+    outputExp: data.outputExp || 0,
+    currentTitle: data.currentTitle || "",
+    currentCharacter: data.currentCharacter || characterOptions[0].id,
+    streak: data.streak || 0,
+    unlockedCharacters: Array.isArray(data.unlockedCharacters) ? data.unlockedCharacters : [characterOptions[0].id],
+    characterExp: data.characterExp || 0,
+    githubId: data.githubId || "",
+    githubUsername: data.githubUsername || "",
+    contributionCount: data.contributionCount || 0,
+    lastSyncedAt: data.lastSyncedAt || "",
   };
 }
 
@@ -1970,9 +2028,16 @@ function App() {
   const isApplyingRemoteRoomsRef = useRef(false);
   const lastSyncedWorkspaceRoomsRef = useRef("");
   const pendingWorkspaceRoomsRef = useRef<Map<string, WorkspaceRoom>>(new Map());
+  const remoteWorkspaceRoomsRef = useRef<{ rooms: WorkspaceRoom[]; legacyRooms: WorkspaceRoom[] }>({
+    rooms: [],
+    legacyRooms: [],
+  });
+  const didRequestStudyLogMigrationRef = useRef(false);
 
   useEffect(() => {
     return onAuthStateChanged(auth, (user) => {
+      didRequestStudyLogMigrationRef.current = false;
+      remoteWorkspaceRoomsRef.current = { rooms: [], legacyRooms: [] };
       setIsWorkspaceLoaded(false);
       setCurrentView("home");
       setProfileMember(null);
@@ -2153,9 +2218,12 @@ function App() {
         resolvedUserId = profile.userId || resolvedUserId;
         setUserId(resolvedUserId);
         setDraftUserId(resolvedUserId);
+        setCustomUserName(profile.displayName || savedUserName || "");
+        setDraftUserName(profile.displayName || savedUserName || currentUser.displayName || currentUser.email?.split("@")[0] || "");
         setFollowing(profile.following);
         setDetermination(profile.determination || savedDetermination || "");
         setDraftDetermination(profile.determination || savedDetermination || "");
+        setPlayerAvatar(profile.photoURL || savedAvatar || currentUser.photoURL || "");
         setPlayerCharacterColor(profile.characterColor || savedCharacterColor || characterColorOptions[0].value);
         if (resolvedUserId) {
           safeSetLocalStorage(`contribution-arc-user-id-${currentUser.uid}`, resolvedUserId);
@@ -2208,6 +2276,45 @@ function App() {
       JSON.stringify(studyLogs),
     );
   }, [currentUser, studyLogs, isWorkspaceLoaded, userId]);
+
+  useEffect(() => {
+    if (!currentUser || !isWorkspaceLoaded) {
+      return;
+    }
+
+    let handledInitialSnapshot = false;
+    const cachedLogs = removeSeedStudyLogs(studyLogs);
+
+    const unsubscribe = subscribeStudyLogsFromCloud(
+      db,
+      currentUser.uid,
+      (cloudLogs) => {
+        const remoteLogs = removeSeedStudyLogs(cloudLogs);
+
+        if (remoteLogs.length > 0) {
+          setStudyLogs(remoteLogs);
+          handledInitialSnapshot = true;
+          return;
+        }
+
+        if (!handledInitialSnapshot && cachedLogs.length > 0 && !didRequestStudyLogMigrationRef.current) {
+          didRequestStudyLogMigrationRef.current = true;
+          void migrateStudyLogsToCloud(db, currentUser.uid, cachedLogs).catch((error) => {
+            console.info("Study log migration to cloud skipped.", error);
+          });
+        } else if (!handledInitialSnapshot && cachedLogs.length === 0) {
+          setStudyLogs(defaultStudyLogs);
+        }
+
+        handledInitialSnapshot = true;
+      },
+      (error) => {
+        console.info("Study log cloud sync skipped.", error);
+      },
+    );
+
+    return () => unsubscribe();
+  }, [currentUser, isWorkspaceLoaded]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
@@ -2429,57 +2536,88 @@ function App() {
       return;
     }
 
-    const unsubscribe = onSnapshot(
+    const applyRemoteRooms = () => {
+      const remoteRoomMap = new Map<string, WorkspaceRoom>();
+
+      remoteWorkspaceRoomsRef.current.legacyRooms.forEach((room) => {
+        remoteRoomMap.set(room.id, room);
+      });
+      remoteWorkspaceRoomsRef.current.rooms.forEach((room) => {
+        remoteRoomMap.set(room.id, room);
+      });
+
+      const remoteRooms = Array.from(remoteRoomMap.values());
+      const remoteRoomIds = new Set(remoteRooms.map((room) => room.id));
+
+      remoteRooms.forEach((room) => {
+        const pendingRoom = pendingWorkspaceRoomsRef.current.get(room.id);
+        if (pendingRoom && getSerializedWorkspaceRoomText(pendingRoom) === getSerializedWorkspaceRoomText(room)) {
+          pendingWorkspaceRoomsRef.current.delete(room.id);
+        }
+      });
+
+      setCustomRooms((currentRooms) => {
+        const pendingLocalRooms = Array.from(pendingWorkspaceRoomsRef.current.values());
+        const pendingLocalRoomIds = new Set(pendingLocalRooms.map((room) => room.id));
+        const remoteRoomsForMerge = remoteRooms.filter((room) => !pendingLocalRoomIds.has(room.id));
+        const localOnlyRooms = currentRooms.filter(
+          (room) =>
+            !remoteRoomIds.has(room.id) &&
+            !pendingWorkspaceRoomsRef.current.has(room.id),
+        );
+        const hasLocalRoomsWaitingForCloud = pendingLocalRooms.length > 0 || localOnlyRooms.length > 0;
+        const nextRooms = cleanWorkspacePresenceForUser(
+          seedWorkspaceRooms([...remoteRoomsForMerge, ...pendingLocalRooms, ...localOnlyRooms]),
+          currentUser.uid,
+          Date.now(),
+        );
+
+        isApplyingRemoteRoomsRef.current = !hasLocalRoomsWaitingForCloud;
+        if (!hasLocalRoomsWaitingForCloud) {
+          lastSyncedWorkspaceRoomsRef.current = JSON.stringify(serializeWorkspaceRooms(nextRooms));
+        }
+        setSelectedRoomId((currentRoomId) =>
+          nextRooms.some((room) => room.id === currentRoomId) ? currentRoomId : nextRooms[0]?.id || "",
+        );
+
+        return nextRooms;
+      });
+    };
+
+    const readRoomsSnapshot = (snapshot: { docs: Array<{ id: string; data: () => unknown }> }) =>
+      snapshot.docs.map((item) =>
+        normalizeWorkspaceRoom({
+          ...((item.data() as Partial<WorkspaceRoom>) || {}),
+          id: item.id,
+        } as WorkspaceRoom),
+      );
+
+    const unsubscribeRooms = onSnapshot(
       collection(db, workspaceRoomsCollectionName),
       (snapshot) => {
-        const remoteRooms = snapshot.docs.map((item) =>
-          normalizeWorkspaceRoom({
-            ...(item.data() as Partial<WorkspaceRoom>),
-            id: item.id,
-          } as WorkspaceRoom),
-        );
-        const remoteRoomIds = new Set(remoteRooms.map((room) => room.id));
-
-        remoteRooms.forEach((room) => {
-          const pendingRoom = pendingWorkspaceRoomsRef.current.get(room.id);
-          if (pendingRoom && getSerializedWorkspaceRoomText(pendingRoom) === getSerializedWorkspaceRoomText(room)) {
-            pendingWorkspaceRoomsRef.current.delete(room.id);
-          }
-        });
-
-        setCustomRooms((currentRooms) => {
-          const pendingLocalRooms = Array.from(pendingWorkspaceRoomsRef.current.values());
-          const pendingLocalRoomIds = new Set(pendingLocalRooms.map((room) => room.id));
-          const remoteRoomsForMerge = remoteRooms.filter((room) => !pendingLocalRoomIds.has(room.id));
-          const localOnlyRooms = currentRooms.filter(
-            (room) =>
-              !remoteRoomIds.has(room.id) &&
-              !pendingWorkspaceRoomsRef.current.has(room.id),
-          );
-          const hasLocalRoomsWaitingForCloud = pendingLocalRooms.length > 0 || localOnlyRooms.length > 0;
-          const nextRooms = cleanWorkspacePresenceForUser(
-            seedWorkspaceRooms([...remoteRoomsForMerge, ...pendingLocalRooms, ...localOnlyRooms]),
-            currentUser.uid,
-            Date.now(),
-          );
-
-          isApplyingRemoteRoomsRef.current = !hasLocalRoomsWaitingForCloud;
-          if (!hasLocalRoomsWaitingForCloud) {
-            lastSyncedWorkspaceRoomsRef.current = JSON.stringify(serializeWorkspaceRooms(nextRooms));
-          }
-          setSelectedRoomId((currentRoomId) =>
-            nextRooms.some((room) => room.id === currentRoomId) ? currentRoomId : nextRooms[0]?.id || "",
-          );
-
-          return nextRooms;
-        });
+        remoteWorkspaceRoomsRef.current.rooms = readRoomsSnapshot(snapshot);
+        applyRemoteRooms();
       },
       (error) => {
         console.info("Workspace room realtime sync skipped.", error);
       },
     );
 
-    return () => unsubscribe();
+    const unsubscribeLegacyRooms = onSnapshot(
+      collection(db, legacyWorkspaceRoomsCollectionName),
+      (snapshot) => {
+        remoteWorkspaceRoomsRef.current.legacyRooms = readRoomsSnapshot(snapshot);
+        applyRemoteRooms();
+      },
+      (error) => {
+        console.info("Legacy workspace room realtime sync skipped.", error);
+      },
+    );
+
+    return () => {
+      unsubscribeRooms();
+      unsubscribeLegacyRooms();
+    };
   }, [currentUser, isWorkspaceLoaded]);
 
   useEffect(() => {
@@ -2735,6 +2873,10 @@ function App() {
   const titles = getTitleRanks(studyLogs, effortExp, outputExp);
   const currentTitle =
     [...titles].reverse().find((title) => title.unlocked)?.name || "Commit Knight";
+  const studyStreak = getStudyStreak(studyLogs);
+  const githubProviderInfo = currentUser.providerData.find((provider) => provider.providerId === "github.com");
+  const githubId = githubProviderInfo?.uid || "";
+  const githubUsername = githubProviderInfo?.displayName || (githubProviderInfo ? userId : "");
   const totalWeeklyMinutes = weeklyStudyHours.reduce((sum, item) => sum + item.totalMinutes, 0);
   const selectedStudyDayData =
     weeklyStudyHours.find((item) => item.day === selectedStudyDay) ||
@@ -2751,9 +2893,7 @@ function App() {
   const currentBuilding = workspaceTask.trim() || studySubject.trim() || "Deep work";
   const activeRoom =
     allWorkspaceRooms.find((room) => room.activeMembers.some((member) => member.userId === currentUser.uid)) || null;
-  const githubConnectionLabel = currentUser.providerData.some((provider) => provider.providerId === "github.com")
-    ? "GitHub connected"
-    : "GitHub ready";
+  const githubConnectionLabel = githubId ? "GitHub connected" : "GitHub ready";
   const isInSelectedRoom = Boolean(
     selectedRoom?.activeMembers.some((member) => member.userId === currentUser.uid),
   );
@@ -2941,16 +3081,20 @@ function App() {
     }
 
     const minutes = Math.round(studyUnit === "hours" ? amount * 60 : amount);
-    setStudyLogs((logs) => [
-      ...logs,
-      {
-        id: crypto.randomUUID(),
-        subject: studySubject.trim(),
-        minutes,
-        createdAt: new Date().toISOString(),
-        color: studyColor,
-      },
-    ]);
+    const nextLog: StudyLog = {
+      id: crypto.randomUUID(),
+      subject: studySubject.trim(),
+      minutes,
+      createdAt: new Date().toISOString(),
+      color: studyColor,
+    };
+    setStudyLogs((logs) => [...logs, nextLog]);
+    void saveStudyLogToCloud(db, currentUser.uid, nextLog, {
+      earnedExp: Math.round(minutes * 1.25),
+      source: "manual",
+    }).catch((error) => {
+      console.info("Study log cloud save skipped.", error);
+    });
     setStudyAmount(studyUnit === "hours" ? "1" : "30");
   };
 
@@ -2982,6 +3126,68 @@ function App() {
       setIsSettingsOpen(true);
     });
   }, [isDesktopApp, playerName, userId]);
+
+  useEffect(() => {
+    if (!currentUser || !isWorkspaceLoaded || !userId) {
+      return;
+    }
+
+    const lastSyncedAt = new Date().toISOString();
+    const safeAvatar = getSerializableAvatar(playerAvatar || currentUser.photoURL || "");
+
+    void saveUserProgressToCloud(db, {
+      uid: currentUser.uid,
+      userId,
+      displayName: playerName,
+      email: currentUser.email || "",
+      avatarUrl: safeAvatar,
+      photoURL: safeAvatar,
+      level: levelState.level,
+      effortExp,
+      outputExp,
+      currentTitle,
+      currentCharacter: characterOptions[0].id,
+      characterColor: playerCharacterColor,
+      streak: studyStreak,
+      determination,
+      following,
+      followers: [],
+      unlockedCharacters: [characterOptions[0].id],
+      characterExp: effortExp,
+      githubId,
+      githubUsername,
+      contributionCount: outputStats.contributions,
+      lastSyncedAt,
+    }).catch((error) => {
+      console.info("User progress cloud sync skipped.", error);
+    });
+
+    void saveGithubActivitySummary(db, {
+      userId: currentUser.uid,
+      githubId,
+      githubUsername,
+      contributionCount: outputStats.contributions,
+      lastSyncedAt,
+    }).catch((error) => {
+      console.info("GitHub activity cloud sync skipped.", error);
+    });
+  }, [
+    currentTitle,
+    currentUser,
+    determination,
+    effortExp,
+    following,
+    githubId,
+    githubUsername,
+    isWorkspaceLoaded,
+    levelState.level,
+    outputExp,
+    playerAvatar,
+    playerCharacterColor,
+    playerName,
+    studyStreak,
+    userId,
+  ]);
 
   const handleSettingsSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -3034,12 +3240,27 @@ function App() {
             uid: currentUser.uid,
             userId: nextUserId,
             displayName: nextDisplayName,
-            photoURL: playerAvatar,
+            email: currentUser.email || "",
+            avatarUrl: getSerializableAvatar(playerAvatar || currentUser.photoURL || ""),
+            photoURL: getSerializableAvatar(playerAvatar || currentUser.photoURL || ""),
             determination,
             characterColor: playerCharacterColor,
             searchName: nextDisplayName.toLowerCase(),
             following: currentProfile.following,
             followers: currentProfile.followers,
+            level: levelState.level,
+            effortExp,
+            outputExp,
+            currentTitle,
+            currentCharacter: characterOptions[0].id,
+            streak: studyStreak,
+            unlockedCharacters: [characterOptions[0].id],
+            characterExp: effortExp,
+            githubId,
+            githubUsername,
+            contributionCount: outputStats.contributions,
+            lastSyncedAt: new Date().toISOString(),
+            ...(userSnapshot.exists() ? {} : { createdAt: serverTimestamp() }),
             updatedAt: serverTimestamp(),
           },
           { merge: true },
@@ -3517,16 +3738,35 @@ function App() {
       }),
     );
 
-    setStudyLogs((logs) => [
-      ...logs,
-      {
-        id: `workspace-${session.id}`,
-        subject: session.building,
-        minutes: session.minutes,
-        createdAt: session.leftAt,
-        color: session.color,
-      },
-    ]);
+    const sessionLog: StudyLog = {
+      id: `workspace-${session.id}`,
+      subject: session.building,
+      minutes: session.minutes,
+      createdAt: session.leftAt,
+      color: session.color,
+    };
+
+    setStudyLogs((logs) => [...logs, sessionLog]);
+    void saveWorkspaceSessionToCloud(db, {
+      id: session.id,
+      userId: session.userId,
+      roomId: session.roomId,
+      roomName: session.roomName,
+      task: session.task,
+      joinedAt: session.joinedAt,
+      leftAt: session.leftAt,
+      durationMinutes: session.durationMinutes,
+      earnedExp: session.earnedExp,
+    }).catch((error) => {
+      console.info("Workspace session cloud save skipped.", error);
+    });
+    void saveStudyLogToCloud(db, currentUser.uid, sessionLog, {
+      roomId: session.roomId,
+      earnedExp: session.earnedExp,
+      source: "workspace-session",
+    }).catch((error) => {
+      console.info("Workspace study log cloud save skipped.", error);
+    });
     setLastRoomSession(session);
   };
 
@@ -3791,6 +4031,9 @@ function App() {
     void deleteDoc(doc(db, workspaceRoomsCollectionName, roomId)).catch((error) => {
       console.info("Workspace room delete cloud sync skipped.", error);
     });
+    void deleteDoc(doc(db, legacyWorkspaceRoomsCollectionName, roomId)).catch((error) => {
+      console.info("Legacy workspace room delete cloud sync skipped.", error);
+    });
 
     if (selectedRoomId === roomId) {
       setSelectedRoomId(nextRooms[0]?.id || createDefaultWorkspaceRooms()[0].id);
@@ -3808,6 +4051,9 @@ function App() {
 
   const handleStudyLogDelete = (logId: string) => {
     setStudyLogs((logs) => logs.filter((log) => log.id !== logId));
+    void deleteStudyLogFromCloud(db, logId).catch((error) => {
+      console.info("Study log cloud delete skipped.", error);
+    });
   };
 
   const handleKnowledgeImport = async (event: ChangeEvent<HTMLInputElement>) => {

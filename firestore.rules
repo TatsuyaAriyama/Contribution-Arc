@@ -42,9 +42,93 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.createdBy is string
         && request.resource.data.name is string;
-      allow update: if signedIn();
+      allow update: if signedIn()
+        && request.resource.data.createdBy == resource.data.createdBy;
       allow delete: if signedIn()
         && resource.data.createdBy == request.auth.uid;
+    }
+
+    match /rooms/{roomId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.name is string;
+      allow update: if signedIn()
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.name is string;
+      allow delete: if signedIn()
+        && resource.data.createdBy == request.auth.uid;
+    }
+
+    match /studyLogs/{logId} {
+      allow read: if signedIn()
+        && resource.data.userId == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.category is string
+        && request.resource.data.studyMinutes is number
+        && request.resource.data.earnedExp is number;
+      allow update: if signedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid;
+      allow delete: if signedIn()
+        && resource.data.userId == request.auth.uid;
+    }
+
+    match /workspaceSessions/{sessionId} {
+      allow read: if signedIn()
+        && resource.data.userId == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.roomId is string
+        && request.resource.data.currentTask is string
+        && request.resource.data.durationMinutes is number
+        && request.resource.data.earnedExp is number;
+      allow update: if signedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid;
+      allow delete: if signedIn()
+        && resource.data.userId == request.auth.uid;
+    }
+
+    match /achievements/{achievementId} {
+      allow read: if signedIn()
+        && resource.data.userId == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid;
+      allow update: if signedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid;
+      allow delete: if signedIn()
+        && resource.data.userId == request.auth.uid;
+    }
+
+    match /githubActivities/{activityId} {
+      allow read: if signedIn()
+        && resource.data.userId == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.githubId is string;
+      allow update: if signedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid;
+      allow delete: if signedIn()
+        && resource.data.userId == request.auth.uid;
+    }
+
+    match /friendRequests/{requestId} {
+      allow read: if signedIn()
+        && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.fromUid == request.auth.uid
+        && request.resource.data.toUid is string
+        && request.resource.data.status == "pending";
+      allow update: if signedIn()
+        && resource.data.toUid == request.auth.uid
+        && request.resource.data.fromUid == resource.data.fromUid
+        && request.resource.data.toUid == resource.data.toUid;
+      allow delete: if signedIn()
+        && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
     }
   }
 }
