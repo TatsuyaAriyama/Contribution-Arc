@@ -2921,10 +2921,6 @@ function App() {
   };
 
   const startRoomTitleEdit = (room: WorkspaceRoom) => {
-    if (room.createdBy !== currentUser.uid) {
-      return;
-    }
-
     setEditingRoomId(room.id);
     setEditingRoomName(room.name);
   };
@@ -2938,9 +2934,7 @@ function App() {
     }
 
     setCustomRooms((rooms) =>
-      rooms.map((room) =>
-        room.id === editingRoomId && room.createdBy === currentUser.uid ? { ...room, name: nextName } : room,
-      ),
+      rooms.map((room) => (room.id === editingRoomId ? { ...room, name: nextName } : room)),
     );
     setEditingRoomId("");
     setEditingRoomName("");
@@ -3938,39 +3932,39 @@ function App() {
                         )}
                       </div>
 
-                      {isOwnRoom ? (
-                        <div className="room-owner-actions">
-                          {editingRoomId === room.id ? (
-                            <form className="room-title-edit-form" onSubmit={handleRoomTitleSave}>
-                              <input
-                                value={editingRoomName}
-                                onChange={(event) => setEditingRoomName(event.target.value)}
-                                maxLength={32}
-                                aria-label="Roomタイトル"
-                              />
-                              <button type="submit">保存</button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setEditingRoomId("");
-                                  setEditingRoomName("");
-                                }}
-                              >
-                                取消
-                              </button>
-                            </form>
-                          ) : (
-                            <>
-                              <button type="button" className="room-title-edit-button" onClick={() => startRoomTitleEdit(room)}>
-                                タイトル変更
-                              </button>
+                      <div className="room-owner-actions">
+                        {editingRoomId === room.id ? (
+                          <form className="room-title-edit-form" onSubmit={handleRoomTitleSave}>
+                            <input
+                              value={editingRoomName}
+                              onChange={(event) => setEditingRoomName(event.target.value)}
+                              maxLength={32}
+                              aria-label="Roomタイトル"
+                            />
+                            <button type="submit">保存</button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingRoomId("");
+                                setEditingRoomName("");
+                              }}
+                            >
+                              取消
+                            </button>
+                          </form>
+                        ) : (
+                          <>
+                            <button type="button" className="room-title-edit-button" onClick={() => startRoomTitleEdit(room)}>
+                              名前変更
+                            </button>
+                            {isOwnRoom ? (
                               <button type="button" className="room-delete-button" onClick={() => handleRoomDelete(room.id)}>
                                 解体
                               </button>
-                            </>
-                          )}
-                        </div>
-                      ) : null}
+                            ) : null}
+                          </>
+                        )}
+                      </div>
                     </article>
                   );
                 })}
