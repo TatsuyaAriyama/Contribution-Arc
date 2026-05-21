@@ -36,5 +36,14 @@ service cloud.firestore {
       allow update: if false;
       allow delete: if signedIn() && resource.data.uid == request.auth.uid;
     }
+
+    match /workspaceRooms/{roomId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update: if signedIn();
+      allow delete: if signedIn()
+        && resource.data.createdBy == request.auth.uid;
+    }
   }
 }

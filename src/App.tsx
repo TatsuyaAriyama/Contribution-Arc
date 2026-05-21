@@ -1340,6 +1340,10 @@ function serializeWorkspaceRoom(room: WorkspaceRoom): WorkspaceRoom {
   };
 }
 
+function serializeWorkspaceRooms(rooms: WorkspaceRoom[]) {
+  return rooms.map(serializeWorkspaceRoom);
+}
+
 async function saveWorkspaceRoomToCloud(room: WorkspaceRoom) {
   await setDoc(
     doc(db, workspaceRoomsCollectionName, room.id),
@@ -2324,7 +2328,7 @@ function App() {
       return;
     }
 
-    const serializedRooms = customRooms.map(serializeWorkspaceRoom);
+    const serializedRooms = serializeWorkspaceRooms(customRooms);
     const serializedRoomText = JSON.stringify(serializedRooms);
     safeSetLocalStorage(sharedWorkspaceRoomsStorageKey, serializedRoomText);
 
@@ -2339,7 +2343,7 @@ function App() {
     }
 
     lastSyncedWorkspaceRoomsRef.current = serializedRoomText;
-    customRooms.forEach((room) => {
+    serializedRooms.forEach((room) => {
       void saveWorkspaceRoomToCloud(room).catch((error) => {
         console.info("Workspace room cloud sync skipped.", error);
       });
@@ -2419,14 +2423,17 @@ function App() {
               !pendingWorkspaceRoomsRef.current.has(room.id) &&
               room.createdBy === currentUser.uid,
           );
+          const hasLocalRoomsWaitingForCloud = pendingLocalRooms.length > 0 || localOnlyRooms.length > 0;
           const nextRooms = cleanWorkspacePresenceForUser(
             seedWorkspaceRooms([...remoteRooms, ...pendingLocalRooms, ...localOnlyRooms]),
             currentUser.uid,
             Date.now(),
           );
 
-          isApplyingRemoteRoomsRef.current = true;
-          lastSyncedWorkspaceRoomsRef.current = JSON.stringify(nextRooms.map(serializeWorkspaceRoom));
+          isApplyingRemoteRoomsRef.current = !hasLocalRoomsWaitingForCloud;
+          if (!hasLocalRoomsWaitingForCloud) {
+            lastSyncedWorkspaceRoomsRef.current = JSON.stringify(serializeWorkspaceRooms(nextRooms));
+          }
           setSelectedRoomId((currentRoomId) =>
             nextRooms.some((room) => room.id === currentRoomId) ? currentRoomId : nextRooms[0]?.id || "",
           );
@@ -3603,6 +3610,13 @@ function App() {
 
     pendingWorkspaceRoomsRef.current.set(room.id, room);
     setCustomRooms((rooms) => (rooms.some((item) => item.id === room.id) ? rooms : [...rooms, room].map(normalizeWorkspaceRoom)));
+    void saveWorkspaceRoomToCloud(room)
+      .then(() => {
+        pendingWorkspaceRoomsRef.current.delete(room.id);
+      })
+      .catch((error) => {
+        console.info("Workspace room create cloud sync skipped.", error);
+      });
     setSelectedRoomId(room.id);
     setProfileMember(null);
     setProfileUser(null);
