@@ -4433,28 +4433,6 @@ function App() {
             <strong>Search</strong>
             <em>⌘K</em>
           </button>
-          <button
-            type="button"
-            className={currentView === "workspace" ? "workspace-nav-button active" : "workspace-nav-button"}
-            onClick={() => setCurrentView("workspace")}
-            aria-label="Silent Workspaceを開く"
-          >
-            <span className="workspace-live-strip" aria-hidden="true">
-              <b />
-              <b />
-              <b />
-            </span>
-            <span className="workspace-nav-icon" aria-hidden="true">
-              <span />
-              <span />
-              <span />
-            </span>
-            <span className="workspace-nav-copy">
-              <strong>作業部屋</strong>
-              <small>誰かの学習が今も積み上がっている</small>
-            </span>
-            <i>{activeRoom ? "入室中" : `${allWorkspaceRooms.length} Rooms`}</i>
-          </button>
           <div className="notification-wrap">
             <button
               type="button"
