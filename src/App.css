@@ -8879,3 +8879,144 @@
   background: rgba(255, 255, 255, 0.82);
   color: #111827;
 }
+
+/* Compact room list, matching the member-list rhythm */
+.workspace-2d-shell {
+  grid-template-columns: 1fr;
+}
+
+.workspace-2d-card .workspace-layout {
+  grid-template-columns: minmax(260px, 0.3fr) minmax(0, 1fr);
+  gap: 18px;
+}
+
+.room-list {
+  gap: 8px;
+}
+
+.room-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 10px;
+  align-items: center;
+  padding: 12px;
+  border-color: rgba(17, 24, 39, 0.045);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(248, 249, 251, 0.72)),
+    #f8f9fb;
+  box-shadow:
+    0 18px 46px rgba(17, 24, 39, 0.055),
+    0 1px 0 rgba(255, 255, 255, 0.92) inset;
+}
+
+.room-card:hover,
+.room-card.active {
+  transform: translateY(-2px);
+  border-color: rgba(31, 111, 74, 0.1);
+  box-shadow:
+    0 26px 64px rgba(17, 24, 39, 0.08),
+    0 1px 0 rgba(255, 255, 255, 0.96) inset;
+}
+
+.room-select-button {
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  gap: 4px 14px;
+  min-height: 62px;
+  align-items: center;
+}
+
+.room-space-orb {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  width: 48px;
+  height: 48px;
+  border-radius: 17px;
+  box-shadow:
+    0 12px 28px rgba(31, 111, 74, 0.12),
+    0 1px 0 rgba(255, 255, 255, 0.84) inset;
+}
+
+.room-space-orb > span {
+  font-size: 16px;
+  font-weight: 720;
+}
+
+.room-card-top {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
+  gap: 4px;
+  justify-content: stretch;
+}
+
+.room-card-top span:first-child {
+  font-size: 15px;
+  font-weight: 780;
+  line-height: 1.2;
+}
+
+.room-join-badge {
+  justify-self: start;
+  min-height: 21px;
+  padding: 0 9px;
+  font-size: 11px;
+  font-weight: 740;
+}
+
+.room-online-count {
+  grid-column: 3;
+  grid-row: 1 / 3;
+  align-self: center;
+  justify-self: end;
+  min-width: 58px;
+  margin: 0;
+  justify-content: flex-end;
+}
+
+.room-online-count strong {
+  font-size: 22px;
+}
+
+.room-online-count em {
+  color: rgba(17, 24, 39, 0.52);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.room-supporting-meta {
+  grid-column: 2;
+  grid-row: 2;
+  overflow: hidden;
+  color: rgba(17, 24, 39, 0.5);
+  font-size: 12px;
+  font-weight: 720;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-card-actions {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.room-card-actions button {
+  min-height: 34px;
+  padding: 0 14px;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.room-owner-actions {
+  grid-column: 1 / -1;
+  padding-top: 6px;
+}
+
+.room-title-edit-form {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+@media (max-width: 1080px) {
+  .workspace-2d-card .workspace-layout {
+    grid-template-columns: 1fr;
+  }
+}

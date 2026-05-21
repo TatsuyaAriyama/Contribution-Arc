@@ -296,28 +296,6 @@ export function SilentWorkspaceRoom({
         </div>
       </div>
 
-      {!isFocusPresentation ? (
-        <aside className="workspace-activity-panel">
-          <div>
-            <p className="card-kicker">Quiet Stream</p>
-            <strong>{roomName}</strong>
-            <span>{contributionLabel}</span>
-          </div>
-          <div className="workspace-activity-list">
-            {activityItems.map((item) => (
-              <button type="button" key={item.id} onClick={() => onActivityOpen(item)}>
-                <span className="workspace-activity-avatar">
-                  {item.avatar ? <img src={item.avatar} alt="" /> : item.userName.slice(0, 1).toUpperCase()}
-                </span>
-                <span>
-                  <p>{item.text}</p>
-                  <small>{item.meta}</small>
-                </span>
-              </button>
-            ))}
-          </div>
-        </aside>
-      ) : null}
     </div>
   );
 }
