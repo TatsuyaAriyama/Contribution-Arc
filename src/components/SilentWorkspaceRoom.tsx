@@ -48,6 +48,9 @@ type SilentWorkspaceRoomProps = {
   onLeave: () => void;
   onResetPresence: () => void;
   onSeatSelect: (task: string) => void;
+  seatLabels: Record<string, string>;
+  canEditSeatLabels?: boolean;
+  onSeatLabelsChange: (labels: Record<string, string>) => void;
   presetMessages: string[];
   onPresetMessagesChange: (messages: string[]) => void;
   onPresetMessage: (message: string) => void;
@@ -64,27 +67,27 @@ type SilentWorkspaceRoomProps = {
 const workspaceSeats = [
   {
     id: "frontend",
-    name: "Frontend",
+    name: "作業",
     task: "React",
-    note: "UI / React",
+    note: "React",
   },
   {
     id: "java",
-    name: "Java",
+    name: "仕事",
     task: "Java",
-    note: "API / backend",
+    note: "Java",
   },
   {
     id: "deep",
-    name: "Deep Work",
+    name: "休憩",
     task: "Deep Work",
-    note: "focus block",
+    note: "Deep Work",
   },
   {
     id: "cloud",
-    name: "Cloud",
+    name: "学習",
     task: "AWS",
-    note: "infra / deploy",
+    note: "AWS",
   },
 ];
 
@@ -127,6 +130,9 @@ export function SilentWorkspaceRoom({
   onLeave,
   onResetPresence,
   onSeatSelect,
+  seatLabels,
+  canEditSeatLabels = false,
+  onSeatLabelsChange,
   presetMessages,
   onPresetMessagesChange,
   onPresetMessage,
@@ -140,6 +146,7 @@ export function SilentWorkspaceRoom({
 }: SilentWorkspaceRoomProps) {
   const isFocusPresentation = presentation === "focus";
   const [isPresetEditorOpen, setIsPresetEditorOpen] = useState(false);
+  const [isSeatEditorOpen, setIsSeatEditorOpen] = useState(false);
   const presetSlots = [...presetMessages, "", "", "", "", "", ""].slice(0, 6);
   const visiblePresetMessages = presetSlots.map((message) => message.trim()).filter(Boolean);
   const currentMember = members.find((member) => member.userId === currentUserId);
@@ -153,6 +160,13 @@ export function SilentWorkspaceRoom({
     onPresetMessagesChange(
       presetSlots.map((message, slotIndex) => (slotIndex === index ? value : message)).slice(0, 6),
     );
+  };
+
+  const handleSeatLabelChange = (seatId: string, value: string) => {
+    onSeatLabelsChange({
+      ...seatLabels,
+      [seatId]: value.slice(0, 10),
+    });
   };
 
   return (
@@ -217,25 +231,29 @@ export function SilentWorkspaceRoom({
             <span />
             <span />
           </div>
-          {workspaceSeats.map((seat) => (
-            <button
-              type="button"
-              key={seat.id}
-              className={`workspace-seat seat-${seat.id}`}
-              onClick={() => onSeatSelect(seat.task)}
-              aria-label={`${seat.name}席に着席して${seat.task}を開始`}
-            >
-              <span className="seat-desk">
-                <span className="seat-screen" />
-                <span className="seat-mug" />
-              </span>
-              <span className="seat-chair" />
-              <span className="seat-caption">
-                <strong>{seat.name}</strong>
-                <small>{seat.note}</small>
-              </span>
-            </button>
-          ))}
+          {workspaceSeats.map((seat) => {
+            const seatName = (seatLabels[seat.id] || seat.name).trim() || seat.name;
+
+            return (
+              <button
+                type="button"
+                key={seat.id}
+                className={`workspace-seat seat-${seat.id}`}
+                onClick={() => onSeatSelect(seat.task)}
+                aria-label={`${seatName}席に着席して${seat.task}を開始`}
+              >
+                <span className="seat-desk">
+                  <span className="seat-screen" />
+                  <span className="seat-mug" />
+                </span>
+                <span className="seat-chair" />
+                <span className="seat-caption">
+                  <strong>{seatName}</strong>
+                  <small>{seat.note}</small>
+                </span>
+              </button>
+            );
+          })}
           <div className="workspace-plant plant-a" aria-hidden="true" />
           <div className="workspace-plant plant-b" aria-hidden="true" />
           <div className="workspace-plant plant-c" aria-hidden="true" />
@@ -283,6 +301,34 @@ export function SilentWorkspaceRoom({
         </div>
 
         <div className="preset-message-panel">
+          {!isFocusPresentation && canEditSeatLabels ? (
+            <div className="seat-label-editor" aria-label="席名編集">
+              <button
+                type="button"
+                className="seat-label-editor-toggle"
+                onClick={() => setIsSeatEditorOpen((isOpen) => !isOpen)}
+              >
+                {isSeatEditorOpen ? "席名編集を閉じる" : "席名編集"}
+              </button>
+
+              {isSeatEditorOpen ? (
+                <div className="seat-label-editor-grid">
+                  {workspaceSeats.map((seat) => (
+                    <label key={`seat-label-${seat.id}`}>
+                      <span>{seat.note}</span>
+                      <input
+                        value={seatLabels[seat.id] || seat.name}
+                        onChange={(event) => handleSeatLabelChange(seat.id, event.target.value)}
+                        placeholder={seat.name}
+                        maxLength={10}
+                      />
+                    </label>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="preset-message-bar" aria-label="定型コミュニケーション">
           {visiblePresetMessages.map((message, index) => (
             <button type="button" key={`${message}-${index}`} onClick={() => onPresetMessage(message)} disabled={!isJoined}>

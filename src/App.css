@@ -4914,6 +4914,90 @@
   gap: 8px;
 }
 
+.seat-label-editor {
+  display: grid;
+  gap: 8px;
+}
+
+.seat-label-editor-toggle {
+  justify-self: end;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid rgba(31, 111, 74, 0.14);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(244, 247, 245, 0.78)),
+    rgba(255, 255, 255, 0.74);
+  color: #24332d;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 850;
+  box-shadow: 0 12px 30px rgba(17, 24, 39, 0.06);
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.seat-label-editor-toggle:hover {
+  transform: translateY(-1px);
+  border-color: rgba(31, 111, 74, 0.26);
+  box-shadow: 0 18px 34px rgba(17, 24, 39, 0.09);
+}
+
+.seat-label-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(17, 24, 39, 0.07);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(248, 250, 252, 0.72)),
+    rgba(255, 255, 255, 0.78);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.seat-label-editor-grid label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.seat-label-editor-grid label span {
+  padding: 0 3px;
+  overflow: hidden;
+  color: #7b827f;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seat-label-editor-grid input {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #111827;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+  outline: none;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.seat-label-editor-grid input:focus {
+  border-color: rgba(31, 111, 74, 0.32);
+  box-shadow: 0 0 0 4px rgba(31, 111, 74, 0.08);
+}
+
 .preset-message-bar {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
@@ -5265,6 +5349,10 @@
 
   .preset-message-editor {
     grid-template-columns: 1fr;
+  }
+
+  .seat-label-editor-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -8270,8 +8358,9 @@
 
 .seat-caption strong {
   color: #fff9e8;
-  font-size: 10px;
-  font-weight: 900;
+  font-size: 11px;
+  font-weight: 880;
+  letter-spacing: 0;
   line-height: 1;
 }
 

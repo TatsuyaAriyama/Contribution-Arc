@@ -164,6 +164,7 @@ type WorkspaceRoom = {
   name: string;
   ownerName?: string;
   ownerAvatar?: string;
+  seatLabels?: WorkspaceSeatLabels;
   totalMinutes: number;
   contributions: number;
   commits: number;
@@ -172,6 +173,8 @@ type WorkspaceRoom = {
   activeMembers: WorkspaceMember[];
   history: WorkspaceSessionHistory[];
 };
+
+type WorkspaceSeatLabels = Record<string, string>;
 
 type OnboardingStep = "idle" | "welcome" | "settings";
 
@@ -249,6 +252,12 @@ const defaultWorkspacePresetMessages = [
   "一緒にやろう",
   "今日はReactやります",
 ];
+const defaultWorkspaceSeatLabels: WorkspaceSeatLabels = {
+  frontend: "作業",
+  java: "仕事",
+  deep: "休憩",
+  cloud: "学習",
+};
 const emptyKnowledgeGraph: KnowledgeGraphData = { nodes: [], links: [] };
 const knowledgeClusterAnchors: Record<string, { x: number; y: number }> = {
   frontend: { x: 322, y: 198 },
@@ -1003,6 +1012,7 @@ function createDefaultWorkspaceRooms(): WorkspaceRoom[] {
       createdBy: "system",
       ownerName: "Contribution Arc",
       ownerAvatar: "",
+      seatLabels: defaultWorkspaceSeatLabels,
       activeMembers: [
         createWorkspaceMember({
           id: "npc-yuki",
@@ -1108,6 +1118,10 @@ function normalizeWorkspaceRoom(room: WorkspaceRoom): WorkspaceRoom {
     createdBy: room.createdBy || "legacy",
     ownerName: room.ownerName || "Developer",
     ownerAvatar: room.ownerAvatar || "",
+    seatLabels: {
+      ...defaultWorkspaceSeatLabels,
+      ...(room.seatLabels || {}),
+    },
     activeMembers: (room.activeMembers || []).map((member, index) => {
       const task = member.currentTask || member.building || "Deep Work";
 
@@ -2906,6 +2920,7 @@ function App() {
       name: roomName,
       ownerName: playerName,
       ownerAvatar: playerAvatar,
+      seatLabels: defaultWorkspaceSeatLabels,
       totalMinutes: 0,
       contributions: 0,
       commits: 0,
@@ -2918,6 +2933,24 @@ function App() {
     setCustomRooms((rooms) => [...rooms, room]);
     setSelectedRoomId(room.id);
     setNewRoomName("");
+  };
+
+  const handleSeatLabelsChange = (roomId: string, labels: WorkspaceSeatLabels) => {
+    setCustomRooms((rooms) =>
+      rooms.map((room) => {
+        if (room.id !== roomId || room.createdBy !== currentUser.uid) {
+          return room;
+        }
+
+        return {
+          ...room,
+          seatLabels: {
+            ...defaultWorkspaceSeatLabels,
+            ...labels,
+          },
+        };
+      }),
+    );
   };
 
   const startRoomTitleEdit = (room: WorkspaceRoom) => {
@@ -4001,6 +4034,9 @@ function App() {
                       onLeave={handleRoomLeave}
                       onResetPresence={resetWorkspacePresence}
                       onSeatSelect={(task) => startWorkspaceSession(selectedRoom.id, task, studyColor)}
+                      seatLabels={selectedRoom.seatLabels || defaultWorkspaceSeatLabels}
+                      canEditSeatLabels={selectedRoom.createdBy === currentUser.uid}
+                      onSeatLabelsChange={(labels) => handleSeatLabelsChange(selectedRoom.id, labels)}
                       presetMessages={workspacePresetMessages}
                       onPresetMessagesChange={setWorkspacePresetMessages}
                       onPresetMessage={handleWorkspacePresetMessage}
@@ -4083,6 +4119,9 @@ function App() {
             onLeave={handleRoomLeave}
             onResetPresence={resetWorkspacePresence}
             onSeatSelect={(task) => startWorkspaceSession(selectedRoom.id, task, studyColor)}
+            seatLabels={selectedRoom.seatLabels || defaultWorkspaceSeatLabels}
+            canEditSeatLabels={false}
+            onSeatLabelsChange={(labels) => handleSeatLabelsChange(selectedRoom.id, labels)}
             presetMessages={workspacePresetMessages}
             onPresetMessagesChange={setWorkspacePresetMessages}
             onPresetMessage={handleWorkspacePresetMessage}
