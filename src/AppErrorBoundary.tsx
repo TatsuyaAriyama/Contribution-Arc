@@ -37,6 +37,7 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
           <p className="card-kicker">Contribution Arc</p>
           <h1>画面の復帰が必要です。</h1>
           <p>Roomデータの読み込み中に表示が止まりました。再読み込みすると直前の状態から復帰します。</p>
+          <p className="app-error-detail">{this.state.error.message}</p>
           <button type="button" onClick={this.handleReset}>
             再読み込み
           </button>

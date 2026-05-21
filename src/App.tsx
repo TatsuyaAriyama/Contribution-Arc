@@ -1064,16 +1064,15 @@ function isValidWorkspacePresence(member: WorkspaceMember, userId: string, nowMs
 
 function cleanWorkspacePresenceForUser(rooms: WorkspaceRoom[], userId: string, nowMs = Date.now()) {
   let foundActivePresence = false;
-  let changed = false;
 
   const nextRooms = rooms.map((room) => {
-    const activeMembers = room.activeMembers.filter((member) => {
+    const normalizedRoom = normalizeWorkspaceRoom(room);
+    const activeMembers = normalizedRoom.activeMembers.filter((member) => {
       if (member.userId !== userId) {
         return true;
       }
 
       if (foundActivePresence || !isValidWorkspacePresence(member, userId, nowMs)) {
-        changed = true;
         return false;
       }
 
@@ -1081,26 +1080,26 @@ function cleanWorkspacePresenceForUser(rooms: WorkspaceRoom[], userId: string, n
       return true;
     });
 
-    return activeMembers.length === room.activeMembers.length ? room : { ...room, activeMembers };
+    return activeMembers.length === normalizedRoom.activeMembers.length
+      ? normalizedRoom
+      : normalizeWorkspaceRoom({ ...normalizedRoom, activeMembers });
   });
 
-  return changed ? nextRooms : rooms;
+  return nextRooms;
 }
 
 function removeWorkspacePresenceForUser(rooms: WorkspaceRoom[], userId: string) {
-  let changed = false;
-
   const nextRooms = rooms.map((room) => {
-    const activeMembers = room.activeMembers.filter((member) => member.userId !== userId);
-    if (activeMembers.length !== room.activeMembers.length) {
-      changed = true;
-      return { ...room, activeMembers };
+    const normalizedRoom = normalizeWorkspaceRoom(room);
+    const activeMembers = normalizedRoom.activeMembers.filter((member) => member.userId !== userId);
+    if (activeMembers.length !== normalizedRoom.activeMembers.length) {
+      return normalizeWorkspaceRoom({ ...normalizedRoom, activeMembers });
     }
 
-    return room;
+    return normalizedRoom;
   });
 
-  return changed ? nextRooms : rooms;
+  return nextRooms;
 }
 
 function createDefaultWorkspaceRooms(): WorkspaceRoom[] {
@@ -1192,10 +1191,11 @@ function createDefaultWorkspaceRooms(): WorkspaceRoom[] {
 
 function seedWorkspaceRooms(rooms: WorkspaceRoom[]): WorkspaceRoom[] {
   const seedRoom = createDefaultWorkspaceRooms()[0];
-  const existingRoom = rooms.find((room) => room.id === seedRoom.id);
+  const normalizedRooms = rooms.map(normalizeWorkspaceRoom);
+  const existingRoom = normalizedRooms.find((room) => room.id === seedRoom.id);
 
   if (!existingRoom) {
-    return [seedRoom, ...rooms];
+    return [seedRoom, ...normalizedRooms];
   }
 
   const activeIds = new Set(existingRoom.activeMembers.map((member) => member.userId));
@@ -1206,7 +1206,7 @@ function seedWorkspaceRooms(rooms: WorkspaceRoom[]): WorkspaceRoom[] {
     history: existingRoom.history.length > 0 ? existingRoom.history : seedRoom.history,
   });
 
-  return [mergedRoom, ...rooms.filter((room) => room.id !== seedRoom.id)];
+  return [mergedRoom, ...normalizedRooms.filter((room) => room.id !== seedRoom.id)];
 }
 
 function getTodayKey(date = new Date()) {
@@ -1288,22 +1288,24 @@ function normalizeWorkspaceRoom(room: Partial<WorkspaceRoom> | null | undefined)
 }
 
 function serializeWorkspaceRoom(room: WorkspaceRoom): WorkspaceRoom {
+  const normalizedRoom = normalizeWorkspaceRoom(room);
+
   return {
-    id: room.id,
-    name: room.name,
-    ownerName: room.ownerName || "Developer",
-    ownerAvatar: room.ownerAvatar || "",
+    id: normalizedRoom.id,
+    name: normalizedRoom.name,
+    ownerName: normalizedRoom.ownerName || "Developer",
+    ownerAvatar: normalizedRoom.ownerAvatar || "",
     seatLabels: {
       ...defaultWorkspaceSeatLabels,
-      ...(room.seatLabels || {}),
+      ...(normalizedRoom.seatLabels || {}),
     },
-    totalMinutes: room.totalMinutes || 0,
-    contributions: room.contributions || 0,
-    commits: room.commits || 0,
-    createdAt: room.createdAt || new Date().toISOString(),
-    createdBy: room.createdBy || "legacy",
-    activeMembers: room.activeMembers || [],
-    history: room.history || [],
+    totalMinutes: normalizedRoom.totalMinutes || 0,
+    contributions: normalizedRoom.contributions || 0,
+    commits: normalizedRoom.commits || 0,
+    createdAt: normalizedRoom.createdAt || new Date().toISOString(),
+    createdBy: normalizedRoom.createdBy || "legacy",
+    activeMembers: normalizedRoom.activeMembers || [],
+    history: normalizedRoom.history || [],
   };
 }
 
@@ -2445,16 +2447,17 @@ function App() {
     setCustomRooms((rooms) => {
       let changed = false;
       const nextRooms = rooms.map((room) => {
+        const normalizedRoom = normalizeWorkspaceRoom(room);
         const nextRoomOwner =
-          room.createdBy === currentUser.uid &&
-          (room.ownerName !== nextName || room.ownerAvatar !== playerAvatar)
+          normalizedRoom.createdBy === currentUser.uid &&
+          (normalizedRoom.ownerName !== nextName || normalizedRoom.ownerAvatar !== playerAvatar)
             ? {
                 ownerName: nextName,
                 ownerAvatar: playerAvatar,
               }
             : null;
         let memberChanged = false;
-        const nextMembers = room.activeMembers.map((member) => {
+        const nextMembers = normalizedRoom.activeMembers.map((member) => {
           if (member.userId !== currentUser.uid) {
             return member;
           }
@@ -2487,7 +2490,9 @@ function App() {
           changed = true;
         }
 
-        return nextRoomOwner || memberChanged ? { ...room, ...nextRoomOwner, activeMembers: nextMembers } : room;
+        return nextRoomOwner || memberChanged
+          ? normalizeWorkspaceRoom({ ...normalizedRoom, ...nextRoomOwner, activeMembers: nextMembers })
+          : normalizedRoom;
       });
 
       return changed ? nextRooms : rooms;
@@ -3351,17 +3356,21 @@ function App() {
     };
 
     setCustomRooms((rooms) =>
-      rooms.map((item) =>
-        item.id === roomId
-          ? {
-              ...item,
-              totalMinutes: item.totalMinutes + minutes,
-              contributions: item.contributions + 1,
-              activeMembers: item.activeMembers.filter((activeMember) => activeMember.userId !== currentUser.uid),
-              history: [session, ...item.history],
-            }
-          : item,
-      ),
+      rooms.map((item) => {
+        const normalizedRoom = normalizeWorkspaceRoom(item);
+
+        if (normalizedRoom.id !== roomId) {
+          return normalizedRoom;
+        }
+
+        return normalizeWorkspaceRoom({
+          ...normalizedRoom,
+          totalMinutes: normalizedRoom.totalMinutes + minutes,
+          contributions: normalizedRoom.contributions + 1,
+          activeMembers: normalizedRoom.activeMembers.filter((activeMember) => activeMember.userId !== currentUser.uid),
+          history: [session, ...normalizedRoom.history],
+        });
+      }),
     );
 
     setStudyLogs((logs) => [
@@ -3392,13 +3401,30 @@ function App() {
     }
 
     const joinedAt = new Date().toISOString();
+    const seatPosition = getWorkspaceSeatPosition(nextTask);
+    const nextMember = createWorkspaceMember({
+      id: currentUser.uid,
+      userId: currentUser.uid,
+      name: playerName,
+      building: nextTask,
+      currentTask: nextTask,
+      color,
+      joinedAt,
+      activeStartedAt: joinedAt,
+      accumulatedActiveMinutes: 0,
+      breakStartedAt: "",
+      x: seatPosition.x,
+      y: seatPosition.y,
+      status: "working",
+      tone: "deep",
+      avatar: playerAvatar,
+      characterColor: playerCharacterColor,
+    });
+
     setSelectedRoomId(roomId);
     setWorkspaceTask(nextTask);
-    setStudySubject(nextTask);
-    setStudyColor(color);
     setLastRoomSession(null);
     setPendingJoinRoomId(null);
-    const seatPosition = getWorkspaceSeatPosition(nextTask);
     setPlayerPosition(seatPosition);
     pressedWorkspaceKeysRef.current.clear();
     setIsPlayerWalking(false);
@@ -3409,7 +3435,7 @@ function App() {
           ? rooms
           : [fallbackRoom, ...rooms.filter((room) => room.id !== roomId)];
 
-      return baseRooms.map((room) => {
+      const nextRooms = baseRooms.map((room) => {
         const normalizedRoom = normalizeWorkspaceRoom(room);
         const activeMembers = normalizedRoom.activeMembers.filter((member) => member.userId !== currentUser.uid);
 
@@ -3419,31 +3445,19 @@ function App() {
             : normalizeWorkspaceRoom({ ...normalizedRoom, activeMembers });
         }
 
-        return normalizeWorkspaceRoom({
+        const nextRoom = normalizeWorkspaceRoom({
           ...normalizedRoom,
-          activeMembers: [
-            ...activeMembers,
-            createWorkspaceMember({
-              id: currentUser.uid,
-              userId: currentUser.uid,
-              name: playerName,
-              building: nextTask,
-              currentTask: nextTask,
-              color,
-              joinedAt,
-              activeStartedAt: joinedAt,
-              accumulatedActiveMinutes: 0,
-              breakStartedAt: "",
-              x: seatPosition.x,
-              y: seatPosition.y,
-              status: "working",
-              tone: "deep",
-              avatar: playerAvatar,
-              characterColor: playerCharacterColor,
-            }),
-          ],
+          activeMembers: [...activeMembers, nextMember],
         });
+
+        if (pendingWorkspaceRoomsRef.current.has(roomId)) {
+          pendingWorkspaceRoomsRef.current.set(roomId, nextRoom);
+        }
+
+        return nextRoom;
       });
+
+      return nextRooms;
     });
   };
 
@@ -3493,11 +3507,13 @@ function App() {
     }
 
     setCustomRooms((rooms) =>
-      rooms.map((room) =>
-        room.id === selectedRoom.id
-          ? {
-              ...room,
-              activeMembers: room.activeMembers.map((member) =>
+      rooms.map((room) => {
+        const normalizedRoom = normalizeWorkspaceRoom(room);
+
+        return normalizedRoom.id === selectedRoom.id
+          ? normalizeWorkspaceRoom({
+              ...normalizedRoom,
+              activeMembers: normalizedRoom.activeMembers.map((member) =>
                 member.userId === currentUser.uid
                   ? (() => {
                       const wasOnBreak = member.status === "on-break";
@@ -3521,9 +3537,9 @@ function App() {
                     })()
                   : member,
               ),
-            }
-          : room,
-      ),
+            })
+          : normalizedRoom;
+      }),
     );
   };
 
