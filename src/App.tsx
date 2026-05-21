@@ -1344,6 +1344,10 @@ function serializeWorkspaceRooms(rooms: WorkspaceRoom[]) {
   return rooms.map(serializeWorkspaceRoom);
 }
 
+function getSerializedWorkspaceRoomText(room: WorkspaceRoom) {
+  return JSON.stringify(serializeWorkspaceRoom(room));
+}
+
 async function saveWorkspaceRoomToCloud(room: WorkspaceRoom) {
   await setDoc(
     doc(db, workspaceRoomsCollectionName, room.id),
@@ -2411,12 +2415,18 @@ function App() {
           } as WorkspaceRoom),
         );
         const remoteRoomIds = new Set(remoteRooms.map((room) => room.id));
-        remoteRoomIds.forEach((roomId) => pendingWorkspaceRoomsRef.current.delete(roomId));
+
+        remoteRooms.forEach((room) => {
+          const pendingRoom = pendingWorkspaceRoomsRef.current.get(room.id);
+          if (pendingRoom && getSerializedWorkspaceRoomText(pendingRoom) === getSerializedWorkspaceRoomText(room)) {
+            pendingWorkspaceRoomsRef.current.delete(room.id);
+          }
+        });
 
         setCustomRooms((currentRooms) => {
-          const pendingLocalRooms = Array.from(pendingWorkspaceRoomsRef.current.values()).filter(
-            (room) => !remoteRoomIds.has(room.id),
-          );
+          const pendingLocalRooms = Array.from(pendingWorkspaceRoomsRef.current.values());
+          const pendingLocalRoomIds = new Set(pendingLocalRooms.map((room) => room.id));
+          const remoteRoomsForMerge = remoteRooms.filter((room) => !pendingLocalRoomIds.has(room.id));
           const localOnlyRooms = currentRooms.filter(
             (room) =>
               !remoteRoomIds.has(room.id) &&
@@ -2424,7 +2434,7 @@ function App() {
           );
           const hasLocalRoomsWaitingForCloud = pendingLocalRooms.length > 0 || localOnlyRooms.length > 0;
           const nextRooms = cleanWorkspacePresenceForUser(
-            seedWorkspaceRooms([...remoteRooms, ...pendingLocalRooms, ...localOnlyRooms]),
+            seedWorkspaceRooms([...remoteRoomsForMerge, ...pendingLocalRooms, ...localOnlyRooms]),
             currentUser.uid,
             Date.now(),
           );
@@ -3400,13 +3410,16 @@ function App() {
           return normalizedRoom;
         }
 
-        return normalizeWorkspaceRoom({
+        const nextRoom = normalizeWorkspaceRoom({
           ...normalizedRoom,
           totalMinutes: normalizedRoom.totalMinutes + minutes,
           contributions: normalizedRoom.contributions + 1,
           activeMembers: normalizedRoom.activeMembers.filter((activeMember) => activeMember.userId !== currentUser.uid),
           history: [session, ...normalizedRoom.history],
         });
+
+        pendingWorkspaceRoomsRef.current.set(roomId, nextRoom);
+        return nextRoom;
       }),
     );
 
@@ -3487,10 +3500,7 @@ function App() {
           activeMembers: [...activeMembers, nextMember],
         });
 
-        if (pendingWorkspaceRoomsRef.current.has(roomId)) {
-          pendingWorkspaceRoomsRef.current.set(roomId, nextRoom);
-        }
-
+        pendingWorkspaceRoomsRef.current.set(roomId, nextRoom);
         return nextRoom;
       });
 
@@ -3547,8 +3557,11 @@ function App() {
       rooms.map((room) => {
         const normalizedRoom = normalizeWorkspaceRoom(room);
 
-        return normalizedRoom.id === selectedRoom.id
-          ? normalizeWorkspaceRoom({
+        if (normalizedRoom.id !== selectedRoom.id) {
+          return normalizedRoom;
+        }
+
+        const nextRoom = normalizeWorkspaceRoom({
               ...normalizedRoom,
               activeMembers: normalizedRoom.activeMembers.map((member) =>
                 member.userId === currentUser.uid
@@ -3574,8 +3587,10 @@ function App() {
                     })()
                   : member,
               ),
-            })
-          : normalizedRoom;
+            });
+
+        pendingWorkspaceRoomsRef.current.set(nextRoom.id, nextRoom);
+        return nextRoom;
       }),
     );
   };
