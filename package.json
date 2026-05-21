@@ -1,12 +1,19 @@
 {
   "name": "github-contribution-rpg",
+  "productName": "Contribution Arc",
   "private": true,
   "version": "0.0.0",
+  "description": "A quiet developer workspace for Contribution Arc.",
+  "author": "Contribution Arc",
   "type": "module",
+  "main": "electron/main.mjs",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron": "npm run electron:dev",
+    "electron:dev": "concurrently -k -n VITE,ELECTRON -c green,blue \"vite --host localhost --port 5173 --strictPort\" \"wait-on tcp:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron electron/main.mjs\"",
+    "electron:build": "cross-env ELECTRON_BUILD=true npm run build && electron-builder --mac"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.0",
@@ -17,10 +24,48 @@
     "tailwindcss": "^4.3.0"
   },
   "devDependencies": {
+    "@types/node": "^25.9.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^42.2.0",
+    "electron-builder": "^26.8.1",
     "typescript": "^5.9.3",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "wait-on": "^9.0.10"
+  },
+  "build": {
+    "appId": "com.contributionarc.desktop",
+    "productName": "Contribution Arc",
+    "asar": true,
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "identity": null,
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Utility"
+    }
   }
 }
