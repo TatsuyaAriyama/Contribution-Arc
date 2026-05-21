@@ -159,6 +159,8 @@ type WorkspaceSessionHistory = WorkspaceSession & {
 type WorkspaceRoom = {
   id: string;
   name: string;
+  ownerName?: string;
+  ownerAvatar?: string;
   totalMinutes: number;
   contributions: number;
   commits: number;
@@ -843,6 +845,10 @@ function getWorkspaceSeatPosition(task: string) {
   return { x: 30, y: 47 };
 }
 
+function getRoomOwnerInitial(room: WorkspaceRoom) {
+  return (room.ownerName || room.name || "Room").slice(0, 1).toUpperCase();
+}
+
 function createDetaMember(joinedAt: Date): WorkspaceMember {
   return createWorkspaceMember({
     id: detaUserId,
@@ -980,6 +986,8 @@ function createDefaultWorkspaceRooms(): WorkspaceRoom[] {
       commits: 0,
       createdAt: new Date(now - 1000 * 60 * 60 * 24 * 8).toISOString(),
       createdBy: "system",
+      ownerName: "Contribution Arc",
+      ownerAvatar: "",
       activeMembers: [
         createWorkspaceMember({
           id: "npc-yuki",
@@ -1079,6 +1087,8 @@ function normalizeWorkspaceRoom(room: WorkspaceRoom): WorkspaceRoom {
     commits: room.commits || 0,
     createdAt: room.createdAt || new Date().toISOString(),
     createdBy: room.createdBy || "legacy",
+    ownerName: room.ownerName || "Developer",
+    ownerAvatar: room.ownerAvatar || "",
     activeMembers: (room.activeMembers || []).map((member, index) => {
       const task = member.currentTask || member.building || "Deep Work";
 
@@ -1647,6 +1657,8 @@ function App() {
   const [customRooms, setCustomRooms] = useState<WorkspaceRoom[]>([]);
   const [isWorkspaceLoaded, setIsWorkspaceLoaded] = useState(false);
   const [newRoomName, setNewRoomName] = useState("");
+  const [editingRoomId, setEditingRoomId] = useState("");
+  const [editingRoomName, setEditingRoomName] = useState("");
   const [workspaceTask, setWorkspaceTask] = useState("React");
   const [workspaceDraftTask, setWorkspaceDraftTask] = useState("React");
   const [workspaceDraftColor, setWorkspaceDraftColor] = useState(studyColorOptions[0].value);
@@ -1958,6 +1970,15 @@ function App() {
     setCustomRooms((rooms) => {
       let changed = false;
       const nextRooms = rooms.map((room) => {
+        const nextRoomOwner =
+          room.createdBy === currentUser.uid &&
+          (room.ownerName !== nextName || room.ownerAvatar !== playerAvatar)
+            ? {
+                ownerName: nextName,
+                ownerAvatar: playerAvatar,
+              }
+            : null;
+        let memberChanged = false;
         const nextMembers = room.activeMembers.map((member) => {
           if (member.userId !== currentUser.uid) {
             return member;
@@ -1972,7 +1993,7 @@ function App() {
             return member;
           }
 
-          changed = true;
+          memberChanged = true;
           return {
             ...member,
             name: nextName,
@@ -1983,7 +2004,15 @@ function App() {
           };
         });
 
-        return nextMembers === room.activeMembers ? room : { ...room, activeMembers: nextMembers };
+        if (nextRoomOwner) {
+          changed = true;
+        }
+
+        if (memberChanged) {
+          changed = true;
+        }
+
+        return nextRoomOwner || memberChanged ? { ...room, ...nextRoomOwner, activeMembers: nextMembers } : room;
       });
 
       return changed ? nextRooms : rooms;
@@ -2835,6 +2864,8 @@ function App() {
     const room: WorkspaceRoom = {
       id: `custom-${crypto.randomUUID()}`,
       name: roomName,
+      ownerName: playerName,
+      ownerAvatar: playerAvatar,
       totalMinutes: 0,
       contributions: 0,
       commits: 0,
@@ -2849,13 +2880,39 @@ function App() {
     setNewRoomName("");
   };
 
+  const startRoomTitleEdit = (room: WorkspaceRoom) => {
+    if (room.createdBy !== currentUser.uid) {
+      return;
+    }
+
+    setEditingRoomId(room.id);
+    setEditingRoomName(room.name);
+  };
+
+  const handleRoomTitleSave = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const nextName = editingRoomName.trim();
+    if (!nextName) {
+      return;
+    }
+
+    setCustomRooms((rooms) =>
+      rooms.map((room) =>
+        room.id === editingRoomId && room.createdBy === currentUser.uid ? { ...room, name: nextName } : room,
+      ),
+    );
+    setEditingRoomId("");
+    setEditingRoomName("");
+  };
+
   const handleRoomDelete = (roomId: string) => {
     const room = customRooms.find((item) => item.id === roomId);
     if (!room || room.createdBy !== currentUser.uid) {
       return;
     }
 
-    const isConfirmed = window.confirm(`${room.name}を削除しますか？このRoomは一覧から消えます。`);
+    const isConfirmed = window.confirm(`${room.name}を解体しますか？このRoomは一覧から消えます。`);
     if (!isConfirmed) {
       return;
     }
@@ -2869,6 +2926,10 @@ function App() {
 
     if (pendingJoinRoomId === roomId) {
       setPendingJoinRoomId(null);
+    }
+    if (editingRoomId === roomId) {
+      setEditingRoomId("");
+      setEditingRoomName("");
     }
     setLastRoomSession(null);
   };
@@ -3794,12 +3855,13 @@ function App() {
                         onClick={() => setSelectedRoomId(room.id)}
                         aria-label={`${room.name}を表示`}
                       >
-                        <span className="room-space-orb" aria-hidden="true" />
+                        <span className="room-space-orb" aria-hidden="true">
+                          {room.ownerAvatar ? <img src={room.ownerAvatar} alt="" /> : <span>{getRoomOwnerInitial(room)}</span>}
+                        </span>
                         <span className="room-card-top">
                           <span>{room.name}</span>
                           <span className="room-join-badge">{isJoinedRoom ? "入室中" : "未入室"}</span>
                         </span>
-                        <em>{getRoomDescription(room)}</em>
                         <strong>{room.activeMembers.length} online</strong>
                         <small>{Math.round(room.totalMinutes / 60)}h learned / {room.contributions} contributions</small>
                       </button>
@@ -3832,10 +3894,35 @@ function App() {
 
                       {isOwnRoom ? (
                         <div className="room-owner-actions">
-                          <span>あなたが作成</span>
-                          <button type="button" className="room-delete-button" onClick={() => handleRoomDelete(room.id)}>
-                            削除
-                          </button>
+                          {editingRoomId === room.id ? (
+                            <form className="room-title-edit-form" onSubmit={handleRoomTitleSave}>
+                              <input
+                                value={editingRoomName}
+                                onChange={(event) => setEditingRoomName(event.target.value)}
+                                maxLength={32}
+                                aria-label="Roomタイトル"
+                              />
+                              <button type="submit">保存</button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingRoomId("");
+                                  setEditingRoomName("");
+                                }}
+                              >
+                                取消
+                              </button>
+                            </form>
+                          ) : (
+                            <>
+                              <button type="button" className="room-title-edit-button" onClick={() => startRoomTitleEdit(room)}>
+                                タイトル変更
+                              </button>
+                              <button type="button" className="room-delete-button" onClick={() => handleRoomDelete(room.id)}>
+                                解体
+                              </button>
+                            </>
+                          )}
                         </div>
                       ) : null}
                     </article>

@@ -3306,6 +3306,7 @@
   font-weight: 850;
 }
 
+.room-title-edit-button,
 .room-delete-button {
   flex: 0 0 auto;
   min-height: 28px;
@@ -3325,6 +3326,8 @@
     color 0.16s ease;
 }
 
+.room-title-edit-button:hover,
+.room-title-edit-button:focus-visible,
 .room-delete-button:hover,
 .room-delete-button:focus-visible {
   transform: translateY(-1px);
@@ -3332,6 +3335,45 @@
   background: #f4f4f5;
   color: var(--ink);
   outline: none;
+}
+
+.room-title-edit-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 6px;
+  width: 100%;
+}
+
+.room-title-edit-form input {
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+  outline: none;
+}
+
+.room-title-edit-form input:focus {
+  border-color: rgba(31, 111, 74, 0.28);
+  box-shadow: 0 0 0 4px rgba(31, 111, 74, 0.08);
+}
+
+.room-title-edit-form button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 850;
 }
 
 .room-card:not(.active):hover .room-join-badge {
@@ -7721,23 +7763,38 @@
 }
 
 .room-select-button {
-  grid-template-columns: 38px minmax(0, 1fr);
-  gap: 4px 10px;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 5px 12px;
   align-items: center;
 }
 
 .room-space-orb {
-  grid-row: 1 / 5;
-  display: block;
-  width: 36px;
-  height: 36px;
-  border-radius: 14px;
+  grid-row: 1 / 4;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 18px;
   background:
     radial-gradient(circle at 35% 24%, rgba(255, 255, 255, 0.7), transparent 0.55rem),
     linear-gradient(145deg, #1f6f4a, #0b1f1b);
   box-shadow:
     0 14px 30px rgba(31, 111, 74, 0.18),
     inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
+.room-space-orb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.room-space-orb > span {
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 950;
 }
 
 .room-accent-night .room-space-orb {
@@ -7753,30 +7810,22 @@
 }
 
 .room-card-top,
-.room-select-button em,
 .room-select-button strong,
 .room-select-button small {
   grid-column: 2;
 }
 
-.room-select-button em {
-  display: block;
-  overflow: hidden;
-  color: #71717a;
-  font-size: 12px;
-  font-style: normal;
-  font-weight: 760;
-  line-height: 1.45;
-}
-
 .room-select-button strong {
   color: #111827;
-  font-size: 13px;
+  font-size: 16px;
+  line-height: 1;
 }
 
 .room-select-button small {
   color: #7a8089;
-  font-size: 11px;
+  font-size: 13px;
+  font-weight: 820;
+  line-height: 1.35;
 }
 
 .room-join-badge {
