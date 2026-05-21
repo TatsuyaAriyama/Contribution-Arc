@@ -2499,7 +2499,7 @@ function App() {
       return;
     }
 
-    const selectedLocalRoom = customRooms.find((room) => room.id === selectedRoomId);
+    const selectedLocalRoom = customRooms.map(normalizeWorkspaceRoom).find((room) => room.id === selectedRoomId);
     const member = selectedLocalRoom?.activeMembers.find((item) => item.userId === currentUser.uid);
     if (!member) {
       pressedWorkspaceKeysRef.current.clear();
@@ -2529,7 +2529,7 @@ function App() {
       return;
     }
 
-    const selectedLocalRoom = customRooms.find((room) => room.id === selectedRoomId);
+    const selectedLocalRoom = customRooms.map(normalizeWorkspaceRoom).find((room) => room.id === selectedRoomId);
     const canMove = Boolean(selectedLocalRoom?.activeMembers.some((member) => member.userId === currentUser.uid));
     if (!canMove) {
       pressedWorkspaceKeysRef.current.clear();
@@ -3325,7 +3325,7 @@ function App() {
   };
 
   const closeWorkspaceSession = (roomId: string) => {
-    const room = customRooms.find((item) => item.id === roomId);
+    const room = customRooms.map(normalizeWorkspaceRoom).find((item) => item.id === roomId);
     const member = room?.activeMembers.find((item) => item.userId === currentUser.uid);
     if (!room || !member) {
       return;
@@ -3410,17 +3410,20 @@ function App() {
           : [fallbackRoom, ...rooms.filter((room) => room.id !== roomId)];
 
       return baseRooms.map((room) => {
-        const activeMembers = room.activeMembers.filter((member) => member.userId !== currentUser.uid);
+        const normalizedRoom = normalizeWorkspaceRoom(room);
+        const activeMembers = normalizedRoom.activeMembers.filter((member) => member.userId !== currentUser.uid);
 
-        if (room.id !== roomId) {
-          return activeMembers.length === room.activeMembers.length ? room : { ...room, activeMembers };
+        if (normalizedRoom.id !== roomId) {
+          return activeMembers.length === normalizedRoom.activeMembers.length
+            ? normalizedRoom
+            : normalizeWorkspaceRoom({ ...normalizedRoom, activeMembers });
         }
 
-        return {
-          ...room,
+        return normalizeWorkspaceRoom({
+          ...normalizedRoom,
           activeMembers: [
             ...activeMembers,
-            {
+            createWorkspaceMember({
               id: currentUser.uid,
               userId: currentUser.uid,
               name: playerName,
@@ -3437,9 +3440,9 @@ function App() {
               tone: "deep",
               avatar: playerAvatar,
               characterColor: playerCharacterColor,
-            },
+            }),
           ],
-        };
+        });
       });
     });
   };
@@ -3463,7 +3466,7 @@ function App() {
       return;
     }
 
-    const selectedLocalRoom = customRooms.find((room) => room.id === selectedRoom.id);
+    const selectedLocalRoom = customRooms.map(normalizeWorkspaceRoom).find((room) => room.id === selectedRoom.id);
     const member = selectedLocalRoom?.activeMembers.find((item) => item.userId === currentUser.uid);
     if (!member) {
       resetWorkspacePresence();
