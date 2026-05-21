@@ -2420,8 +2420,7 @@ function App() {
           const localOnlyRooms = currentRooms.filter(
             (room) =>
               !remoteRoomIds.has(room.id) &&
-              !pendingWorkspaceRoomsRef.current.has(room.id) &&
-              room.createdBy === currentUser.uid,
+              !pendingWorkspaceRoomsRef.current.has(room.id),
           );
           const hasLocalRoomsWaitingForCloud = pendingLocalRooms.length > 0 || localOnlyRooms.length > 0;
           const nextRooms = cleanWorkspacePresenceForUser(
