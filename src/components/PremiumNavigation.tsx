@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 
-export type AppView = "home" | "profile" | "workspace";
+export type AppView = "home" | "profile" | "workspace" | "logs";
 export type FriendPreviewStatus = "online" | "away" | "offline";
 
 export type FriendPreview = {
@@ -77,6 +77,14 @@ export function PremiumSidebar({
         >
           <span />
           作業部屋
+        </button>
+        <button
+          type="button"
+          className={currentView === "logs" ? "active" : ""}
+          onClick={() => onViewChange("logs")}
+        >
+          <span />
+          ログ
         </button>
         <button type="button" className={currentView === "profile" ? "active" : ""} onClick={onProfileOpen}>
           <span />

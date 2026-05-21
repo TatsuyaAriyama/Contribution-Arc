@@ -2241,6 +2241,289 @@
   box-shadow: 0 0 0 1px rgba(17, 24, 39, 0.08);
 }
 
+.logs-screen {
+  display: grid;
+  gap: 16px;
+}
+
+.log-composer-card,
+.log-side-panel,
+.room-log-strip,
+.profile-log-card {
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 92% 0%, rgba(31, 111, 74, 0.08), transparent 12rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(250, 250, 248, 0.86));
+  box-shadow:
+    0 18px 54px rgba(17, 24, 39, 0.055),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
+}
+
+.log-composer-card {
+  display: grid;
+  gap: 16px;
+  padding: clamp(18px, 2.2vw, 26px);
+}
+
+.log-composer-head,
+.profile-log-head,
+.room-log-strip > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.log-composer-head h2 {
+  margin: 6px 0 0;
+  color: var(--ink);
+  font-size: clamp(28px, 3.4vw, 46px);
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.log-composer-head > span,
+.log-side-panel span,
+.profile-log-empty,
+.room-log-strip > span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.log-composer {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.log-composer .profile-character-preview,
+.log-post-author .profile-character-preview {
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
+}
+
+.log-composer textarea {
+  width: 100%;
+  min-height: 110px;
+  resize: vertical;
+  padding: 14px 16px;
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 760;
+  line-height: 1.6;
+  outline: none;
+}
+
+.log-composer textarea:focus {
+  border-color: rgba(31, 111, 74, 0.3);
+  box-shadow: 0 0 0 4px rgba(31, 111, 74, 0.07);
+}
+
+.log-composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.log-compose-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.log-composer-footer button,
+.profile-log-head button,
+.room-log-strip button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(31, 111, 74, 0.14);
+  border-radius: 999px;
+  background: rgba(244, 247, 245, 0.86);
+  color: #1f2937;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.log-composer-footer button[type="submit"] {
+  border-color: transparent;
+  background: var(--ink);
+  color: #ffffff;
+}
+
+.log-composer-footer button:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+}
+
+.log-composer-footer > span {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.log-post-error {
+  margin: 10px 0 0;
+  color: #8a5a12;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.logs-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 0.34fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.log-timeline,
+.profile-log-list,
+.room-log-preview,
+.room-log-strip > div:last-child {
+  display: grid;
+  gap: 10px;
+}
+
+.log-post-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(17, 24, 39, 0.07);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(250, 250, 248, 0.88)),
+    #ffffff;
+  box-shadow: 0 16px 42px rgba(17, 24, 39, 0.045);
+}
+
+.log-post-card.compact {
+  gap: 9px;
+  padding: 12px;
+  border-radius: 18px;
+  box-shadow: none;
+}
+
+.log-post-author {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.log-post-author strong {
+  display: block;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.log-post-author small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.log-post-card > p {
+  margin: 0;
+  color: #111827;
+  font-size: 16px;
+  font-weight: 760;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.log-post-card.compact > p {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.log-post-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.log-post-meta span {
+  min-height: 26px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: rgba(220, 232, 225, 0.36);
+  color: #5f6770;
+  font-size: 11px;
+  font-weight: 820;
+}
+
+.log-like-button {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.74);
+  color: #4b5563;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.log-like-button.liked {
+  border-color: rgba(31, 111, 74, 0.22);
+  background: rgba(220, 232, 225, 0.5);
+  color: var(--green);
+}
+
+.log-side-panel,
+.profile-log-card,
+.room-log-strip {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.log-side-panel strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--ink);
+  font-size: 24px;
+  line-height: 1.05;
+}
+
+.log-empty-card {
+  display: grid;
+  gap: 8px;
+  padding: 24px;
+  border: 1px dashed rgba(31, 111, 74, 0.18);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.log-empty-card strong {
+  color: var(--ink);
+  font-size: 22px;
+}
+
 .map-card {
   padding: 22px;
 }
@@ -4439,6 +4722,7 @@
   .hero-grid,
   .insight-grid,
   .profile-layout,
+  .logs-layout,
   .workspace-layout,
   .member-profile-grid,
   .room-output-panel {
@@ -5796,6 +6080,7 @@
 
   .hero-grid,
   .profile-layout,
+  .logs-layout,
   .workspace-layout {
     grid-template-columns: 1fr;
     gap: 10px;

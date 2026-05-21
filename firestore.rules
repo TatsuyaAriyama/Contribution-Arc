@@ -116,6 +116,27 @@ service cloud.firestore {
         && resource.data.userId == request.auth.uid;
     }
 
+    match /posts/{postId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 280
+        && request.resource.data.username is string
+        && request.resource.data.createdAt is string
+        && request.resource.data.likesCount is number
+        && request.resource.data.likedUserIds is list;
+      allow update: if signedIn()
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(["likedUserIds", "likesCount", "updatedAt"])
+        && request.resource.data.likesCount is number
+        && request.resource.data.likedUserIds is list;
+      allow delete: if signedIn()
+        && resource.data.userId == request.auth.uid;
+    }
+
     match /friendRequests/{requestId} {
       allow read: if signedIn()
         && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);

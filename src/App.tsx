@@ -48,6 +48,12 @@ import {
   saveWorkspaceSessionToCloud,
   subscribeStudyLogsFromCloud,
 } from "./services/cloudData";
+import {
+  savePostToCloud,
+  subscribePostsFromCloud,
+  togglePostLikeInCloud,
+  type ContributionPostRecord,
+} from "./services/posts";
 import { PremiumSidebar, type AppView, type FriendPreview, type LiveActivity } from "./components/PremiumNavigation";
 import { SilentWorkspaceRoom, type RoomActivityItem } from "./components/SilentWorkspaceRoom";
 import "./App.css";
@@ -850,6 +856,26 @@ function workspaceMemberToProfile(member: WorkspaceMember): UserProfile {
 
 function profileResolveText(profile: UserProfile) {
   return profile.determination?.trim() || "静かに積み上げています。";
+}
+
+function formatPostTime(createdAt: string) {
+  const createdTime = new Date(createdAt).getTime();
+  if (!Number.isFinite(createdTime)) {
+    return "";
+  }
+
+  const diffMinutes = Math.max(0, Math.floor((Date.now() - createdTime) / 60000));
+  if (diffMinutes < 1) {
+    return "now";
+  }
+  if (diffMinutes < 60) {
+    return `${diffMinutes}m`;
+  }
+  if (diffMinutes < 60 * 24) {
+    return `${Math.floor(diffMinutes / 60)}h`;
+  }
+
+  return new Date(createdAt).toLocaleDateString("ja-JP", { month: "2-digit", day: "2-digit" });
 }
 
 function ProfileCharacterPreview({ color }: { color?: string }) {
@@ -2016,6 +2042,10 @@ function App() {
   const [isPlayerWalking, setIsPlayerWalking] = useState(false);
   const [workspaceBubble, setWorkspaceBubble] = useState("");
   const [workspacePresetMessages, setWorkspacePresetMessages] = useState(defaultWorkspacePresetMessages);
+  const [posts, setPosts] = useState<ContributionPostRecord[]>([]);
+  const [postDraft, setPostDraft] = useState("");
+  const [postError, setPostError] = useState("");
+  const [isPosting, setIsPosting] = useState(false);
   const [isDesktopWelcomeVisible, setIsDesktopWelcomeVisible] = useState(true);
   const [knowledgeGraph, setKnowledgeGraph] = useState<KnowledgeGraphData>(emptyKnowledgeGraph);
   const [selectedKnowledgeId, setSelectedKnowledgeId] = useState("");
@@ -2074,6 +2104,10 @@ function App() {
       setWorkspaceTask("React");
       setWorkspaceDraftTask("React");
       setWorkspacePresetMessages(defaultWorkspacePresetMessages);
+      setPosts([]);
+      setPostDraft("");
+      setPostError("");
+      setIsPosting(false);
       setIsDesktopWelcomeVisible(true);
       setKnowledgeGraph(emptyKnowledgeGraph);
       setSelectedKnowledgeId("");
@@ -2314,6 +2348,21 @@ function App() {
     );
 
     return () => unsubscribe();
+  }, [currentUser, isWorkspaceLoaded]);
+
+  useEffect(() => {
+    if (!currentUser || !isWorkspaceLoaded) {
+      return;
+    }
+
+    return subscribePostsFromCloud(
+      db,
+      setPosts,
+      (error) => {
+        console.info("Post realtime sync skipped.", error);
+        setPostError("ログの読み込みを待っています。");
+      },
+    );
   }, [currentUser, isWorkspaceLoaded]);
 
   useEffect(() => {
@@ -2993,6 +3042,7 @@ function App() {
     status: "online",
   }));
   const liveActivities = [...onlineActivities, ...recentStudyActivities].slice(0, 5);
+  const selectedRoomPosts = selectedRoom ? posts.filter((post) => post.roomId === selectedRoom.id).slice(0, 4) : [];
   const accountScope = getAccountStorageScope(currentUserUid, userId);
   const notificationItems = friendRequests
     .filter((request) => request.direction === "incoming" || request.status === "accepted")
@@ -3082,6 +3132,137 @@ function App() {
       console.info("Study log cloud save skipped.", error);
     });
     setStudyAmount(studyUnit === "hours" ? "1" : "30");
+  };
+
+  const handlePostSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!currentUser || isPosting) {
+      return;
+    }
+
+    const text = postDraft.trim();
+    if (!text) {
+      setPostError("ログ内容を入力してください。");
+      return;
+    }
+
+    const currentPostRoom = activeRoom || selectedRoom || null;
+    const createdAt = new Date().toISOString();
+    const nextPost: ContributionPostRecord = {
+      id: crypto.randomUUID(),
+      userId: currentUser.uid,
+      username: playerName,
+      avatar: getSerializableAvatar(playerAvatar || currentUser.photoURL || ""),
+      currentCharacter: characterOptions[0].id,
+      characterColor: playerCharacterColor,
+      currentTitle,
+      text: text.slice(0, 280),
+      createdAt,
+      roomId: currentPostRoom?.id || "",
+      roomName: currentPostRoom?.name || "",
+      githubContributionCount: outputStats.commits,
+      studyMinutes: totalWeeklyMinutes,
+      likesCount: 0,
+      likedUserIds: [],
+    };
+
+    setIsPosting(true);
+    setPostError("");
+    setPosts((items) => [nextPost, ...items.filter((item) => item.id !== nextPost.id)]);
+    setPostDraft("");
+
+    try {
+      await savePostToCloud(db, nextPost);
+    } catch (error) {
+      setPostError(
+        getFirestoreErrorMessage(
+          error,
+          "ログを保存できませんでした。",
+          "ログを保存する権限がまだ有効になっていません。少し時間を置いて再度お試しください。",
+        ),
+      );
+      setPosts((items) => items.filter((item) => item.id !== nextPost.id));
+      setPostDraft(text);
+    } finally {
+      setIsPosting(false);
+    }
+  };
+
+  const handlePostLike = (post: ContributionPostRecord) => {
+    if (!currentUser) {
+      return;
+    }
+
+    const isLiked = post.likedUserIds.includes(currentUser.uid);
+    setPosts((items) =>
+      items.map((item) => {
+        if (item.id !== post.id) {
+          return item;
+        }
+
+        return {
+          ...item,
+          likedUserIds: isLiked
+            ? item.likedUserIds.filter((likedUserId) => likedUserId !== currentUser.uid)
+            : [...item.likedUserIds, currentUser.uid],
+          likesCount: Math.max(0, item.likesCount + (isLiked ? -1 : 1)),
+        };
+      }),
+    );
+
+    void togglePostLikeInCloud(db, post.id, currentUser.uid, isLiked).catch((error) => {
+      console.info("Post like sync skipped.", error);
+      setPostError("リアクションを保存できませんでした。");
+    });
+  };
+
+  const handlePostAuthorOpen = (post: ContributionPostRecord) => {
+    if (post.userId === currentUserUid) {
+      setProfileMember(null);
+      setProfileUser(null);
+      setCurrentView("profile");
+      return;
+    }
+
+    const profile = workspaceProfiles[post.userId];
+    if (profile) {
+      handleUserProfileOpen(profile);
+      return;
+    }
+
+    setProfileMember(null);
+    setProfileUser({
+      uid: post.userId,
+      userId: post.userId,
+      displayName: post.username,
+      photoURL: post.avatar,
+      searchName: post.username.toLowerCase(),
+      following: [],
+      followers: [],
+      determination: post.text,
+      characterColor: post.characterColor,
+      currentTitle: post.currentTitle,
+    });
+    setCurrentView("profile");
+  };
+
+  const useLatestStudyLogAsPost = () => {
+    const latestLog = [...studyLogs]
+      .filter((log) => !log.id.startsWith("seed-"))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+
+    if (!latestLog) {
+      setPostDraft("今日の積み上げを静かに記録中。");
+      return;
+    }
+
+    setPostDraft(`${latestLog.subject}を${formatStudyTimeJa(latestLog.minutes)}積み上げました。`);
+  };
+
+  const useRoomPresenceAsPost = () => {
+    const currentPostRoom = activeRoom || selectedRoom;
+    setPostDraft(`${currentPostRoom?.name || "作業部屋"}で${currentBuilding}を進めています。`);
   };
 
   const handleSettingsOpen = () => {
@@ -4176,6 +4357,66 @@ function App() {
     </article>
   );
 
+  const postCard = (post: ContributionPostRecord, variant: "full" | "compact" = "full") => {
+    const isLiked = post.likedUserIds.includes(currentUserUid);
+    const roomLabel = post.roomName || "Quiet log";
+    const studyLabel = post.studyMinutes > 0 ? `${formatStudyTimeJa(post.studyMinutes)} focused` : "quiet progress";
+    const contributionLabel =
+      post.githubContributionCount > 0 ? `+${post.githubContributionCount.toLocaleString()} commits` : "GitHub ready";
+
+    return (
+      <article className={`log-post-card ${variant === "compact" ? "compact" : ""}`} key={post.id}>
+        <button type="button" className="log-post-author" onClick={() => handlePostAuthorOpen(post)}>
+          <ProfileCharacterPreview color={post.characterColor} />
+          <span>
+            <strong>{post.username}</strong>
+            <small>
+              {post.currentTitle || "Builder"} · {formatPostTime(post.createdAt)}
+            </small>
+          </span>
+        </button>
+
+        <p>{post.text}</p>
+
+        <div className="log-post-meta">
+          <span>{studyLabel}</span>
+          <span>{contributionLabel}</span>
+          <span>{roomLabel}</span>
+        </div>
+
+        <button
+          type="button"
+          className={isLiked ? "log-like-button liked" : "log-like-button"}
+          onClick={() => handlePostLike(post)}
+          aria-label={isLiked ? "ハートを取り消す" : "ハートする"}
+        >
+          <span aria-hidden="true">{isLiked ? "♥" : "♡"}</span>
+          {post.likesCount.toLocaleString()}
+        </button>
+      </article>
+    );
+  };
+
+  const recentLogsCard = (ownerUid: string, title = "Recent Logs") => {
+    const recentPosts = posts.filter((post) => post.userId === ownerUid).slice(0, 3);
+
+    return (
+      <article className="profile-log-card">
+        <div className="profile-log-head">
+          <p className="card-kicker">{title}</p>
+          <button type="button" onClick={() => setCurrentView("logs")}>
+            ログを見る
+          </button>
+        </div>
+        {recentPosts.length > 0 ? (
+          <div className="profile-log-list">{recentPosts.map((post) => postCard(post, "compact"))}</div>
+        ) : (
+          <p className="profile-log-empty">まだ静かなログはありません。</p>
+        )}
+      </article>
+    );
+  };
+
   const memberProfileCard = (member: WorkspaceMember) => {
     const memberRoom =
       allWorkspaceRooms.find((room) => room.activeMembers.some((item) => item.userId === member.userId)) ||
@@ -4266,6 +4507,7 @@ function App() {
             </strong>
           </div>
         </div>
+        {recentLogsCard(member.userId)}
       </article>
     );
   };
@@ -4331,6 +4573,7 @@ function App() {
             <strong>静かな積み上げ</strong>
           </div>
         </div>
+        {recentLogsCard(profile.uid)}
       </article>
     );
   };
@@ -4417,6 +4660,8 @@ function App() {
           <strong>
             {currentView === "workspace"
               ? "作業部屋"
+              : currentView === "logs"
+                ? "ログ"
               : currentView === "profile"
                 ? "プロフィール"
                 : "ホーム"}
@@ -4746,7 +4991,86 @@ function App() {
         </div>
       ) : null}
 
-      {currentView === "profile" ? (
+      {currentView === "logs" ? (
+        <motion.section
+          className="logs-screen"
+          aria-label="Contribution Arc logs"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <section className="log-composer-card">
+            <div className="log-composer-head">
+              <div>
+                <p className="card-kicker">Quiet Logs</p>
+                <h2>今日の積み上げを静かに残す。</h2>
+              </div>
+              <span>{posts.length.toLocaleString()} logs</span>
+            </div>
+
+            <form className="log-composer" onSubmit={handlePostSubmit}>
+              <ProfileCharacterPreview color={playerCharacterColor} />
+              <div>
+                <textarea
+                  value={postDraft}
+                  onChange={(event) => {
+                    setPostDraft(event.target.value);
+                    setPostError("");
+                  }}
+                  placeholder="What are you building tonight?"
+                  maxLength={280}
+                  rows={4}
+                />
+                <div className="log-composer-footer">
+                  <div className="log-compose-shortcuts">
+                    <button type="button" onClick={useRoomPresenceAsPost}>
+                      Roomから作成
+                    </button>
+                    <button type="button" onClick={useLatestStudyLogAsPost}>
+                      学習ログから作成
+                    </button>
+                  </div>
+                  <span>{postDraft.length}/280</span>
+                  <button type="submit" disabled={isPosting || !postDraft.trim()}>
+                    {isPosting ? "Posting" : "投稿"}
+                  </button>
+                </div>
+                {postError ? <p className="log-post-error">{postError}</p> : null}
+              </div>
+            </form>
+          </section>
+
+          <div className="logs-layout">
+            <section className="log-timeline" aria-label="開発ログタイムライン">
+              {posts.length > 0 ? (
+                posts.map((post) => postCard(post))
+              ) : (
+                <article className="log-empty-card">
+                  <p className="card-kicker">Quiet Progress</p>
+                  <strong>まだログはありません。</strong>
+                  <span>今日作っているもの、学んだこと、commitしたことを静かに共有できます。</span>
+                </article>
+              )}
+            </section>
+
+            <aside className="log-side-panel" aria-label="Room logs">
+              <div>
+                <p className="card-kicker">Current Room</p>
+                <strong>{selectedRoom?.name || "作業部屋"}</strong>
+                <span>{roomOnlineCount} online · {formatStudyTimeJa(roomTotalMinutes)}</span>
+              </div>
+              <div className="room-log-preview">
+                <p className="card-kicker">このRoomの最近の投稿</p>
+                {selectedRoomPosts.length > 0 ? (
+                  selectedRoomPosts.map((post) => postCard(post, "compact"))
+                ) : (
+                  <span>このRoomのログはまだありません。</span>
+                )}
+              </div>
+            </aside>
+          </div>
+        </motion.section>
+      ) : currentView === "profile" ? (
 
         <motion.section
           className="profile-screen"
@@ -4826,6 +5150,7 @@ function App() {
                       <button type="submit">保存</button>
                     </form>
                   </article>
+                  {recentLogsCard(currentUser.uid)}
                 </div>
               </>
             )}
@@ -5039,6 +5364,19 @@ function App() {
                       totalLearnedLabel={`${Math.round(roomTotalMinutes / 60).toLocaleString()}h learned`}
                       contributionLabel={`${roomContributions.toLocaleString()} contributions today`}
                     />
+                    <section className="room-log-strip" aria-label="このRoomの最近の投稿">
+                      <div>
+                        <p className="card-kicker">Room Logs</p>
+                        <button type="button" onClick={() => setCurrentView("logs")}>
+                          ログを開く
+                        </button>
+                      </div>
+                      {selectedRoomPosts.length > 0 ? (
+                        <div>{selectedRoomPosts.slice(0, 3).map((post) => postCard(post, "compact"))}</div>
+                      ) : (
+                        <span>このRoomの投稿はまだありません。</span>
+                      )}
+                    </section>
                   </>
                 ) : (
                   <div className="room-empty-detail">
