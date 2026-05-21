@@ -1836,6 +1836,7 @@ function App() {
   const graphSvgRef = useRef<SVGSVGElement | null>(null);
   const isApplyingRemoteRoomsRef = useRef(false);
   const lastSyncedWorkspaceRoomsRef = useRef("");
+  const pendingWorkspaceRoomIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     return onAuthStateChanged(auth, (user) => {
@@ -2290,14 +2291,27 @@ function App() {
             id: item.id,
           } as WorkspaceRoom),
         );
-        const nextRooms = cleanWorkspacePresenceForUser(seedWorkspaceRooms(remoteRooms), currentUser.uid, Date.now());
-        isApplyingRemoteRoomsRef.current = true;
-        lastSyncedWorkspaceRoomsRef.current = JSON.stringify(nextRooms.map(serializeWorkspaceRoom));
-        setCustomRooms(nextRooms);
+        const remoteRoomIds = new Set(remoteRooms.map((room) => room.id));
+        remoteRoomIds.forEach((roomId) => pendingWorkspaceRoomIdsRef.current.delete(roomId));
 
-        setSelectedRoomId((currentRoomId) =>
-          nextRooms.some((room) => room.id === currentRoomId) ? currentRoomId : nextRooms[0]?.id || "",
-        );
+        setCustomRooms((currentRooms) => {
+          const pendingLocalRooms = currentRooms.filter(
+            (room) => pendingWorkspaceRoomIdsRef.current.has(room.id) && !remoteRoomIds.has(room.id),
+          );
+          const nextRooms = cleanWorkspacePresenceForUser(
+            seedWorkspaceRooms([...remoteRooms, ...pendingLocalRooms]),
+            currentUser.uid,
+            Date.now(),
+          );
+
+          isApplyingRemoteRoomsRef.current = true;
+          lastSyncedWorkspaceRoomsRef.current = JSON.stringify(nextRooms.map(serializeWorkspaceRoom));
+          setSelectedRoomId((currentRoomId) =>
+            nextRooms.some((room) => room.id === currentRoomId) ? currentRoomId : nextRooms[0]?.id || "",
+          );
+
+          return nextRooms;
+        });
       },
       (error) => {
         console.info("Workspace room realtime sync skipped.", error);
@@ -3374,6 +3388,7 @@ function App() {
 
   const handleRoomCreate = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    event.stopPropagation();
 
     const roomName = newRoomName.trim();
     if (!roomName) {
@@ -3395,12 +3410,18 @@ function App() {
       history: [],
     };
 
-    setCustomRooms((rooms) => [...rooms, room]);
-    void saveWorkspaceRoomToCloud(room).catch((error) => {
-      console.info("Workspace room create cloud sync skipped.", error);
-    });
+    pendingWorkspaceRoomIdsRef.current.add(room.id);
+    setCustomRooms((rooms) => (rooms.some((item) => item.id === room.id) ? rooms : [...rooms, room]));
     setSelectedRoomId(room.id);
+    setCurrentView("workspace");
     setNewRoomName("");
+    void saveWorkspaceRoomToCloud(room)
+      .then(() => {
+        pendingWorkspaceRoomIdsRef.current.delete(room.id);
+      })
+      .catch((error) => {
+        console.info("Workspace room create cloud sync skipped.", error);
+      });
   };
 
   const handleSeatLabelsChange = (roomId: string, labels: WorkspaceSeatLabels) => {
@@ -3452,6 +3473,7 @@ function App() {
       return;
     }
 
+    pendingWorkspaceRoomIdsRef.current.delete(roomId);
     const nextRooms = customRooms.filter((item) => item.id !== roomId);
     setCustomRooms(nextRooms);
     void deleteDoc(doc(db, workspaceRoomsCollectionName, roomId)).catch((error) => {
