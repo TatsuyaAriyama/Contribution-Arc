@@ -32,6 +32,7 @@ import {
   startAt,
   endAt,
   updateDoc,
+  where,
 } from "firebase/firestore";
 import { motion } from "framer-motion";
 import { auth, db, githubProvider, googleProvider } from "./firebase";
@@ -98,11 +99,13 @@ type UserProfile = {
 };
 
 type FriendRequestStatus = "pending" | "accepted";
+type FriendRequestDirection = "incoming" | "outgoing";
 
 type FriendRequest = {
   id: string;
   profile: UserProfile;
   status: FriendRequestStatus;
+  direction: FriendRequestDirection;
   createdAt: string;
 };
 
@@ -646,6 +649,50 @@ function profileToFriend(profile: UserProfile): FriendPreview {
     activity: "オフライン",
     githubUrl: getFriendGithubUrl(profile.userId),
   };
+}
+
+function getFriendRequestDocId(fromUid: string, toUid: string) {
+  return `${fromUid}_${toUid}`;
+}
+
+function getCurrentProfile(user: User, displayName: string, currentUserId: string, avatar: string): UserProfile {
+  const nextName = displayName.trim() || user.displayName || user.email?.split("@")[0] || "Developer";
+
+  return normalizeUserProfile(user.uid, {
+    userId: currentUserId,
+    displayName: nextName,
+    photoURL: avatar || user.photoURL || "",
+  });
+}
+
+function getFriendRequestsStorageKey(uid: string) {
+  return `contribution-arc-friend-requests-${uid}`;
+}
+
+function readStoredFriendRequests(uid: string) {
+  try {
+    const savedRequests = window.localStorage.getItem(getFriendRequestsStorageKey(uid));
+    return savedRequests ? (JSON.parse(savedRequests) as FriendRequest[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function upsertStoredFriendRequest(uid: string, nextRequest: FriendRequest) {
+  try {
+    const requests = readStoredFriendRequests(uid);
+    const nextRequests = [
+      nextRequest,
+      ...requests.filter(
+        (request) =>
+          !(request.id === nextRequest.id && (request.direction || "outgoing") === nextRequest.direction),
+      ),
+    ];
+
+    window.localStorage.setItem(getFriendRequestsStorageKey(uid), JSON.stringify(nextRequests));
+  } catch {
+    // Local mirror is a convenience for same-browser account switching.
+  }
 }
 
 function workspaceMemberToProfile(member: WorkspaceMember): UserProfile {
@@ -1759,7 +1806,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!currentUser) {
+    if (!currentUser || !isWorkspaceLoaded) {
       return;
     }
 
@@ -1770,7 +1817,7 @@ function App() {
     const savedAvatar = window.localStorage.getItem(`contribution-arc-avatar-${currentUser.uid}`);
     const savedCharacterColor = window.localStorage.getItem(`contribution-arc-character-color-${currentUser.uid}`);
     const savedFriends = window.localStorage.getItem(`contribution-arc-friends-${currentUser.uid}`);
-    const savedFriendRequests = window.localStorage.getItem(`contribution-arc-friend-requests-${currentUser.uid}`);
+    const savedFriendRequests = window.localStorage.getItem(getFriendRequestsStorageKey(currentUser.uid));
     const savedOnboardingComplete = window.localStorage.getItem(`contribution-arc-onboarding-complete-${currentUser.uid}`);
     const savedRoomId = window.localStorage.getItem(`contribution-arc-room-${currentUser.uid}`);
     const workspaceRoomsStorageKey = getWorkspaceRoomsStorageKey(currentUser.uid);
@@ -1812,7 +1859,14 @@ function App() {
     setSettingsError("");
     setFriendMessage("");
     setFriends(savedFriends ? (JSON.parse(savedFriends) as FriendPreview[]) : []);
-    setFriendRequests(savedFriendRequests ? (JSON.parse(savedFriendRequests) as FriendRequest[]) : []);
+    setFriendRequests(
+      savedFriendRequests
+        ? (JSON.parse(savedFriendRequests) as FriendRequest[]).map((request) => ({
+            ...request,
+            direction: request.direction || "outgoing",
+          }))
+        : [],
+    );
     setDetermination(savedDetermination || "");
     setDraftDetermination(savedDetermination || "");
     setPlayerAvatar(savedAvatar || currentUser.photoURL || "");
@@ -1908,10 +1962,10 @@ function App() {
       `contribution-arc-study-${currentUser.uid}`,
       JSON.stringify(studyLogs),
     );
-  }, [currentUser, studyLogs]);
+  }, [currentUser, studyLogs, isWorkspaceLoaded]);
 
   useEffect(() => {
-    if (!currentUser) {
+    if (!currentUser || !isWorkspaceLoaded) {
       return;
     }
 
@@ -1919,34 +1973,128 @@ function App() {
       `contribution-arc-knowledge-graph-${currentUser.uid}`,
       JSON.stringify(knowledgeGraph),
     );
-  }, [currentUser, knowledgeGraph]);
+  }, [currentUser, knowledgeGraph, isWorkspaceLoaded]);
 
   useEffect(() => {
-    if (!currentUser) {
+    if (!currentUser || !isWorkspaceLoaded) {
       return;
     }
 
     window.localStorage.setItem(`contribution-arc-friends-${currentUser.uid}`, JSON.stringify(friends));
-  }, [currentUser, friends]);
+  }, [currentUser, friends, isWorkspaceLoaded]);
 
   useEffect(() => {
-    if (!currentUser) {
+    if (!currentUser || !isWorkspaceLoaded) {
       return;
     }
 
     window.localStorage.setItem(
-      `contribution-arc-friend-requests-${currentUser.uid}`,
+      getFriendRequestsStorageKey(currentUser.uid),
       JSON.stringify(friendRequests),
     );
-  }, [currentUser, friendRequests]);
+  }, [currentUser, friendRequests, isWorkspaceLoaded]);
 
   useEffect(() => {
     if (!currentUser) {
       return;
     }
 
+    let isCancelled = false;
+
+    const loadCloudFriendRequests = async () => {
+      try {
+        const outgoingQuery = query(collection(db, "friendRequests"), where("fromUid", "==", currentUser.uid));
+        const incomingQuery = query(collection(db, "friendRequests"), where("toUid", "==", currentUser.uid));
+        const [outgoingSnapshot, incomingSnapshot] = await Promise.all([
+          getDocs(outgoingQuery),
+          getDocs(incomingQuery),
+        ]);
+
+        if (isCancelled) {
+          return;
+        }
+
+        const cloudRequests: FriendRequest[] = [
+          ...outgoingSnapshot.docs.map((item) => {
+            const data = item.data() as {
+              toProfile?: Partial<UserProfile>;
+              status?: FriendRequestStatus;
+              createdAt?: string;
+            };
+
+            return {
+              id: item.id,
+              profile: normalizeUserProfile(data.toProfile?.uid || "", data.toProfile || {}),
+              status: (data.status === "accepted" ? "accepted" : "pending") as FriendRequestStatus,
+              direction: "outgoing" as const,
+              createdAt: data.createdAt || new Date().toISOString(),
+            };
+          }),
+          ...incomingSnapshot.docs.map((item) => {
+            const data = item.data() as {
+              fromProfile?: Partial<UserProfile>;
+              status?: FriendRequestStatus;
+              createdAt?: string;
+            };
+
+            return {
+              id: item.id,
+              profile: normalizeUserProfile(data.fromProfile?.uid || "", data.fromProfile || {}),
+              status: (data.status === "accepted" ? "accepted" : "pending") as FriendRequestStatus,
+              direction: "incoming" as const,
+              createdAt: data.createdAt || new Date().toISOString(),
+            };
+          }),
+        ].filter((request) => request.profile.uid);
+
+        setFriendRequests((requests) => {
+          const merged = new Map<string, FriendRequest>();
+          requests.forEach((request) => {
+            merged.set(`${request.direction}-${request.profile.uid}`, {
+              ...request,
+              direction: request.direction || "outgoing",
+            });
+          });
+          cloudRequests.forEach((request) => {
+            merged.set(`${request.direction}-${request.profile.uid}`, request);
+          });
+
+          return Array.from(merged.values()).sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          );
+        });
+        setFriends((items) => {
+          const nextFriends = [...items];
+          cloudRequests
+            .filter((request) => request.status === "accepted")
+            .forEach((request) => {
+              const nextFriend = profileToFriend(request.profile);
+              if (!nextFriends.some((friend) => friend.uid === nextFriend.uid)) {
+                nextFriends.unshift(nextFriend);
+              }
+            });
+
+          return nextFriends;
+        });
+      } catch (error) {
+        console.info("Friend request cloud sync skipped.", error);
+      }
+    };
+
+    void loadCloudFriendRequests();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser || !isWorkspaceLoaded) {
+      return;
+    }
+
     window.localStorage.setItem(`contribution-arc-room-${currentUser.uid}`, selectedRoomId);
-  }, [currentUser, selectedRoomId]);
+  }, [currentUser, selectedRoomId, isWorkspaceLoaded]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
@@ -1957,7 +2105,7 @@ function App() {
   }, [currentUser, customRooms, isWorkspaceLoaded]);
 
   useEffect(() => {
-    if (!currentUser) {
+    if (!currentUser || !isWorkspaceLoaded) {
       return;
     }
 
@@ -1965,18 +2113,18 @@ function App() {
       `contribution-arc-workspace-task-${currentUser.uid}`,
       workspaceTask,
     );
-  }, [currentUser, workspaceTask]);
+  }, [currentUser, workspaceTask, isWorkspaceLoaded]);
 
   useEffect(() => {
-    if (!currentUser) {
+    if (!currentUser || !isWorkspaceLoaded) {
       return;
     }
 
     window.localStorage.setItem(`contribution-arc-character-color-${currentUser.uid}`, playerCharacterColor);
-  }, [currentUser, playerCharacterColor]);
+  }, [currentUser, playerCharacterColor, isWorkspaceLoaded]);
 
   useEffect(() => {
-    if (!currentUser) {
+    if (!currentUser || !isWorkspaceLoaded) {
       return;
     }
 
@@ -1984,7 +2132,7 @@ function App() {
       `contribution-arc-workspace-preset-messages-${currentUser.uid}`,
       JSON.stringify(workspacePresetMessages.slice(0, 6)),
     );
-  }, [currentUser, workspacePresetMessages]);
+  }, [currentUser, workspacePresetMessages, isWorkspaceLoaded]);
 
   useEffect(() => {
     const timerId = window.setInterval(() => setWorkspaceNow(Date.now()), 30000);
@@ -2540,9 +2688,18 @@ function App() {
     setCurrentView("profile");
   };
 
-  const handleFriendRequest = (profile: UserProfile) => {
+  const handleFriendRequest = async (profile: UserProfile) => {
+    if (!currentUser) {
+      return;
+    }
+
     if (friends.length >= 20) {
       setFriendMessage("フレンド上限に達しています。");
+      return;
+    }
+
+    if (profile.uid === currentUser.uid) {
+      setFriendMessage("自分自身にはフレンド申請できません。");
       return;
     }
 
@@ -2556,29 +2713,87 @@ function App() {
       return;
     }
 
+    const requestId = getFriendRequestDocId(currentUser.uid, profile.uid);
+    const outgoingRequest: FriendRequest = {
+      id: requestId,
+      profile,
+      status: "pending",
+      direction: "outgoing",
+      createdAt: new Date().toISOString(),
+    };
+    const currentProfile = getCurrentProfile(currentUser, playerName, userId, playerAvatar);
+    const incomingRequest: FriendRequest = {
+      id: requestId,
+      profile: currentProfile,
+      status: "pending",
+      direction: "incoming",
+      createdAt: outgoingRequest.createdAt,
+    };
+
     setFriendRequests((requests) => [
-      {
-        id: crypto.randomUUID(),
-        profile,
-        status: "pending",
-        createdAt: new Date().toISOString(),
-      },
+      outgoingRequest,
       ...requests,
     ]);
+    upsertStoredFriendRequest(currentUser.uid, outgoingRequest);
+    upsertStoredFriendRequest(profile.uid, incomingRequest);
+
+    try {
+      await setDoc(doc(db, "friendRequests", requestId), {
+        fromUid: currentUser.uid,
+        toUid: profile.uid,
+        fromProfile: currentProfile,
+        toProfile: profile,
+        status: "pending",
+        createdAt: outgoingRequest.createdAt,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.info("Friend request cloud send skipped.", error);
+    }
+
     setFriendMessage("フレンド申請を送信しました。承認されるとFriendsに表示されます。");
   };
 
-  const handleFriendAccept = (request: FriendRequest) => {
+  const handleFriendAccept = async (request: FriendRequest) => {
+    if (!currentUser) {
+      return;
+    }
+
+    if (request.direction !== "incoming") {
+      setFriendMessage("フレンド申請は相手が承認すると成立します。");
+      return;
+    }
+
     if (friends.length >= 20) {
       setFriendMessage("フレンド上限に達しています。");
       return;
     }
 
     const nextFriend = profileToFriend(request.profile);
+    const currentProfile = getCurrentProfile(currentUser, playerName, userId, playerAvatar);
     setFriends((items) => (items.some((friend) => friend.uid === nextFriend.uid) ? items : [nextFriend, ...items]));
     setFriendRequests((requests) =>
       requests.map((item) => (item.id === request.id ? { ...item, status: "accepted" } : item)),
     );
+    upsertStoredFriendRequest(currentUser.uid, { ...request, status: "accepted" });
+    upsertStoredFriendRequest(request.profile.uid, {
+      id: request.id,
+      profile: currentProfile,
+      status: "accepted",
+      direction: "outgoing",
+      createdAt: request.createdAt,
+    });
+
+    try {
+      await updateDoc(doc(db, "friendRequests", request.id), {
+        status: "accepted",
+        acceptedAt: new Date().toISOString(),
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.info("Friend request accept cloud sync skipped.", error);
+    }
+
     setFriendMessage("フレンドになりました。");
   };
 
@@ -3155,13 +3370,19 @@ function App() {
       selectedRoom;
     const elapsedMinutes = getElapsedMinutes(member.joinedAt, workspaceNow);
     const memberProfile = workspaceMemberToProfile(member);
-    const pendingRequest = friendRequests.find(
-      (request) => request.profile.uid === memberProfile.uid && request.status === "pending",
+    const pendingOutgoingRequest = friendRequests.find(
+      (request) =>
+        request.profile.uid === memberProfile.uid && request.status === "pending" && request.direction === "outgoing",
+    );
+    const pendingIncomingRequest = friendRequests.find(
+      (request) =>
+        request.profile.uid === memberProfile.uid && request.status === "pending" && request.direction === "incoming",
     );
     const acceptedRequest = friendRequests.find(
       (request) => request.profile.uid === memberProfile.uid && request.status === "accepted",
     );
     const isFriend = friends.some((friend) => friend.uid === memberProfile.uid) || Boolean(acceptedRequest);
+    const hasPendingRequest = Boolean(pendingOutgoingRequest || pendingIncomingRequest);
 
     return (
       <article className="card member-profile-card workspace-member-profile-card">
@@ -3179,17 +3400,25 @@ function App() {
         <div className="friend-profile-actions member-profile-actions">
           <button
             type="button"
-            disabled={isFriend || Boolean(pendingRequest)}
+            disabled={isFriend || hasPendingRequest}
             onClick={() => handleFriendRequest(memberProfile)}
           >
-            {isFriend ? "フレンド" : pendingRequest ? "申請中" : "フレンド申請"}
+            {isFriend ? "フレンド" : pendingIncomingRequest ? "申請が届いています" : pendingOutgoingRequest ? "申請中" : "フレンド申請"}
           </button>
-          {pendingRequest ? (
-            <button type="button" onClick={() => handleFriendAccept(pendingRequest)}>
+          {pendingIncomingRequest ? (
+            <button type="button" onClick={() => handleFriendAccept(pendingIncomingRequest)}>
               承認する
             </button>
           ) : null}
-          <span>{isFriend ? "つながっています" : pendingRequest ? "申請を送信済み" : "静かに作業仲間へ追加"}</span>
+          <span>
+            {isFriend
+              ? "つながっています"
+              : pendingIncomingRequest
+                ? "相手から申請が届いています"
+                : pendingOutgoingRequest
+                  ? "相手の承認待ちです"
+                  : "静かに作業仲間へ追加"}
+          </span>
         </div>
 
         {friendMessage ? <p className="friend-message">{friendMessage}</p> : null}
@@ -3217,8 +3446,8 @@ function App() {
           <div>
             <span>Connection</span>
             <strong>
-              <i style={{ background: isFriend ? "#1f6f4a" : pendingRequest ? "#c8a95b" : "#d4d4d8" }} />
-              {isFriend ? "Friends" : pendingRequest ? "Pending" : "Not connected"}
+              <i style={{ background: isFriend ? "#1f6f4a" : hasPendingRequest ? "#c8a95b" : "#d4d4d8" }} />
+              {isFriend ? "Friends" : hasPendingRequest ? "Pending" : "Not connected"}
             </strong>
           </div>
         </div>
@@ -3227,13 +3456,17 @@ function App() {
   };
 
   const userProfileCard = (profile: UserProfile) => {
-    const pendingRequest = friendRequests.find(
-      (request) => request.profile.uid === profile.uid && request.status === "pending",
+    const pendingOutgoingRequest = friendRequests.find(
+      (request) => request.profile.uid === profile.uid && request.status === "pending" && request.direction === "outgoing",
+    );
+    const pendingIncomingRequest = friendRequests.find(
+      (request) => request.profile.uid === profile.uid && request.status === "pending" && request.direction === "incoming",
     );
     const acceptedRequest = friendRequests.find(
       (request) => request.profile.uid === profile.uid && request.status === "accepted",
     );
     const isFriend = friends.some((friend) => friend.uid === profile.uid) || Boolean(acceptedRequest);
+    const hasPendingRequest = Boolean(pendingOutgoingRequest || pendingIncomingRequest);
     const githubUrl = getFriendGithubUrl(profile.userId);
 
     return (
@@ -3250,11 +3483,11 @@ function App() {
         </div>
 
         <div className="friend-profile-actions">
-          <button type="button" disabled={isFriend || Boolean(pendingRequest)} onClick={() => handleFriendRequest(profile)}>
-            {isFriend ? "フレンド" : pendingRequest ? "申請中" : "フレンド申請"}
+          <button type="button" disabled={isFriend || hasPendingRequest} onClick={() => handleFriendRequest(profile)}>
+            {isFriend ? "フレンド" : pendingIncomingRequest ? "申請が届いています" : pendingOutgoingRequest ? "申請中" : "フレンド申請"}
           </button>
-          {pendingRequest ? (
-            <button type="button" onClick={() => handleFriendAccept(pendingRequest)}>
+          {pendingIncomingRequest ? (
+            <button type="button" onClick={() => handleFriendAccept(pendingIncomingRequest)}>
               承認する
             </button>
           ) : null}
@@ -3271,8 +3504,8 @@ function App() {
           <div>
             <span>Status</span>
             <strong>
-              <i style={{ background: isFriend ? "#1f6f4a" : "#d4d4d8" }} />
-              {isFriend ? "Friends" : pendingRequest ? "Pending" : "Not connected"}
+              <i style={{ background: isFriend ? "#1f6f4a" : hasPendingRequest ? "#c8a95b" : "#d4d4d8" }} />
+              {isFriend ? "Friends" : hasPendingRequest ? "Pending" : "Not connected"}
             </strong>
           </div>
           <div>
@@ -3537,7 +3770,10 @@ function App() {
               {searchResults.map((profile) => {
                 const isFriend = friends.some((friend) => friend.uid === profile.uid);
                 const isPending = friendRequests.some(
-                  (request) => request.profile.uid === profile.uid && request.status === "pending",
+                  (request) =>
+                    request.profile.uid === profile.uid &&
+                    request.status === "pending" &&
+                    (request.direction === "outgoing" || request.direction === "incoming"),
                 );
                 return (
                   <article key={profile.uid} className="user-result-card">
