@@ -9066,10 +9066,26 @@
 /* Room list correction: no icon, compact readable rows */
 .room-card {
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 6px 12px;
-  min-height: 76px;
-  padding: 12px 14px;
+  gap: 8px 14px;
+  min-height: 92px;
+  padding: 14px 16px;
   border-radius: 22px;
+  transition:
+    transform 280ms ease-out,
+    border-color 280ms ease-out,
+    box-shadow 280ms ease-out,
+    background 280ms ease-out;
+  will-change: transform;
+}
+
+.room-card:hover,
+.room-card:focus-within {
+  transform: translateY(-4px);
+  border-color: rgba(31, 143, 95, 0.12);
+  box-shadow:
+    0 30px 72px rgba(17, 24, 39, 0.09),
+    0 12px 34px rgba(31, 143, 95, 0.06),
+    0 1px 0 rgba(255, 255, 255, 0.96) inset;
 }
 
 .room-card.joined {
@@ -9091,7 +9107,9 @@
 }
 
 .room-card.joined:hover,
-.room-card.joined.active {
+.room-card.joined.active,
+.room-card.joined:focus-within {
+  transform: translateY(-4px);
   border-color: rgba(31, 143, 95, 0.3);
   box-shadow:
     0 28px 68px rgba(31, 143, 95, 0.11),
@@ -9103,10 +9121,11 @@
 .room-select-button {
   grid-column: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 5px 12px;
-  min-height: 52px;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  min-height: 64px;
+  align-content: center;
+  align-items: start;
 }
 
 .room-space-orb {
@@ -9118,6 +9137,7 @@
   grid-row: 1;
   display: block;
   min-width: 0;
+  padding-right: 4px;
 }
 
 .room-card-top span:first-child {
@@ -9126,19 +9146,19 @@
   max-width: 100%;
   overflow: hidden;
   color: #111827;
-  font-size: 14px;
-  font-weight: 760;
+  font-size: 13px;
+  font-weight: 780;
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .room-online-count {
-  grid-column: 2;
-  grid-row: 1;
+  grid-column: 1;
+  grid-row: 2;
   display: inline-flex;
   align-items: center;
-  justify-self: end;
+  justify-self: start;
   min-width: auto;
   gap: 5px;
 }
@@ -9166,8 +9186,8 @@
 }
 
 .room-supporting-meta {
-  grid-column: 1 / -1;
-  grid-row: 2;
+  grid-column: 1;
+  grid-row: 3;
   color: rgba(17, 24, 39, 0.42);
   font-size: 11px;
   font-weight: 720;
@@ -9176,7 +9196,7 @@
 
 .room-card-actions {
   grid-column: 2;
-  grid-row: 1 / 3;
+  grid-row: 1;
   align-self: center;
 }
 
