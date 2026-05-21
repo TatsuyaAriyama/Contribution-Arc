@@ -146,6 +146,7 @@ export function SilentWorkspaceRoom({
 }: SilentWorkspaceRoomProps) {
   const isFocusPresentation = presentation === "focus";
   const [isPresetEditorOpen, setIsPresetEditorOpen] = useState(false);
+  const [isPresetTrayOpen, setIsPresetTrayOpen] = useState(false);
   const [isSeatEditorOpen, setIsSeatEditorOpen] = useState(false);
   const presetSlots = [...presetMessages, "", "", "", "", "", ""].slice(0, 6);
   const visiblePresetMessages = presetSlots.map((message) => message.trim()).filter(Boolean);
@@ -300,7 +301,7 @@ export function SilentWorkspaceRoom({
           })}
         </div>
 
-        <div className="preset-message-panel">
+        <div className={`preset-message-panel ${isPresetTrayOpen ? "is-open" : ""}`}>
           {!isFocusPresentation && canEditSeatLabels ? (
             <div className="seat-label-editor" aria-label="席名編集">
               <button
@@ -329,31 +330,44 @@ export function SilentWorkspaceRoom({
             </div>
           ) : null}
 
-          <div className="preset-message-bar" aria-label="定型コミュニケーション">
-          {visiblePresetMessages.map((message, index) => (
-            <button type="button" key={`${message}-${index}`} onClick={() => onPresetMessage(message)} disabled={!isJoined}>
-              {message}
-            </button>
-          ))}
-            {isJoined ? (
+          <button
+            type="button"
+            className="preset-chat-toggle"
+            onClick={() => setIsPresetTrayOpen((isOpen) => !isOpen)}
+            aria-expanded={isPresetTrayOpen}
+            aria-label={isPresetTrayOpen ? "定型文を閉じる" : "定型文を開く"}
+          >
+            <span aria-hidden="true" />
+            <strong>{isPresetTrayOpen ? "閉じる" : "定型文"}</strong>
+          </button>
+
+          {isPresetTrayOpen ? (
+            <div className="preset-message-bar" aria-label="定型コミュニケーション">
+              {visiblePresetMessages.map((message, index) => (
+                <button type="button" key={`${message}-${index}`} onClick={() => onPresetMessage(message)} disabled={!isJoined}>
+                  {message}
+                </button>
+              ))}
+              {isJoined ? (
+                <button
+                  type="button"
+                  className="preset-break-toggle"
+                  onClick={() => onPresetMessage(isCurrentUserOnBreak ? "集中します" : "休憩します")}
+                >
+                  {isCurrentUserOnBreak ? "休憩終了" : "休憩"}
+                </button>
+              ) : null}
               <button
                 type="button"
-                className="preset-break-toggle"
-                onClick={() => onPresetMessage(isCurrentUserOnBreak ? "集中します" : "休憩します")}
+                className="preset-edit-button"
+                onClick={() => setIsPresetEditorOpen((isOpen) => !isOpen)}
               >
-                {isCurrentUserOnBreak ? "休憩終了" : "休憩"}
+                {isPresetEditorOpen ? "閉じる" : "定型文編集"}
               </button>
-            ) : null}
-            <button
-              type="button"
-              className="preset-edit-button"
-              onClick={() => setIsPresetEditorOpen((isOpen) => !isOpen)}
-            >
-              {isPresetEditorOpen ? "閉じる" : "定型文編集"}
-            </button>
-          </div>
+            </div>
+          ) : null}
 
-          {isPresetEditorOpen ? (
+          {isPresetTrayOpen && isPresetEditorOpen ? (
             <div className="preset-message-editor" aria-label="定型文編集">
               {presetSlots.map((message, index) => (
                 <label key={`preset-slot-${index}`}>
