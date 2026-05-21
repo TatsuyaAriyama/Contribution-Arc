@@ -3536,7 +3536,7 @@ function App() {
       return;
     }
 
-    const room: WorkspaceRoom = {
+    const room = normalizeWorkspaceRoom({
       id: createWorkspaceRoomId(),
       name: roomName,
       ownerName: playerName,
@@ -3549,10 +3549,10 @@ function App() {
       createdBy: currentUser.uid,
       activeMembers: [],
       history: [],
-    };
+    });
 
     pendingWorkspaceRoomsRef.current.set(room.id, room);
-    setCustomRooms((rooms) => (rooms.some((item) => item.id === room.id) ? rooms : [...rooms, room]));
+    setCustomRooms((rooms) => (rooms.some((item) => item.id === room.id) ? rooms : [...rooms, room].map(normalizeWorkspaceRoom)));
     setSelectedRoomId(room.id);
     setProfileMember(null);
     setProfileUser(null);
@@ -3562,16 +3562,6 @@ function App() {
     setNewRoomName("");
     setRoomCreateState("saved");
     setRoomCreateMessage("Roomを作成しました。");
-
-    void saveWorkspaceRoomToCloud(room)
-      .then(() => {
-        setRoomCreateMessage("Roomを作成しました。同期中でもこのまま使えます。");
-      })
-      .catch((error) => {
-        console.info("Workspace room create cloud sync skipped.", error);
-        setRoomCreateState("offline");
-        setRoomCreateMessage("Roomは作成済みです。オンライン反映は接続回復後に再試行します。");
-      });
   };
 
   const handleSeatLabelsChange = (roomId: string, labels: WorkspaceSeatLabels) => {
@@ -4643,9 +4633,13 @@ function App() {
                           setRoomCreateMessage("");
                         }
                       }}
-                      placeholder="例: 朝活Build"
+                      placeholder=""
                       maxLength={32}
                       onKeyDown={(event) => {
+                        if (event.nativeEvent.isComposing) {
+                          return;
+                        }
+
                         if (event.key === "Enter") {
                           event.preventDefault();
                           handleRoomCreate();
