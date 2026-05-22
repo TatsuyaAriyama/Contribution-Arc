@@ -227,7 +227,6 @@ type WorkspaceRoom = {
   name: string;
   ownerName?: string;
   ownerAvatar?: string;
-  seatLabels?: WorkspaceSeatLabels;
   totalMinutes: number;
   contributions: number;
   commits: number;
@@ -236,8 +235,6 @@ type WorkspaceRoom = {
   activeMembers: WorkspaceMember[];
   history: WorkspaceSessionHistory[];
 };
-
-type WorkspaceSeatLabels = Record<string, string>;
 
 type OnboardingStep = "idle" | "welcome" | "settings";
 
@@ -378,12 +375,6 @@ const notificationSoundSources = {
   post: `${import.meta.env.BASE_URL}sounds/notification-soft.mp3`,
   friendRequest: `${import.meta.env.BASE_URL}sounds/notification-soft.mp3`,
 } as const;
-const defaultWorkspaceSeatLabels: WorkspaceSeatLabels = {
-  frontend: "作業",
-  java: "仕事",
-  deep: "休憩",
-  cloud: "学習",
-};
 const workspaceActorSlots = [
   { x: 28, y: 54 },
   { x: 40, y: 52 },
@@ -1912,10 +1903,6 @@ function normalizeWorkspaceRoom(room: Partial<WorkspaceRoom> | null | undefined)
     createdBy: safeRoom.createdBy || "legacy",
     ownerName: safeRoom.ownerName || "Developer",
     ownerAvatar: safeRoom.ownerAvatar || "",
-    seatLabels: {
-      ...defaultWorkspaceSeatLabels,
-      ...(safeRoom.seatLabels || {}),
-    },
     activeMembers: activeMembers.filter(Boolean).map((member, index) => {
       const task = member.currentTask || member.building || "Deep Work";
 
@@ -1969,10 +1956,6 @@ function serializeWorkspaceRoom(room: WorkspaceRoom): WorkspaceRoom {
     name: normalizedRoom.name,
     ownerName: normalizedRoom.ownerName || "Developer",
     ownerAvatar: getSerializableAvatar(normalizedRoom.ownerAvatar),
-    seatLabels: {
-      ...defaultWorkspaceSeatLabels,
-      ...(normalizedRoom.seatLabels || {}),
-    },
     totalMinutes: normalizedRoom.totalMinutes || 0,
     contributions: normalizedRoom.contributions || 0,
     commits: normalizedRoom.commits || 0,
@@ -5571,7 +5554,6 @@ function App() {
       name: roomName,
       ownerName: playerName,
       ownerAvatar: playerAvatar,
-      seatLabels: defaultWorkspaceSeatLabels,
       totalMinutes: 0,
       contributions: 0,
       commits: 0,
@@ -5599,24 +5581,6 @@ function App() {
     setNewRoomName("");
     setRoomCreateState("saved");
     setRoomCreateMessage("Roomを作成しました。");
-  };
-
-  const handleSeatLabelsChange = (roomId: string, labels: WorkspaceSeatLabels) => {
-    setCustomRooms((rooms) =>
-      rooms.map((room) => {
-        if (room.id !== roomId || room.createdBy !== currentUser.uid) {
-          return room;
-        }
-
-        return {
-          ...room,
-          seatLabels: {
-            ...defaultWorkspaceSeatLabels,
-            ...labels,
-          },
-        };
-      }),
-    );
   };
 
   const startRoomTitleEdit = (room: WorkspaceRoom) => {
@@ -7179,9 +7143,6 @@ function App() {
                       onJoin={() => handleRoomJoin(selectedRoom.id)}
                       onLeave={handleRoomLeave}
                       onResetPresence={resetWorkspacePresence}
-                      seatLabels={selectedRoom.seatLabels || defaultWorkspaceSeatLabels}
-                      canEditSeatLabels={selectedRoom.createdBy === currentUser.uid}
-                      onSeatLabelsChange={(labels) => handleSeatLabelsChange(selectedRoom.id, labels)}
                       presetMessages={workspacePresetMessages}
                       onPresetMessagesChange={setWorkspacePresetMessages}
                       onPresetMessage={handleWorkspacePresetMessage}

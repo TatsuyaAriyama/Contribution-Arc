@@ -55,9 +55,6 @@ type SilentWorkspaceRoomProps = {
   onJoin: () => void;
   onLeave: () => void;
   onResetPresence: () => void;
-  seatLabels: Record<string, string>;
-  canEditSeatLabels?: boolean;
-  onSeatLabelsChange: (labels: Record<string, string>) => void;
   presetMessages: string[];
   onPresetMessagesChange: (messages: string[]) => void;
   onPresetMessage: (message: string) => void;
@@ -72,29 +69,6 @@ type SilentWorkspaceRoomProps = {
   growthProgress: WorkspaceGrowthProgress;
   onGrowthGiftOpen: (level: number) => void;
 };
-
-const workspaceSeats = [
-  {
-    id: "frontend",
-    name: "作業",
-    note: "Work",
-  },
-  {
-    id: "java",
-    name: "仕事",
-    note: "Job",
-  },
-  {
-    id: "deep",
-    name: "休憩",
-    note: "Break",
-  },
-  {
-    id: "cloud",
-    name: "学習",
-    note: "Study",
-  },
-];
 
 const workspaceGrowthItems = [
   {
@@ -205,9 +179,6 @@ export function SilentWorkspaceRoom({
   onJoin,
   onLeave,
   onResetPresence,
-  seatLabels,
-  canEditSeatLabels = false,
-  onSeatLabelsChange,
   presetMessages,
   onPresetMessagesChange,
   onPresetMessage,
@@ -224,7 +195,6 @@ export function SilentWorkspaceRoom({
   const isFocusPresentation = presentation === "focus";
   const [isPresetEditorOpen, setIsPresetEditorOpen] = useState(false);
   const [isPresetTrayOpen, setIsPresetTrayOpen] = useState(false);
-  const [isSeatEditorOpen, setIsSeatEditorOpen] = useState(false);
   const presetSlots = [...presetMessages, "", "", "", "", "", ""].slice(0, 6);
   const visiblePresetMessages = presetSlots.map((message) => message.trim()).filter(Boolean);
   const currentMember = members.find((member) => member.userId === currentUserId);
@@ -255,13 +225,6 @@ export function SilentWorkspaceRoom({
     onPresetMessagesChange(
       presetSlots.map((message, slotIndex) => (slotIndex === index ? value : message)).slice(0, 6),
     );
-  };
-
-  const handleSeatLabelChange = (seatId: string, value: string) => {
-    onSeatLabelsChange({
-      ...seatLabels,
-      [seatId]: value.slice(0, 10),
-    });
   };
 
   return (
@@ -352,26 +315,6 @@ export function SilentWorkspaceRoom({
               <small>{pendingGift.name}</small>
             </button>
           ) : null}
-          {workspaceSeats.map((seat) => {
-            const seatName = (seatLabels[seat.id] ?? seat.name).trim() || seat.name;
-
-            return (
-              <div
-                key={seat.id}
-                className={`workspace-seat seat-${seat.id}`}
-                aria-label={`${seatName}席`}
-              >
-                <span className="seat-desk">
-                  <span className="seat-screen" />
-                  <span className="seat-mug" />
-                </span>
-                <span className="seat-chair" />
-                <span className="seat-caption">
-                  <strong>{seatName}</strong>
-                </span>
-              </div>
-            );
-          })}
           {unlockedGrowthIds.has("plant") ? (
             <>
               <div className="workspace-plant plant-a" aria-hidden="true" />
@@ -422,34 +365,6 @@ export function SilentWorkspaceRoom({
         </div>
 
         <div className={`preset-message-panel ${isPresetTrayOpen ? "is-open" : ""}`}>
-          {!isFocusPresentation && canEditSeatLabels ? (
-            <div className="seat-label-editor" aria-label="席名編集">
-              <button
-                type="button"
-                className="seat-label-editor-toggle"
-                onClick={() => setIsSeatEditorOpen((isOpen) => !isOpen)}
-              >
-                {isSeatEditorOpen ? "席名編集を閉じる" : "席名編集"}
-              </button>
-
-              {isSeatEditorOpen ? (
-                <div className="seat-label-editor-grid">
-                  {workspaceSeats.map((seat) => (
-                    <label key={`seat-label-${seat.id}`}>
-                      <span>{seat.note}</span>
-                      <input
-                        value={seatLabels[seat.id] ?? seat.name}
-                        onChange={(event) => handleSeatLabelChange(seat.id, event.target.value)}
-                        placeholder={seat.name}
-                        maxLength={10}
-                      />
-                    </label>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
           <button
             type="button"
             className="preset-chat-toggle"
