@@ -2511,6 +2511,8 @@ function App() {
   const [selectedDailyDate, setSelectedDailyDate] = useState(getDateInputValue());
   const [dailyPlanDraft, setDailyPlanDraft] = useState("");
   const [dailyReflectionDraft, setDailyReflectionDraft] = useState("");
+  const [dailyHistoryDateFilter, setDailyHistoryDateFilter] = useState("");
+  const [dailyHistorySearch, setDailyHistorySearch] = useState("");
   const [dailyMessage, setDailyMessage] = useState("");
   const [isSavingDailyReport, setIsSavingDailyReport] = useState(false);
   const [postReplies, setPostReplies] = useState<ContributionReplyRecord[]>([]);
@@ -2598,6 +2600,8 @@ function App() {
       setSelectedDailyDate(getDateInputValue());
       setDailyPlanDraft("");
       setDailyReflectionDraft("");
+      setDailyHistoryDateFilter("");
+      setDailyHistorySearch("");
       setDailyMessage("");
       setIsSavingDailyReport(false);
       setPostReplies([]);
@@ -3796,6 +3800,22 @@ function App() {
   )
     .sort((a, b) => b.date.localeCompare(a.date) || new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 12);
+  const normalizedDailyHistorySearch = dailyHistorySearch.trim().toLowerCase();
+  const filteredDailyReports = dailyReports.filter((report) => {
+    const matchesDate = !dailyHistoryDateFilter || report.date === dailyHistoryDateFilter;
+    const searchableText = [
+      report.date,
+      formatDailyDate(report.date),
+      report.plan,
+      report.reflection,
+      report.userName || "",
+    ]
+      .join(" ")
+      .toLowerCase();
+    const matchesSearch = !normalizedDailyHistorySearch || searchableText.includes(normalizedDailyHistorySearch);
+
+    return matchesDate && matchesSearch;
+  });
   const accountScope = getAccountStorageScope(currentUserUid, userId);
   const sameRoomUserIds = new Set(
     allWorkspaceRooms
@@ -6299,11 +6319,41 @@ function App() {
           <aside className="daily-history-card">
             <div className="daily-history-head">
               <p className="card-kicker">History</p>
-              <strong>{dailyReports.length} days</strong>
+              <strong>{filteredDailyReports.length}/{dailyReports.length} days</strong>
+            </div>
+            <div className="daily-history-filters" aria-label="過去の日報を絞り込む">
+              <label>
+                <span>日付</span>
+                <input
+                  type="date"
+                  value={dailyHistoryDateFilter}
+                  onChange={(event) => setDailyHistoryDateFilter(event.target.value)}
+                />
+              </label>
+              <label>
+                <span>検索</span>
+                <input
+                  type="search"
+                  value={dailyHistorySearch}
+                  onChange={(event) => setDailyHistorySearch(event.target.value)}
+                  placeholder="本文・日付から探す"
+                />
+              </label>
+              {dailyHistoryDateFilter || dailyHistorySearch ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDailyHistoryDateFilter("");
+                    setDailyHistorySearch("");
+                  }}
+                >
+                  クリア
+                </button>
+              ) : null}
             </div>
             <div className="daily-history-list">
-              {dailyReports.length > 0 ? (
-                dailyReports.slice(0, 10).map((report) => (
+              {filteredDailyReports.length > 0 ? (
+                filteredDailyReports.slice(0, 20).map((report) => (
                   <article
                     key={report.id}
                     className={report.date === selectedDailyDate ? "active" : ""}
@@ -6322,6 +6372,8 @@ function App() {
                     </button>
                   </article>
                 ))
+              ) : dailyReports.length > 0 ? (
+                <p>一致する日報はありません。</p>
               ) : (
                 <p>まだ日報はありません。</p>
               )}
