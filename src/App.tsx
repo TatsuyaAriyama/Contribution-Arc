@@ -50,9 +50,12 @@ import {
 } from "./services/cloudData";
 import {
   savePostToCloud,
+  savePostReplyToCloud,
+  subscribePostRepliesFromCloud,
   subscribePostsFromCloud,
   togglePostLikeInCloud,
   type ContributionPostRecord,
+  type ContributionReplyRecord,
 } from "./services/posts";
 import { PremiumSidebar, type AppView, type FriendPreview, type LiveActivity } from "./components/PremiumNavigation";
 import { SilentWorkspaceRoom, type RoomActivityItem, type WorkspaceGrowthProgress } from "./components/SilentWorkspaceRoom";
@@ -236,6 +239,9 @@ type RoomCreateState = "idle" | "saving" | "saved" | "offline";
 type DailyReport = {
   id: string;
   userId: string;
+  userName?: string;
+  characterColor?: string;
+  currentTitle?: string;
   date: string;
   plan: string;
   reflection: string;
@@ -947,6 +953,9 @@ function normalizeDailyReport(data: Partial<DailyReport>, fallbackUserId: string
   return {
     id: typeof data.id === "string" && data.id ? data.id : `${fallbackUserId}_${date}`,
     userId: typeof data.userId === "string" && data.userId ? data.userId : fallbackUserId,
+    userName: typeof data.userName === "string" ? data.userName : "",
+    characterColor: typeof data.characterColor === "string" ? data.characterColor : "",
+    currentTitle: typeof data.currentTitle === "string" ? data.currentTitle : "",
     date,
     plan: typeof data.plan === "string" ? data.plan : "",
     reflection: typeof data.reflection === "string" ? data.reflection : "",
@@ -2232,11 +2241,15 @@ function App() {
   const [postError, setPostError] = useState("");
   const [isPosting, setIsPosting] = useState(false);
   const [dailyReports, setDailyReports] = useState<DailyReport[]>([]);
+  const [sharedDailyReports, setSharedDailyReports] = useState<DailyReport[]>([]);
   const [selectedDailyDate, setSelectedDailyDate] = useState(getDateInputValue());
   const [dailyPlanDraft, setDailyPlanDraft] = useState("");
   const [dailyReflectionDraft, setDailyReflectionDraft] = useState("");
   const [dailyMessage, setDailyMessage] = useState("");
   const [isSavingDailyReport, setIsSavingDailyReport] = useState(false);
+  const [postReplies, setPostReplies] = useState<ContributionReplyRecord[]>([]);
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+  const [replyError, setReplyError] = useState("");
   const [isDesktopWelcomeVisible, setIsDesktopWelcomeVisible] = useState(true);
   const [knowledgeGraph, setKnowledgeGraph] = useState<KnowledgeGraphData>(emptyKnowledgeGraph);
   const [selectedKnowledgeId, setSelectedKnowledgeId] = useState("");
@@ -2303,11 +2316,15 @@ function App() {
       setPostError("");
       setIsPosting(false);
       setDailyReports([]);
+      setSharedDailyReports([]);
       setSelectedDailyDate(getDateInputValue());
       setDailyPlanDraft("");
       setDailyReflectionDraft("");
       setDailyMessage("");
       setIsSavingDailyReport(false);
+      setPostReplies([]);
+      setReplyDrafts({});
+      setReplyError("");
       setIsDesktopWelcomeVisible(true);
       setKnowledgeGraph(emptyKnowledgeGraph);
       setSelectedKnowledgeId("");
@@ -2589,13 +2606,27 @@ function App() {
       return;
     }
 
+    return subscribePostRepliesFromCloud(
+      db,
+      setPostReplies,
+      (error) => {
+        console.info("Post reply realtime sync skipped.", error);
+      },
+    );
+  }, [currentUser, isWorkspaceLoaded]);
+
+  useEffect(() => {
+    if (!currentUser || !isWorkspaceLoaded) {
+      return;
+    }
+
     const cachedReports = readCachedDailyReports(currentUser.uid, userId);
     if (cachedReports.length > 0) {
       setDailyReports(cachedReports);
     }
 
     let handledInitialSnapshot = false;
-    const dailyQuery = query(collection(db, "dailyReports"), where("userId", "==", currentUser.uid));
+    const dailyQuery = query(collection(db, "dailyReports"), orderBy("date", "desc"), limit(120));
     const unsubscribe = onSnapshot(
       dailyQuery,
       (snapshot) => {
@@ -2607,10 +2638,13 @@ function App() {
             };
             return normalizeDailyReport(data, currentUser.uid);
           })
-          .filter((report) => report.userId === currentUser.uid);
+          .filter((report) => report.userId && (report.plan.trim() || report.reflection.trim()));
+        const ownCloudReports = cloudReports.filter((report) => report.userId === currentUser.uid);
 
-        if (cloudReports.length > 0) {
-          const reports = mergeDailyReports([...cachedReports, ...cloudReports]);
+        setSharedDailyReports(cloudReports);
+
+        if (ownCloudReports.length > 0) {
+          const reports = mergeDailyReports([...cachedReports, ...ownCloudReports]);
           setDailyReports(reports);
           writeCachedDailyReports(currentUser.uid, userId, reports);
           handledInitialSnapshot = true;
@@ -3365,6 +3399,11 @@ function App() {
   const selectedRoomPosts = selectedRoom ? posts.filter((post) => post.roomId === selectedRoom.id).slice(0, 4) : [];
   const selectedDailyReport = dailyReports.find((report) => report.date === selectedDailyDate) || null;
   const todayDailyReport = dailyReports.find((report) => report.date === getDateInputValue()) || null;
+  const visibleSharedDailyReports = Array.from(
+    new Map([...sharedDailyReports, ...dailyReports].map((report) => [report.id, report])).values(),
+  )
+    .sort((a, b) => b.date.localeCompare(a.date) || new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .slice(0, 12);
   const accountScope = getAccountStorageScope(currentUserUid, userId);
   const notificationItems = friendRequests
     .filter((request) => request.direction === "incoming" || request.status === "accepted")
@@ -3545,6 +3584,41 @@ function App() {
     });
   };
 
+  const handlePostReplySubmit = async (post: ContributionPostRecord) => {
+    if (!currentUser) {
+      return;
+    }
+
+    const text = (replyDrafts[post.id] || "").trim();
+    if (!text) {
+      return;
+    }
+
+    const reply: ContributionReplyRecord = {
+      id: crypto.randomUUID(),
+      postId: post.id,
+      userId: currentUser.uid,
+      username: playerName,
+      avatar: getSerializableAvatar(playerAvatar || currentUser.photoURL || ""),
+      characterColor: playerCharacterColor,
+      text: text.slice(0, 160),
+      createdAt: new Date().toISOString(),
+    };
+
+    setReplyError("");
+    setPostReplies((items) => [reply, ...items.filter((item) => item.id !== reply.id)]);
+    setReplyDrafts((drafts) => ({ ...drafts, [post.id]: "" }));
+
+    try {
+      await savePostReplyToCloud(db, reply);
+    } catch (error) {
+      console.info("Post reply save skipped.", error);
+      setReplyError("返信を保存できませんでした。");
+      setPostReplies((items) => items.filter((item) => item.id !== reply.id));
+      setReplyDrafts((drafts) => ({ ...drafts, [post.id]: text }));
+    }
+  };
+
   const handleDailyDateChange = (date: string) => {
     const nextReport = dailyReports.find((report) => report.date === date);
     setSelectedDailyDate(date);
@@ -3565,6 +3639,9 @@ function App() {
     const report: DailyReport = {
       id: `${currentUser.uid}_${selectedDailyDate}`,
       userId: currentUser.uid,
+      userName: playerName,
+      characterColor: playerCharacterColor,
+      currentTitle,
       date: selectedDailyDate,
       plan: dailyPlanDraft.trim(),
       reflection: dailyReflectionDraft.trim(),
@@ -4770,6 +4847,11 @@ function App() {
     const studyLabel = post.studyMinutes > 0 ? `${formatStudyTimeJa(post.studyMinutes)} focused` : "quiet progress";
     const contributionLabel =
       post.githubContributionCount > 0 ? `+${post.githubContributionCount.toLocaleString()} commits` : "";
+    const replies = postReplies
+      .filter((reply) => reply.postId === post.id)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    const visibleReplies = variant === "compact" ? replies.slice(-1) : replies.slice(-3);
+    const replyDraft = replyDrafts[post.id] || "";
 
     return (
       <article className={`log-post-card ${variant === "compact" ? "compact" : ""}`} key={post.id}>
@@ -4800,6 +4882,44 @@ function App() {
           <span aria-hidden="true">{isLiked ? "♥" : "♡"}</span>
           {post.likesCount.toLocaleString()}
         </button>
+
+        <div className="post-reply-area">
+          {visibleReplies.length > 0 ? (
+            <div className="post-reply-list">
+              {visibleReplies.map((reply) => (
+                <article key={reply.id} className="post-reply-item">
+                  <ProfileCharacterPreview color={reply.characterColor} />
+                  <p>
+                    <strong>{reply.username}</strong>
+                    <span>{reply.text}</span>
+                  </p>
+                </article>
+              ))}
+              {replies.length > visibleReplies.length ? <small>ほか {replies.length - visibleReplies.length} 件</small> : null}
+            </div>
+          ) : null}
+
+          <form
+            className="post-reply-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handlePostReplySubmit(post);
+            }}
+          >
+            <input
+              value={replyDraft}
+              onChange={(event) => {
+                setReplyDrafts((drafts) => ({ ...drafts, [post.id]: event.target.value }));
+                setReplyError("");
+              }}
+              placeholder="短く返信"
+              maxLength={160}
+            />
+            <button type="submit" disabled={!replyDraft.trim()}>
+              返信
+            </button>
+          </form>
+        </div>
       </article>
     );
   };
@@ -5487,6 +5607,32 @@ function App() {
                 <p>まだ日報はありません。</p>
               )}
             </div>
+
+            <div className="daily-shared-feed" aria-label="みんなの日報">
+              <div className="daily-history-head">
+                <p className="card-kicker">Team Daily</p>
+                <strong>{visibleSharedDailyReports.length}</strong>
+              </div>
+              {visibleSharedDailyReports.length > 0 ? (
+                <div className="daily-shared-list">
+                  {visibleSharedDailyReports.map((report) => (
+                    <article key={`shared-${report.id}`} className={report.userId === currentUserUid ? "mine" : ""}>
+                      <div>
+                        <ProfileCharacterPreview color={report.characterColor || characterColorOptions[0].value} />
+                        <span>
+                          <strong>{report.userName || (report.userId === currentUserUid ? playerName : "Developer")}</strong>
+                          <small>{formatDailyDate(report.date)}</small>
+                        </span>
+                      </div>
+                      {report.plan ? <p>朝: {report.plan}</p> : null}
+                      {report.reflection ? <p>振り返り: {report.reflection}</p> : null}
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p className="daily-shared-empty">共有された日報はまだありません。</p>
+              )}
+            </div>
           </aside>
         </motion.section>
       ) : currentView === "logs" ? (
@@ -5534,6 +5680,7 @@ function App() {
                   </button>
                 </div>
                 {postError ? <p className="log-post-error">{postError}</p> : null}
+                {replyError ? <p className="log-post-error">{replyError}</p> : null}
               </div>
             </form>
           </section>

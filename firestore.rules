@@ -135,11 +135,25 @@ service cloud.firestore {
         && request.resource.data.likedUserIds is list;
       allow delete: if signedIn()
         && resource.data.userId == request.auth.uid;
+
+      match /replies/{replyId} {
+        allow read: if signedIn();
+        allow create: if signedIn()
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.postId == postId
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 160
+          && request.resource.data.username is string
+          && request.resource.data.createdAt is string;
+        allow update: if false;
+        allow delete: if signedIn()
+          && resource.data.userId == request.auth.uid;
+      }
     }
 
     match /dailyReports/{reportId} {
-      allow read: if signedIn()
-        && resource.data.userId == request.auth.uid;
+      allow read: if signedIn();
       allow create: if signedIn()
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.date is string

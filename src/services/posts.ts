@@ -2,6 +2,7 @@ import {
   arrayRemove,
   arrayUnion,
   collection,
+  collectionGroup,
   doc,
   increment,
   limit,
@@ -31,6 +32,17 @@ export type ContributionPostRecord = {
   studyMinutes: number;
   likesCount: number;
   likedUserIds: string[];
+};
+
+export type ContributionReplyRecord = {
+  id: string;
+  postId: string;
+  userId: string;
+  username: string;
+  avatar: string;
+  characterColor: string;
+  text: string;
+  createdAt: string;
 };
 
 function readString(value: unknown, fallback = "") {
@@ -104,6 +116,47 @@ export async function savePostToCloud(db: Firestore, post: ContributionPostRecor
     doc(db, "posts", post.id),
     {
       ...post,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+}
+
+export function subscribePostRepliesFromCloud(
+  db: Firestore,
+  onChange: (replies: ContributionReplyRecord[]) => void,
+  onError: (error: unknown) => void,
+): Unsubscribe {
+  const repliesQuery = query(collectionGroup(db, "replies"), orderBy("createdAt", "desc"), limit(200));
+
+  return onSnapshot(
+    repliesQuery,
+    (snapshot) => {
+      const replies = snapshot.docs.map((item) => {
+        const data = item.data();
+        return {
+          id: item.id,
+          postId: readString(data.postId),
+          userId: readString(data.userId),
+          username: readString(data.username, "Developer"),
+          avatar: readString(data.avatar),
+          characterColor: readString(data.characterColor, "#1f6f4a"),
+          text: readString(data.text),
+          createdAt: readCreatedAt(data.createdAt),
+        };
+      });
+
+      onChange(replies.filter((reply) => reply.postId && reply.userId && reply.text.trim()));
+    },
+    onError,
+  );
+}
+
+export async function savePostReplyToCloud(db: Firestore, reply: ContributionReplyRecord) {
+  await setDoc(
+    doc(db, "posts", reply.postId, "replies", reply.id),
+    {
+      ...reply,
       updatedAt: serverTimestamp(),
     },
     { merge: true },
