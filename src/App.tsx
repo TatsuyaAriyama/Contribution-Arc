@@ -7268,16 +7268,9 @@ function App() {
               </span>
             </div>
           </div>
-          <div className="contribution-arc-legend" aria-hidden="true">
-            <span>少</span>
-            <i className="lv-0" />
-            <i className="lv-1" />
-            <i className="lv-2" />
-            <i className="lv-3" />
-            <i className="lv-4" />
-            <span>多</span>
-          </div>
         </div>
+        <div className="contribution-arc-body">
+        <div className="contribution-arc-left">
         <div className="contribution-arc-canvas">
           <div
             className="contribution-arc-grid"
@@ -7392,30 +7385,79 @@ function App() {
             </div>
           </div>
         </div>
-        {arcSubjectTotals.total > 0 ? (
-          <div className="contribution-arc-ribbon" aria-label="学習ジャンル年間配分">
-            <div className="contribution-arc-ribbon-bar">
-              {arcSubjectTotals.items.map((item) => (
-                <span
-                  key={item.subject}
-                  className="contribution-arc-ribbon-segment"
-                  style={{ flexGrow: item.minutes, background: item.color }}
-                  title={`${item.subject} · ${formatStudyTimeJa(item.minutes)}`}
-                  aria-label={`${item.subject} ${formatStudyTimeJa(item.minutes)}`}
-                />
-              ))}
-            </div>
-            <div className="contribution-arc-ribbon-legend">
-              {arcSubjectTotals.items.map((item) => (
-                <span key={item.subject} className="contribution-arc-ribbon-chip">
-                  <i style={{ background: item.color }} aria-hidden="true" />
-                  <strong>{item.subject}</strong>
-                  <small>{formatStudyTimeJa(item.minutes)}</small>
-                </span>
-              ))}
-            </div>
+          <div className="contribution-arc-legend" aria-hidden="true">
+            <span>少</span>
+            <i className="lv-0" />
+            <i className="lv-1" />
+            <i className="lv-2" />
+            <i className="lv-3" />
+            <i className="lv-4" />
+            <span>多</span>
           </div>
-        ) : null}
+        </div>
+        {arcSubjectTotals.total > 0 ? (
+          <div className="contribution-arc-donut" aria-label="学習ジャンル配分">
+            <div className="contribution-arc-donut-chart">
+              <svg viewBox="0 0 160 160" aria-hidden="true">
+                <circle
+                  cx="80"
+                  cy="80"
+                  r="56"
+                  fill="none"
+                  stroke="rgba(17, 24, 39, 0.06)"
+                  strokeWidth="16"
+                />
+                {(() => {
+                  const r = 56;
+                  const circumference = 2 * Math.PI * r;
+                  let cumulative = 0;
+                  return arcSubjectTotals.items.map((item, idx) => {
+                    const dash = (item.minutes / arcSubjectTotals.total) * circumference;
+                    const seg = (
+                      <circle
+                        key={`${item.subject}-${idx}`}
+                        cx="80"
+                        cy="80"
+                        r={r}
+                        fill="none"
+                        stroke={item.color}
+                        strokeWidth="16"
+                        strokeDasharray={`${dash} ${circumference - dash}`}
+                        strokeDashoffset={-cumulative}
+                        transform="rotate(-90 80 80)"
+                      />
+                    );
+                    cumulative += dash;
+                    return seg;
+                  });
+                })()}
+              </svg>
+              <div className="contribution-arc-donut-center">
+                <small>13週合計</small>
+                <strong>{formatStudyTimeJa(arcSubjectTotals.total)}</strong>
+                <span>{arcSubjectTotals.items.length}ジャンル</span>
+              </div>
+            </div>
+            <ul className="contribution-arc-donut-legend">
+              {arcSubjectTotals.items.map((item) => {
+                const pct = Math.round((item.minutes / arcSubjectTotals.total) * 100);
+                return (
+                  <li key={item.subject}>
+                    <i style={{ background: item.color }} aria-hidden="true" />
+                    <strong>{item.subject}</strong>
+                    <span>{formatStudyTimeJa(item.minutes)}</span>
+                    <small>{pct}%</small>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : (
+          <div className="contribution-arc-donut empty">
+            <p>学習を記録するとここにジャンル分布が現れます。</p>
+          </div>
+        )}
+        </div>
         {selectedArcDay ? (
           <div className="contribution-arc-detail" role="region" aria-label="選択日の学習詳細">
             <div className="contribution-arc-detail-head">
