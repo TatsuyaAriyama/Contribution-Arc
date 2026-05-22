@@ -348,8 +348,9 @@ const getAccountStorageKey = (scope: string, key: string) => `contribution-arc-$
 const sharedWorkspaceRoomsStorageKey = "contribution-arc-shared-workspace-rooms-cache";
 const workspaceRoomsCollectionName = "rooms";
 const legacyWorkspaceRoomsCollectionName = "workspaceRooms";
-const minaAvatarPath = "mina-icon.webp";
-const detaUserId = "npc-deta";
+const betaWorkspaceRoomId = "beta-room";
+const legacyDeepWorkStudioRoomId = "deep-work-studio";
+const minaUserId = "npc-mina";
 const maxWorkspacePresenceMinutes = 12 * 60;
 const onboardingMessage = "ようこそContribution Arcへ";
 const workspacePresenceResetVersion = "2026-05-20-clear-stuck-presence";
@@ -1526,8 +1527,8 @@ function createWorkspaceMember(
 }
 
 function getRoomDescription(room: WorkspaceRoom) {
-  if (room.id === "deep-work-studio") {
-    return "深夜でも静かに手を動かせる、Contribution Arcの基点となる開発室。";
+  if (room.id === betaWorkspaceRoomId) {
+    return "ベータ版として全ユーザーが集まれる、静かな共同作業ルーム。";
   }
 
   if (room.name.toLowerCase().includes("night")) {
@@ -1538,7 +1539,7 @@ function getRoomDescription(room: WorkspaceRoom) {
 }
 
 function getRoomAccent(room: WorkspaceRoom) {
-  if (room.id === "deep-work-studio") {
+  if (room.id === betaWorkspaceRoomId) {
     return "studio";
   }
 
@@ -1567,74 +1568,92 @@ function getWorkspaceSeatPosition(task: string) {
   return { x: 32, y: 58 };
 }
 
-function createDetaMember(joinedAt: Date): WorkspaceMember {
+function createMinaMember(joinedAt: Date, nowMs: number, status: RoomUserStatus): WorkspaceMember {
+  const joinedAtMs = joinedAt.getTime();
+  const activeMinutes = Math.max(0, Math.floor((nowMs - joinedAtMs) / 60000));
+  const isOnBreak = status === "on-break";
+  const activeStartedAt = new Date(nowMs - Math.max(1, activeMinutes % 50) * 60000).toISOString();
+  const breakStartedAt = isOnBreak ? new Date(nowMs - Math.max(1, activeMinutes % 12) * 60000).toISOString() : "";
+
   return createWorkspaceMember({
-    id: detaUserId,
-    userId: detaUserId,
-    name: "deta",
+    id: minaUserId,
+    userId: minaUserId,
+    name: "Mina",
     avatar: "",
-    characterColor: "#1f6f4a",
-    x: 30,
-    y: 47,
-    currentTask: "React",
-    color: "#1f6f4a",
+    characterColor: "#3f6f9f",
+    x: 66,
+    y: 58,
+    currentTask: "仕事を片付ける",
+    color: "#3f6f9f",
     joinedAt: joinedAt.toISOString(),
-    activeStartedAt: joinedAt.toISOString(),
-    accumulatedActiveMinutes: 0,
-    status: "deep-work",
-    tone: "green",
+    activeStartedAt,
+    accumulatedActiveMinutes: isOnBreak ? Math.max(0, activeMinutes - (activeMinutes % 12)) : 0,
+    breakStartedAt,
+    status,
+    tone: "blue",
   });
 }
 
-function getScheduledDetaMember(nowMs: number): WorkspaceMember | null {
+function getScheduledMinaMember(nowMs: number): WorkspaceMember | null {
   const now = new Date(nowMs);
   const hour = now.getHours();
 
-  if (hour < 6) {
+  if (hour < 7 || hour >= 24) {
     return null;
   }
 
   const dayStart = new Date(now);
-  dayStart.setHours(6, 0, 0, 0);
+  dayStart.setHours(7, 0, 0, 0);
   const dayEnd = new Date(now);
   dayEnd.setHours(24, 0, 0, 0);
 
   const dateKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
-  const random = seededRandom(getStableHash(`deta-${dateKey}`));
-  let cursor = dayStart.getTime() + Math.floor(random() * 90) * 60000;
+  const random = seededRandom(getStableHash(`mina-beta-${dateKey}`));
+  let cursor = dayStart.getTime() + Math.floor(random() * 70) * 60000;
 
   while (cursor < dayEnd.getTime()) {
-    const durationMinutes = 60 + Math.floor(random() * 121);
+    const durationMinutes = 70 + Math.floor(random() * 100);
     const sessionEnd = cursor + durationMinutes * 60000;
 
     if (nowMs >= cursor && nowMs < sessionEnd) {
-      return createDetaMember(new Date(cursor));
+      const elapsedMinutes = Math.floor((nowMs - cursor) / 60000);
+      const cycleMinutes = elapsedMinutes % 58;
+      const status: RoomUserStatus = cycleMinutes >= 45 && cycleMinutes < 55 ? "on-break" : "working";
+      return createMinaMember(new Date(cursor), nowMs, status);
     }
 
-    const breakMinutes = 25 + Math.floor(random() * 156);
+    const breakMinutes = 35 + Math.floor(random() * 130);
     cursor = sessionEnd + breakMinutes * 60000;
   }
 
   return null;
 }
 
-function isDetaLikeMember(member: Pick<WorkspaceMember, "userId" | "id" | "name">) {
-  return member.userId === detaUserId || member.userId === "npc-ari" || member.id === "npc-ari" || member.name === "Ari";
+function isScheduledWorkspaceNpc(member: Pick<WorkspaceMember, "userId" | "id" | "name">) {
+  return (
+    member.userId === minaUserId ||
+    member.id === minaUserId ||
+    member.name === "Mina" ||
+    member.userId === "npc-deta" ||
+    member.userId === "npc-ari" ||
+    member.id === "npc-ari" ||
+    member.name === "Ari"
+  );
 }
 
-function applyScheduledDetaPresence(room: WorkspaceRoom, nowMs: number): WorkspaceRoom {
+function applyScheduledWorkspacePresence(room: WorkspaceRoom, nowMs: number): WorkspaceRoom {
   const activeMembers = Array.isArray(room.activeMembers) ? room.activeMembers : [];
 
-  if (room.id !== "deep-work-studio") {
+  if (room.id !== betaWorkspaceRoomId) {
     return room;
   }
 
-  const detaMember = getScheduledDetaMember(nowMs);
-  const nextActiveMembers = activeMembers.filter((member) => member && !isDetaLikeMember(member));
+  const minaMember = getScheduledMinaMember(nowMs);
+  const nextActiveMembers = activeMembers.filter((member) => member && !isScheduledWorkspaceNpc(member));
 
   return {
     ...room,
-    activeMembers: detaMember ? [detaMember, ...nextActiveMembers] : nextActiveMembers,
+    activeMembers: minaMember ? [minaMember, ...nextActiveMembers] : nextActiveMembers,
   };
 }
 
@@ -1700,76 +1719,27 @@ function createDefaultWorkspaceRooms(): WorkspaceRoom[] {
 
   return [
     {
-      id: "deep-work-studio",
-      name: "Deep Work Studio",
-      totalMinutes: 1860,
-      contributions: 24,
+      id: betaWorkspaceRoomId,
+      name: "ベータ版",
+      totalMinutes: 0,
+      contributions: 0,
       commits: 0,
       createdAt: new Date(now - 1000 * 60 * 60 * 24 * 8).toISOString(),
       createdBy: "system",
       ownerName: "Contribution Arc",
       ownerAvatar: "",
       seatLabels: defaultWorkspaceSeatLabels,
-      activeMembers: [
-        createWorkspaceMember({
-          id: "npc-yuki",
-          userId: "npc-yuki",
-          name: "Yuki",
-          avatar: "",
-          characterColor: "#3f6f9f",
-          x: 62,
-          y: 47,
-          currentTask: "Java",
-          color: "#3f6f9f",
-          joinedAt: new Date(now - 1000 * 60 * 66).toISOString(),
-          activeStartedAt: new Date(now - 1000 * 60 * 66).toISOString(),
-          accumulatedActiveMinutes: 0,
-          status: "working",
-          tone: "blue",
-        }),
-        createWorkspaceMember({
-          id: "npc-mina",
-          userId: "npc-mina",
-          name: "Mina",
-          avatar: minaAvatarPath,
-          characterColor: "#2f8f83",
-          x: 72,
-          y: 69,
-          currentTask: "AWS",
-          color: "#2f8f83",
-          joinedAt: new Date(now - 1000 * 60 * 31).toISOString(),
-          activeStartedAt: new Date(now - 1000 * 60 * 31).toISOString(),
-          accumulatedActiveMinutes: 0,
-          status: "working",
-          tone: "deep",
-        }),
-      ],
+      activeMembers: [],
       history: [
         {
-          id: "seed-deta-react",
-          userId: detaUserId,
-          userName: "deta",
-          roomId: "deep-work-studio",
-          roomName: "Deep Work Studio",
-          task: "React",
-          building: "React",
-          color: "#1f6f4a",
-          joinedAt: new Date(now - 1000 * 60 * 160).toISOString(),
-          leftAt: new Date(now - 1000 * 60 * 100).toISOString(),
-          durationMinutes: 60,
-          earnedExp: getRoomSessionExp(60),
-          minutes: 60,
-          exp: getRoomSessionExp(60),
-        },
-        {
-          id: "seed-mina-joined",
-          userId: "npc-mina",
+          id: "seed-mina-beta",
+          userId: minaUserId,
           userName: "Mina",
-          roomId: "deep-work-studio",
-          roomName: "Deep Work Studio",
-          task: "Deep Work",
-          building: "Deep Work",
-          color: "#2f8f83",
+          roomId: betaWorkspaceRoomId,
+          roomName: "ベータ版",
+          task: "仕事を片付ける",
+          building: "仕事を片付ける",
+          color: "#3f6f9f",
           joinedAt: new Date(now - 1000 * 60 * 240).toISOString(),
           leftAt: new Date(now - 1000 * 60 * 210).toISOString(),
           durationMinutes: 30,
@@ -1784,7 +1754,9 @@ function createDefaultWorkspaceRooms(): WorkspaceRoom[] {
 
 function seedWorkspaceRooms(rooms: WorkspaceRoom[]): WorkspaceRoom[] {
   const seedRoom = createDefaultWorkspaceRooms()[0];
-  const normalizedRooms = rooms.map(normalizeWorkspaceRoom);
+  const normalizedRooms = rooms
+    .map(normalizeWorkspaceRoom)
+    .filter((room) => room.id !== legacyDeepWorkStudioRoomId && room.name !== "Deep Work Studio");
   const existingRoom = normalizedRooms.find((room) => room.id === seedRoom.id);
 
   if (!existingRoom) {
@@ -1837,7 +1809,6 @@ function normalizeWorkspaceRoom(room: Partial<WorkspaceRoom> | null | undefined)
     activeMembers: activeMembers.filter(Boolean).map((member, index) => {
       const task = member.currentTask || member.building || "Deep Work";
 
-      const isMina = member.userId === "npc-mina" || member.id === "npc-mina" || member.name === "Mina";
       const memberId = member.userId || member.id || `member-${roomId}-${index}`;
 
       return {
@@ -1845,7 +1816,7 @@ function normalizeWorkspaceRoom(room: Partial<WorkspaceRoom> | null | undefined)
         id: member.id || memberId,
         userId: memberId,
         name: member.name || "Developer",
-        avatar: isMina ? minaAvatarPath : member.avatar || "",
+        avatar: member.avatar || "",
         characterColor: getSafeCharacterColor(member.characterColor || member.color),
         x: typeof member.x === "number" ? member.x : clampNumber(24 + index * 18, 12, 88),
         y: typeof member.y === "number" ? member.y : clampNumber(34 + index * 12, 16, 84),
@@ -1899,7 +1870,7 @@ function serializeWorkspaceRoom(room: WorkspaceRoom): WorkspaceRoom {
     createdBy: normalizedRoom.createdBy || "legacy",
     activeMembers: (normalizedRoom.activeMembers || []).map((member) => ({
       ...member,
-      avatar: member.userId === "npc-mina" ? member.avatar : getSerializableAvatar(member.avatar),
+      avatar: getSerializableAvatar(member.avatar),
     })),
     history: normalizedRoom.history || [],
   };
@@ -3717,7 +3688,7 @@ function App() {
       ? formatStudyTime(totalWeeklyMinutes)
       : `${(Math.round((totalWeeklyMinutes / 60) * 10) / 10).toLocaleString()}h`;
   const allWorkspaceRooms = [...workspaceRooms, ...customRooms].map((room) =>
-    normalizeWorkspaceRoom(applyScheduledDetaPresence(normalizeWorkspaceRoom(room), workspaceNow)),
+    normalizeWorkspaceRoom(applyScheduledWorkspacePresence(normalizeWorkspaceRoom(room), workspaceNow)),
   );
   const selectedRoom = allWorkspaceRooms.find((room) => room.id === selectedRoomId) || allWorkspaceRooms[0];
   const currentBuilding = workspaceTask.trim() || studySubject.trim() || "Deep work";
@@ -3795,10 +3766,10 @@ function App() {
       id: `history-${item.id}`,
       userId: item.userId,
       userName: item.userName,
-      avatar: item.userName === "Mina" || item.userId === "npc-mina" ? minaAvatarPath : "",
+      avatar: "",
       text:
-        item.id === "seed-mina-joined"
-          ? `${item.userName} committed to Contribution Arc`
+        item.id === "seed-mina-beta"
+          ? `${item.userName} is quietly clearing work`
           : `${item.userName} closed a ${formatStayTime(item.minutes)} ${item.building} session`,
       meta: new Date(item.leftAt).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
     })) satisfies RoomActivityItem[]),
@@ -5851,7 +5822,7 @@ function App() {
 
           <div className="desktop-app-context">
             <span>{activeRoom ? "In room" : "Viewing"}</span>
-            <strong>{activeRoom?.name || selectedRoom?.name || "Deep Work Studio"}</strong>
+            <strong>{activeRoom?.name || selectedRoom?.name || "ベータ版"}</strong>
           </div>
 
           <div className="desktop-app-actions">
@@ -6940,7 +6911,7 @@ function App() {
         <div className="home-workspace-header">
           <div>
             <p className="card-kicker">Silent Workspace</p>
-            <h2>{selectedRoom?.name || "Deep Work Studio"}</h2>
+            <h2>{selectedRoom?.name || "ベータ版"}</h2>
             <p>
               {isInSelectedRoom
                 ? `入室中 ${currentStayMinutes > 0 ? formatStayTime(currentStayMinutes) : ""}`
