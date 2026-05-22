@@ -13,7 +13,8 @@
     "preview": "vite preview",
     "electron": "npm run electron:dev",
     "electron:dev": "concurrently -k -n VITE,ELECTRON -c green,blue \"vite --host localhost --port 5173 --strictPort\" \"wait-on http://localhost:5173/Contribution-Arc/ && cross-env VITE_DEV_SERVER_URL=http://localhost:5173/Contribution-Arc/ electron electron/main.mjs\"",
-    "electron:build": "cross-env ELECTRON_BUILD=true npm run build && electron-builder --mac"
+    "electron:build": "cross-env ELECTRON_BUILD=true npm run build && electron-builder --mac",
+    "electron:build:win": "cross-env ELECTRON_BUILD=true npm run build && electron-builder --win"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.0",
@@ -39,6 +40,7 @@
   "build": {
     "appId": "com.contributionarc.desktop",
     "productName": "Contribution Arc",
+    "copyright": "Copyright © 2026 Contribution Arc",
     "asar": true,
     "files": [
       "dist/**/*",
@@ -58,9 +60,27 @@
       ]
     },
     "win": {
+      "icon": "build/icons/icon.ico",
       "target": [
-        "nsis"
-      ]
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Contribution-Arc-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Contribution Arc",
+      "installerIcon": "build/icons/icon.ico",
+      "uninstallerIcon": "build/icons/icon.ico"
     },
     "linux": {
       "target": [
