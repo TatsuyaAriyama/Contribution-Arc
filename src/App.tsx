@@ -1008,6 +1008,19 @@ function canEditDailyReportDate(date: string) {
   return ageInDays >= 0 && ageInDays <= 1;
 }
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
+  let timeoutId: number | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeoutId !== undefined) {
+      window.clearTimeout(timeoutId);
+    }
+  });
+}
+
 function normalizeDailyReport(data: Partial<DailyReport>, fallbackUserId: string): DailyReport {
   const date = typeof data.date === "string" && data.date ? data.date : getDateInputValue();
   return {
@@ -4338,14 +4351,18 @@ function App() {
     void putPersistentItem("dailyReports", report);
 
     try {
-      await setDoc(
-        doc(db, "dailyReports", report.id),
-        {
-          ...dailyReportToCloudPayload(report),
-          updatedAt: report.updatedAt,
-          serverUpdatedAt: serverTimestamp(),
-        },
-        { merge: true },
+      await withTimeout(
+        setDoc(
+          doc(db, "dailyReports", report.id),
+          {
+            ...dailyReportToCloudPayload(report),
+            updatedAt: report.updatedAt,
+            serverUpdatedAt: serverTimestamp(),
+          },
+          { merge: true },
+        ),
+        8000,
+        "Daily report cloud save timed out.",
       );
       const syncedReport: DailyReport = { ...report, syncStatus: "synced", syncError: "" };
       setDailyReports((reports) => {
@@ -4368,7 +4385,7 @@ function App() {
       setDailyMessage(
         getFirestoreErrorMessage(
           error,
-          `${sectionLabel}をローカルに保存しました。`,
+          `${sectionLabel}をローカルに保存しました。クラウドへ再同期します。`,
           `${sectionLabel}をクラウド保存する権限がまだ有効ではありません。ローカルには保存されています。`,
         ),
       );
