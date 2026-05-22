@@ -269,8 +269,30 @@ export function SilentWorkspaceRoom({
       <div className="workspace-2d-main">
         {!isFocusPresentation ? (
           <div className="workspace-session-panel">
+            <div className="workspace-session-header">
+              <div className="workspace-session-title">
+                <strong>{roomName}</strong>
+                <span className="workspace-session-status">
+                  {isJoined
+                    ? `入室中 · ${joinedAtLabel} から ${currentStayLabel}`
+                    : "未入室"}
+                </span>
+              </div>
+              <div className="workspace-session-actions">
+                {isJoined ? (
+                  <button type="button" className="room-leave-button" onClick={onLeave}>
+                    退出する
+                  </button>
+                ) : (
+                  <button type="button" className="room-join-button" onClick={onJoin}>
+                    入室する
+                  </button>
+                )}
+              </div>
+            </div>
+
             <label className="workspace-task-field">
-              <span>現在の作業</span>
+              <span>今やってること</span>
               <input
                 value={taskValue}
                 onChange={handleTaskChange}
@@ -278,31 +300,6 @@ export function SilentWorkspaceRoom({
                 maxLength={48}
               />
             </label>
-
-            <div className="room-actions">
-              <span className={`room-presence-state ${isJoined ? "joined" : "outside"}`}>
-                {isJoined ? "現在: 入室中" : "現在: 未入室"}
-              </span>
-              {isJoined ? (
-                <>
-                  <button type="button" className="room-rejoin-button" onClick={onJoin}>
-                    入室し直す
-                  </button>
-                  <button type="button" className="room-leave-button" onClick={onLeave}>
-                    退出する
-                  </button>
-                  <button type="button" className="room-reset-button" onClick={onResetPresence}>
-                    接続を整える
-                  </button>
-                </>
-              ) : (
-                <button type="button" className="room-join-button" onClick={onJoin}>
-                  入室する
-                </button>
-              )}
-              <span>{isJoined ? `入室 ${joinedAtLabel} / ${currentStayLabel}` : "入室すると滞在時間を記録します"}</span>
-              {lastSessionLabel ? <strong>{lastSessionLabel}</strong> : null}
-            </div>
           </div>
         ) : null}
 

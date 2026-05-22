@@ -6814,6 +6814,7 @@ function App() {
                   const isActiveRoom = room.id === selectedRoom?.id;
                   const roomMembers = room.activeMembers || [];
                   const isJoinedRoom = roomMembers.some((member) => member.userId === currentUser.uid);
+                  const isEditingRoom = editingRoomId === room.id;
 
                   return (
                     <article
@@ -6824,86 +6825,52 @@ function App() {
                     >
                       <button
                         type="button"
-                        className="room-title-display"
+                        className="room-card-main"
                         onClick={() => setSelectedRoomId(room.id)}
                         aria-label={`${room.name}を選択`}
                       >
-                        {room.name}
-                      </button>
-                      <button
-                        type="button"
-                        className={`room-select-button room-accent-${getRoomAccent(room)}`}
-                        onClick={() => setSelectedRoomId(room.id)}
-                        aria-label={`${room.name}を表示`}
-                      >
-                        <span className="room-online-count">
-                          <strong>{roomMembers.length}</strong>
-                          <em>online</em>
+                        <span className="room-card-name">{room.name}</span>
+                        <span className="room-card-meta">
+                          {roomMembers.length}人 · {Math.round(room.totalMinutes / 60)}h
+                          {isJoinedRoom ? <em className="room-card-joined-badge">入室中</em> : null}
                         </span>
-                        <small className="room-supporting-meta">
-                          {Math.round(room.totalMinutes / 60)}h / {room.contributions} contributions
-                        </small>
                       </button>
 
-                      <div className="room-card-actions">
-                        {isJoinedRoom ? (
-                          <button
-                            type="button"
-                            className="room-card-leave-button"
-                            onClick={() => {
-                              setSelectedRoomId(room.id);
-                              closeWorkspaceSession(room.id);
-                            }}
-                          >
-                            退出する
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="room-card-join-button"
-                            onClick={() => {
-                              setSelectedRoomId(room.id);
-                              handleRoomJoin(room.id);
-                            }}
-                          >
-                            入室する
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="room-owner-actions">
-                        {editingRoomId === room.id ? (
-                          <form className="room-title-edit-form" onSubmit={handleRoomTitleSave}>
-                            <input
-                              value={editingRoomName}
-                              onChange={(event) => setEditingRoomName(event.target.value)}
-                              maxLength={32}
-                              aria-label="Roomタイトル"
-                            />
-                            <button type="submit">保存</button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingRoomId("");
-                                setEditingRoomName("");
-                              }}
-                            >
-                              取消
-                            </button>
-                          </form>
-                        ) : (
-                          <>
-                            <button type="button" className="room-title-edit-button" onClick={() => startRoomTitleEdit(room)}>
-                              名前変更
-                            </button>
-                            {isOwnRoom ? (
-                              <button type="button" className="room-delete-button" onClick={() => handleRoomDelete(room.id)}>
-                                解体
+                      {isActiveRoom ? (
+                        <div className="room-card-footer">
+                          {isEditingRoom ? (
+                            <form className="room-title-edit-form" onSubmit={handleRoomTitleSave}>
+                              <input
+                                value={editingRoomName}
+                                onChange={(event) => setEditingRoomName(event.target.value)}
+                                maxLength={32}
+                                aria-label="Roomタイトル"
+                              />
+                              <button type="submit">保存</button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingRoomId("");
+                                  setEditingRoomName("");
+                                }}
+                              >
+                                取消
                               </button>
-                            ) : null}
-                          </>
-                        )}
-                      </div>
+                            </form>
+                          ) : (
+                            <>
+                              <button type="button" className="room-title-edit-button" onClick={() => startRoomTitleEdit(room)}>
+                                名前変更
+                              </button>
+                              {isOwnRoom ? (
+                                <button type="button" className="room-delete-button" onClick={() => handleRoomDelete(room.id)}>
+                                  解体
+                                </button>
+                              ) : null}
+                            </>
+                          )}
+                        </div>
+                      ) : null}
                     </article>
                   );
                 })}

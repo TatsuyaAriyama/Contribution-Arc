@@ -11916,3 +11916,244 @@
   background: rgba(17, 24, 39, 0.04);
   border-color: rgba(17, 24, 39, 0.16);
 }
+
+/* Workspace screen: simplified room cards (left list) */
+.room-card {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid rgba(17, 24, 39, 0.06);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: none;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0s;
+}
+
+.room-card:hover {
+  transform: none;
+  border-color: rgba(17, 24, 39, 0.12);
+  background: var(--surface);
+  box-shadow: none;
+}
+
+.room-card.active {
+  transform: none;
+  border-color: rgba(31, 111, 74, 0.35);
+  background: rgba(220, 232, 225, 0.18);
+  box-shadow: none;
+}
+
+.room-card-main {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.room-card-name {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.room-card-joined-badge {
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--green);
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(31, 111, 74, 0.1);
+}
+
+.room-card-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(17, 24, 39, 0.05);
+}
+
+.room-card-footer button,
+.room-card-footer .room-title-edit-form button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 6px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.room-card-footer button:hover {
+  background: rgba(17, 24, 39, 0.04);
+  color: var(--ink);
+}
+
+.room-card-footer .room-delete-button:hover {
+  background: rgba(239, 68, 68, 0.08);
+  color: #b91c1c;
+}
+
+.room-card-footer .room-title-edit-form {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+}
+
+.room-card-footer .room-title-edit-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  border-radius: 6px;
+  font-size: 12px;
+  font: inherit;
+  font-weight: 500;
+  outline: none;
+}
+
+.room-card-footer .room-title-edit-form input:focus {
+  border-color: rgba(31, 111, 74, 0.4);
+}
+
+/* Workspace session panel: clear hierarchy */
+.workspace-session-panel {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(17, 24, 39, 0.06);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: none;
+}
+
+.workspace-session-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.workspace-session-title {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.workspace-session-title strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.workspace-session-status {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.workspace-session-actions {
+  flex-shrink: 0;
+}
+
+.workspace-session-actions .room-join-button,
+.workspace-session-actions .room-leave-button {
+  appearance: none;
+  min-height: 30px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.workspace-session-actions .room-join-button {
+  background: var(--ink);
+  color: #ffffff;
+}
+
+.workspace-session-actions .room-join-button:hover {
+  background: #0f172a;
+}
+
+.workspace-session-actions .room-leave-button {
+  background: transparent;
+  color: var(--ink);
+  border-color: rgba(17, 24, 39, 0.12);
+}
+
+.workspace-session-actions .room-leave-button:hover {
+  background: rgba(17, 24, 39, 0.04);
+  border-color: rgba(17, 24, 39, 0.2);
+}
+
+/* Task field in session panel */
+.workspace-session-panel .workspace-task-field {
+  display: grid;
+  gap: 4px;
+}
+
+.workspace-session-panel .workspace-task-field > span {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.workspace-session-panel .workspace-task-field input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 8px;
+  background: var(--surface);
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.workspace-session-panel .workspace-task-field input:focus {
+  border-color: rgba(31, 111, 74, 0.4);
+  box-shadow: 0 0 0 3px rgba(31, 111, 74, 0.08);
+}
