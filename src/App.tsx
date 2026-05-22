@@ -730,6 +730,90 @@ function getWeeklyStudyHours(logs: StudyLog[]): WeeklyStudyDay[] {
   });
 }
 
+type ContributionArcDay = {
+  date: Date;
+  key: string;
+  minutes: number;
+  level: 0 | 1 | 2 | 3 | 4;
+  isToday: boolean;
+};
+
+type ContributionArcWeek = {
+  monthLabel: string | null;
+  days: (ContributionArcDay | null)[];
+};
+
+function getContributionArcLevel(minutes: number): 0 | 1 | 2 | 3 | 4 {
+  if (minutes <= 0) return 0;
+  if (minutes < 30) return 1;
+  if (minutes < 60) return 2;
+  if (minutes < 120) return 3;
+  return 4;
+}
+
+function getContributionArc(logs: StudyLog[]): {
+  weeks: ContributionArcWeek[];
+  totalMinutes: number;
+  activeDays: number;
+} {
+  const WEEKS = 52;
+  const minutesByDay = new Map<string, number>();
+  for (const log of logs) {
+    const d = new Date(log.createdAt);
+    if (Number.isNaN(d.getTime())) continue;
+    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    minutesByDay.set(key, (minutesByDay.get(key) || 0) + log.minutes);
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayWeekday = today.getDay();
+  const todayKey = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+
+  const startOffset = (WEEKS - 1) * 7 + todayWeekday;
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - startOffset);
+
+  let totalMinutes = 0;
+  let activeDays = 0;
+  let lastMonthShown = -1;
+  const weeks: ContributionArcWeek[] = [];
+
+  for (let w = 0; w < WEEKS; w++) {
+    const days: (ContributionArcDay | null)[] = [];
+    let monthLabel: string | null = null;
+    for (let d = 0; d < 7; d++) {
+      const cellDate = new Date(startDate);
+      cellDate.setDate(startDate.getDate() + w * 7 + d);
+      if (cellDate > today) {
+        days.push(null);
+        continue;
+      }
+      const key = `${cellDate.getFullYear()}-${cellDate.getMonth()}-${cellDate.getDate()}`;
+      const minutes = minutesByDay.get(key) || 0;
+      if (minutes > 0) {
+        totalMinutes += minutes;
+        activeDays += 1;
+      }
+      days.push({
+        date: cellDate,
+        key,
+        minutes,
+        level: getContributionArcLevel(minutes),
+        isToday: key === todayKey,
+      });
+    }
+    const firstCell = days.find((cell) => cell !== null) as ContributionArcDay | undefined;
+    if (firstCell && firstCell.date.getMonth() !== lastMonthShown && firstCell.date.getDate() <= 7) {
+      monthLabel = `${firstCell.date.getMonth() + 1}月`;
+      lastMonthShown = firstCell.date.getMonth();
+    }
+    weeks.push({ monthLabel, days });
+  }
+
+  return { weeks, totalMinutes, activeDays };
+}
+
 function getEffortExp(logs: StudyLog[]) {
   const studyMinutes = logs.reduce((sum, log) => sum + log.minutes, 0);
   const activeDays = new Set(logs.map((log) => new Date(log.createdAt).toDateString())).size;
@@ -3674,6 +3758,7 @@ function App() {
   const isOnboardingSettings = onboardingStep === "settings";
   const weeklyStudyHours = getWeeklyStudyHours(studyLogs);
   const maxStudyMinutes = Math.max(1, ...weeklyStudyHours.map((item) => item.totalMinutes));
+  const contributionArc = useMemo(() => getContributionArc(studyLogs), [studyLogs]);
   const effortExp = getEffortExp(studyLogs);
   const outputExp = getOutputExp();
   const levelState = getLevelState(effortExp + outputExp);
@@ -6954,6 +7039,51 @@ function App() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
       >
+      <section className="contribution-arc-card" aria-label="Contribution Arc">
+        <div className="contribution-arc-head">
+          <div>
+            <p className="card-kicker">Contribution Arc</p>
+            <strong>{Math.round(contributionArc.totalMinutes / 60)}時間 学習</strong>
+            <span>
+              {contributionArc.activeDays}日間 · 直近52週
+            </span>
+          </div>
+          <div className="contribution-arc-legend" aria-hidden="true">
+            <span>少</span>
+            <i className="lv-0" />
+            <i className="lv-1" />
+            <i className="lv-2" />
+            <i className="lv-3" />
+            <i className="lv-4" />
+            <span>多</span>
+          </div>
+        </div>
+        <div
+          className="contribution-arc-grid"
+          role="img"
+          aria-label={`直近52週で${contributionArc.activeDays}日間学習`}
+        >
+          {contributionArc.weeks.map((week, wIndex) => (
+            <div className="contribution-arc-week" key={wIndex}>
+              <span className="contribution-arc-month">{week.monthLabel || ""}</span>
+              {week.days.map((day, dIndex) =>
+                day ? (
+                  <span
+                    key={dIndex}
+                    className={`contribution-arc-cell lv-${day.level}${day.isToday ? " today" : ""}`}
+                    title={`${day.date.getMonth() + 1}/${day.date.getDate()} · ${
+                      day.minutes > 0 ? formatStudyTime(day.minutes) : "学習なし"
+                    }`}
+                  />
+                ) : (
+                  <span key={dIndex} className="contribution-arc-cell empty" aria-hidden="true" />
+                ),
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section className="hero-grid" aria-label="Contribution Arc overview">
         <div className="overview-stack">
           {playerStatusCard(true)}

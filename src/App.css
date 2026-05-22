@@ -12157,3 +12157,136 @@
   border-color: rgba(31, 111, 74, 0.4);
   box-shadow: 0 0 0 3px rgba(31, 111, 74, 0.08);
 }
+
+/* Contribution Arc heatmap (home top) */
+.contribution-arc-card {
+  padding: 18px 20px 14px;
+  border: 1px solid rgba(17, 24, 39, 0.06);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.contribution-arc-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.contribution-arc-head .card-kicker {
+  margin: 0 0 4px;
+}
+
+.contribution-arc-head strong {
+  display: block;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.contribution-arc-head span {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.contribution-arc-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.contribution-arc-legend span {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0 2px;
+}
+
+.contribution-arc-legend i {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  display: block;
+}
+
+.contribution-arc-legend i.lv-0,
+.contribution-arc-cell.lv-0 {
+  background: rgba(17, 24, 39, 0.06);
+}
+.contribution-arc-legend i.lv-1,
+.contribution-arc-cell.lv-1 {
+  background: rgba(31, 111, 74, 0.28);
+}
+.contribution-arc-legend i.lv-2,
+.contribution-arc-cell.lv-2 {
+  background: rgba(31, 111, 74, 0.5);
+}
+.contribution-arc-legend i.lv-3,
+.contribution-arc-cell.lv-3 {
+  background: rgba(31, 111, 74, 0.72);
+}
+.contribution-arc-legend i.lv-4,
+.contribution-arc-cell.lv-4 {
+  background: rgba(31, 111, 74, 0.95);
+}
+
+.contribution-arc-grid {
+  display: flex;
+  gap: 3px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+}
+
+.contribution-arc-grid::-webkit-scrollbar {
+  height: 6px;
+}
+
+.contribution-arc-grid::-webkit-scrollbar-thumb {
+  background: rgba(17, 24, 39, 0.12);
+  border-radius: 3px;
+}
+
+.contribution-arc-week {
+  display: grid;
+  grid-template-rows: 14px repeat(7, 11px);
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.contribution-arc-month {
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+  line-height: 14px;
+  letter-spacing: 0;
+}
+
+.contribution-arc-cell {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  display: block;
+  transition: transform 0.12s ease, outline-color 0.12s ease;
+}
+
+.contribution-arc-cell:hover {
+  transform: scale(1.4);
+}
+
+.contribution-arc-cell.empty {
+  background: transparent;
+}
+
+.contribution-arc-cell.today {
+  outline: 1px solid rgba(17, 24, 39, 0.5);
+  outline-offset: 1px;
+}
