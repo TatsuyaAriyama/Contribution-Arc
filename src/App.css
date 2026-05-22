@@ -9891,24 +9891,8 @@
   padding: 0;
   border: 0;
   background: transparent;
-  cursor: pointer;
+  cursor: default;
   transform: translate(-50%, -50%);
-  transition:
-    transform 0.18s ease,
-    filter 0.18s ease;
-}
-
-.workspace-seat:hover,
-.workspace-seat:focus-visible {
-  transform: translate(-50%, -50%) translateY(-2px);
-  filter: brightness(1.08);
-  outline: none;
-}
-
-.workspace-seat:focus-visible .seat-desk {
-  box-shadow:
-    0 0 0 3px rgba(255, 244, 218, 0.18),
-    0 28px 64px rgba(0, 0, 0, 0.28);
 }
 
 .seat-frontend {

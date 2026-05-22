@@ -6867,7 +6867,6 @@ function App() {
                       onJoin={() => handleRoomJoin(selectedRoom.id)}
                       onLeave={handleRoomLeave}
                       onResetPresence={resetWorkspacePresence}
-                      onSeatSelect={(task) => startWorkspaceSession(selectedRoom.id, task, studyColor)}
                       seatLabels={selectedRoom.seatLabels || defaultWorkspaceSeatLabels}
                       canEditSeatLabels={selectedRoom.createdBy === currentUser.uid}
                       onSeatLabelsChange={(labels) => handleSeatLabelsChange(selectedRoom.id, labels)}
@@ -6967,7 +6966,6 @@ function App() {
             onJoin={() => handleRoomJoin(selectedRoom.id)}
             onLeave={handleRoomLeave}
             onResetPresence={resetWorkspacePresence}
-            onSeatSelect={(task) => startWorkspaceSession(selectedRoom.id, task, studyColor)}
             seatLabels={selectedRoom.seatLabels || defaultWorkspaceSeatLabels}
             canEditSeatLabels={false}
             onSeatLabelsChange={(labels) => handleSeatLabelsChange(selectedRoom.id, labels)}

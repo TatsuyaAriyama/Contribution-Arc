@@ -55,7 +55,6 @@ type SilentWorkspaceRoomProps = {
   onJoin: () => void;
   onLeave: () => void;
   onResetPresence: () => void;
-  onSeatSelect: (task: string) => void;
   seatLabels: Record<string, string>;
   canEditSeatLabels?: boolean;
   onSeatLabelsChange: (labels: Record<string, string>) => void;
@@ -78,25 +77,21 @@ const workspaceSeats = [
   {
     id: "frontend",
     name: "作業",
-    task: "React",
     note: "Work",
   },
   {
     id: "java",
     name: "仕事",
-    task: "Java",
     note: "Job",
   },
   {
     id: "deep",
     name: "休憩",
-    task: "Deep Work",
     note: "Break",
   },
   {
     id: "cloud",
     name: "学習",
-    task: "AWS",
     note: "Study",
   },
 ];
@@ -210,7 +205,6 @@ export function SilentWorkspaceRoom({
   onJoin,
   onLeave,
   onResetPresence,
-  onSeatSelect,
   seatLabels,
   canEditSeatLabels = false,
   onSeatLabelsChange,
@@ -365,12 +359,10 @@ export function SilentWorkspaceRoom({
             const seatName = (seatLabels[seat.id] ?? seat.name).trim() || seat.name;
 
             return (
-              <button
-                type="button"
+              <div
                 key={seat.id}
                 className={`workspace-seat seat-${seat.id}`}
-                onClick={() => onSeatSelect(seat.task)}
-                aria-label={`${seatName}席に着席して${seat.task}を開始`}
+                aria-label={`${seatName}席`}
               >
                 <span className="seat-desk">
                   <span className="seat-screen" />
@@ -381,7 +373,7 @@ export function SilentWorkspaceRoom({
                   <strong>{seatName}</strong>
                   <small>{seat.note}</small>
                 </span>
-              </button>
+              </div>
             );
           })}
           {unlockedGrowthIds.has("plant") ? (
