@@ -327,9 +327,6 @@ export function SilentWorkspaceRoom({
             <span />
             <span />
           </div>
-          <div className="starter-cardboard-box" aria-hidden="true">
-            <span />
-          </div>
           <div className="workspace-light light-a starter-light" aria-hidden="true" />
           {unlockedGrowthIds.has("warm-light") ? <div className="workspace-light light-b growth-light" aria-hidden="true" /> : null}
           {unlockedGrowthIds.has("window") ? (
