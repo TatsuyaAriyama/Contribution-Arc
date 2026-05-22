@@ -2568,6 +2568,9 @@ function App() {
   const [studyColor, setStudyColor] = useState(studyColorOptions[0].value);
   const [selectedStudyDay, setSelectedStudyDay] = useState(dayLabels[(new Date().getDay() + 6) % 7]);
   const [selectedArcDayKey, setSelectedArcDayKey] = useState<string | null>(null);
+  const [hoveredArcCell, setHoveredArcCell] = useState<
+    { day: ContributionArcDay; left: number; top: number } | null
+  >(null);
   const [customUserName, setCustomUserName] = useState("");
   const [draftUserName, setDraftUserName] = useState("");
   const [userId, setUserId] = useState("");
@@ -3807,6 +3810,51 @@ function App() {
   const weeklyStudyHours = getWeeklyStudyHours(studyLogs);
   const maxStudyMinutes = Math.max(1, ...weeklyStudyHours.map((item) => item.totalMinutes));
   const contributionArc = useMemo(() => getContributionArc(studyLogs), [studyLogs]);
+  const studyLogsByDay = useMemo(() => {
+    const map = new Map<string, StudyLog[]>();
+    for (const log of studyLogs) {
+      const d = new Date(log.createdAt);
+      if (Number.isNaN(d.getTime())) continue;
+      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      const arr = map.get(key) || [];
+      arr.push(log);
+      map.set(key, arr);
+    }
+    return map;
+  }, [studyLogs]);
+  const arcSubjectTotals = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayWeekday = today.getDay();
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - ((52 - 1) * 7 + todayWeekday));
+    const totals = new Map<string, { subject: string; minutes: number; color: string }>();
+    for (const log of studyLogs) {
+      const d = new Date(log.createdAt);
+      if (Number.isNaN(d.getTime())) continue;
+      if (d < startDate) continue;
+      const entry =
+        totals.get(log.subject) ||
+        { subject: log.subject, minutes: 0, color: log.color || "rgba(31,111,74,0.7)" };
+      entry.minutes += log.minutes;
+      if (log.color) entry.color = log.color;
+      totals.set(log.subject, entry);
+    }
+    const list = [...totals.values()].sort((a, b) => b.minutes - a.minutes);
+    const TOP = 6;
+    const top = list.slice(0, TOP);
+    const rest = list.slice(TOP);
+    const restMinutes = rest.reduce((sum, entry) => sum + entry.minutes, 0);
+    if (restMinutes > 0) {
+      top.push({ subject: "その他", minutes: restMinutes, color: "rgba(17,24,39,0.3)" });
+    }
+    const total = top.reduce((sum, entry) => sum + entry.minutes, 0);
+    return { items: top, total };
+  }, [studyLogs]);
+  const hoveredArcDayLogs = useMemo(() => {
+    if (!hoveredArcCell) return [] as StudyLog[];
+    return studyLogsByDay.get(hoveredArcCell.day.key) || [];
+  }, [hoveredArcCell, studyLogsByDay]);
   const selectedArcDay = useMemo(() => {
     if (!selectedArcDayKey) return null;
     for (const week of contributionArc.weeks) {
@@ -3818,12 +3866,8 @@ function App() {
   }, [contributionArc, selectedArcDayKey]);
   const selectedArcDayLogs = useMemo(() => {
     if (!selectedArcDay) return [] as StudyLog[];
-    return studyLogs.filter((log) => {
-      const d = new Date(log.createdAt);
-      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-      return key === selectedArcDay.key;
-    });
-  }, [studyLogs, selectedArcDay]);
+    return studyLogsByDay.get(selectedArcDay.key) || [];
+  }, [studyLogsByDay, selectedArcDay]);
   const contributionArcCurvePath = useMemo(() => {
     const weekMinutes = contributionArc.weekMinutes;
     if (weekMinutes.length === 0) return "";
@@ -7181,6 +7225,48 @@ function App() {
                 <path d={contributionArcCurvePath} />
               </svg>
             ) : null}
+            {hoveredArcCell ? (
+              <div
+                className="contribution-arc-tooltip"
+                style={{ left: hoveredArcCell.left, top: hoveredArcCell.top }}
+                role="tooltip"
+              >
+                <div className="contribution-arc-tooltip-head">
+                  <strong>
+                    {hoveredArcCell.day.date.getMonth() + 1}/{hoveredArcCell.day.date.getDate()}
+                  </strong>
+                  <span>
+                    {["日", "月", "火", "水", "木", "金", "土"][hoveredArcCell.day.date.getDay()]}曜
+                  </span>
+                </div>
+                {hoveredArcCell.day.minutes > 0 ? (
+                  <>
+                    <p className="contribution-arc-tooltip-total">
+                      {formatStudyTimeJa(hoveredArcCell.day.minutes)} 学習
+                    </p>
+                    <ul className="contribution-arc-tooltip-list">
+                      {hoveredArcDayLogs.slice(0, 4).map((log) => (
+                        <li key={log.id}>
+                          <i style={{ background: log.color || "rgba(31,111,74,0.7)" }} />
+                          <span>{log.subject}</span>
+                          <small>{formatStudyTime(log.minutes)}</small>
+                        </li>
+                      ))}
+                      {hoveredArcDayLogs.length > 4 ? (
+                        <li className="contribution-arc-tooltip-more">
+                          ほか {hoveredArcDayLogs.length - 4} 件
+                        </li>
+                      ) : null}
+                    </ul>
+                    <p className="contribution-arc-tooltip-exp">
+                      +{Math.round((hoveredArcCell.day.minutes / 60) * 80)} EXP
+                    </p>
+                  </>
+                ) : (
+                  <p className="contribution-arc-tooltip-empty">学習記録なし</p>
+                )}
+              </div>
+            ) : null}
             {contributionArc.weeks.map((week, wIndex) => (
               <div className="contribution-arc-week" key={wIndex}>
                 <span className="contribution-arc-month">{week.monthLabel || ""}</span>
@@ -7192,12 +7278,37 @@ function App() {
                       className={`contribution-arc-cell lv-${day.level}${day.isToday ? " today" : ""}${
                         selectedArcDayKey === day.key ? " selected" : ""
                       }`}
-                      title={`${day.date.getMonth() + 1}/${day.date.getDate()} · ${
-                        day.minutes > 0 ? formatStudyTime(day.minutes) : "学習なし"
-                      }`}
                       onClick={() =>
                         setSelectedArcDayKey((prev) => (prev === day.key ? null : day.key))
                       }
+                      onMouseEnter={(event) => {
+                        const cellRect = event.currentTarget.getBoundingClientRect();
+                        const trackEl = event.currentTarget.closest(
+                          ".contribution-arc-track",
+                        ) as HTMLElement | null;
+                        if (!trackEl) return;
+                        const trackRect = trackEl.getBoundingClientRect();
+                        setHoveredArcCell({
+                          day,
+                          left: cellRect.left - trackRect.left + cellRect.width / 2,
+                          top: cellRect.top - trackRect.top,
+                        });
+                      }}
+                      onMouseLeave={() => setHoveredArcCell(null)}
+                      onFocus={(event) => {
+                        const cellRect = event.currentTarget.getBoundingClientRect();
+                        const trackEl = event.currentTarget.closest(
+                          ".contribution-arc-track",
+                        ) as HTMLElement | null;
+                        if (!trackEl) return;
+                        const trackRect = trackEl.getBoundingClientRect();
+                        setHoveredArcCell({
+                          day,
+                          left: cellRect.left - trackRect.left + cellRect.width / 2,
+                          top: cellRect.top - trackRect.top,
+                        });
+                      }}
+                      onBlur={() => setHoveredArcCell(null)}
                       aria-label={`${day.date.getMonth() + 1}月${day.date.getDate()}日 ${
                         day.minutes > 0 ? formatStudyTime(day.minutes) : "学習なし"
                       }`}
@@ -7211,6 +7322,30 @@ function App() {
             </div>
           </div>
         </div>
+        {arcSubjectTotals.total > 0 ? (
+          <div className="contribution-arc-ribbon" aria-label="学習ジャンル年間配分">
+            <div className="contribution-arc-ribbon-bar">
+              {arcSubjectTotals.items.map((item) => (
+                <span
+                  key={item.subject}
+                  className="contribution-arc-ribbon-segment"
+                  style={{ flexGrow: item.minutes, background: item.color }}
+                  title={`${item.subject} · ${formatStudyTimeJa(item.minutes)}`}
+                  aria-label={`${item.subject} ${formatStudyTimeJa(item.minutes)}`}
+                />
+              ))}
+            </div>
+            <div className="contribution-arc-ribbon-legend">
+              {arcSubjectTotals.items.map((item) => (
+                <span key={item.subject} className="contribution-arc-ribbon-chip">
+                  <i style={{ background: item.color }} aria-hidden="true" />
+                  <strong>{item.subject}</strong>
+                  <small>{formatStudyTimeJa(item.minutes)}</small>
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
         {selectedArcDay ? (
           <div className="contribution-arc-detail" role="region" aria-label="選択日の学習詳細">
             <div className="contribution-arc-detail-head">
