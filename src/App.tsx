@@ -4412,7 +4412,7 @@ function App() {
     const roomLabel = post.roomName || "Quiet log";
     const studyLabel = post.studyMinutes > 0 ? `${formatStudyTimeJa(post.studyMinutes)} focused` : "quiet progress";
     const contributionLabel =
-      post.githubContributionCount > 0 ? `+${post.githubContributionCount.toLocaleString()} commits` : "GitHub ready";
+      post.githubContributionCount > 0 ? `+${post.githubContributionCount.toLocaleString()} commits` : "";
 
     return (
       <article className={`log-post-card ${variant === "compact" ? "compact" : ""}`} key={post.id}>
@@ -4430,7 +4430,7 @@ function App() {
 
         <div className="log-post-meta">
           <span>{studyLabel}</span>
-          <span>{contributionLabel}</span>
+          {contributionLabel ? <span>{contributionLabel}</span> : null}
           <span>{roomLabel}</span>
         </div>
 
