@@ -259,12 +259,18 @@ type ObsidianNoteSource = {
 
 const dayLabels = ["月", "火", "水", "木", "金", "土", "日"];
 const studyColorOptions = [
-  { name: "Forest", value: "#1f6f4a" },
-  { name: "Lime", value: "#83bb70" },
-  { name: "Teal", value: "#2f8f83" },
-  { name: "Blue", value: "#3f6f9f" },
-  { name: "Violet", value: "#7667a8" },
-  { name: "Gold", value: "#c8a95b" },
+  { name: "Evergreen", value: "#1f6f4a" },
+  { name: "Sage", value: "#7aa874" },
+  { name: "Jade", value: "#2f8f83" },
+  { name: "Sea", value: "#2f7890" },
+  { name: "Azure", value: "#4f7fb2" },
+  { name: "Indigo", value: "#5b68a6" },
+  { name: "Lavender", value: "#8b72b6" },
+  { name: "Plum", value: "#9b4f83" },
+  { name: "Rose", value: "#bf5f78" },
+  { name: "Clay", value: "#b87555" },
+  { name: "Amber", value: "#c8a95b" },
+  { name: "Moss", value: "#6f8f45" },
 ];
 
 const characterColorOptions = [
