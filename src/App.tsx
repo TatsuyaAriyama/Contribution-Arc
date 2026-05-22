@@ -990,6 +990,24 @@ function formatDailyDate(date: string) {
   });
 }
 
+function getDailyDateAgeInDays(date: string) {
+  const parsedDate = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  parsedDate.setHours(0, 0, 0, 0);
+
+  return Math.round((today.getTime() - parsedDate.getTime()) / 86400000);
+}
+
+function canEditDailyReportDate(date: string) {
+  const ageInDays = getDailyDateAgeInDays(date);
+  return ageInDays >= 0 && ageInDays <= 1;
+}
+
 function normalizeDailyReport(data: Partial<DailyReport>, fallbackUserId: string): DailyReport {
   const date = typeof data.date === "string" && data.date ? data.date : getDateInputValue();
   return {
@@ -3827,6 +3845,7 @@ function App() {
   const selectedRoomPosts = selectedRoom ? posts.filter((post) => post.roomId === selectedRoom.id).slice(0, 4) : [];
   const selectedDailyReport = dailyReports.find((report) => report.date === selectedDailyDate) || null;
   const todayDailyReport = dailyReports.find((report) => report.date === getDateInputValue()) || null;
+  const canEditSelectedDailyReport = canEditDailyReportDate(selectedDailyDate);
   const visibleSharedDailyReports = Array.from(
     new Map([...sharedDailyReports, ...dailyReports].map((report) => [report.id, report])).values(),
   )
@@ -4270,10 +4289,23 @@ function App() {
     setDailyMessage("");
   };
 
-  const handleDailyReportSave = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
+  const handleDailyReportSectionSave = async (section: "plan" | "reflection") => {
     if (!currentUser || isSavingDailyReport) {
+      return;
+    }
+
+    if (!canEditDailyReportDate(selectedDailyDate)) {
+      setDailyMessage("日報の編集は当日または1日前までです。");
+      return;
+    }
+
+    const planText = dailyPlanDraft.trim();
+    const reflectionText = dailyReflectionDraft.trim();
+    const sectionText = section === "plan" ? planText : reflectionText;
+    const sectionLabel = section === "plan" ? "今日やること" : "振り返り";
+
+    if (!sectionText) {
+      setDailyMessage(`${sectionLabel}を入力してください。`);
       return;
     }
 
@@ -4286,8 +4318,8 @@ function App() {
       characterColor: playerCharacterColor,
       currentTitle,
       date: selectedDailyDate,
-      plan: dailyPlanDraft.trim(),
-      reflection: dailyReflectionDraft.trim(),
+      plan: section === "plan" ? planText : existingReport?.plan || "",
+      reflection: section === "reflection" ? reflectionText : existingReport?.reflection || "",
       createdAt: existingReport?.createdAt || now,
       updatedAt: now,
       syncStatus: "pending",
@@ -4321,7 +4353,7 @@ function App() {
         persistDailyReports(currentUser.uid, userId, nextReports);
         return nextReports;
       });
-      setDailyMessage("日報を保存しました。");
+      setDailyMessage(`${sectionLabel}を保存しました。`);
     } catch (error) {
       const pendingReport: DailyReport = {
         ...report,
@@ -4336,13 +4368,18 @@ function App() {
       setDailyMessage(
         getFirestoreErrorMessage(
           error,
-          "日報をローカルに保存しました。",
-          "日報をクラウド保存する権限がまだ有効ではありません。ローカルには保存されています。",
+          `${sectionLabel}をローカルに保存しました。`,
+          `${sectionLabel}をクラウド保存する権限がまだ有効ではありません。ローカルには保存されています。`,
         ),
       );
     } finally {
       setIsSavingDailyReport(false);
     }
+  };
+
+  const handleDailyReportSectionSubmit = (event: FormEvent<HTMLFormElement>, section: "plan" | "reflection") => {
+    event.preventDefault();
+    void handleDailyReportSectionSave(section);
   };
 
   const handlePostAuthorOpen = (post: ContributionPostRecord) => {
@@ -6316,34 +6353,53 @@ function App() {
               </label>
             </div>
 
-            <form className="daily-editor-form" onSubmit={handleDailyReportSave}>
-              <label>
-                <span>今日やること</span>
-                <textarea
-                  value={dailyPlanDraft}
-                  onChange={(event) => setDailyPlanDraft(event.target.value)}
-                  placeholder="今日進める業務、確認すること、優先順位など"
-                  rows={7}
-                />
-              </label>
+            {!canEditSelectedDailyReport ? (
+              <p className="daily-edit-note">日報の編集は当日または1日前までです。</p>
+            ) : null}
 
-              <label>
-                <span>振り返り</span>
-                <textarea
-                  value={dailyReflectionDraft}
-                  onChange={(event) => setDailyReflectionDraft(event.target.value)}
-                  placeholder="できたこと、詰まったこと、明日に回すことなど"
-                  rows={7}
-                />
-              </label>
+            <div className="daily-editor-form">
+              <form className="daily-entry-card" onSubmit={(event) => handleDailyReportSectionSubmit(event, "plan")}>
+                <label>
+                  <span>今日やること</span>
+                  <textarea
+                    value={dailyPlanDraft}
+                    onChange={(event) => setDailyPlanDraft(event.target.value)}
+                    placeholder="今日進める業務、確認すること、優先順位など"
+                    rows={7}
+                    disabled={!canEditSelectedDailyReport}
+                  />
+                </label>
 
-              <div className="daily-editor-actions">
-                <button type="submit" disabled={isSavingDailyReport}>
-                  {isSavingDailyReport ? "保存中" : "保存"}
-                </button>
-              </div>
+                <div className="daily-editor-actions">
+                  <button type="submit" disabled={isSavingDailyReport || !canEditSelectedDailyReport}>
+                    {isSavingDailyReport ? "保存中" : selectedDailyReport?.plan ? "今日やることを更新" : "今日やることを送信"}
+                  </button>
+                </div>
+              </form>
+
+              <form
+                className="daily-entry-card"
+                onSubmit={(event) => handleDailyReportSectionSubmit(event, "reflection")}
+              >
+                <label>
+                  <span>振り返り</span>
+                  <textarea
+                    value={dailyReflectionDraft}
+                    onChange={(event) => setDailyReflectionDraft(event.target.value)}
+                    placeholder="できたこと、詰まったこと、明日に回すことなど"
+                    rows={7}
+                    disabled={!canEditSelectedDailyReport}
+                  />
+                </label>
+
+                <div className="daily-editor-actions">
+                  <button type="submit" disabled={isSavingDailyReport || !canEditSelectedDailyReport}>
+                    {isSavingDailyReport ? "保存中" : selectedDailyReport?.reflection ? "振り返りを更新" : "振り返りを送信"}
+                  </button>
+                </div>
+              </form>
               {dailyMessage ? <p className="daily-message">{dailyMessage}</p> : null}
-            </form>
+            </div>
           </section>
 
           <aside className="daily-history-card">
@@ -6425,8 +6481,18 @@ function App() {
                           <small>{formatDailyDate(report.date)}</small>
                         </span>
                       </div>
-                      {report.plan ? <p>今日やること: {report.plan}</p> : null}
-                      {report.reflection ? <p>振り返り: {report.reflection}</p> : null}
+                      {report.plan ? (
+                        <p className="daily-shared-section">
+                          <strong>今日やること</strong>
+                          <span>{report.plan}</span>
+                        </p>
+                      ) : null}
+                      {report.reflection ? (
+                        <p className="daily-shared-section">
+                          <strong>振り返り</strong>
+                          <span>{report.reflection}</span>
+                        </p>
+                      ) : null}
                       {report.userId === currentUserUid ? (
                         <button
                           type="button"

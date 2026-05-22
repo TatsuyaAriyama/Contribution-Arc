@@ -2874,7 +2874,17 @@
   gap: 14px;
 }
 
-.daily-editor-form label {
+.daily-entry-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(17, 24, 39, 0.06);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.daily-editor-form label,
+.daily-entry-card label {
   display: grid;
   gap: 8px;
 }
@@ -2886,6 +2896,12 @@
   padding: 14px;
   font-size: 14px;
   line-height: 1.65;
+}
+
+.daily-editor-form textarea:disabled {
+  cursor: not-allowed;
+  background: rgba(244, 247, 245, 0.66);
+  color: rgba(17, 24, 39, 0.56);
 }
 
 .daily-editor-head input:focus,
@@ -2931,6 +2947,17 @@
   color: var(--green);
   font-size: 13px;
   font-weight: 820;
+}
+
+.daily-edit-note {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(166, 95, 26, 0.14);
+  border-radius: 16px;
+  background: rgba(255, 247, 237, 0.76);
+  color: #8a5b1d;
+  font-size: 12px;
+  font-weight: 850;
 }
 
 .daily-history-card {
@@ -3132,16 +3159,35 @@
 }
 
 .daily-shared-list p {
-  display: -webkit-box;
-  max-height: 3.2em;
   margin: 0;
-  overflow: hidden;
   color: #374151;
   font-size: 12px;
   font-weight: 760;
   line-height: 1.55;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+}
+
+.daily-shared-section {
+  display: grid;
+  gap: 4px;
+  padding: 9px 10px;
+  border: 1px solid rgba(17, 24, 39, 0.05);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.daily-shared-section strong {
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.daily-shared-section span {
+  overflow-wrap: anywhere;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 760;
+  line-height: 1.58;
+  white-space: pre-wrap;
 }
 
 .daily-delete-button,
