@@ -6987,74 +6987,6 @@ function App() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
       >
-      <section className="home-workspace-focus card workspace-2d-card" aria-label="Silent Workspace live view">
-        <div className="home-workspace-header">
-          <div>
-            <p className="card-kicker">Silent Workspace</p>
-            <h2>{selectedRoom?.name || "作業部屋"}</h2>
-            <p>
-              {isInSelectedRoom
-                ? `入室中 ${currentStayMinutes > 0 ? formatStayTime(currentStayMinutes) : ""}`
-                : "席を選び、定型文だけで気配を届ける。詳細なRoom設定は専用画面で整えます。"}
-            </p>
-          </div>
-          <div className="home-workspace-actions">
-            <span className="workspace-online-pill">
-              <span>{roomOnlineCount}</span>
-              online
-            </span>
-            <button type="button" onClick={() => setCurrentView("workspace")}>
-              詳細設定
-            </button>
-          </div>
-        </div>
-
-        {selectedRoom ? (
-          <SilentWorkspaceRoom
-            presentation="focus"
-            roomName={selectedRoom.name}
-            roomDescription={getRoomDescription(selectedRoom)}
-            onlineCount={roomOnlineCount}
-            commitLabel={roomCommits.toLocaleString()}
-            members={workspaceActors}
-            currentUserId={currentUser.uid}
-            isJoined={isInSelectedRoom}
-            currentStayLabel={formatStayTime(currentStayMinutes)}
-            joinedAtLabel={
-              currentPresence
-                ? new Date(currentPresence.joinedAt).toLocaleTimeString("ja-JP", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
-                : ""
-            }
-            taskValue={workspaceTask}
-            onTaskChange={setWorkspaceTask}
-            onJoin={() => handleRoomJoin(selectedRoom.id)}
-            onLeave={handleRoomLeave}
-            onResetPresence={resetWorkspacePresence}
-            seatLabels={selectedRoom.seatLabels || defaultWorkspaceSeatLabels}
-            canEditSeatLabels={false}
-            onSeatLabelsChange={(labels) => handleSeatLabelsChange(selectedRoom.id, labels)}
-            presetMessages={workspacePresetMessages}
-            onPresetMessagesChange={setWorkspacePresetMessages}
-            onPresetMessage={handleWorkspacePresetMessage}
-            bubbleMessage={workspaceBubble}
-            isPlayerWalking={isPlayerWalking}
-            activityItems={roomActivityItems}
-            onMemberOpen={handleMemberProfileOpen}
-            onActivityOpen={handleRoomActivityOpen}
-            lastSessionLabel={
-              lastRoomSession ? `+${lastRoomSession.exp} EXP / ${formatStayTime(lastRoomSession.minutes)}を記録` : ""
-            }
-            totalLearnedLabel={`${Math.round(roomTotalMinutes / 60).toLocaleString()}h learned`}
-            contributionLabel={`${roomContributions.toLocaleString()} contributions today`}
-            growthProgress={workspaceGrowthProgress}
-            onGrowthGiftOpen={handleWorkspaceGiftOpen}
-          />
-        ) : null}
-      </section>
-
       <section className="hero-grid" aria-label="Contribution Arc overview">
         <div className="overview-stack">
           {playerStatusCard(true)}
@@ -7066,6 +6998,20 @@ function App() {
             </div>
             <button type="button" onClick={() => setCurrentView("daily")}>
               日報を書く
+            </button>
+          </article>
+          <article className="card workspace-summary-card">
+            <div>
+              <p className="card-kicker">Silent Workspace</p>
+              <strong>{selectedRoom?.name || "作業部屋"}</strong>
+              <span>
+                {isInSelectedRoom
+                  ? `入室中 ${currentStayMinutes > 0 ? formatStayTime(currentStayMinutes) : ""}`
+                  : `${roomOnlineCount} online`}
+              </span>
+            </div>
+            <button type="button" onClick={() => setCurrentView("workspace")}>
+              作業部屋へ
             </button>
           </article>
         </div>
