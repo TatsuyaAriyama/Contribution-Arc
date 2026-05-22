@@ -1095,7 +1095,7 @@ function mergePosts(posts: ContributionPostRecord[]) {
   const postMap = new Map<string, ContributionPostRecord>();
 
   posts.forEach((post) => {
-    if (!post.id || !post.userId || !post.text.trim()) {
+    if (!post.id || !post.userId || !post.text.trim() || isDailyReportMirrorPost(post)) {
       return;
     }
 
@@ -1117,6 +1117,11 @@ async function readDurablePosts(currentUid: string) {
 
 async function persistPosts(posts: ContributionPostRecord[]) {
   await putPersistentItems("posts", mergePosts(posts));
+}
+
+function isDailyReportMirrorPost(post: Pick<ContributionPostRecord, "text">) {
+  const text = post.text.trimStart();
+  return text.startsWith("今日やること\n") || text.startsWith("今日の振り返り\n");
 }
 
 function readDesktopNotificationSettings(scope: string): DesktopNotificationSettings {
@@ -2988,39 +2993,38 @@ function App() {
         });
     });
 
-    let handledInitialSnapshot = false;
-    const dailyQuery = query(collection(db, "dailyReports"), orderBy("date", "desc"), limit(120));
-    const unsubscribe = onSnapshot(
-      dailyQuery,
+    let handledOwnInitialSnapshot = false;
+    const ownDailyQuery = query(collection(db, "dailyReports"), where("userId", "==", currentUser.uid));
+    const sharedDailyQuery = query(collection(db, "dailyReports"), orderBy("date", "desc"), limit(120));
+    const unsubscribeOwnReports = onSnapshot(
+      ownDailyQuery,
       (snapshot) => {
-        const cloudReports = snapshot.docs
-          .map((item) => {
-            const data = {
-              ...(item.data() as Partial<DailyReport>),
-              id: item.id,
-            };
-            return normalizeDailyReport(data, currentUser.uid);
-          })
-          .filter((report) => report.userId && (report.plan.trim() || report.reflection.trim()));
-        const syncedCloudReports = cloudReports.map((report) => ({
-          ...report,
-          syncStatus: "synced" as const,
-          syncError: "",
-        }));
-        const ownCloudReports = syncedCloudReports.filter((report) => report.userId === currentUser.uid);
-
-        setSharedDailyReports(syncedCloudReports);
-        void putPersistentItems("dailyReports", syncedCloudReports);
+        const ownCloudReports = mergeDailyReports(
+          snapshot.docs
+            .map((item) => {
+              const data = {
+                ...(item.data() as Partial<DailyReport>),
+                id: item.id,
+              };
+              return {
+                ...normalizeDailyReport(data, currentUser.uid),
+                syncStatus: "synced" as const,
+                syncError: "",
+              };
+            })
+            .filter((report) => report.userId === currentUser.uid && (report.plan.trim() || report.reflection.trim())),
+        );
 
         if (ownCloudReports.length > 0) {
           const reports = mergeDailyReports([...durableReportsCache, ...ownCloudReports]);
+          durableReportsCache = reports;
           setDailyReports(reports);
           persistDailyReports(currentUser.uid, userId, reports);
-          handledInitialSnapshot = true;
+          handledOwnInitialSnapshot = true;
           return;
         }
 
-        if (!handledInitialSnapshot && durableReportsCache.length > 0 && !didRequestDailyReportMigrationRef.current) {
+        if (!handledOwnInitialSnapshot && durableReportsCache.length > 0 && !didRequestDailyReportMigrationRef.current) {
           didRequestDailyReportMigrationRef.current = true;
           setDailyReports(durableReportsCache);
           persistDailyReports(currentUser.uid, userId, durableReportsCache);
@@ -3039,23 +3043,48 @@ function App() {
           ).catch((error) => {
             console.info("Daily report migration to cloud skipped.", error);
           });
-        } else if (!handledInitialSnapshot && durableReportsCache.length === 0) {
+        } else if (!handledOwnInitialSnapshot && durableReportsCache.length === 0) {
           setDailyReports([]);
         }
 
-        handledInitialSnapshot = true;
+        handledOwnInitialSnapshot = true;
       },
       (error) => {
-        console.info("Daily report realtime sync skipped.", error);
+        console.info("Own daily report realtime sync skipped.", error);
         if (durableReportsCache.length > 0) {
           setDailyReports(durableReportsCache);
         }
       },
     );
+    const unsubscribeSharedReports = onSnapshot(
+      sharedDailyQuery,
+      (snapshot) => {
+        const syncedCloudReports = snapshot.docs
+          .map((item) => {
+            const data = {
+              ...(item.data() as Partial<DailyReport>),
+              id: item.id,
+            };
+            return {
+              ...normalizeDailyReport(data, currentUser.uid),
+              syncStatus: "synced" as const,
+              syncError: "",
+            };
+          })
+          .filter((report) => report.userId && (report.plan.trim() || report.reflection.trim()));
+
+        setSharedDailyReports(syncedCloudReports);
+        void putPersistentItems("dailyReports", syncedCloudReports);
+      },
+      (error) => {
+        console.info("Shared daily report realtime sync skipped.", error);
+      },
+    );
 
     return () => {
       isActive = false;
-      unsubscribe();
+      unsubscribeOwnReports();
+      unsubscribeSharedReports();
     };
   }, [currentUser, isWorkspaceLoaded, userId]);
 
@@ -4310,22 +4339,6 @@ function App() {
       );
     } finally {
       setIsSavingDailyReport(false);
-    }
-  };
-
-  const useDailyPlanAsPost = () => {
-    const text = dailyPlanDraft.trim() || selectedDailyReport?.plan.trim();
-    if (text) {
-      setPostDraft(`今日やること\n${text}`);
-      setCurrentView("logs");
-    }
-  };
-
-  const useDailyReflectionAsPost = () => {
-    const text = dailyReflectionDraft.trim() || selectedDailyReport?.reflection.trim();
-    if (text) {
-      setPostDraft(`今日の振り返り\n${text}`);
-      setCurrentView("logs");
     }
   };
 
@@ -6298,16 +6311,6 @@ function App() {
               </label>
 
               <div className="daily-editor-actions">
-                <button type="button" onClick={useDailyPlanAsPost} disabled={!dailyPlanDraft.trim() && !selectedDailyReport?.plan}>
-                  やることをログへ
-                </button>
-                <button
-                  type="button"
-                  onClick={useDailyReflectionAsPost}
-                  disabled={!dailyReflectionDraft.trim() && !selectedDailyReport?.reflection}
-                >
-                  振り返りをログへ
-                </button>
                 <button type="submit" disabled={isSavingDailyReport}>
                   {isSavingDailyReport ? "保存中" : "保存"}
                 </button>
@@ -6395,7 +6398,7 @@ function App() {
                           <small>{formatDailyDate(report.date)}</small>
                         </span>
                       </div>
-                      {report.plan ? <p>朝: {report.plan}</p> : null}
+                      {report.plan ? <p>今日やること: {report.plan}</p> : null}
                       {report.reflection ? <p>振り返り: {report.reflection}</p> : null}
                       {report.userId === currentUserUid ? (
                         <button
