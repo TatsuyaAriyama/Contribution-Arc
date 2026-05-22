@@ -878,6 +878,56 @@ function formatPostTime(createdAt: string) {
   return new Date(createdAt).toLocaleDateString("ja-JP", { month: "2-digit", day: "2-digit" });
 }
 
+function getStudyLogPostVerb(subject: string) {
+  const normalizedSubject = subject.toLowerCase();
+  const workKeywords = [
+    "実装",
+    "開発",
+    "作業",
+    "修正",
+    "改善",
+    "対応",
+    "構築",
+    "整理",
+    "設計",
+    "デプロイ",
+    "リファクタ",
+    "build",
+    "develop",
+    "fix",
+    "debug",
+    "deploy",
+    "release",
+    "refactor",
+    "implement",
+  ];
+  const studyKeywords = [
+    "学習",
+    "勉強",
+    "復習",
+    "読書",
+    "講座",
+    "資格",
+    "試験",
+    "silver",
+    "gold",
+    "learn",
+    "study",
+    "course",
+    "book",
+  ];
+
+  if (workKeywords.some((keyword) => normalizedSubject.includes(keyword))) {
+    return "作業しました";
+  }
+
+  if (studyKeywords.some((keyword) => normalizedSubject.includes(keyword))) {
+    return "学習しました";
+  }
+
+  return "学習しました";
+}
+
 function ProfileCharacterPreview({ color }: { color?: string }) {
   return (
     <div
@@ -3257,7 +3307,7 @@ function App() {
       return;
     }
 
-    setPostDraft(`${latestLog.subject}を${formatStudyTimeJa(latestLog.minutes)}積み上げました。`);
+    setPostDraft(`${latestLog.subject}を${formatStudyTimeJa(latestLog.minutes)}${getStudyLogPostVerb(latestLog.subject)}。`);
   };
 
   const useRoomPresenceAsPost = () => {
