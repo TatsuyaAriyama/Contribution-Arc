@@ -2517,8 +2517,14 @@
   font-weight: 820;
 }
 
+.log-post-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
 .log-like-button {
-  justify-self: start;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -2812,7 +2818,14 @@
   gap: 8px;
 }
 
-.daily-history-list button {
+.daily-history-list article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.daily-history-list article > button:first-child {
   display: grid;
   gap: 5px;
   width: 100%;
@@ -2825,7 +2838,7 @@
   text-align: left;
 }
 
-.daily-history-list button.active {
+.daily-history-list article.active > button:first-child {
   border-color: rgba(31, 111, 74, 0.24);
   background: rgba(220, 232, 225, 0.36);
 }
@@ -2936,6 +2949,35 @@
   line-height: 1.55;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+.daily-delete-button,
+.log-delete-button {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: rgba(17, 24, 39, 0.48);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 820;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    background 0.16s ease;
+}
+
+.daily-delete-button:hover,
+.daily-delete-button:focus-visible,
+.log-delete-button:hover,
+.log-delete-button:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(170, 57, 57, 0.18);
+  background: rgba(255, 250, 250, 0.92);
+  color: #8a2f2f;
+  outline: none;
 }
 
 .map-card {

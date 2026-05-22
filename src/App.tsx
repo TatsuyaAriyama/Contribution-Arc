@@ -3864,6 +3864,51 @@ function App() {
     }
   };
 
+  const handlePostDelete = (post: ContributionPostRecord) => {
+    if (!currentUser || post.userId !== currentUser.uid) {
+      return;
+    }
+
+    const isConfirmed = window.confirm("このログを削除しますか？");
+    if (!isConfirmed) {
+      return;
+    }
+
+    setPosts((items) => items.filter((item) => item.id !== post.id));
+    setPostReplies((items) => items.filter((item) => item.postId !== post.id));
+    void deleteDoc(doc(db, "posts", post.id)).catch((error) => {
+      console.info("Post delete skipped.", error);
+      setPostError("ログを削除できませんでした。");
+    });
+  };
+
+  const handleDailyReportDelete = (report: DailyReport) => {
+    if (!currentUser || report.userId !== currentUser.uid) {
+      return;
+    }
+
+    const isConfirmed = window.confirm(`${formatDailyDate(report.date)}の日報を削除しますか？`);
+    if (!isConfirmed) {
+      return;
+    }
+
+    const nextReports = dailyReports.filter((item) => item.id !== report.id);
+    setDailyReports(nextReports);
+    setSharedDailyReports((reports) => reports.filter((item) => item.id !== report.id));
+    writeCachedDailyReports(currentUser.uid, userId, nextReports);
+
+    if (selectedDailyDate === report.date) {
+      setDailyPlanDraft("");
+      setDailyReflectionDraft("");
+      setDailyMessage("日報を削除しました。");
+    }
+
+    void deleteDoc(doc(db, "dailyReports", report.id)).catch((error) => {
+      console.info("Daily report delete skipped.", error);
+      setDailyMessage("日報を削除できませんでした。");
+    });
+  };
+
   const handleDailyDateChange = (date: string) => {
     const nextReport = dailyReports.find((report) => report.date === date);
     setSelectedDailyDate(date);
@@ -3931,7 +3976,7 @@ function App() {
   const useDailyPlanAsPost = () => {
     const text = dailyPlanDraft.trim() || selectedDailyReport?.plan.trim();
     if (text) {
-      setPostDraft(`今日やること: ${text}`);
+      setPostDraft(`今日やること\n${text}`);
       setCurrentView("logs");
     }
   };
@@ -3939,7 +3984,7 @@ function App() {
   const useDailyReflectionAsPost = () => {
     const text = dailyReflectionDraft.trim() || selectedDailyReport?.reflection.trim();
     if (text) {
-      setPostDraft(`今日の振り返り: ${text}`);
+      setPostDraft(`今日の振り返り\n${text}`);
       setCurrentView("logs");
     }
   };
@@ -5118,15 +5163,22 @@ function App() {
           <span>{roomLabel}</span>
         </div>
 
-        <button
-          type="button"
-          className={isLiked ? "log-like-button liked" : "log-like-button"}
-          onClick={() => handlePostLike(post)}
-          aria-label={isLiked ? "ハートを取り消す" : "ハートする"}
-        >
-          <span aria-hidden="true">{isLiked ? "♥" : "♡"}</span>
-          {post.likesCount.toLocaleString()}
-        </button>
+        <div className="log-post-actions">
+          <button
+            type="button"
+            className={isLiked ? "log-like-button liked" : "log-like-button"}
+            onClick={() => handlePostLike(post)}
+            aria-label={isLiked ? "ハートを取り消す" : "ハートする"}
+          >
+            <span aria-hidden="true">{isLiked ? "♥" : "♡"}</span>
+            {post.likesCount.toLocaleString()}
+          </button>
+          {post.userId === currentUserUid ? (
+            <button type="button" className="log-delete-button" onClick={() => handlePostDelete(post)}>
+              削除
+            </button>
+          ) : null}
+        </div>
 
         <div className="post-reply-area">
           {visibleReplies.length > 0 ? (
@@ -5881,16 +5933,23 @@ function App() {
             <div className="daily-history-list">
               {dailyReports.length > 0 ? (
                 dailyReports.slice(0, 10).map((report) => (
-                  <button
-                    type="button"
+                  <article
                     key={report.id}
                     className={report.date === selectedDailyDate ? "active" : ""}
-                    onClick={() => handleDailyDateChange(report.date)}
                   >
-                    <strong>{formatDailyDate(report.date)}</strong>
-                    <span>{report.plan || "朝の予定は未入力"}</span>
-                    <small>{report.reflection ? "振り返り済み" : "振り返り未入力"}</small>
-                  </button>
+                    <button type="button" onClick={() => handleDailyDateChange(report.date)}>
+                      <strong>{formatDailyDate(report.date)}</strong>
+                      <span>{report.plan || "朝の予定は未入力"}</span>
+                      <small>{report.reflection ? "振り返り済み" : "振り返り未入力"}</small>
+                    </button>
+                    <button
+                      type="button"
+                      className="daily-delete-button"
+                      onClick={() => handleDailyReportDelete(report)}
+                    >
+                      削除
+                    </button>
+                  </article>
                 ))
               ) : (
                 <p>まだ日報はありません。</p>
@@ -5915,6 +5974,15 @@ function App() {
                       </div>
                       {report.plan ? <p>朝: {report.plan}</p> : null}
                       {report.reflection ? <p>振り返り: {report.reflection}</p> : null}
+                      {report.userId === currentUserUid ? (
+                        <button
+                          type="button"
+                          className="daily-delete-button"
+                          onClick={() => handleDailyReportDelete(report)}
+                        >
+                          削除
+                        </button>
+                      ) : null}
                     </article>
                   ))}
                 </div>
