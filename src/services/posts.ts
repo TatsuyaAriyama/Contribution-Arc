@@ -32,6 +32,8 @@ export type ContributionPostRecord = {
   studyMinutes: number;
   likesCount: number;
   likedUserIds: string[];
+  syncStatus?: "synced" | "pending";
+  syncError?: string;
 };
 
 export type ContributionReplyRecord = {
@@ -102,6 +104,7 @@ export function subscribePostsFromCloud(
           studyMinutes: readNumber(data.studyMinutes),
           likesCount: readNumber(data.likesCount),
           likedUserIds: readStringList(data.likedUserIds),
+          syncStatus: "synced" as const,
         };
       });
 
@@ -112,10 +115,11 @@ export function subscribePostsFromCloud(
 }
 
 export async function savePostToCloud(db: Firestore, post: ContributionPostRecord) {
+  const { syncStatus, syncError, ...cloudPost } = post;
   await setDoc(
     doc(db, "posts", post.id),
     {
-      ...post,
+      ...cloudPost,
       updatedAt: serverTimestamp(),
     },
     { merge: true },

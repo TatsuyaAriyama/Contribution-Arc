@@ -57,6 +57,12 @@ import {
   type ContributionPostRecord,
   type ContributionReplyRecord,
 } from "./services/posts";
+import {
+  deletePersistentItem,
+  putPersistentItem,
+  putPersistentItems,
+  readPersistentItems,
+} from "./services/persistentCache";
 import { PremiumSidebar, type AppView, type FriendPreview, type LiveActivity } from "./components/PremiumNavigation";
 import { SilentWorkspaceRoom, type RoomActivityItem, type WorkspaceGrowthProgress } from "./components/SilentWorkspaceRoom";
 import "./App.css";
@@ -264,6 +270,8 @@ type DailyReport = {
   reflection: string;
   createdAt: string;
   updatedAt: string;
+  syncStatus?: "synced" | "pending";
+  syncError?: string;
 };
 
 type KnowledgeNode = {
@@ -984,7 +992,14 @@ function normalizeDailyReport(data: Partial<DailyReport>, fallbackUserId: string
     reflection: typeof data.reflection === "string" ? data.reflection : "",
     createdAt: typeof data.createdAt === "string" && data.createdAt ? data.createdAt : new Date().toISOString(),
     updatedAt: typeof data.updatedAt === "string" && data.updatedAt ? data.updatedAt : new Date().toISOString(),
+    syncStatus: data.syncStatus === "pending" ? "pending" : "synced",
+    syncError: typeof data.syncError === "string" ? data.syncError : "",
   };
+}
+
+function dailyReportToCloudPayload(report: DailyReport) {
+  const { syncStatus, syncError, ...cloudReport } = report;
+  return cloudReport;
 }
 
 function mergeDailyReports(reports: DailyReport[]) {
@@ -1042,6 +1057,55 @@ function writeCachedDailyReports(uid: string, registeredUserId: string, reports:
   getDailyReportStorageKeys(uid, registeredUserId).forEach((key) => {
     safeSetLocalStorage(key, serializedReports);
   });
+}
+
+async function readDurableDailyReports(uid: string, registeredUserId: string) {
+  const indexedReports = await readPersistentItems<DailyReport>("dailyReports");
+  return mergeDailyReports([
+    ...readCachedDailyReports(uid, registeredUserId),
+    ...indexedReports
+      .filter((report) => report.userId === uid)
+      .map((report) => normalizeDailyReport(report, uid)),
+  ]);
+}
+
+function persistDailyReports(uid: string, registeredUserId: string, reports: DailyReport[]) {
+  const normalizedReports = mergeDailyReports(reports);
+  writeCachedDailyReports(uid, registeredUserId, normalizedReports);
+  void putPersistentItems("dailyReports", normalizedReports);
+}
+
+function getPostTime(post: ContributionPostRecord) {
+  const time = new Date(post.createdAt).getTime();
+  return Number.isFinite(time) ? time : 0;
+}
+
+function mergePosts(posts: ContributionPostRecord[]) {
+  const postMap = new Map<string, ContributionPostRecord>();
+
+  posts.forEach((post) => {
+    if (!post.id || !post.userId || !post.text.trim()) {
+      return;
+    }
+
+    const existingPost = postMap.get(post.id);
+    if (!existingPost || post.syncStatus === "synced" || getPostTime(post) >= getPostTime(existingPost)) {
+      postMap.set(post.id, post);
+    }
+  });
+
+  return Array.from(postMap.values()).sort((a, b) => getPostTime(b) - getPostTime(a));
+}
+
+async function readDurablePosts(currentUid: string) {
+  const indexedPosts = await readPersistentItems<ContributionPostRecord>("posts");
+  return mergePosts(
+    indexedPosts.filter((post) => post.syncStatus === "synced" || post.userId === currentUid),
+  );
+}
+
+async function persistPosts(posts: ContributionPostRecord[]) {
+  await putPersistentItems("posts", mergePosts(posts));
 }
 
 function readDesktopNotificationSettings(scope: string): DesktopNotificationSettings {
@@ -2713,14 +2777,58 @@ function App() {
       return;
     }
 
-    return subscribePostsFromCloud(
+    let isActive = true;
+    void readDurablePosts(currentUser.uid).then((cachedPosts) => {
+      if (!isActive || cachedPosts.length === 0) {
+        return;
+      }
+
+      setPosts(cachedPosts);
+
+      cachedPosts
+        .filter((post) => post.userId === currentUser.uid && post.syncStatus === "pending")
+        .forEach((post) => {
+          void savePostToCloud(db, post)
+            .then(() => {
+              const syncedPost: ContributionPostRecord = { ...post, syncStatus: "synced", syncError: "" };
+              void putPersistentItem("posts", syncedPost);
+              if (isActive) {
+                setPosts((items) => mergePosts([syncedPost, ...items.filter((item) => item.id !== post.id)]));
+              }
+            })
+            .catch((error) => {
+              console.info("Pending post sync skipped.", error);
+            });
+        });
+    });
+
+    const unsubscribe = subscribePostsFromCloud(
       db,
-      setPosts,
+      (cloudPosts) => {
+        const syncedPosts = cloudPosts.map((post) => ({ ...post, syncStatus: "synced" as const, syncError: "" }));
+        void readDurablePosts(currentUser.uid).then((cachedPosts) => {
+          if (!isActive) {
+            return;
+          }
+
+          const pendingPosts = cachedPosts.filter(
+            (post) => post.userId === currentUser.uid && post.syncStatus === "pending",
+          );
+          const nextPosts = mergePosts([...syncedPosts, ...pendingPosts]);
+          setPosts(nextPosts);
+          void persistPosts(nextPosts);
+        });
+      },
       (error) => {
         console.info("Post realtime sync skipped.", error);
         setPostError("ログの読み込みを待っています。");
       },
     );
+
+    return () => {
+      isActive = false;
+      unsubscribe();
+    };
   }, [currentUser, isWorkspaceLoaded]);
 
   useEffect(() => {
@@ -2742,10 +2850,45 @@ function App() {
       return;
     }
 
+    let isActive = true;
     const cachedReports = readCachedDailyReports(currentUser.uid, userId);
+    let durableReportsCache = cachedReports;
     if (cachedReports.length > 0) {
       setDailyReports(cachedReports);
     }
+    void readDurableDailyReports(currentUser.uid, userId).then((durableReports) => {
+      if (!isActive || durableReports.length === 0) {
+        return;
+      }
+
+      durableReportsCache = durableReports;
+      setDailyReports(durableReports);
+      persistDailyReports(currentUser.uid, userId, durableReports);
+
+      durableReports
+        .filter((report) => report.userId === currentUser.uid && report.syncStatus === "pending")
+        .forEach((report) => {
+          void setDoc(
+            doc(db, "dailyReports", report.id),
+            {
+              ...dailyReportToCloudPayload(report),
+              userId: currentUser.uid,
+              serverUpdatedAt: serverTimestamp(),
+            },
+            { merge: true },
+          )
+            .then(() => {
+              const syncedReport: DailyReport = { ...report, syncStatus: "synced", syncError: "" };
+              void putPersistentItem("dailyReports", syncedReport);
+              if (isActive) {
+                setDailyReports((reports) => mergeDailyReports([syncedReport, ...reports]));
+              }
+            })
+            .catch((error) => {
+              console.info("Pending daily report sync skipped.", error);
+            });
+        });
+    });
 
     let handledInitialSnapshot = false;
     const dailyQuery = query(collection(db, "dailyReports"), orderBy("date", "desc"), limit(120));
@@ -2761,28 +2904,34 @@ function App() {
             return normalizeDailyReport(data, currentUser.uid);
           })
           .filter((report) => report.userId && (report.plan.trim() || report.reflection.trim()));
-        const ownCloudReports = cloudReports.filter((report) => report.userId === currentUser.uid);
+        const syncedCloudReports = cloudReports.map((report) => ({
+          ...report,
+          syncStatus: "synced" as const,
+          syncError: "",
+        }));
+        const ownCloudReports = syncedCloudReports.filter((report) => report.userId === currentUser.uid);
 
-        setSharedDailyReports(cloudReports);
+        setSharedDailyReports(syncedCloudReports);
+        void putPersistentItems("dailyReports", syncedCloudReports);
 
         if (ownCloudReports.length > 0) {
-          const reports = mergeDailyReports([...cachedReports, ...ownCloudReports]);
+          const reports = mergeDailyReports([...durableReportsCache, ...ownCloudReports]);
           setDailyReports(reports);
-          writeCachedDailyReports(currentUser.uid, userId, reports);
+          persistDailyReports(currentUser.uid, userId, reports);
           handledInitialSnapshot = true;
           return;
         }
 
-        if (!handledInitialSnapshot && cachedReports.length > 0 && !didRequestDailyReportMigrationRef.current) {
+        if (!handledInitialSnapshot && durableReportsCache.length > 0 && !didRequestDailyReportMigrationRef.current) {
           didRequestDailyReportMigrationRef.current = true;
-          setDailyReports(cachedReports);
-          writeCachedDailyReports(currentUser.uid, userId, cachedReports);
+          setDailyReports(durableReportsCache);
+          persistDailyReports(currentUser.uid, userId, durableReportsCache);
           void Promise.all(
-            cachedReports.map((report) =>
+            durableReportsCache.map((report) =>
               setDoc(
                 doc(db, "dailyReports", report.id),
                 {
-                  ...report,
+                  ...dailyReportToCloudPayload(report),
                   userId: currentUser.uid,
                   serverUpdatedAt: serverTimestamp(),
                 },
@@ -2792,7 +2941,7 @@ function App() {
           ).catch((error) => {
             console.info("Daily report migration to cloud skipped.", error);
           });
-        } else if (!handledInitialSnapshot && cachedReports.length === 0) {
+        } else if (!handledInitialSnapshot && durableReportsCache.length === 0) {
           setDailyReports([]);
         }
 
@@ -2800,13 +2949,16 @@ function App() {
       },
       (error) => {
         console.info("Daily report realtime sync skipped.", error);
-        if (cachedReports.length > 0) {
-          setDailyReports(cachedReports);
+        if (durableReportsCache.length > 0) {
+          setDailyReports(durableReportsCache);
         }
       },
     );
 
-    return () => unsubscribe();
+    return () => {
+      isActive = false;
+      unsubscribe();
+    };
   }, [currentUser, isWorkspaceLoaded, userId]);
 
   useEffect(() => {
@@ -3807,25 +3959,36 @@ function App() {
       studyMinutes: totalWeeklyMinutes,
       likesCount: 0,
       likedUserIds: [],
+      syncStatus: "pending",
+      syncError: "",
     };
 
     setIsPosting(true);
     setPostError("");
-    setPosts((items) => [nextPost, ...items.filter((item) => item.id !== nextPost.id)]);
+    setPosts((items) => mergePosts([nextPost, ...items.filter((item) => item.id !== nextPost.id)]));
+    void putPersistentItem("posts", nextPost);
     setPostDraft("");
 
     try {
       await savePostToCloud(db, nextPost);
+      const syncedPost: ContributionPostRecord = { ...nextPost, syncStatus: "synced", syncError: "" };
+      setPosts((items) => mergePosts([syncedPost, ...items.filter((item) => item.id !== nextPost.id)]));
+      void putPersistentItem("posts", syncedPost);
     } catch (error) {
       setPostError(
         getFirestoreErrorMessage(
           error,
-          "ログを保存できませんでした。",
-          "ログを保存する権限がまだ有効になっていません。少し時間を置いて再度お試しください。",
+          "ログをローカルに保存しました。クラウドへ再同期します。",
+          "ログをクラウド保存する権限がまだ有効ではありません。ローカルには保存されています。",
         ),
       );
-      setPosts((items) => items.filter((item) => item.id !== nextPost.id));
-      setPostDraft(text);
+      const pendingPost: ContributionPostRecord = {
+        ...nextPost,
+        syncStatus: "pending",
+        syncError: "cloud-save-failed",
+      };
+      setPosts((items) => mergePosts([pendingPost, ...items.filter((item) => item.id !== nextPost.id)]));
+      void putPersistentItem("posts", pendingPost);
     } finally {
       setIsPosting(false);
     }
@@ -3906,6 +4069,7 @@ function App() {
 
     setPosts((items) => items.filter((item) => item.id !== post.id));
     setPostReplies((items) => items.filter((item) => item.postId !== post.id));
+    void deletePersistentItem("posts", post.id);
     void deleteDoc(doc(db, "posts", post.id)).catch((error) => {
       console.info("Post delete skipped.", error);
       setPostError("ログを削除できませんでした。");
@@ -3925,7 +4089,8 @@ function App() {
     const nextReports = dailyReports.filter((item) => item.id !== report.id);
     setDailyReports(nextReports);
     setSharedDailyReports((reports) => reports.filter((item) => item.id !== report.id));
-    writeCachedDailyReports(currentUser.uid, userId, nextReports);
+    persistDailyReports(currentUser.uid, userId, nextReports);
+    void deletePersistentItem("dailyReports", report.id);
 
     if (selectedDailyDate === report.date) {
       setDailyPlanDraft("");
@@ -3967,6 +4132,8 @@ function App() {
       reflection: dailyReflectionDraft.trim(),
       createdAt: existingReport?.createdAt || now,
       updatedAt: now,
+      syncStatus: "pending",
+      syncError: "",
     };
 
     setIsSavingDailyReport(true);
@@ -3975,22 +4142,39 @@ function App() {
       const nextReports = [report, ...reports.filter((item) => item.id !== report.id)].sort((a, b) =>
         b.date.localeCompare(a.date),
       );
-      writeCachedDailyReports(currentUser.uid, userId, nextReports);
+      persistDailyReports(currentUser.uid, userId, nextReports);
       return nextReports;
     });
+    void putPersistentItem("dailyReports", report);
 
     try {
       await setDoc(
         doc(db, "dailyReports", report.id),
         {
-          ...report,
+          ...dailyReportToCloudPayload(report),
           updatedAt: report.updatedAt,
           serverUpdatedAt: serverTimestamp(),
         },
         { merge: true },
       );
+      const syncedReport: DailyReport = { ...report, syncStatus: "synced", syncError: "" };
+      setDailyReports((reports) => {
+        const nextReports = mergeDailyReports([syncedReport, ...reports.filter((item) => item.id !== report.id)]);
+        persistDailyReports(currentUser.uid, userId, nextReports);
+        return nextReports;
+      });
       setDailyMessage("日報を保存しました。");
     } catch (error) {
+      const pendingReport: DailyReport = {
+        ...report,
+        syncStatus: "pending",
+        syncError: "cloud-save-failed",
+      };
+      setDailyReports((reports) => {
+        const nextReports = mergeDailyReports([pendingReport, ...reports.filter((item) => item.id !== report.id)]);
+        persistDailyReports(currentUser.uid, userId, nextReports);
+        return nextReports;
+      });
       setDailyMessage(
         getFirestoreErrorMessage(
           error,
