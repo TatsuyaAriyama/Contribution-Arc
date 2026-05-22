@@ -5585,9 +5585,7 @@ function App() {
           <ProfileCharacterPreview color={post.characterColor} />
           <span>
             <strong>{post.username}</strong>
-            <small>
-              {post.currentTitle || "Builder"} · {formatPostTime(post.createdAt)}
-            </small>
+            <small>{formatPostTime(post.createdAt)}</small>
           </span>
         </button>
 
