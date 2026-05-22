@@ -942,6 +942,76 @@ function formatDailyDate(date: string) {
   });
 }
 
+function normalizeDailyReport(data: Partial<DailyReport>, fallbackUserId: string): DailyReport {
+  const date = typeof data.date === "string" && data.date ? data.date : getDateInputValue();
+  return {
+    id: typeof data.id === "string" && data.id ? data.id : `${fallbackUserId}_${date}`,
+    userId: typeof data.userId === "string" && data.userId ? data.userId : fallbackUserId,
+    date,
+    plan: typeof data.plan === "string" ? data.plan : "",
+    reflection: typeof data.reflection === "string" ? data.reflection : "",
+    createdAt: typeof data.createdAt === "string" && data.createdAt ? data.createdAt : new Date().toISOString(),
+    updatedAt: typeof data.updatedAt === "string" && data.updatedAt ? data.updatedAt : new Date().toISOString(),
+  };
+}
+
+function mergeDailyReports(reports: DailyReport[]) {
+  const reportMap = new Map<string, DailyReport>();
+
+  reports.forEach((report) => {
+    const key = report.date || report.id;
+    const existingReport = reportMap.get(key);
+    if (!existingReport || new Date(report.updatedAt).getTime() >= new Date(existingReport.updatedAt).getTime()) {
+      reportMap.set(key, report);
+    }
+  });
+
+  return Array.from(reportMap.values()).sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function getDailyReportStorageKeys(uid: string, registeredUserId: string) {
+  return Array.from(
+    new Set([
+      getAccountStorageKey(getAccountStorageScope(uid, registeredUserId), "daily-reports"),
+      getAccountStorageKey(getAccountStorageScope(uid, ""), "daily-reports"),
+    ]),
+  );
+}
+
+function readCachedDailyReports(uid: string, registeredUserId: string): DailyReport[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  return mergeDailyReports(
+    getDailyReportStorageKeys(uid, registeredUserId).flatMap((key) => {
+      const savedReports = window.localStorage.getItem(key);
+      if (!savedReports) {
+        return [];
+      }
+
+      try {
+        return (JSON.parse(savedReports) as Partial<DailyReport>[]).map((report) =>
+          normalizeDailyReport(report, uid),
+        );
+      } catch {
+        return [];
+      }
+    }),
+  );
+}
+
+function writeCachedDailyReports(uid: string, registeredUserId: string, reports: DailyReport[]) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const serializedReports = JSON.stringify(mergeDailyReports(reports));
+  getDailyReportStorageKeys(uid, registeredUserId).forEach((key) => {
+    safeSetLocalStorage(key, serializedReports);
+  });
+}
+
 function getStudyLogPostVerb(subject: string) {
   const normalizedSubject = subject.toLowerCase();
   const workKeywords = [
@@ -2184,10 +2254,12 @@ function App() {
     legacyRooms: [],
   });
   const didRequestStudyLogMigrationRef = useRef(false);
+  const didRequestDailyReportMigrationRef = useRef(false);
 
   useEffect(() => {
     return onAuthStateChanged(auth, (user) => {
       didRequestStudyLogMigrationRef.current = false;
+      didRequestDailyReportMigrationRef.current = false;
       remoteWorkspaceRoomsRef.current = { rooms: [], legacyRooms: [] };
       setIsWorkspaceLoaded(false);
       setCurrentView("home");
@@ -2517,40 +2589,64 @@ function App() {
       return;
     }
 
-    const accountScope = getAccountStorageScope(currentUser.uid, userId);
-    const savedReports = window.localStorage.getItem(getAccountStorageKey(accountScope, "daily-reports"));
-    if (savedReports) {
-      try {
-        setDailyReports(JSON.parse(savedReports) as DailyReport[]);
-      } catch {
-        setDailyReports([]);
-      }
+    const cachedReports = readCachedDailyReports(currentUser.uid, userId);
+    if (cachedReports.length > 0) {
+      setDailyReports(cachedReports);
     }
 
+    let handledInitialSnapshot = false;
     const dailyQuery = query(collection(db, "dailyReports"), where("userId", "==", currentUser.uid));
     const unsubscribe = onSnapshot(
       dailyQuery,
       (snapshot) => {
-        const reports = snapshot.docs
+        const cloudReports = snapshot.docs
           .map((item) => {
-            const data = item.data() as Partial<DailyReport>;
-            return {
+            const data = {
+              ...(item.data() as Partial<DailyReport>),
               id: item.id,
-              userId: typeof data.userId === "string" ? data.userId : currentUser.uid,
-              date: typeof data.date === "string" ? data.date : getDateInputValue(),
-              plan: typeof data.plan === "string" ? data.plan : "",
-              reflection: typeof data.reflection === "string" ? data.reflection : "",
-              createdAt: typeof data.createdAt === "string" ? data.createdAt : new Date().toISOString(),
-              updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : new Date().toISOString(),
             };
+            return normalizeDailyReport(data, currentUser.uid);
           })
-          .sort((a, b) => b.date.localeCompare(a.date));
+          .filter((report) => report.userId === currentUser.uid);
 
-        setDailyReports(reports);
-        safeSetLocalStorage(getAccountStorageKey(accountScope, "daily-reports"), JSON.stringify(reports));
+        if (cloudReports.length > 0) {
+          const reports = mergeDailyReports([...cachedReports, ...cloudReports]);
+          setDailyReports(reports);
+          writeCachedDailyReports(currentUser.uid, userId, reports);
+          handledInitialSnapshot = true;
+          return;
+        }
+
+        if (!handledInitialSnapshot && cachedReports.length > 0 && !didRequestDailyReportMigrationRef.current) {
+          didRequestDailyReportMigrationRef.current = true;
+          setDailyReports(cachedReports);
+          writeCachedDailyReports(currentUser.uid, userId, cachedReports);
+          void Promise.all(
+            cachedReports.map((report) =>
+              setDoc(
+                doc(db, "dailyReports", report.id),
+                {
+                  ...report,
+                  userId: currentUser.uid,
+                  serverUpdatedAt: serverTimestamp(),
+                },
+                { merge: true },
+              ),
+            ),
+          ).catch((error) => {
+            console.info("Daily report migration to cloud skipped.", error);
+          });
+        } else if (!handledInitialSnapshot && cachedReports.length === 0) {
+          setDailyReports([]);
+        }
+
+        handledInitialSnapshot = true;
       },
       (error) => {
         console.info("Daily report realtime sync skipped.", error);
+        if (cachedReports.length > 0) {
+          setDailyReports(cachedReports);
+        }
       },
     );
 
@@ -3482,7 +3578,7 @@ function App() {
       const nextReports = [report, ...reports.filter((item) => item.id !== report.id)].sort((a, b) =>
         b.date.localeCompare(a.date),
       );
-      safeSetLocalStorage(getAccountStorageKey(accountScope, "daily-reports"), JSON.stringify(nextReports));
+      writeCachedDailyReports(currentUser.uid, userId, nextReports);
       return nextReports;
     });
 
