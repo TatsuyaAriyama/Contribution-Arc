@@ -1634,11 +1634,14 @@ function isScheduledWorkspaceNpc(member: Pick<WorkspaceMember, "userId" | "id" |
 }
 
 function isLegacyWorkspaceRoom(room: WorkspaceRoom) {
+  const roomName = room.name.trim();
+
   return (
     room.id === legacyDeepWorkStudioRoomId ||
     room.id === betaWorkspaceRoomId ||
-    room.name === "Deep Work Studio" ||
-    room.name === "ベータ版"
+    roomName === "Deep Work Studio" ||
+    roomName === "ベータ版" ||
+    roomName.toLowerCase() === "a"
   );
 }
 
@@ -5109,6 +5112,14 @@ function App() {
     setWorkspaceStartError("");
     const joinedAt = new Date().toISOString();
     const seatPosition = getWorkspaceSeatPosition(nextTask);
+    const targetRoom = allWorkspaceRooms.find((room) => room.id === roomId);
+
+    if (!targetRoom) {
+      setWorkspaceStartError("Roomデータを読み込めませんでした。もう一度Roomを選択してください。");
+      setWorkspaceBubble("Roomデータを読み込めませんでした。");
+      return;
+    }
+
     const nextMember = createWorkspaceMember({
       id: currentUser.uid,
       userId: currentUser.uid,
@@ -5136,9 +5147,23 @@ function App() {
     pressedWorkspaceKeysRef.current.clear();
     setIsPlayerWalking(false);
     setCustomRooms((rooms) => {
-      const nextRooms = rooms.map((room) => {
+      const normalizedRooms = rooms.map(normalizeWorkspaceRoom).filter((room) => !isLegacyWorkspaceRoom(room));
+      const baseRooms =
+        normalizedRooms.some((room) => room.id === roomId)
+          ? normalizedRooms
+          : [
+              ...normalizedRooms,
+              normalizeWorkspaceRoom({
+                ...targetRoom,
+                activeMembers: targetRoom.activeMembers.filter((member) => !isScheduledWorkspaceNpc(member)),
+              }),
+            ];
+
+      const nextRooms = baseRooms.map((room) => {
         const normalizedRoom = normalizeWorkspaceRoom(room);
-        const activeMembers = normalizedRoom.activeMembers.filter((member) => member.userId !== currentUser.uid);
+        const activeMembers = normalizedRoom.activeMembers.filter(
+          (member) => member.userId !== currentUser.uid && !isScheduledWorkspaceNpc(member),
+        );
 
         if (normalizedRoom.id !== roomId) {
           return activeMembers.length === normalizedRoom.activeMembers.length
