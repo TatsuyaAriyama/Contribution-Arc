@@ -257,6 +257,8 @@ type DesktopNotificationSettings = {
   dailyLog: boolean;
   post: boolean;
   friendRequest: boolean;
+  sound: boolean;
+  soundVolume: number;
 };
 
 type DailyReport = {
@@ -364,8 +366,17 @@ const defaultDesktopNotificationSettings: DesktopNotificationSettings = {
   dailyLog: true,
   post: true,
   friendRequest: true,
+  sound: true,
+  soundVolume: 0.35,
 };
 const notificationCooldownMs = 90 * 1000;
+const notificationSoundCooldownMs = 12 * 1000;
+const notificationSoundSources = {
+  default: `${import.meta.env.BASE_URL}sounds/notification-soft.mp3`,
+  dailyLog: `${import.meta.env.BASE_URL}sounds/notification-soft.mp3`,
+  post: `${import.meta.env.BASE_URL}sounds/notification-soft.mp3`,
+  friendRequest: `${import.meta.env.BASE_URL}sounds/notification-soft.mp3`,
+} as const;
 const defaultWorkspaceSeatLabels: WorkspaceSeatLabels = {
   frontend: "作業",
   java: "仕事",
@@ -1119,12 +1130,93 @@ function readDesktopNotificationSettings(scope: string): DesktopNotificationSett
   }
 
   try {
+    const parsedSettings = JSON.parse(savedSettings) as Partial<DesktopNotificationSettings>;
+    const volume =
+      typeof parsedSettings.soundVolume === "number" && Number.isFinite(parsedSettings.soundVolume)
+        ? Math.min(1, Math.max(0, parsedSettings.soundVolume))
+        : defaultDesktopNotificationSettings.soundVolume;
+
     return {
       ...defaultDesktopNotificationSettings,
-      ...(JSON.parse(savedSettings) as Partial<DesktopNotificationSettings>),
+      ...parsedSettings,
+      soundVolume: volume,
     };
   } catch {
     return defaultDesktopNotificationSettings;
+  }
+}
+
+function getAudioContextConstructor() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext || null;
+}
+
+function playFallbackNotificationTone(volume: number) {
+  const AudioContextConstructor = getAudioContextConstructor();
+  if (!AudioContextConstructor) {
+    return Promise.resolve(false);
+  }
+
+  const audioContext = new AudioContextConstructor();
+  const gain = audioContext.createGain();
+  const firstTone = audioContext.createOscillator();
+  const secondTone = audioContext.createOscillator();
+  const startTime = audioContext.currentTime;
+  const safeVolume = Math.min(0.5, Math.max(0.02, volume));
+
+  gain.gain.setValueAtTime(0.0001, startTime);
+  gain.gain.exponentialRampToValueAtTime(safeVolume * 0.14, startTime + 0.025);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.52);
+
+  firstTone.type = "sine";
+  firstTone.frequency.setValueAtTime(660, startTime);
+  firstTone.frequency.exponentialRampToValueAtTime(880, startTime + 0.16);
+
+  secondTone.type = "sine";
+  secondTone.frequency.setValueAtTime(990, startTime + 0.08);
+  secondTone.frequency.exponentialRampToValueAtTime(1180, startTime + 0.28);
+
+  firstTone.connect(gain);
+  secondTone.connect(gain);
+  gain.connect(audioContext.destination);
+
+  firstTone.start(startTime);
+  firstTone.stop(startTime + 0.44);
+  secondTone.start(startTime + 0.08);
+  secondTone.stop(startTime + 0.48);
+
+  return new Promise<boolean>((resolve) => {
+    window.setTimeout(() => {
+      void audioContext.close().catch(() => undefined);
+      resolve(true);
+    }, 620);
+  });
+}
+
+async function playNotificationSound(
+  type: NotificationItem["type"] | "default",
+  settings: DesktopNotificationSettings,
+) {
+  if (typeof window === "undefined" || !settings.sound) {
+    return false;
+  }
+
+  const volume = Math.min(1, Math.max(0, settings.soundVolume));
+  if (volume <= 0) {
+    return false;
+  }
+
+  const audio = new Audio(notificationSoundSources[type] || notificationSoundSources.default);
+  audio.volume = Math.min(0.7, volume);
+
+  try {
+    await audio.play();
+    return true;
+  } catch {
+    return playFallbackNotificationTone(volume);
   }
 }
 
@@ -2444,6 +2536,7 @@ function App() {
   const didRequestDailyReportMigrationRef = useRef(false);
   const seenNotificationKeysRef = useRef<Set<string>>(new Set());
   const notificationCooldownRef = useRef<Record<string, number>>({});
+  const lastNotificationSoundAtRef = useRef(0);
   const notificationBootedRef = useRef(false);
   const notificationStartedAtRef = useRef(Date.now());
 
@@ -2479,6 +2572,7 @@ function App() {
       setDesktopNotificationSettings(defaultDesktopNotificationSettings);
       seenNotificationKeysRef.current = new Set();
       notificationCooldownRef.current = {};
+      lastNotificationSoundAtRef.current = 0;
       notificationBootedRef.current = false;
       notificationStartedAtRef.current = Date.now();
       setDetermination("");
@@ -3714,11 +3808,19 @@ function App() {
     .slice(0, 12);
   const unreadNotificationCount = appNotifications.filter((item) => !item.read).length;
   const hasUnreadNotifications = unreadNotificationCount > 0;
+  const handleNotificationSoundTest = () => {
+    lastNotificationSoundAtRef.current = 0;
+    void playNotificationSound("default", desktopNotificationSettings);
+  };
   const pushAppNotification = (item: NotificationItem, shouldSendNative: boolean) => {
     const cooldownKey = `${item.type}:${item.sourceUserId}`;
     const now = Date.now();
     const lastNotifiedAt = notificationCooldownRef.current[cooldownKey] || 0;
     const canSendNative = shouldSendNative && now - lastNotifiedAt > notificationCooldownMs;
+    const canPlaySound =
+      canSendNative &&
+      desktopNotificationSettings.sound &&
+      now - lastNotificationSoundAtRef.current > notificationSoundCooldownMs;
 
     seenNotificationKeysRef.current.add(item.id);
     if (canSendNative) {
@@ -3727,6 +3829,10 @@ function App() {
         title: item.title,
         body: item.body,
       });
+    }
+    if (canPlaySound) {
+      lastNotificationSoundAtRef.current = now;
+      void playNotificationSound(item.type, desktopNotificationSettings);
     }
 
     setAppNotifications((items) => {
@@ -5942,6 +6048,47 @@ function App() {
                       />
                     </label>
                   ))}
+                  <label>
+                    <span>通知音</span>
+                    <input
+                      type="checkbox"
+                      checked={desktopNotificationSettings.sound}
+                      onChange={(event) =>
+                        setDesktopNotificationSettings((settings) => ({
+                          ...settings,
+                          sound: event.target.checked,
+                        }))
+                      }
+                    />
+                  </label>
+                  <div className="notification-sound-control">
+                    <div>
+                      <span>通知音量</span>
+                      <small>{Math.round(desktopNotificationSettings.soundVolume * 100)}%</small>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={desktopNotificationSettings.soundVolume}
+                      disabled={!desktopNotificationSettings.sound}
+                      onChange={(event) =>
+                        setDesktopNotificationSettings((settings) => ({
+                          ...settings,
+                          soundVolume: Number(event.target.value),
+                        }))
+                      }
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="notification-sound-test"
+                    disabled={!desktopNotificationSettings.sound || desktopNotificationSettings.soundVolume <= 0}
+                    onClick={handleNotificationSoundTest}
+                  >
+                    通知音をテスト
+                  </button>
                 </fieldset>
               ) : null}
 

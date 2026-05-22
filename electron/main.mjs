@@ -35,7 +35,7 @@ ipcMain.handle("contribution-arc:notify", (_event, payload) => {
   new Notification({
     title: notificationPayload.title,
     body: notificationPayload.body,
-    silent: false,
+    silent: true,
   }).show();
 
   return true;
