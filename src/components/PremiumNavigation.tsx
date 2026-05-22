@@ -120,7 +120,11 @@ export function PremiumSidebar({
               </article>
             ))
           ) : (
-            <p className="friend-empty">まだフレンドはいません。プロフィールから静かに申請できます。</p>
+            <p className="friend-empty">
+              まだフレンドはいません。
+              <br />
+              プロフィールから申請できます。
+            </p>
           )}
         </div>
       </section>
