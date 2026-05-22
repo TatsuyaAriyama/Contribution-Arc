@@ -371,7 +371,6 @@ export function SilentWorkspaceRoom({
                 <span className="seat-chair" />
                 <span className="seat-caption">
                   <strong>{seatName}</strong>
-                  <small>{seat.note}</small>
                 </span>
               </div>
             );

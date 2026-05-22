@@ -6153,22 +6153,23 @@
   content: "";
   position: absolute;
   border-radius: 999px 999px 10px 999px;
-  background: #1f6f4a;
+  background: rgba(31, 111, 74, 0.72);
+  opacity: 0.78;
 }
 
 .workspace-plant::before {
-  top: -20px;
-  left: 8px;
-  width: 26px;
-  height: 42px;
+  top: -14px;
+  left: 6px;
+  width: 18px;
+  height: 30px;
   transform: rotate(-28deg);
 }
 
 .workspace-plant::after {
-  top: -18px;
-  right: 6px;
-  width: 28px;
-  height: 46px;
+  top: -12px;
+  right: 4px;
+  width: 20px;
+  height: 32px;
   transform: rotate(28deg);
 }
 
@@ -10180,14 +10181,15 @@
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 50%),
     #10221d;
-  box-shadow: 0 24px 46px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 18px 32px rgba(0, 0, 0, 0.16);
 }
 
 .workspace-plant::before,
 .workspace-plant::after {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 42%),
-    #237a52;
+    rgba(35, 122, 82, 0.78);
+  opacity: 0.82;
 }
 
 .workspace-plant.plant-a {
@@ -11205,35 +11207,48 @@
 
 .growth-room-status {
   position: absolute;
-  top: 28px;
-  left: 32px;
+  top: 14px;
+  left: 14px;
   z-index: 12;
-  display: grid;
-  gap: 2px;
-  min-width: 120px;
-  padding: 10px 12px;
-  border: 1px solid rgba(31, 111, 74, 0.08);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.72);
-  color: #111827;
-  box-shadow:
-    0 18px 42px rgba(17, 24, 39, 0.055),
-    inset 0 1px 0 rgba(255, 255, 255, 0.86);
-  backdrop-filter: blur(18px);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid rgba(17, 24, 39, 0.06);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--muted);
+  box-shadow: none;
+  backdrop-filter: blur(8px);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
 }
 
 .growth-room-status strong {
-  font-size: 18px;
-  font-weight: 780;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink);
   line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .growth-room-status span,
 .growth-room-status small {
-  color: rgba(17, 24, 39, 0.5);
-  font-size: 10px;
-  font-weight: 760;
-  line-height: 1.2;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.growth-room-status small {
+  display: none;
+}
+
+.growth-room-status span::before {
+  content: "·";
+  margin-right: 4px;
+  color: rgba(17, 24, 39, 0.25);
 }
 
 .starter-cardboard-box {
@@ -11638,19 +11653,23 @@
 .workspace-growth-stage .workspace-plant::before,
 .workspace-growth-stage .workspace-plant::after {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 42%),
-    #1f6f4a;
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent 42%),
+    rgba(31, 111, 74, 0.72);
+  opacity: 0.78;
 }
 
 .workspace-growth-stage .plant-a {
   left: 8%;
   bottom: 26px;
+  transform: scale(0.78);
+  transform-origin: bottom left;
 }
 
 .workspace-growth-stage .plant-b {
   top: 37%;
   right: 7%;
-  transform: scale(0.82);
+  transform: scale(0.68);
+  transform-origin: top right;
 }
 
 .workspace-growth-stage .growth-rug {
