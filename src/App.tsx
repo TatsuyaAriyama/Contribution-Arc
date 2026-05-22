@@ -64,7 +64,7 @@ import {
   readPersistentItems,
 } from "./services/persistentCache";
 import { PremiumSidebar, type AppView, type FriendPreview, type LiveActivity } from "./components/PremiumNavigation";
-import { SilentWorkspaceRoom, type RoomActivityItem, type WorkspaceGrowthProgress } from "./components/SilentWorkspaceRoom";
+import { SilentWorkspaceRoom, type RoomActivityItem } from "./components/SilentWorkspaceRoom";
 import "./App.css";
 
 declare global {
@@ -3966,13 +3966,6 @@ function App() {
           ],
         },
   );
-  const workspaceGrowthProgress: WorkspaceGrowthProgress = {
-    level: levelState.level,
-    totalMinutes: studyLogs.reduce((sum, log) => sum + log.minutes, 0),
-    contributions: outputStats.contributions + studyLogs.length,
-    streak: studyStreak,
-    openedGiftLevels: openedWorkspaceGiftLevels,
-  };
   const roomActivityItems: RoomActivityItem[] = [
     ...resolvedVisibleMembers.map((member) => {
       const task = member.currentTask || member.building;
@@ -4142,13 +4135,6 @@ function App() {
       setAppNotifications((items) => items.map((item) => ({ ...item, read: true })));
     }
   };
-  const handleWorkspaceGiftOpen = (level: number) => {
-    setOpenedWorkspaceGiftLevels((levels) =>
-      levels.includes(level) ? levels : [...levels, level].sort((first, second) => first - second),
-    );
-    setWorkspaceBubble("新しいインテリアを受け取りました");
-  };
-
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
       return;
@@ -7158,8 +7144,6 @@ function App() {
                       }
                       totalLearnedLabel={`${Math.round(roomTotalMinutes / 60).toLocaleString()}h learned`}
                       contributionLabel={`${roomContributions.toLocaleString()} contributions today`}
-                      growthProgress={workspaceGrowthProgress}
-                      onGrowthGiftOpen={handleWorkspaceGiftOpen}
                     />
                     <section className="room-log-strip" aria-label="このRoomの最近の投稿">
                       <div>

@@ -31,14 +31,6 @@ export type RoomActor = {
   tone: "deep" | "green" | "soft" | "blue";
 };
 
-export type WorkspaceGrowthProgress = {
-  level: number;
-  totalMinutes: number;
-  contributions: number;
-  streak: number;
-  openedGiftLevels: number[];
-};
-
 type SilentWorkspaceRoomProps = {
   presentation?: "full" | "focus";
   roomName: string;
@@ -66,72 +58,7 @@ type SilentWorkspaceRoomProps = {
   lastSessionLabel: string;
   totalLearnedLabel: string;
   contributionLabel: string;
-  growthProgress: WorkspaceGrowthProgress;
-  onGrowthGiftOpen: (level: number) => void;
 };
-
-const workspaceGrowthItems = [
-  {
-    id: "plant",
-    level: 2,
-    name: "小さな植物",
-    detail: "余白に最初の緑が増えます。",
-  },
-  {
-    id: "warm-light",
-    level: 3,
-    name: "暖色ライト",
-    detail: "夜の作業に柔らかい灯りが入ります。",
-  },
-  {
-    id: "wood-table",
-    level: 4,
-    name: "共同テーブル",
-    detail: "最大20人が自然に集まれる中心ができます。",
-  },
-  {
-    id: "window",
-    level: 5,
-    name: "大きな窓",
-    detail: "静かな深夜の空気が部屋に入ります。",
-  },
-  {
-    id: "sofa",
-    level: 6,
-    name: "ソファ",
-    detail: "休憩できる小さな居場所ができます。",
-  },
-  {
-    id: "glass-panel",
-    level: 7,
-    name: "ガラスパネル",
-    detail: "Contributionの気配を壁に映します。",
-  },
-  {
-    id: "bookshelf",
-    level: 8,
-    name: "本棚",
-    detail: "学習ログが空間の厚みになります。",
-  },
-  {
-    id: "rain",
-    level: 10,
-    name: "小雨",
-    detail: "窓の外に静かな雨が流れます。",
-  },
-  {
-    id: "coffee",
-    level: 12,
-    name: "コーヒー",
-    detail: "作業席に小さな湯気が立ちます。",
-  },
-  {
-    id: "arc-object",
-    level: 15,
-    name: "Arcオブジェクト",
-    detail: "積み上げの象徴が部屋の中心に灯ります。",
-  },
-];
 
 function getActorStayLabel(member: RoomActor) {
   if (member.status === "on-break") {
@@ -158,14 +85,6 @@ function getActorStayLabel(member: RoomActor) {
   return restMinutes > 0 ? `${hours}h ${restMinutes}m` : `${hours}h`;
 }
 
-function formatGrowthMinutes(minutes: number) {
-  if (minutes < 60) {
-    return `${Math.max(0, Math.round(minutes))}m`;
-  }
-
-  return `${Math.round((minutes / 60) * 10) / 10}h`;
-}
-
 export function SilentWorkspaceRoom({
   presentation = "full",
   roomName,
@@ -189,8 +108,6 @@ export function SilentWorkspaceRoom({
   onActivityOpen,
   lastSessionLabel,
   contributionLabel,
-  growthProgress,
-  onGrowthGiftOpen,
 }: SilentWorkspaceRoomProps) {
   const isFocusPresentation = presentation === "focus";
   const [isPresetEditorOpen, setIsPresetEditorOpen] = useState(false);
@@ -199,23 +116,6 @@ export function SilentWorkspaceRoom({
   const visiblePresetMessages = presetSlots.map((message) => message.trim()).filter(Boolean);
   const currentMember = members.find((member) => member.userId === currentUserId);
   const isCurrentUserOnBreak = currentMember?.status === "on-break";
-  const openedGiftLevelSet = new Set(growthProgress.openedGiftLevels);
-  const unlockedGrowthItems = workspaceGrowthItems.filter(
-    (item) => item.level <= growthProgress.level && openedGiftLevelSet.has(item.level),
-  );
-  const unlockedGrowthIds = new Set(unlockedGrowthItems.map((item) => item.id));
-  const pendingGift = workspaceGrowthItems.find(
-    (item) => item.level <= growthProgress.level && !openedGiftLevelSet.has(item.level),
-  );
-  const stageClassName = [
-    "workspace-stage",
-    "workspace-growth-stage",
-    unlockedGrowthIds.size > 0 ? "is-grown" : "is-starter",
-    pendingGift ? "has-pending-gift" : "",
-    ...unlockedGrowthItems.map((item) => `has-growth-${item.id}`),
-  ]
-    .filter(Boolean)
-    .join(" ");
 
   const handleTaskChange = (event: ChangeEvent<HTMLInputElement>) => {
     onTaskChange(event.target.value);
@@ -266,62 +166,8 @@ export function SilentWorkspaceRoom({
           </div>
         ) : null}
 
-        <div className={stageClassName} aria-label="Growing silent workspace">
+        <div className="workspace-stage" aria-label="Silent workspace">
           <div className="workspace-floor-grid" aria-hidden="true" />
-          <div className="workspace-ambient-glow" aria-hidden="true" />
-          <div className="workspace-ambient-dust" aria-hidden="true" />
-          <div className="growth-room-status" aria-label="Workspace growth">
-            <strong>Lv.{growthProgress.level}</strong>
-            <span>{unlockedGrowthItems.length} interiors</span>
-            <small>
-              {formatGrowthMinutes(growthProgress.totalMinutes)} / {growthProgress.contributions} contributions
-            </small>
-          </div>
-          <div className="workspace-back-wall growth-back-wall" aria-hidden="true">
-            <span />
-            <span />
-          </div>
-          <div className="workspace-light light-a starter-light" aria-hidden="true" />
-          {unlockedGrowthIds.has("warm-light") ? <div className="workspace-light light-b growth-light" aria-hidden="true" /> : null}
-          {unlockedGrowthIds.has("window") ? (
-            <div className="workspace-window growth-window" aria-hidden="true">
-              <span />
-              <span />
-              <span />
-            </div>
-          ) : null}
-          {unlockedGrowthIds.has("glass-panel") ? (
-            <div className="workspace-whiteboard growth-contribution-panel" aria-hidden="true">
-              <span />
-              <span />
-              <span />
-            </div>
-          ) : null}
-          {unlockedGrowthIds.has("wood-table") ? <div className="growth-community-table" aria-hidden="true" /> : null}
-          {unlockedGrowthIds.has("sofa") ? <div className="growth-sofa" aria-hidden="true" /> : null}
-          {unlockedGrowthIds.has("bookshelf") ? <div className="growth-bookshelf" aria-hidden="true" /> : null}
-          {unlockedGrowthIds.has("coffee") ? <div className="growth-coffee" aria-hidden="true" /> : null}
-          {unlockedGrowthIds.has("arc-object") ? <div className="growth-arc-object" aria-hidden="true" /> : null}
-          {unlockedGrowthIds.has("rain") ? <div className="growth-rain" aria-hidden="true" /> : null}
-          {pendingGift ? (
-            <button
-              type="button"
-              className="growth-gift-box"
-              onClick={() => onGrowthGiftOpen(pendingGift.level)}
-              aria-label={`Lv.${pendingGift.level}のプレゼントを開く`}
-            >
-              <span />
-              <strong>Lv.{pendingGift.level}</strong>
-              <small>{pendingGift.name}</small>
-            </button>
-          ) : null}
-          {unlockedGrowthIds.has("plant") ? (
-            <>
-              <div className="workspace-plant plant-a" aria-hidden="true" />
-              <div className="workspace-plant plant-b" aria-hidden="true" />
-            </>
-          ) : null}
-          {unlockedGrowthIds.has("wood-table") ? <div className="workspace-rug growth-rug" aria-hidden="true" /> : null}
 
           {members.map((member) => {
             const isCurrentUser = member.userId === currentUserId;
