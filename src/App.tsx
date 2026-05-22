@@ -2460,7 +2460,7 @@ function App() {
   const [desktopNotificationSettings, setDesktopNotificationSettings] = useState<DesktopNotificationSettings>(
     defaultDesktopNotificationSettings,
   );
-  const [currentView, setCurrentView] = useState<AppView>("home");
+  const [currentView, setCurrentView] = useState<AppView>("logs");
   const [profileMember, setProfileMember] = useState<WorkspaceMember | null>(null);
   const [profileUser, setProfileUser] = useState<UserProfile | null>(null);
   const [determination, setDetermination] = useState("");
@@ -3685,6 +3685,17 @@ function App() {
   const githubId = githubProviderInfo?.uid || "";
   const githubUsername = githubProviderInfo?.displayName || (githubProviderInfo ? userId : "");
   const totalWeeklyMinutes = weeklyStudyHours.reduce((sum, item) => sum + item.totalMinutes, 0);
+  const todayStudyMinutes = weeklyStudyHours.find((item) => item.isToday)?.totalMinutes ?? 0;
+  const lastStudyLog = useMemo(() => {
+    if (studyLogs.length === 0) {
+      return null;
+    }
+    return [...studyLogs].sort((a, b) => {
+      const aTime = new Date(a.createdAt).getTime();
+      const bTime = new Date(b.createdAt).getTime();
+      return bTime - aTime;
+    })[0];
+  }, [studyLogs]);
   const selectedStudyDayData =
     weeklyStudyHours.find((item) => item.day === selectedStudyDay) ||
     weeklyStudyHours.find((item) => item.isToday) ||
@@ -6532,6 +6543,27 @@ function App() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
         >
+          <section className="today-strip" aria-label="今日の足場">
+            <div className="today-strip-stat">
+              <span className="today-strip-label">今日</span>
+              <span className="today-strip-value">{formatStudyTimeJa(todayStudyMinutes)}</span>
+            </div>
+            <div className="today-strip-divider" aria-hidden="true" />
+            <div className="today-strip-stat">
+              <span className="today-strip-label">今週</span>
+              <span className="today-strip-value">{formatStudyTimeJa(totalWeeklyMinutes)}</span>
+            </div>
+            {lastStudyLog ? (
+              <>
+                <div className="today-strip-divider" aria-hidden="true" />
+                <div className="today-strip-stat today-strip-recent">
+                  <span className="today-strip-label">最後に学んだ</span>
+                  <span className="today-strip-value today-strip-recent-subject">{lastStudyLog.subject}</span>
+                </div>
+              </>
+            ) : null}
+          </section>
+
           <section className="log-composer-card">
             <div className="log-composer-head">
               <div>

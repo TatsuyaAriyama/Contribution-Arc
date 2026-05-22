@@ -2422,6 +2422,68 @@
   gap: 16px;
 }
 
+.today-strip {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 12px 18px;
+  border: 1px solid rgba(17, 24, 39, 0.06);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(8px);
+}
+
+.today-strip-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.today-strip-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.today-strip-value {
+  font-size: 14px;
+  color: var(--ink);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.today-strip-divider {
+  width: 1px;
+  align-self: stretch;
+  background: rgba(17, 24, 39, 0.08);
+  margin: 2px 0;
+}
+
+.today-strip-recent {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.today-strip-recent-subject {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 720px) {
+  .today-strip {
+    flex-wrap: wrap;
+    gap: 10px 14px;
+  }
+  .today-strip-divider {
+    display: none;
+  }
+}
+
 .log-composer-card,
 .log-side-panel,
 .room-log-strip,
