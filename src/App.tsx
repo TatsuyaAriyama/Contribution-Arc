@@ -55,7 +55,7 @@ import {
   type ContributionPostRecord,
 } from "./services/posts";
 import { PremiumSidebar, type AppView, type FriendPreview, type LiveActivity } from "./components/PremiumNavigation";
-import { SilentWorkspaceRoom, type RoomActivityItem } from "./components/SilentWorkspaceRoom";
+import { SilentWorkspaceRoom, type RoomActivityItem, type WorkspaceGrowthProgress } from "./components/SilentWorkspaceRoom";
 import "./App.css";
 
 declare global {
@@ -140,6 +140,7 @@ type UserProfile = {
   streak?: number;
   unlockedCharacters?: string[];
   characterExp?: number;
+  openedWorkspaceGiftLevels?: number[];
   githubId?: string;
   githubUsername?: string;
   contributionCount?: number;
@@ -334,6 +335,28 @@ const defaultWorkspaceSeatLabels: WorkspaceSeatLabels = {
   deep: "休憩",
   cloud: "学習",
 };
+const workspaceActorSlots = [
+  { x: 28, y: 54 },
+  { x: 40, y: 52 },
+  { x: 55, y: 50 },
+  { x: 68, y: 54 },
+  { x: 78, y: 64 },
+  { x: 63, y: 69 },
+  { x: 48, y: 72 },
+  { x: 32, y: 70 },
+  { x: 20, y: 63 },
+  { x: 84, y: 48 },
+  { x: 73, y: 39 },
+  { x: 59, y: 36 },
+  { x: 43, y: 37 },
+  { x: 27, y: 40 },
+  { x: 16, y: 78 },
+  { x: 30, y: 82 },
+  { x: 45, y: 84 },
+  { x: 60, y: 83 },
+  { x: 75, y: 80 },
+  { x: 88, y: 73 },
+];
 const emptyKnowledgeGraph: KnowledgeGraphData = { nodes: [], links: [] };
 const knowledgeClusterAnchors: Record<string, { x: number; y: number }> = {
   frontend: { x: 322, y: 198 },
@@ -737,6 +760,11 @@ function normalizeUserProfile(uid: string, data: Partial<UserProfile>): UserProf
     streak: data.streak || 0,
     unlockedCharacters: Array.isArray(data.unlockedCharacters) ? data.unlockedCharacters : [characterOptions[0].id],
     characterExp: data.characterExp || 0,
+    openedWorkspaceGiftLevels: Array.isArray(data.openedWorkspaceGiftLevels)
+      ? data.openedWorkspaceGiftLevels
+          .map((level) => Number(level))
+          .filter((level) => Number.isFinite(level) && level > 0)
+      : [],
     githubId: data.githubId || "",
     githubUsername: data.githubUsername || "",
     contributionCount: data.contributionCount || 0,
@@ -1178,18 +1206,18 @@ function getWorkspaceSeatPosition(task: string) {
   const normalizedTask = task.toLowerCase();
 
   if (normalizedTask.includes("java")) {
-    return { x: 63, y: 47 };
+    return { x: 58, y: 52 };
   }
 
   if (normalizedTask.includes("aws") || normalizedTask.includes("cloud")) {
-    return { x: 73, y: 69 };
+    return { x: 72, y: 68 };
   }
 
   if (normalizedTask.includes("deep") || normalizedTask.includes("focus")) {
-    return { x: 44, y: 67 };
+    return { x: 44, y: 74 };
   }
 
-  return { x: 30, y: 47 };
+  return { x: 32, y: 58 };
 }
 
 function createDetaMember(joinedAt: Date): WorkspaceMember {
@@ -2128,6 +2156,7 @@ function App() {
   const [isPlayerWalking, setIsPlayerWalking] = useState(false);
   const [workspaceBubble, setWorkspaceBubble] = useState("");
   const [workspacePresetMessages, setWorkspacePresetMessages] = useState(defaultWorkspacePresetMessages);
+  const [openedWorkspaceGiftLevels, setOpenedWorkspaceGiftLevels] = useState<number[]>([]);
   const [posts, setPosts] = useState<ContributionPostRecord[]>([]);
   const [postDraft, setPostDraft] = useState("");
   const [postError, setPostError] = useState("");
@@ -2196,6 +2225,7 @@ function App() {
       setWorkspaceTask("React");
       setWorkspaceDraftTask("React");
       setWorkspacePresetMessages(defaultWorkspacePresetMessages);
+      setOpenedWorkspaceGiftLevels([]);
       setPosts([]);
       setPostDraft("");
       setPostError("");
@@ -2257,6 +2287,9 @@ function App() {
       (shouldUseLegacyUserStorage ? window.localStorage.getItem(`contribution-arc-workspace-task-${currentUser.uid}`) : null);
     const savedWorkspacePresetMessages = window.localStorage.getItem(
       getAccountStorageKey(accountScope, "workspace-preset-messages"),
+    );
+    const savedOpenedWorkspaceGiftLevels = window.localStorage.getItem(
+      getAccountStorageKey(accountScope, "workspace-opened-gift-levels"),
     );
     const savedKnowledgeGraph =
       window.localStorage.getItem(getAccountStorageKey(accountScope, "knowledge-graph")) ||
@@ -2328,6 +2361,17 @@ function App() {
           ].slice(0, 6)
         : defaultWorkspacePresetMessages,
     );
+    setOpenedWorkspaceGiftLevels(
+      savedOpenedWorkspaceGiftLevels
+        ? Array.from(
+            new Set(
+              (JSON.parse(savedOpenedWorkspaceGiftLevels) as unknown[])
+                .map((level) => Number(level))
+                .filter((level) => Number.isFinite(level) && level > 0),
+            ),
+          )
+        : [],
+    );
     setKnowledgeGraph(savedKnowledgeGraph ? (JSON.parse(savedKnowledgeGraph) as KnowledgeGraphData) : emptyKnowledgeGraph);
     setSelectedKnowledgeId("");
     setHoveredKnowledgeId("");
@@ -2357,6 +2401,11 @@ function App() {
         setDraftDetermination(profile.determination || savedDetermination || "");
         setPlayerAvatar(profile.photoURL || savedAvatar || currentUser.photoURL || "");
         setPlayerCharacterColor(profile.characterColor || savedCharacterColor || characterColorOptions[0].value);
+        setOpenedWorkspaceGiftLevels((levels) =>
+          Array.from(new Set([...levels, ...(profile.openedWorkspaceGiftLevels || [])])).sort(
+            (first, second) => first - second,
+          ),
+        );
         if (resolvedUserId) {
           safeSetLocalStorage(`contribution-arc-user-id-${currentUser.uid}`, resolvedUserId);
           safeSetLocalStorage(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
@@ -2715,6 +2764,18 @@ function App() {
       JSON.stringify(workspacePresetMessages.slice(0, 6)),
     );
   }, [currentUser, workspacePresetMessages, isWorkspaceLoaded, userId]);
+
+  useEffect(() => {
+    if (!currentUser || !isWorkspaceLoaded) {
+      return;
+    }
+    const accountScope = getAccountStorageScope(currentUser.uid, userId);
+
+    safeSetLocalStorage(
+      getAccountStorageKey(accountScope, "workspace-opened-gift-levels"),
+      JSON.stringify(openedWorkspaceGiftLevels),
+    );
+  }, [currentUser, openedWorkspaceGiftLevels, isWorkspaceLoaded, userId]);
 
   useEffect(() => {
     const timerId = window.setInterval(() => setWorkspaceNow(Date.now()), 30000);
@@ -3103,8 +3164,22 @@ function App() {
           x: playerPosition.x,
           y: playerPosition.y,
         }
-      : member,
+      : {
+          ...member,
+          ...workspaceActorSlots[
+            Math.abs(
+              Array.from(member.userId || member.id).reduce((sum, character) => sum + character.charCodeAt(0), 0),
+            ) % workspaceActorSlots.length
+          ],
+        },
   );
+  const workspaceGrowthProgress: WorkspaceGrowthProgress = {
+    level: levelState.level,
+    totalMinutes: studyLogs.reduce((sum, log) => sum + log.minutes, 0),
+    contributions: outputStats.contributions + studyLogs.length,
+    streak: studyStreak,
+    openedGiftLevels: openedWorkspaceGiftLevels,
+  };
   const roomActivityItems: RoomActivityItem[] = [
     ...resolvedVisibleMembers.map((member) => {
       const task = member.currentTask || member.building;
@@ -3222,6 +3297,12 @@ function App() {
       setLastNotificationReadAt(nextReadAt);
       safeSetLocalStorage(getAccountStorageKey(accountScope, "notifications-read-at"), nextReadAt);
     }
+  };
+  const handleWorkspaceGiftOpen = (level: number) => {
+    setOpenedWorkspaceGiftLevels((levels) =>
+      levels.includes(level) ? levels : [...levels, level].sort((first, second) => first - second),
+    );
+    setWorkspaceBubble("新しいインテリアを受け取りました");
   };
   const activeKnowledgeGraph = knowledgeGraph.nodes.length > 0 ? knowledgeGraph : studyKnowledgeGraph;
   const graphNodes = activeKnowledgeGraph.nodes.map((node) => ({
@@ -3549,6 +3630,7 @@ function App() {
       followers: [],
       unlockedCharacters: [characterOptions[0].id],
       characterExp: effortExp,
+      openedWorkspaceGiftLevels,
       githubId,
       githubUsername,
       contributionCount: outputStats.contributions,
@@ -3577,6 +3659,7 @@ function App() {
     isWorkspaceLoaded,
     levelState.level,
     outputExp,
+    openedWorkspaceGiftLevels,
     playerAvatar,
     playerCharacterColor,
     playerName,
@@ -5682,6 +5765,8 @@ function App() {
                       }
                       totalLearnedLabel={`${Math.round(roomTotalMinutes / 60).toLocaleString()}h learned`}
                       contributionLabel={`${roomContributions.toLocaleString()} contributions today`}
+                      growthProgress={workspaceGrowthProgress}
+                      onGrowthGiftOpen={handleWorkspaceGiftOpen}
                     />
                     <section className="room-log-strip" aria-label="このRoomの最近の投稿">
                       <div>
@@ -5778,6 +5863,8 @@ function App() {
             }
             totalLearnedLabel={`${Math.round(roomTotalMinutes / 60).toLocaleString()}h learned`}
             contributionLabel={`${roomContributions.toLocaleString()} contributions today`}
+            growthProgress={workspaceGrowthProgress}
+            onGrowthGiftOpen={handleWorkspaceGiftOpen}
           />
         ) : null}
       </section>

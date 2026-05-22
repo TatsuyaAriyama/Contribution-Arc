@@ -51,6 +51,7 @@ export type UserProgressRecord = {
   followers?: string[];
   unlockedCharacters: string[];
   characterExp: number;
+  openedWorkspaceGiftLevels: number[];
   githubId: string;
   githubUsername: string;
   contributionCount: number;
@@ -222,6 +223,7 @@ export async function saveUserProgressToCloud(db: Firestore, profile: UserProgre
       ...(profile.followers && profile.followers.length > 0 ? { followers: profile.followers } : {}),
       unlockedCharacters: profile.unlockedCharacters,
       characterExp: profile.characterExp,
+      openedWorkspaceGiftLevels: profile.openedWorkspaceGiftLevels,
       githubId: profile.githubId,
       githubUsername: profile.githubUsername,
       contributionCount: profile.contributionCount,
