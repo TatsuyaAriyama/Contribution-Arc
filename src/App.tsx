@@ -2571,6 +2571,25 @@ function App() {
   const [hoveredArcCell, setHoveredArcCell] = useState<
     { day: ContributionArcDay; left: number; top: number } | null
   >(null);
+  const [topbarNow, setTopbarNow] = useState(() => new Date());
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const id = window.setInterval(() => setTopbarNow(new Date()), 30000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    if (!isUserMenuOpen) return;
+    const handler = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [isUserMenuOpen]);
   const [customUserName, setCustomUserName] = useState("");
   const [draftUserName, setDraftUserName] = useState("");
   const [userId, setUserId] = useState("");
@@ -6122,18 +6141,27 @@ function App() {
         transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.06 }}
       >
         <div className="topbar-context">
-          <p className="card-kicker">Contribution Arc</p>
-          <strong>
-            {currentView === "workspace"
-              ? "作業部屋"
-              : currentView === "daily"
-                ? "日報"
-              : currentView === "logs"
-                ? "ログ"
-              : currentView === "profile"
-                ? "プロフィール"
-                : "ホーム"}
-          </strong>
+          <span className="topbar-date">
+            {topbarNow.getMonth() + 1}/{topbarNow.getDate()}（
+            {["日", "月", "火", "水", "木", "金", "土"][topbarNow.getDay()]}）
+          </span>
+          <span className="topbar-divider" aria-hidden="true">
+            ·
+          </span>
+          <span className="topbar-time">
+            {topbarNow.getHours().toString().padStart(2, "0")}:
+            {topbarNow.getMinutes().toString().padStart(2, "0")}
+          </span>
+          {todayStudyMinutes > 0 ? (
+            <>
+              <span className="topbar-divider" aria-hidden="true">
+                ·
+              </span>
+              <span className="topbar-today">
+                今日 {formatStudyTimeJa(todayStudyMinutes)} 学習
+              </span>
+            </>
+          ) : null}
         </div>
         <div className="user-session">
           <button
@@ -6146,17 +6174,6 @@ function App() {
             <strong>Search</strong>
             <em>⌘K</em>
           </button>
-          <div className="shop-button-wrap">
-            <button
-              type="button"
-              className="shop-button"
-              aria-label="ショップ"
-              onClick={() => console.log("shop clicked")}
-            >
-              <GiftIcon />
-            </button>
-            <span role="tooltip">ショップ</span>
-          </div>
           <div className="notification-wrap">
             <button
               type="button"
@@ -6241,17 +6258,68 @@ function App() {
               </section>
             ) : null}
           </div>
-          <button
-            type="button"
-            className="settings-button"
-            aria-label="Settings"
-            onClick={handleSettingsOpen}
-          >
-            <SettingsIcon />
-          </button>
-          <button type="button" className="connect-button" onClick={() => signOut(auth)}>
-            Sign out
-          </button>
+          <div className="user-menu-wrap" ref={userMenuRef}>
+            <button
+              type="button"
+              className={`user-menu-button${isUserMenuOpen ? " open" : ""}`}
+              aria-label="アカウントメニュー"
+              aria-expanded={isUserMenuOpen}
+              onClick={() => setIsUserMenuOpen((prev) => !prev)}
+            >
+              {playerAvatar ? (
+                <img src={playerAvatar} alt="" />
+              ) : (
+                <span>{playerInitial}</span>
+              )}
+            </button>
+            {isUserMenuOpen ? (
+              <div className="user-menu-panel" role="menu">
+                <div className="user-menu-head">
+                  <span className="user-menu-avatar">
+                    {playerAvatar ? <img src={playerAvatar} alt="" /> : playerInitial}
+                  </span>
+                  <span>
+                    <strong>{playerName}</strong>
+                    <small>@{userId || "未設定"}</small>
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    console.log("shop clicked");
+                  }}
+                >
+                  <GiftIcon />
+                  <span>ショップ</span>
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    handleSettingsOpen();
+                  }}
+                >
+                  <SettingsIcon />
+                  <span>設定</span>
+                </button>
+                <div className="user-menu-separator" aria-hidden="true" />
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="user-menu-signout"
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    signOut(auth);
+                  }}
+                >
+                  ログアウト
+                </button>
+              </div>
+            ) : null}
+          </div>
         </div>
       </motion.header>
 
