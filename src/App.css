@@ -1277,6 +1277,17 @@
   box-shadow: 0 0 0 4px rgba(31, 111, 74, 0.08);
 }
 
+.workspace-start-error {
+  margin: -8px 0 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(166, 95, 26, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 247, 237, 0.82);
+  color: #8a5b1d;
+  font-size: 12px;
+  font-weight: 860;
+}
+
 .workspace-start-color {
   display: grid;
   gap: 8px;

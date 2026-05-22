@@ -2496,9 +2496,10 @@ function App() {
   const [roomCreateMessage, setRoomCreateMessage] = useState("");
   const [editingRoomId, setEditingRoomId] = useState("");
   const [editingRoomName, setEditingRoomName] = useState("");
-  const [workspaceTask, setWorkspaceTask] = useState("React");
-  const [workspaceDraftTask, setWorkspaceDraftTask] = useState("React");
+  const [workspaceTask, setWorkspaceTask] = useState("");
+  const [workspaceDraftTask, setWorkspaceDraftTask] = useState("");
   const [workspaceDraftColor, setWorkspaceDraftColor] = useState(studyColorOptions[0].value);
+  const [workspaceStartError, setWorkspaceStartError] = useState("");
   const [pendingJoinRoomId, setPendingJoinRoomId] = useState<string | null>(null);
   const [workspaceNow, setWorkspaceNow] = useState(Date.now());
   const [lastRoomSession, setLastRoomSession] = useState<WorkspaceSessionHistory | null>(null);
@@ -2591,9 +2592,10 @@ function App() {
       setRoomCreateState("idle");
       setRoomCreateMessage("");
       setPendingJoinRoomId(null);
+      setWorkspaceStartError("");
       setLastRoomSession(null);
-      setWorkspaceTask("React");
-      setWorkspaceDraftTask("React");
+      setWorkspaceTask("");
+      setWorkspaceDraftTask("");
       setWorkspacePresetMessages(defaultWorkspacePresetMessages);
       setOpenedWorkspaceGiftLevels([]);
       setPosts([]);
@@ -2728,8 +2730,9 @@ function App() {
     } else {
       setSelectedRoomId("");
     }
-    setWorkspaceTask(savedWorkspaceTask || studySubject);
-    setWorkspaceDraftTask(savedWorkspaceTask || studySubject);
+    const initialWorkspaceTask = savedWorkspaceTask === "React" ? "" : savedWorkspaceTask || "";
+    setWorkspaceTask(initialWorkspaceTask);
+    setWorkspaceDraftTask(initialWorkspaceTask);
     setWorkspaceDraftColor(studyColorOptions[0].value);
     setWorkspacePresetMessages(
       savedWorkspacePresetMessages
@@ -3489,7 +3492,7 @@ function App() {
 
     const nextName =
       customUserName.trim() || currentUser.displayName || currentUser.email?.split("@")[0] || "Developer";
-    const nextBuilding = workspaceTask.trim() || studySubject.trim() || "Deep work";
+    const nextBuilding = workspaceTask.trim() || "Deep Work";
 
     setCustomRooms((rooms) => {
       let changed = false;
@@ -5094,9 +5097,12 @@ function App() {
   const startWorkspaceSession = (roomId: string, task: string, color: string) => {
     const nextTask = task.trim();
     if (!nextTask) {
+      setWorkspaceStartError("作業内容を入力してください。");
+      setWorkspaceBubble("作業内容を入力してください。");
       return;
     }
 
+    setWorkspaceStartError("");
     const joinedAt = new Date().toISOString();
     const seatPosition = getWorkspaceSeatPosition(nextTask);
     const nextMember = createWorkspaceMember({
@@ -5156,7 +5162,16 @@ function App() {
   };
 
   const handleRoomJoin = (roomId: string) => {
-    startWorkspaceSession(roomId, workspaceTask || studySubject || "Deep work", studyColor);
+    const nextTask = workspaceTask.trim();
+    if (!nextTask) {
+      setPendingJoinRoomId(roomId);
+      setWorkspaceDraftTask("");
+      setWorkspaceStartError("作業内容を入力してください。");
+      setWorkspaceBubble("作業内容を入力してください。");
+      return;
+    }
+
+    startWorkspaceSession(roomId, nextTask, studyColor);
   };
 
   const handleWorkspaceStart = (event: FormEvent<HTMLFormElement>) => {
@@ -5166,7 +5181,13 @@ function App() {
       return;
     }
 
-    startWorkspaceSession(pendingJoinRoomId, workspaceDraftTask, workspaceDraftColor);
+    const nextTask = workspaceDraftTask.trim();
+    if (!nextTask) {
+      setWorkspaceStartError("作業内容を入力してください。");
+      return;
+    }
+
+    startWorkspaceSession(pendingJoinRoomId, nextTask, workspaceDraftColor);
   };
 
   const handleRoomLeave = () => {
@@ -6230,12 +6251,18 @@ function App() {
                 <span>作業内容</span>
                 <input
                   value={workspaceDraftTask}
-                  onChange={(event) => setWorkspaceDraftTask(event.target.value)}
-                  placeholder="React / Java / AWS"
+                  onChange={(event) => {
+                    setWorkspaceDraftTask(event.target.value);
+                    if (workspaceStartError) {
+                      setWorkspaceStartError("");
+                    }
+                  }}
+                  placeholder="例: Firebase設計 / Java学習"
                   maxLength={48}
                   autoFocus
                 />
               </label>
+              {workspaceStartError ? <p className="workspace-start-error">{workspaceStartError}</p> : null}
 
               <fieldset className="workspace-start-color">
                 <legend>記録カラー</legend>

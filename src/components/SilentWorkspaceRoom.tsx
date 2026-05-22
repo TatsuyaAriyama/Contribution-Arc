@@ -280,7 +280,7 @@ export function SilentWorkspaceRoom({
               <input
                 value={taskValue}
                 onChange={handleTaskChange}
-                placeholder="React / Java / AWS"
+                placeholder="作業内容を入力"
                 maxLength={48}
               />
             </label>
