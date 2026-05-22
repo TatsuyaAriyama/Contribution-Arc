@@ -72,19 +72,19 @@ export function PremiumSidebar({
         </button>
         <button
           type="button"
+          className={currentView === "profile" ? "active" : ""}
+          onClick={onProfileOpen}
+        >
+          <span />
+          プロフィール
+        </button>
+        <button
+          type="button"
           className={currentView === "daily" ? "active" : ""}
           onClick={() => onViewChange("daily")}
         >
           <span />
           日報
-        </button>
-        <button
-          type="button"
-          className={currentView === "workspace" ? "active" : ""}
-          onClick={() => onViewChange("workspace")}
-        >
-          <span />
-          作業部屋
         </button>
         <button
           type="button"
@@ -94,9 +94,13 @@ export function PremiumSidebar({
           <span />
           ログ
         </button>
-        <button type="button" className={currentView === "profile" ? "active" : ""} onClick={onProfileOpen}>
+        <button
+          type="button"
+          className={currentView === "workspace" ? "active" : ""}
+          onClick={() => onViewChange("workspace")}
+        >
           <span />
-          プロフィール
+          作業部屋
         </button>
       </nav>
 
