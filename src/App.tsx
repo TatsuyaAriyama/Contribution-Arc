@@ -1625,11 +1625,10 @@ function isScheduledWorkspaceNpc(member: Pick<WorkspaceMember, "userId" | "id" |
   return (
     member.userId === minaUserId ||
     member.id === minaUserId ||
-    member.name === "Mina" ||
     member.userId === "npc-deta" ||
+    member.id === "npc-deta" ||
     member.userId === "npc-ari" ||
-    member.id === "npc-ari" ||
-    member.name === "Ari"
+    member.id === "npc-ari"
   );
 }
 
@@ -2516,6 +2515,7 @@ function App() {
   const isApplyingRemoteRoomsRef = useRef(false);
   const lastSyncedWorkspaceRoomsRef = useRef("");
   const pendingWorkspaceRoomsRef = useRef<Map<string, WorkspaceRoom>>(new Map());
+  const cleanedLegacyWorkspaceRoomsRef = useRef<Set<string>>(new Set());
   const remoteWorkspaceRoomsRef = useRef<{ rooms: WorkspaceRoom[]; legacyRooms: WorkspaceRoom[] }>({
     rooms: [],
     legacyRooms: [],
@@ -2532,6 +2532,7 @@ function App() {
     return onAuthStateChanged(auth, (user) => {
       didRequestStudyLogMigrationRef.current = false;
       didRequestDailyReportMigrationRef.current = false;
+      cleanedLegacyWorkspaceRoomsRef.current = new Set();
       remoteWorkspaceRoomsRef.current = { rooms: [], legacyRooms: [] };
       setIsWorkspaceLoaded(false);
       setCurrentView("home");
@@ -3345,6 +3346,22 @@ function App() {
 
       const remoteRooms = Array.from(remoteRoomMap.values());
       const remoteRoomIds = new Set(remoteRooms.map((room) => room.id));
+
+      remoteRooms
+        .filter((room) => isLegacyWorkspaceRoom(room) && room.createdBy === currentUser.uid)
+        .forEach((room) => {
+          if (cleanedLegacyWorkspaceRoomsRef.current.has(room.id)) {
+            return;
+          }
+
+          cleanedLegacyWorkspaceRoomsRef.current.add(room.id);
+          void deleteDoc(doc(db, workspaceRoomsCollectionName, room.id)).catch((error) => {
+            console.info("Legacy room cleanup skipped.", error);
+          });
+          void deleteDoc(doc(db, legacyWorkspaceRoomsCollectionName, room.id)).catch((error) => {
+            console.info("Legacy workspace room cleanup skipped.", error);
+          });
+        });
 
       remoteRooms.forEach((room) => {
         const pendingRoom = pendingWorkspaceRoomsRef.current.get(room.id);
