@@ -2491,6 +2491,7 @@ function App() {
   const [postDraft, setPostDraft] = useState("");
   const [postError, setPostError] = useState("");
   const [isPosting, setIsPosting] = useState(false);
+  const [timelineFilter, setTimelineFilter] = useState<"following" | "all">("following");
   const [dailyReports, setDailyReports] = useState<DailyReport[]>([]);
   const [sharedDailyReports, setSharedDailyReports] = useState<DailyReport[]>([]);
   const [selectedDailyDate, setSelectedDailyDate] = useState(getDateInputValue());
@@ -3656,6 +3657,16 @@ function App() {
   const studyKnowledgeGraph = useMemo(() => buildStudyKnowledgeGraph(studyLogs), [studyLogs]);
 
   const currentUserUid = currentUser?.uid || "";
+  const visibleTimelinePosts = useMemo(() => {
+    if (timelineFilter === "all") {
+      return posts;
+    }
+    const followingSet = new Set(following);
+    if (currentUserUid) {
+      followingSet.add(currentUserUid);
+    }
+    return posts.filter((post) => followingSet.has(post.userId));
+  }, [posts, timelineFilter, following, currentUserUid]);
   const playerName =
     customUserName.trim() || currentUser?.displayName || currentUser?.email?.split("@")[0] || "Developer";
   const playerInitial = playerName.slice(0, 1).toUpperCase();
@@ -6524,10 +6535,10 @@ function App() {
           <section className="log-composer-card">
             <div className="log-composer-head">
               <div>
-                <p className="card-kicker">Quiet Logs</p>
+                <p className="card-kicker">Timeline</p>
                 <h2>今日の学びを共有する</h2>
               </div>
-              <span>{posts.length.toLocaleString()} logs</span>
+              <span>{visibleTimelinePosts.length.toLocaleString()} logs</span>
             </div>
 
             <form className="log-composer" onSubmit={handlePostSubmit}>
@@ -6565,8 +6576,34 @@ function App() {
 
           <div className="logs-layout">
             <section className="log-timeline" aria-label="開発ログタイムライン">
-              {posts.length > 0 ? (
-                posts.map((post) => postCard(post))
+              <div className="timeline-filter-tabs" role="tablist" aria-label="タイムラインの表示範囲">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={timelineFilter === "following"}
+                  className={`timeline-filter-tab${timelineFilter === "following" ? " is-active" : ""}`}
+                  onClick={() => setTimelineFilter("following")}
+                >
+                  Following
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={timelineFilter === "all"}
+                  className={`timeline-filter-tab${timelineFilter === "all" ? " is-active" : ""}`}
+                  onClick={() => setTimelineFilter("all")}
+                >
+                  All
+                </button>
+              </div>
+              {visibleTimelinePosts.length > 0 ? (
+                visibleTimelinePosts.map((post) => postCard(post))
+              ) : timelineFilter === "following" ? (
+                <article className="log-empty-card">
+                  <p className="card-kicker">Following</p>
+                  <strong>フォロー中のログはまだありません。</strong>
+                  <span>気になるエンジニアをフォローすると、ここに学びが流れます。Allタブで全員のログを見ることもできます。</span>
+                </article>
               ) : (
                 <article className="log-empty-card">
                   <p className="card-kicker">Quiet Progress</p>
