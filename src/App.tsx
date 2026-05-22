@@ -232,6 +232,16 @@ type OnboardingStep = "idle" | "welcome" | "settings";
 
 type RoomCreateState = "idle" | "saving" | "saved" | "offline";
 
+type DailyReport = {
+  id: string;
+  userId: string;
+  date: string;
+  plan: string;
+  reflection: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 type KnowledgeNode = {
   id: string;
   title: string;
@@ -882,6 +892,26 @@ function formatPostTime(createdAt: string) {
   }
 
   return new Date(createdAt).toLocaleDateString("ja-JP", { month: "2-digit", day: "2-digit" });
+}
+
+function getDateInputValue(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatDailyDate(date: string) {
+  const parsedDate = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return date;
+  }
+
+  return parsedDate.toLocaleDateString("ja-JP", {
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+  });
 }
 
 function getStudyLogPostVerb(subject: string) {
@@ -2102,6 +2132,12 @@ function App() {
   const [postDraft, setPostDraft] = useState("");
   const [postError, setPostError] = useState("");
   const [isPosting, setIsPosting] = useState(false);
+  const [dailyReports, setDailyReports] = useState<DailyReport[]>([]);
+  const [selectedDailyDate, setSelectedDailyDate] = useState(getDateInputValue());
+  const [dailyPlanDraft, setDailyPlanDraft] = useState("");
+  const [dailyReflectionDraft, setDailyReflectionDraft] = useState("");
+  const [dailyMessage, setDailyMessage] = useState("");
+  const [isSavingDailyReport, setIsSavingDailyReport] = useState(false);
   const [isDesktopWelcomeVisible, setIsDesktopWelcomeVisible] = useState(true);
   const [knowledgeGraph, setKnowledgeGraph] = useState<KnowledgeGraphData>(emptyKnowledgeGraph);
   const [selectedKnowledgeId, setSelectedKnowledgeId] = useState("");
@@ -2164,6 +2200,12 @@ function App() {
       setPostDraft("");
       setPostError("");
       setIsPosting(false);
+      setDailyReports([]);
+      setSelectedDailyDate(getDateInputValue());
+      setDailyPlanDraft("");
+      setDailyReflectionDraft("");
+      setDailyMessage("");
+      setIsSavingDailyReport(false);
       setIsDesktopWelcomeVisible(true);
       setKnowledgeGraph(emptyKnowledgeGraph);
       setSelectedKnowledgeId("");
@@ -2420,6 +2462,57 @@ function App() {
       },
     );
   }, [currentUser, isWorkspaceLoaded]);
+
+  useEffect(() => {
+    if (!currentUser || !isWorkspaceLoaded) {
+      return;
+    }
+
+    const accountScope = getAccountStorageScope(currentUser.uid, userId);
+    const savedReports = window.localStorage.getItem(getAccountStorageKey(accountScope, "daily-reports"));
+    if (savedReports) {
+      try {
+        setDailyReports(JSON.parse(savedReports) as DailyReport[]);
+      } catch {
+        setDailyReports([]);
+      }
+    }
+
+    const dailyQuery = query(collection(db, "dailyReports"), where("userId", "==", currentUser.uid));
+    const unsubscribe = onSnapshot(
+      dailyQuery,
+      (snapshot) => {
+        const reports = snapshot.docs
+          .map((item) => {
+            const data = item.data() as Partial<DailyReport>;
+            return {
+              id: item.id,
+              userId: typeof data.userId === "string" ? data.userId : currentUser.uid,
+              date: typeof data.date === "string" ? data.date : getDateInputValue(),
+              plan: typeof data.plan === "string" ? data.plan : "",
+              reflection: typeof data.reflection === "string" ? data.reflection : "",
+              createdAt: typeof data.createdAt === "string" ? data.createdAt : new Date().toISOString(),
+              updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : new Date().toISOString(),
+            };
+          })
+          .sort((a, b) => b.date.localeCompare(a.date));
+
+        setDailyReports(reports);
+        safeSetLocalStorage(getAccountStorageKey(accountScope, "daily-reports"), JSON.stringify(reports));
+      },
+      (error) => {
+        console.info("Daily report realtime sync skipped.", error);
+      },
+    );
+
+    return () => unsubscribe();
+  }, [currentUser, isWorkspaceLoaded, userId]);
+
+  useEffect(() => {
+    const nextReport = dailyReports.find((report) => report.date === selectedDailyDate);
+    setDailyPlanDraft(nextReport?.plan || "");
+    setDailyReflectionDraft(nextReport?.reflection || "");
+  }, [dailyReports, selectedDailyDate]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
@@ -3099,6 +3192,8 @@ function App() {
   }));
   const liveActivities = [...onlineActivities, ...recentStudyActivities].slice(0, 5);
   const selectedRoomPosts = selectedRoom ? posts.filter((post) => post.roomId === selectedRoom.id).slice(0, 4) : [];
+  const selectedDailyReport = dailyReports.find((report) => report.date === selectedDailyDate) || null;
+  const todayDailyReport = dailyReports.find((report) => report.date === getDateInputValue()) || null;
   const accountScope = getAccountStorageScope(currentUserUid, userId);
   const notificationItems = friendRequests
     .filter((request) => request.direction === "incoming" || request.status === "accepted")
@@ -3271,6 +3366,83 @@ function App() {
       console.info("Post like sync skipped.", error);
       setPostError("リアクションを保存できませんでした。");
     });
+  };
+
+  const handleDailyDateChange = (date: string) => {
+    const nextReport = dailyReports.find((report) => report.date === date);
+    setSelectedDailyDate(date);
+    setDailyPlanDraft(nextReport?.plan || "");
+    setDailyReflectionDraft(nextReport?.reflection || "");
+    setDailyMessage("");
+  };
+
+  const handleDailyReportSave = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!currentUser || isSavingDailyReport) {
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const existingReport = dailyReports.find((report) => report.date === selectedDailyDate);
+    const report: DailyReport = {
+      id: `${currentUser.uid}_${selectedDailyDate}`,
+      userId: currentUser.uid,
+      date: selectedDailyDate,
+      plan: dailyPlanDraft.trim(),
+      reflection: dailyReflectionDraft.trim(),
+      createdAt: existingReport?.createdAt || now,
+      updatedAt: now,
+    };
+
+    setIsSavingDailyReport(true);
+    setDailyMessage("");
+    setDailyReports((reports) => {
+      const nextReports = [report, ...reports.filter((item) => item.id !== report.id)].sort((a, b) =>
+        b.date.localeCompare(a.date),
+      );
+      safeSetLocalStorage(getAccountStorageKey(accountScope, "daily-reports"), JSON.stringify(nextReports));
+      return nextReports;
+    });
+
+    try {
+      await setDoc(
+        doc(db, "dailyReports", report.id),
+        {
+          ...report,
+          updatedAt: report.updatedAt,
+          serverUpdatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
+      setDailyMessage("日報を保存しました。");
+    } catch (error) {
+      setDailyMessage(
+        getFirestoreErrorMessage(
+          error,
+          "日報をローカルに保存しました。",
+          "日報をクラウド保存する権限がまだ有効ではありません。ローカルには保存されています。",
+        ),
+      );
+    } finally {
+      setIsSavingDailyReport(false);
+    }
+  };
+
+  const useDailyPlanAsPost = () => {
+    const text = dailyPlanDraft.trim() || selectedDailyReport?.plan.trim();
+    if (text) {
+      setPostDraft(`今日やること: ${text}`);
+      setCurrentView("logs");
+    }
+  };
+
+  const useDailyReflectionAsPost = () => {
+    const text = dailyReflectionDraft.trim() || selectedDailyReport?.reflection.trim();
+    if (text) {
+      setPostDraft(`今日の振り返り: ${text}`);
+      setCurrentView("logs");
+    }
   };
 
   const handlePostAuthorOpen = (post: ContributionPostRecord) => {
@@ -4716,6 +4888,8 @@ function App() {
           <strong>
             {currentView === "workspace"
               ? "作業部屋"
+              : currentView === "daily"
+                ? "日報"
               : currentView === "logs"
                 ? "ログ"
               : currentView === "profile"
@@ -5047,7 +5221,96 @@ function App() {
         </div>
       ) : null}
 
-      {currentView === "logs" ? (
+      {currentView === "daily" ? (
+        <motion.section
+          className="daily-screen"
+          aria-label="Daily report"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <section className="daily-editor-card">
+            <div className="daily-editor-head">
+              <div>
+                <p className="card-kicker">Daily Report</p>
+                <h2>朝の予定と業務後の振り返り</h2>
+              </div>
+              <label>
+                <span>日付</span>
+                <input
+                  type="date"
+                  value={selectedDailyDate}
+                  onChange={(event) => handleDailyDateChange(event.target.value)}
+                />
+              </label>
+            </div>
+
+            <form className="daily-editor-form" onSubmit={handleDailyReportSave}>
+              <label>
+                <span>朝にやること</span>
+                <textarea
+                  value={dailyPlanDraft}
+                  onChange={(event) => setDailyPlanDraft(event.target.value)}
+                  placeholder="今日進める業務、確認すること、優先順位など"
+                  rows={7}
+                />
+              </label>
+
+              <label>
+                <span>業務後の振り返り</span>
+                <textarea
+                  value={dailyReflectionDraft}
+                  onChange={(event) => setDailyReflectionDraft(event.target.value)}
+                  placeholder="できたこと、詰まったこと、明日に回すことなど"
+                  rows={7}
+                />
+              </label>
+
+              <div className="daily-editor-actions">
+                <button type="button" onClick={useDailyPlanAsPost} disabled={!dailyPlanDraft.trim() && !selectedDailyReport?.plan}>
+                  やることをログへ
+                </button>
+                <button
+                  type="button"
+                  onClick={useDailyReflectionAsPost}
+                  disabled={!dailyReflectionDraft.trim() && !selectedDailyReport?.reflection}
+                >
+                  振り返りをログへ
+                </button>
+                <button type="submit" disabled={isSavingDailyReport}>
+                  {isSavingDailyReport ? "保存中" : "保存"}
+                </button>
+              </div>
+              {dailyMessage ? <p className="daily-message">{dailyMessage}</p> : null}
+            </form>
+          </section>
+
+          <aside className="daily-history-card">
+            <div className="daily-history-head">
+              <p className="card-kicker">History</p>
+              <strong>{dailyReports.length} days</strong>
+            </div>
+            <div className="daily-history-list">
+              {dailyReports.length > 0 ? (
+                dailyReports.slice(0, 10).map((report) => (
+                  <button
+                    type="button"
+                    key={report.id}
+                    className={report.date === selectedDailyDate ? "active" : ""}
+                    onClick={() => handleDailyDateChange(report.date)}
+                  >
+                    <strong>{formatDailyDate(report.date)}</strong>
+                    <span>{report.plan || "朝の予定は未入力"}</span>
+                    <small>{report.reflection ? "振り返り済み" : "振り返り未入力"}</small>
+                  </button>
+                ))
+              ) : (
+                <p>まだ日報はありません。</p>
+              )}
+            </div>
+          </aside>
+        </motion.section>
+      ) : currentView === "logs" ? (
         <motion.section
           className="logs-screen"
           aria-label="Contribution Arc logs"
@@ -5522,6 +5785,16 @@ function App() {
       <section className="hero-grid" aria-label="Contribution Arc overview">
         <div className="overview-stack">
           {playerStatusCard(true)}
+          <article className="card daily-today-card">
+            <div>
+              <p className="card-kicker">今日の日報</p>
+              <strong>{todayDailyReport?.plan ? "朝の予定あり" : "朝の予定は未入力"}</strong>
+              <span>{todayDailyReport?.reflection ? "振り返り済み" : "業務後に振り返りを記録"}</span>
+            </div>
+            <button type="button" onClick={() => setCurrentView("daily")}>
+              日報を書く
+            </button>
+          </article>
         </div>
 
         <article className="card hours-card weekly-card">
