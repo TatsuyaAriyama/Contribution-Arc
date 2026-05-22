@@ -57,7 +57,7 @@ export function PremiumSidebar({
         {logo}
         <span>
           <strong>Contribution Arc</strong>
-          <small>エンジニアの情報共有</small>
+          <small>エンジニアの学びを共有する</small>
         </span>
       </button>
 
