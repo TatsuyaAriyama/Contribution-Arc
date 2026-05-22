@@ -1931,6 +1931,36 @@ function BellIcon() {
   );
 }
 
+function GiftIcon() {
+  return (
+    <svg className="gift-icon" viewBox="0 0 64 64" aria-hidden="true">
+      <path
+        d="M10 27h44v29H10V27Z"
+        fill="#ffffff"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="4"
+      />
+      <path
+        d="M8 20h48v11H8V20Z"
+        fill="#ffffff"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="4"
+      />
+      <path d="M32 20v36M8 31h48" fill="none" stroke="currentColor" strokeWidth="4" />
+      <path
+        d="M31 19c-7-10-16-11-18-5-2 7 6 10 18 6Zm2 0c7-10 16-11 18-5 2 7-6 10-18 6Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="4"
+      />
+    </svg>
+  );
+}
+
 function ContributionArcLogo() {
   return (
     <div className="brand-logo-stage" aria-label="Contribution Arc logo">
@@ -5504,6 +5534,17 @@ function App() {
             <strong>Search</strong>
             <em>⌘K</em>
           </button>
+          <div className="shop-button-wrap">
+            <button
+              type="button"
+              className="shop-button"
+              aria-label="ショップ"
+              onClick={() => console.log("shop clicked")}
+            >
+              <GiftIcon />
+            </button>
+            <span role="tooltip">ショップ</span>
+          </div>
           <div className="notification-wrap">
             <button
               type="button"

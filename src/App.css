@@ -104,6 +104,77 @@
   display: block;
 }
 
+.shop-button-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.shop-button {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9),
+    0 14px 32px rgba(17, 24, 39, 0.08);
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    color 0.18s ease;
+}
+
+.shop-button:hover,
+.shop-button:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(31, 111, 74, 0.24);
+  color: var(--green);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9),
+    0 18px 38px rgba(31, 111, 74, 0.12);
+  outline: none;
+}
+
+.gift-icon {
+  width: 23px;
+  height: 23px;
+  display: block;
+}
+
+.shop-button-wrap > span {
+  position: absolute;
+  top: calc(100% + 9px);
+  left: 50%;
+  z-index: 60;
+  padding: 5px 8px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.92);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 820;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -4px);
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
+  white-space: nowrap;
+  box-shadow: 0 14px 30px rgba(17, 24, 39, 0.16);
+}
+
+.shop-button-wrap:hover > span,
+.shop-button:focus-visible + span {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
 .notification-wrap {
   position: relative;
   display: grid;
