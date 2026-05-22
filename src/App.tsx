@@ -2650,6 +2650,7 @@ function App() {
   const [knowledgePositions, setKnowledgePositions] = useState<Record<string, { x: number; y: number }>>({});
   const [draggingKnowledgeId, setDraggingKnowledgeId] = useState("");
   const pressedWorkspaceKeysRef = useRef<Set<string>>(new Set());
+  const syncedRoomPositionRef = useRef<string | null>(null);
   const graphSvgRef = useRef<SVGSVGElement | null>(null);
   const isApplyingRemoteRoomsRef = useRef(false);
   const lastSyncedWorkspaceRoomsRef = useRef("");
@@ -3691,6 +3692,7 @@ function App() {
 
   useEffect(() => {
     if (!currentUser) {
+      syncedRoomPositionRef.current = null;
       return;
     }
 
@@ -3699,8 +3701,19 @@ function App() {
     if (!member) {
       pressedWorkspaceKeysRef.current.clear();
       setIsPlayerWalking(false);
+      syncedRoomPositionRef.current = null;
       return;
     }
+
+    // Only seed the local playerPosition once per (user, room) entry. After that
+    // local state owns the avatar position — otherwise every Firestore tick or
+    // normalization pass would snap the avatar back to the persisted x/y and
+    // visually teleport mid-walk.
+    const syncKey = `${currentUser.uid}:${selectedRoomId}`;
+    if (syncedRoomPositionRef.current === syncKey) {
+      return;
+    }
+    syncedRoomPositionRef.current = syncKey;
 
     setPlayerPosition({
       x: typeof member.x === "number" ? member.x : 18,
