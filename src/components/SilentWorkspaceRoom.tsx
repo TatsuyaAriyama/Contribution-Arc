@@ -233,7 +233,7 @@ export function SilentWorkspaceRoom({
             <span />
           </div>
           {workspaceSeats.map((seat) => {
-            const seatName = (seatLabels[seat.id] || seat.name).trim() || seat.name;
+            const seatName = (seatLabels[seat.id] ?? seat.name).trim() || seat.name;
 
             return (
               <button
@@ -318,7 +318,7 @@ export function SilentWorkspaceRoom({
                     <label key={`seat-label-${seat.id}`}>
                       <span>{seat.note}</span>
                       <input
-                        value={seatLabels[seat.id] || seat.name}
+                        value={seatLabels[seat.id] ?? seat.name}
                         onChange={(event) => handleSeatLabelChange(seat.id, event.target.value)}
                         placeholder={seat.name}
                         maxLength={10}
