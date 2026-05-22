@@ -12287,11 +12287,13 @@
   overflow-x: auto;
   padding-bottom: 2px;
   scrollbar-width: thin;
+  display: flex;
+  justify-content: center;
 }
 
 .contribution-arc-track {
   display: flex;
-  gap: 4px;
+  gap: 5px;
   position: relative;
   width: max-content;
 }
@@ -12300,10 +12302,10 @@
   position: absolute;
   left: 0;
   right: 0;
-  top: 20px;
+  top: 23px;
   bottom: 0;
   width: 100%;
-  height: calc(100% - 20px);
+  height: calc(100% - 23px);
   pointer-events: none;
   z-index: 1;
 }
@@ -12333,23 +12335,23 @@
 
 .contribution-arc-week {
   display: grid;
-  grid-template-rows: 16px repeat(7, 13px);
-  gap: 4px;
+  grid-template-rows: 18px repeat(7, 18px);
+  gap: 5px;
   flex-shrink: 0;
 }
 
 .contribution-arc-month {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   white-space: nowrap;
-  line-height: 16px;
+  line-height: 18px;
   letter-spacing: 0;
 }
 
 .contribution-arc-cell {
-  width: 13px;
-  height: 13px;
-  border-radius: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
   display: block;
   border: none;
   padding: 0;

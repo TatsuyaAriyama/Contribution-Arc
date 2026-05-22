@@ -751,6 +751,8 @@ function getContributionArcLevel(minutes: number): 0 | 1 | 2 | 3 | 4 {
   return 4;
 }
 
+const CONTRIBUTION_ARC_WEEKS = 13;
+
 function getContributionArc(logs: StudyLog[]): {
   weeks: ContributionArcWeek[];
   totalMinutes: number;
@@ -762,7 +764,7 @@ function getContributionArc(logs: StudyLog[]): {
   topMonthLabel: string | null;
   topMonthMinutes: number;
 } {
-  const WEEKS = 52;
+  const WEEKS = CONTRIBUTION_ARC_WEEKS;
   const minutesByDay = new Map<string, number>();
   for (const log of logs) {
     const d = new Date(log.createdAt);
@@ -3846,7 +3848,7 @@ function App() {
     today.setHours(0, 0, 0, 0);
     const todayWeekday = today.getDay();
     const startDate = new Date(today);
-    startDate.setDate(today.getDate() - ((52 - 1) * 7 + todayWeekday));
+    startDate.setDate(today.getDate() - ((CONTRIBUTION_ARC_WEEKS - 1) * 7 + todayWeekday));
     const totals = new Map<string, { subject: string; minutes: number; color: string }>();
     for (const log of studyLogs) {
       const d = new Date(log.createdAt);
@@ -7235,7 +7237,7 @@ function App() {
           <div className="contribution-arc-head-title">
             <p className="card-kicker">Contribution Arc</p>
             <strong>{Math.round(contributionArc.totalMinutes / 60)}時間 学習</strong>
-            <span>{contributionArc.activeDays}日間 · 直近52週</span>
+            <span>{contributionArc.activeDays}日間 · 直近13週</span>
           </div>
           <div className="contribution-arc-stats" aria-label="学習サマリ">
             <div>
@@ -7280,7 +7282,7 @@ function App() {
           <div
             className="contribution-arc-grid"
             role="img"
-            aria-label={`直近52週で${contributionArc.activeDays}日間学習`}
+            aria-label={`直近13週で${contributionArc.activeDays}日間学習`}
           >
             <div className="contribution-arc-track">
             {contributionArcCurvePath ? (
