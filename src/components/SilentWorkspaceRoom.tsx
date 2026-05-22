@@ -195,7 +195,6 @@ export function SilentWorkspaceRoom({
                 {member.status === "on-break" ? <span className="actor-rest-mark" aria-hidden="true">Zz</span> : null}
                 <span className="actor-shadow" />
                 <span className={`actor-sprite ${member.tone}`}>
-                  <span className="sprite-head" aria-hidden="true" />
                   <span className="sprite-body" />
                   <span className="sprite-leg sprite-leg-left" />
                   <span className="sprite-leg sprite-leg-right" />

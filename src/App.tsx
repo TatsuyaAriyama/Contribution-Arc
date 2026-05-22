@@ -1472,7 +1472,6 @@ function ProfileCharacterPreview({ color }: { color?: string }) {
       aria-hidden="true"
     >
       <span className="actor-sprite deep">
-        <span className="sprite-head" />
         <span className="sprite-body" />
         <span className="sprite-leg sprite-leg-left" />
         <span className="sprite-leg sprite-leg-right" />
@@ -6320,7 +6319,6 @@ function App() {
                     aria-hidden="true"
                   >
                     <span className="actor-sprite deep">
-                      <span className="sprite-head" />
                       <span className="sprite-body" />
                       <span className="sprite-leg sprite-leg-left" />
                       <span className="sprite-leg sprite-leg-right" />
@@ -6925,7 +6923,6 @@ function App() {
                         aria-hidden="true"
                       >
                         <span className="actor-sprite deep">
-                          <span className="sprite-head" />
                           <span className="sprite-body" />
                           <span className="sprite-leg sprite-leg-left" />
                           <span className="sprite-leg sprite-leg-right" />
