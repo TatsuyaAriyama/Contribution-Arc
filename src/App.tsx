@@ -6098,7 +6098,6 @@ function App() {
             <div className="daily-editor-head">
               <div>
                 <p className="card-kicker">Daily Report</p>
-                <h2>朝の予定と業務後の振り返り</h2>
               </div>
               <label>
                 <span>日付</span>
@@ -6112,7 +6111,7 @@ function App() {
 
             <form className="daily-editor-form" onSubmit={handleDailyReportSave}>
               <label>
-                <span>朝にやること</span>
+                <span>今日やること</span>
                 <textarea
                   value={dailyPlanDraft}
                   onChange={(event) => setDailyPlanDraft(event.target.value)}
@@ -6122,7 +6121,7 @@ function App() {
               </label>
 
               <label>
-                <span>業務後の振り返り</span>
+                <span>振り返り</span>
                 <textarea
                   value={dailyReflectionDraft}
                   onChange={(event) => setDailyReflectionDraft(event.target.value)}
@@ -6164,7 +6163,7 @@ function App() {
                   >
                     <button type="button" onClick={() => handleDailyDateChange(report.date)}>
                       <strong>{formatDailyDate(report.date)}</strong>
-                      <span>{report.plan || "朝の予定は未入力"}</span>
+                      <span>{report.plan || "今日やることは未入力"}</span>
                       <small>{report.reflection ? "振り返り済み" : "振り返り未入力"}</small>
                     </button>
                     <button
@@ -6700,8 +6699,8 @@ function App() {
           <article className="card daily-today-card">
             <div>
               <p className="card-kicker">今日の日報</p>
-              <strong>{todayDailyReport?.plan ? "朝の予定あり" : "朝の予定は未入力"}</strong>
-              <span>{todayDailyReport?.reflection ? "振り返り済み" : "業務後に振り返りを記録"}</span>
+              <strong>{todayDailyReport?.plan ? "今日やることあり" : "今日やることは未入力"}</strong>
+              <span>{todayDailyReport?.reflection ? "振り返り済み" : "振り返りを記録"}</span>
             </div>
             <button type="button" onClick={() => setCurrentView("daily")}>
               日報を書く
