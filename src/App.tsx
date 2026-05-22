@@ -1527,10 +1527,6 @@ function createWorkspaceMember(
 }
 
 function getRoomDescription(room: WorkspaceRoom) {
-  if (room.id === betaWorkspaceRoomId) {
-    return "ベータ版として全ユーザーが集まれる、静かな共同作業ルーム。";
-  }
-
   if (room.name.toLowerCase().includes("night")) {
     return "夜の集中作業に向いた、ゆっくり流れるビルドルーム。";
   }
@@ -1539,10 +1535,6 @@ function getRoomDescription(room: WorkspaceRoom) {
 }
 
 function getRoomAccent(room: WorkspaceRoom) {
-  if (room.id === betaWorkspaceRoomId) {
-    return "studio";
-  }
-
   if (room.name.toLowerCase().includes("night")) {
     return "night";
   }
@@ -1608,7 +1600,7 @@ function getScheduledMinaMember(nowMs: number): WorkspaceMember | null {
   dayEnd.setHours(24, 0, 0, 0);
 
   const dateKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
-  const random = seededRandom(getStableHash(`mina-beta-${dateKey}`));
+  const random = seededRandom(getStableHash(`mina-room-${dateKey}`));
   let cursor = dayStart.getTime() + Math.floor(random() * 70) * 60000;
 
   while (cursor < dayEnd.getTime()) {
@@ -1641,15 +1633,46 @@ function isScheduledWorkspaceNpc(member: Pick<WorkspaceMember, "userId" | "id" |
   );
 }
 
-function applyScheduledWorkspacePresence(room: WorkspaceRoom, nowMs: number): WorkspaceRoom {
-  const activeMembers = Array.isArray(room.activeMembers) ? room.activeMembers : [];
+function isLegacyWorkspaceRoom(room: WorkspaceRoom) {
+  return (
+    room.id === legacyDeepWorkStudioRoomId ||
+    room.id === betaWorkspaceRoomId ||
+    room.name === "Deep Work Studio" ||
+    room.name === "ベータ版"
+  );
+}
 
-  if (room.id !== betaWorkspaceRoomId) {
-    return room;
+function getScheduledMinaRoomId(rooms: WorkspaceRoom[], nowMs: number) {
+  const minaMember = getScheduledMinaMember(nowMs);
+  if (!minaMember) {
+    return "";
+  }
+
+  const candidateRooms = rooms.filter((room) => !isLegacyWorkspaceRoom(room));
+  if (candidateRooms.length === 0) {
+    return "";
+  }
+
+  const sortedRooms = [...candidateRooms].sort((a, b) => a.id.localeCompare(b.id));
+  const now = new Date(nowMs);
+  const roomRotationKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${Math.floor(
+    (now.getHours() * 60 + now.getMinutes()) / 90,
+  )}`;
+  const roomIndex = getStableHash(`mina-room-choice-${roomRotationKey}`) % sortedRooms.length;
+  return sortedRooms[roomIndex]?.id || "";
+}
+
+function applyScheduledWorkspacePresence(room: WorkspaceRoom, nowMs: number, scheduledRoomId: string): WorkspaceRoom {
+  const activeMembers = Array.isArray(room.activeMembers) ? room.activeMembers : [];
+  const nextActiveMembers = activeMembers.filter((member) => member && !isScheduledWorkspaceNpc(member));
+
+  if (!scheduledRoomId || room.id !== scheduledRoomId) {
+    return nextActiveMembers.length === activeMembers.length
+      ? room
+      : normalizeWorkspaceRoom({ ...room, activeMembers: nextActiveMembers });
   }
 
   const minaMember = getScheduledMinaMember(nowMs);
-  const nextActiveMembers = activeMembers.filter((member) => member && !isScheduledWorkspaceNpc(member));
 
   return {
     ...room,
@@ -1714,64 +1737,16 @@ function removeWorkspacePresenceForUser(rooms: WorkspaceRoom[], userId: string) 
   return nextRooms;
 }
 
-function createDefaultWorkspaceRooms(): WorkspaceRoom[] {
-  const now = Date.now();
-
-  return [
-    {
-      id: betaWorkspaceRoomId,
-      name: "ベータ版",
-      totalMinutes: 0,
-      contributions: 0,
-      commits: 0,
-      createdAt: new Date(now - 1000 * 60 * 60 * 24 * 8).toISOString(),
-      createdBy: "system",
-      ownerName: "Contribution Arc",
-      ownerAvatar: "",
-      seatLabels: defaultWorkspaceSeatLabels,
-      activeMembers: [],
-      history: [
-        {
-          id: "seed-mina-beta",
-          userId: minaUserId,
-          userName: "Mina",
-          roomId: betaWorkspaceRoomId,
-          roomName: "ベータ版",
-          task: "仕事を片付ける",
-          building: "仕事を片付ける",
-          color: "#3f6f9f",
-          joinedAt: new Date(now - 1000 * 60 * 240).toISOString(),
-          leftAt: new Date(now - 1000 * 60 * 210).toISOString(),
-          durationMinutes: 30,
-          earnedExp: getRoomSessionExp(30),
-          minutes: 30,
-          exp: getRoomSessionExp(30),
-        },
-      ],
-    },
-  ];
-}
-
 function seedWorkspaceRooms(rooms: WorkspaceRoom[]): WorkspaceRoom[] {
-  const seedRoom = createDefaultWorkspaceRooms()[0];
-  const normalizedRooms = rooms
-    .map(normalizeWorkspaceRoom)
-    .filter((room) => room.id !== legacyDeepWorkStudioRoomId && room.name !== "Deep Work Studio");
-  const existingRoom = normalizedRooms.find((room) => room.id === seedRoom.id);
-
-  if (!existingRoom) {
-    return [seedRoom, ...normalizedRooms];
-  }
-
-  const activeIds = new Set(existingRoom.activeMembers.map((member) => member.userId));
-  const missingSeedMembers = seedRoom.activeMembers.filter((member) => !activeIds.has(member.userId));
-  const mergedRoom = normalizeWorkspaceRoom({
-    ...existingRoom,
-    activeMembers: [...missingSeedMembers, ...existingRoom.activeMembers],
-    history: existingRoom.history.length > 0 ? existingRoom.history : seedRoom.history,
-  });
-
-  return [mergedRoom, ...normalizedRooms.filter((room) => room.id !== seedRoom.id)];
+  return rooms
+    .map((room) => {
+      const normalizedRoom = normalizeWorkspaceRoom(room);
+      return normalizeWorkspaceRoom({
+        ...normalizedRoom,
+        activeMembers: normalizedRoom.activeMembers.filter((member) => !isScheduledWorkspaceNpc(member)),
+      });
+    })
+    .filter((room) => !isLegacyWorkspaceRoom(room));
 }
 
 function getTodayKey(date = new Date()) {
@@ -3687,8 +3662,12 @@ function App() {
     totalWeeklyMinutes > 0 && totalWeeklyMinutes < 60
       ? formatStudyTime(totalWeeklyMinutes)
       : `${(Math.round((totalWeeklyMinutes / 60) * 10) / 10).toLocaleString()}h`;
-  const allWorkspaceRooms = [...workspaceRooms, ...customRooms].map((room) =>
-    normalizeWorkspaceRoom(applyScheduledWorkspacePresence(normalizeWorkspaceRoom(room), workspaceNow)),
+  const baseWorkspaceRooms = [...workspaceRooms, ...customRooms]
+    .map(normalizeWorkspaceRoom)
+    .filter((room) => !isLegacyWorkspaceRoom(room));
+  const scheduledMinaRoomId = getScheduledMinaRoomId(baseWorkspaceRooms, workspaceNow);
+  const allWorkspaceRooms = baseWorkspaceRooms.map((room) =>
+    normalizeWorkspaceRoom(applyScheduledWorkspacePresence(room, workspaceNow, scheduledMinaRoomId)),
   );
   const selectedRoom = allWorkspaceRooms.find((room) => room.id === selectedRoomId) || allWorkspaceRooms[0];
   const currentBuilding = workspaceTask.trim() || studySubject.trim() || "Deep work";
@@ -5157,13 +5136,7 @@ function App() {
     pressedWorkspaceKeysRef.current.clear();
     setIsPlayerWalking(false);
     setCustomRooms((rooms) => {
-      const fallbackRoom = createDefaultWorkspaceRooms().find((room) => room.id === roomId);
-      const baseRooms =
-        rooms.some((room) => room.id === roomId) || !fallbackRoom
-          ? rooms
-          : [fallbackRoom, ...rooms.filter((room) => room.id !== roomId)];
-
-      const nextRooms = baseRooms.map((room) => {
+      const nextRooms = rooms.map((room) => {
         const normalizedRoom = normalizeWorkspaceRoom(room);
         const activeMembers = normalizedRoom.activeMembers.filter((member) => member.userId !== currentUser.uid);
 
@@ -5395,7 +5368,7 @@ function App() {
     });
 
     if (selectedRoomId === roomId) {
-      setSelectedRoomId(nextRooms[0]?.id || createDefaultWorkspaceRooms()[0].id);
+      setSelectedRoomId(nextRooms[0]?.id || "");
     }
 
     if (pendingJoinRoomId === roomId) {
@@ -5822,7 +5795,7 @@ function App() {
 
           <div className="desktop-app-context">
             <span>{activeRoom ? "In room" : "Viewing"}</span>
-            <strong>{activeRoom?.name || selectedRoom?.name || "ベータ版"}</strong>
+            <strong>{activeRoom?.name || selectedRoom?.name || "作業部屋"}</strong>
           </div>
 
           <div className="desktop-app-actions">
@@ -6267,8 +6240,7 @@ function App() {
             aria-labelledby="workspace-start-title"
           >
             <div>
-              <p className="card-kicker">Start Session / {pendingJoinRoom.name}</p>
-              <h2 id="workspace-start-title">何を積み上げますか。</h2>
+              <p className="card-kicker" id="workspace-start-title">Start Session / {pendingJoinRoom.name}</p>
             </div>
 
             <form className="workspace-start-form" onSubmit={handleWorkspaceStart}>
@@ -6282,7 +6254,7 @@ function App() {
                       setWorkspaceStartError("");
                     }
                   }}
-                  placeholder="例: Firebase設計 / Java学習"
+                  placeholder=""
                   maxLength={48}
                   autoFocus
                 />
@@ -6911,7 +6883,7 @@ function App() {
         <div className="home-workspace-header">
           <div>
             <p className="card-kicker">Silent Workspace</p>
-            <h2>{selectedRoom?.name || "ベータ版"}</h2>
+            <h2>{selectedRoom?.name || "作業部屋"}</h2>
             <p>
               {isInSelectedRoom
                 ? `入室中 ${currentStayMinutes > 0 ? formatStayTime(currentStayMinutes) : ""}`
