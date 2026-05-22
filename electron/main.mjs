@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, shell } from "electron";
+import { app, BrowserWindow, Menu, Notification, ipcMain, shell } from "electron";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -9,6 +9,37 @@ const devServerUrl = process.env.VITE_DEV_SERVER_URL || "http://localhost:5173/C
 function openSettings() {
   BrowserWindow.getFocusedWindow()?.webContents.send("contribution-arc:open-settings");
 }
+
+function readNotificationPayload(payload) {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const title = typeof payload.title === "string" ? payload.title.slice(0, 80) : "";
+  const body = typeof payload.body === "string" ? payload.body.slice(0, 180) : "";
+
+  if (!title || !body) {
+    return null;
+  }
+
+  return { title, body };
+}
+
+ipcMain.handle("contribution-arc:notify", (_event, payload) => {
+  const notificationPayload = readNotificationPayload(payload);
+
+  if (!notificationPayload || !Notification.isSupported()) {
+    return false;
+  }
+
+  new Notification({
+    title: notificationPayload.title,
+    body: notificationPayload.body,
+    silent: false,
+  }).show();
+
+  return true;
+});
 
 function createApplicationMenu() {
   const template = [

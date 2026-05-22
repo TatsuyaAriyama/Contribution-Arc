@@ -71,6 +71,7 @@ declare global {
         chrome?: string;
       };
       onOpenSettings?: (callback: () => void) => () => void;
+      notify?: (payload: { title: string; body: string }) => Promise<boolean>;
     };
   }
 }
@@ -236,6 +237,22 @@ type OnboardingStep = "idle" | "welcome" | "settings";
 
 type RoomCreateState = "idle" | "saving" | "saved" | "offline";
 
+type NotificationItem = {
+  id: string;
+  type: "dailyLog" | "post" | "friendRequest";
+  title: string;
+  body: string;
+  createdAt: string;
+  read: boolean;
+  sourceUserId: string;
+};
+
+type DesktopNotificationSettings = {
+  dailyLog: boolean;
+  post: boolean;
+  friendRequest: boolean;
+};
+
 type DailyReport = {
   id: string;
   userId: string;
@@ -335,6 +352,12 @@ const defaultWorkspacePresetMessages = [
   "一緒にやろう",
   "今日はReactやります",
 ];
+const defaultDesktopNotificationSettings: DesktopNotificationSettings = {
+  dailyLog: true,
+  post: true,
+  friendRequest: true,
+};
+const notificationCooldownMs = 90 * 1000;
 const defaultWorkspaceSeatLabels: WorkspaceSeatLabels = {
   frontend: "作業",
   java: "仕事",
@@ -1019,6 +1042,59 @@ function writeCachedDailyReports(uid: string, registeredUserId: string, reports:
   getDailyReportStorageKeys(uid, registeredUserId).forEach((key) => {
     safeSetLocalStorage(key, serializedReports);
   });
+}
+
+function readDesktopNotificationSettings(scope: string): DesktopNotificationSettings {
+  if (typeof window === "undefined") {
+    return defaultDesktopNotificationSettings;
+  }
+
+  const savedSettings = window.localStorage.getItem(getAccountStorageKey(scope, "desktop-notification-settings"));
+  if (!savedSettings) {
+    return defaultDesktopNotificationSettings;
+  }
+
+  try {
+    return {
+      ...defaultDesktopNotificationSettings,
+      ...(JSON.parse(savedSettings) as Partial<DesktopNotificationSettings>),
+    };
+  } catch {
+    return defaultDesktopNotificationSettings;
+  }
+}
+
+function readAppNotifications(scope: string): NotificationItem[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  const savedNotifications = window.localStorage.getItem(getAccountStorageKey(scope, "app-notifications"));
+  if (!savedNotifications) {
+    return [];
+  }
+
+  try {
+    return (JSON.parse(savedNotifications) as Partial<NotificationItem>[])
+      .filter((item) => item.id && item.type && item.title && item.createdAt)
+      .map((item) => ({
+        id: String(item.id),
+        type: item.type as NotificationItem["type"],
+        title: String(item.title),
+        body: typeof item.body === "string" ? item.body : "",
+        createdAt: String(item.createdAt),
+        read: Boolean(item.read),
+        sourceUserId: typeof item.sourceUserId === "string" ? item.sourceUserId : "",
+      }));
+  } catch {
+    return [];
+  }
+}
+
+function getNotificationSourceText(type: NotificationItem["type"]) {
+  if (type === "dailyLog") return "日報";
+  if (type === "post") return "投稿";
+  return "フレンド申請";
 }
 
 function getStudyLogPostVerb(subject: string) {
@@ -2210,6 +2286,10 @@ function App() {
   const [friendMessage, setFriendMessage] = useState("");
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [lastNotificationReadAt, setLastNotificationReadAt] = useState("");
+  const [appNotifications, setAppNotifications] = useState<NotificationItem[]>([]);
+  const [desktopNotificationSettings, setDesktopNotificationSettings] = useState<DesktopNotificationSettings>(
+    defaultDesktopNotificationSettings,
+  );
   const [currentView, setCurrentView] = useState<AppView>("home");
   const [profileMember, setProfileMember] = useState<WorkspaceMember | null>(null);
   const [profileUser, setProfileUser] = useState<UserProfile | null>(null);
@@ -2268,6 +2348,10 @@ function App() {
   });
   const didRequestStudyLogMigrationRef = useRef(false);
   const didRequestDailyReportMigrationRef = useRef(false);
+  const seenNotificationKeysRef = useRef<Set<string>>(new Set());
+  const notificationCooldownRef = useRef<Record<string, number>>({});
+  const notificationBootedRef = useRef(false);
+  const notificationStartedAtRef = useRef(Date.now());
 
   useEffect(() => {
     return onAuthStateChanged(auth, (user) => {
@@ -2297,6 +2381,12 @@ function App() {
       setFriendMessage("");
       setIsNotificationsOpen(false);
       setLastNotificationReadAt("");
+      setAppNotifications([]);
+      setDesktopNotificationSettings(defaultDesktopNotificationSettings);
+      seenNotificationKeysRef.current = new Set();
+      notificationCooldownRef.current = {};
+      notificationBootedRef.current = false;
+      notificationStartedAtRef.current = Date.now();
       setDetermination("");
       setDraftDetermination("");
       setPlayerAvatar("");
@@ -2418,6 +2508,8 @@ function App() {
     setSettingsError("");
     setFriendMessage("");
     setLastNotificationReadAt(savedNotificationReadAt || "");
+    setDesktopNotificationSettings(readDesktopNotificationSettings(accountScope));
+    setAppNotifications(readAppNotifications(accountScope));
     setFriends(savedFriends ? (JSON.parse(savedFriends) as FriendPreview[]) : []);
     setFriendRequests(
       savedFriendRequests
@@ -2906,6 +2998,30 @@ function App() {
       JSON.stringify(openedWorkspaceGiftLevels),
     );
   }, [currentUser, openedWorkspaceGiftLevels, isWorkspaceLoaded, userId]);
+
+  useEffect(() => {
+    if (!currentUser || !isWorkspaceLoaded) {
+      return;
+    }
+    const accountScope = getAccountStorageScope(currentUser.uid, userId);
+
+    safeSetLocalStorage(
+      getAccountStorageKey(accountScope, "desktop-notification-settings"),
+      JSON.stringify(desktopNotificationSettings),
+    );
+  }, [currentUser, desktopNotificationSettings, isWorkspaceLoaded, userId]);
+
+  useEffect(() => {
+    if (!currentUser || !isWorkspaceLoaded) {
+      return;
+    }
+    const accountScope = getAccountStorageScope(currentUser.uid, userId);
+
+    safeSetLocalStorage(
+      getAccountStorageKey(accountScope, "app-notifications"),
+      JSON.stringify(appNotifications.slice(0, 40)),
+    );
+  }, [currentUser, appNotifications, isWorkspaceLoaded, userId]);
 
   useEffect(() => {
     const timerId = window.setInterval(() => setWorkspaceNow(Date.now()), 30000);
@@ -3405,24 +3521,40 @@ function App() {
     .sort((a, b) => b.date.localeCompare(a.date) || new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 12);
   const accountScope = getAccountStorageScope(currentUserUid, userId);
-  const notificationItems = friendRequests
-    .filter((request) => request.direction === "incoming" || request.status === "accepted")
-    .sort((a, b) => new Date(b.acceptedAt || b.createdAt).getTime() - new Date(a.acceptedAt || a.createdAt).getTime())
-    .slice(0, 8);
-  const unreadNotificationCount = friendRequests.filter(
-    (request) => {
-      const notificationAt = request.acceptedAt || request.createdAt;
-      const shouldNotify =
-        (request.direction === "incoming" && request.status === "pending") ||
-        (request.direction === "outgoing" && request.status === "accepted");
-
-      return (
-        shouldNotify &&
-        (!lastNotificationReadAt || new Date(notificationAt).getTime() > new Date(lastNotificationReadAt).getTime())
-      );
-    },
-  ).length;
+  const sameRoomUserIds = new Set(
+    allWorkspaceRooms
+      .filter((room) => room.activeMembers.some((member) => member.userId === currentUserUid))
+      .flatMap((room) => room.activeMembers.map((member) => member.userId)),
+  );
+  const notifiableUserIds = new Set([...friends.map((friend) => friend.uid), ...sameRoomUserIds]);
+  const notificationFeedItems = appNotifications
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 12);
+  const unreadNotificationCount = appNotifications.filter((item) => !item.read).length;
   const hasUnreadNotifications = unreadNotificationCount > 0;
+  const pushAppNotification = (item: NotificationItem, shouldSendNative: boolean) => {
+    const cooldownKey = `${item.type}:${item.sourceUserId}`;
+    const now = Date.now();
+    const lastNotifiedAt = notificationCooldownRef.current[cooldownKey] || 0;
+    const canSendNative = shouldSendNative && now - lastNotifiedAt > notificationCooldownMs;
+
+    seenNotificationKeysRef.current.add(item.id);
+    if (canSendNative) {
+      notificationCooldownRef.current[cooldownKey] = now;
+      void window.contributionArcDesktop?.notify?.({
+        title: item.title,
+        body: item.body,
+      });
+    }
+
+    setAppNotifications((items) => {
+      if (items.some((existingItem) => existingItem.id === item.id)) {
+        return items;
+      }
+
+      return [item, ...items].slice(0, 40);
+    });
+  };
   const handleNotificationsToggle = () => {
     const nextIsOpen = !isNotificationsOpen;
     setIsNotificationsOpen(nextIsOpen);
@@ -3431,6 +3563,7 @@ function App() {
       const nextReadAt = new Date().toISOString();
       setLastNotificationReadAt(nextReadAt);
       safeSetLocalStorage(getAccountStorageKey(accountScope, "notifications-read-at"), nextReadAt);
+      setAppNotifications((items) => items.map((item) => ({ ...item, read: true })));
     }
   };
   const handleWorkspaceGiftOpen = (level: number) => {
@@ -3439,6 +3572,118 @@ function App() {
     );
     setWorkspaceBubble("新しいインテリアを受け取りました");
   };
+
+  useEffect(() => {
+    if (!currentUser || !isWorkspaceLoaded) {
+      return;
+    }
+
+    const startedAt = notificationStartedAtRef.current - 5000;
+    const isRecentEnough = (createdAt: string) => new Date(createdAt).getTime() >= startedAt;
+
+    visibleSharedDailyReports.forEach((report) => {
+      const notificationId = `dailyLog:${report.id}:${report.updatedAt}`;
+      const sourceUserId = report.userId;
+      const createdAt = report.updatedAt || report.createdAt;
+      const isRelevantUser = sourceUserId !== currentUserUid && notifiableUserIds.has(sourceUserId);
+
+      if (!isRelevantUser || seenNotificationKeysRef.current.has(notificationId)) {
+        return;
+      }
+
+      if (!isRecentEnough(createdAt)) {
+        seenNotificationKeysRef.current.add(notificationId);
+        return;
+      }
+
+      pushAppNotification(
+        {
+          id: notificationId,
+          type: "dailyLog",
+          title: `${report.userName || "Developer"}の日報`,
+          body: (report.reflection || report.plan || "日報が更新されました。").slice(0, 120),
+          createdAt,
+          read: false,
+          sourceUserId,
+        },
+        desktopNotificationSettings.dailyLog,
+      );
+    });
+
+    posts.forEach((post) => {
+      const notificationId = `post:${post.id}`;
+      const sourceUserId = post.userId;
+      const isSameRoomPost = Boolean(
+        post.roomId &&
+          allWorkspaceRooms.some(
+            (room) => room.id === post.roomId && room.activeMembers.some((member) => member.userId === currentUserUid),
+          ),
+      );
+      const isRelevantUser =
+        sourceUserId !== currentUserUid && (friends.some((friend) => friend.uid === sourceUserId) || isSameRoomPost);
+
+      if (!isRelevantUser || seenNotificationKeysRef.current.has(notificationId)) {
+        return;
+      }
+
+      if (!isRecentEnough(post.createdAt)) {
+        seenNotificationKeysRef.current.add(notificationId);
+        return;
+      }
+
+      pushAppNotification(
+        {
+          id: notificationId,
+          type: "post",
+          title: `${post.username}の投稿`,
+          body: post.text.slice(0, 120),
+          createdAt: post.createdAt,
+          read: false,
+          sourceUserId,
+        },
+        desktopNotificationSettings.post,
+      );
+    });
+
+    friendRequests
+      .filter((request) => request.direction === "incoming" && request.status === "pending")
+      .forEach((request) => {
+        const notificationId = `friendRequest:${request.id}`;
+        if (seenNotificationKeysRef.current.has(notificationId)) {
+          return;
+        }
+
+        if (!isRecentEnough(request.createdAt)) {
+          seenNotificationKeysRef.current.add(notificationId);
+          return;
+        }
+
+        pushAppNotification(
+          {
+            id: notificationId,
+            type: "friendRequest",
+            title: "フレンド申請",
+            body: `${request.profile.displayName}からフレンド申請が届きました`,
+            createdAt: request.createdAt,
+            read: false,
+            sourceUserId: request.profile.uid,
+          },
+          desktopNotificationSettings.friendRequest,
+        );
+      });
+  }, [
+    allWorkspaceRooms,
+    currentUser,
+    currentUserUid,
+    desktopNotificationSettings,
+    friendRequests,
+    friends,
+    isWorkspaceLoaded,
+    notifiableUserIds,
+    posts,
+    pushAppNotification,
+    visibleSharedDailyReports,
+  ]);
   const activeKnowledgeGraph = knowledgeGraph.nodes.length > 0 ? knowledgeGraph : studyKnowledgeGraph;
   const graphNodes = activeKnowledgeGraph.nodes.map((node) => ({
     ...node,
@@ -5227,25 +5472,43 @@ function App() {
                 </div>
 
                 <div className="notification-list">
-                  {notificationItems.length > 0 ? (
-                    notificationItems.map((request) => (
-                      <article key={`${request.direction}-${request.id}`} className="notification-item">
-                        <button type="button" onClick={() => handleUserProfileOpen(request.profile)}>
+                  {notificationFeedItems.length > 0 ? (
+                    notificationFeedItems.map((item) => {
+                      const friendRequest = friendRequests.find(
+                        (request) => item.id === `friendRequest:${request.id}`,
+                      );
+                      const sourceProfile = friendRequest?.profile || workspaceProfiles[item.sourceUserId];
+
+                      return (
+                      <article key={item.id} className={item.read ? "notification-item" : "notification-item unread"}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (sourceProfile) {
+                              handleUserProfileOpen(sourceProfile);
+                              return;
+                            }
+
+                            if (item.type === "dailyLog") {
+                              setCurrentView("daily");
+                            } else {
+                              setCurrentView("logs");
+                            }
+                          }}
+                        >
                           <span className="notification-avatar">
-                            {request.profile.photoURL ? (
-                              <img src={request.profile.photoURL} alt="" />
+                            {sourceProfile?.photoURL ? (
+                              <img src={sourceProfile.photoURL} alt="" />
                             ) : (
-                              request.profile.displayName.slice(0, 1).toUpperCase()
+                              item.title.slice(0, 1).toUpperCase()
                             )}
                           </span>
                           <span>
-                            <strong>
-                              {request.status === "accepted"
-                                ? `${request.profile.displayName}とフレンドになりました`
-                                : `${request.profile.displayName}からフレンド申請`}
-                            </strong>
+                            <strong>{item.title}</strong>
+                            <small>{item.body}</small>
                             <small>
-                              {new Date(request.acceptedAt || request.createdAt).toLocaleString("ja-JP", {
+                              {getNotificationSourceText(item.type)} ·{" "}
+                              {new Date(item.createdAt).toLocaleString("ja-JP", {
                                 month: "2-digit",
                                 day: "2-digit",
                                 hour: "2-digit",
@@ -5254,17 +5517,18 @@ function App() {
                             </small>
                           </span>
                         </button>
-                        {request.direction === "incoming" && request.status === "pending" ? (
+                        {friendRequest?.direction === "incoming" && friendRequest.status === "pending" ? (
                           <button
                             type="button"
                             className="notification-accept"
-                            onClick={(event) => handleNotificationFriendAccept(event, request)}
+                            onClick={(event) => handleNotificationFriendAccept(event, friendRequest)}
                           >
                             承認
                           </button>
                         ) : null}
                       </article>
-                    ))
+                    );
+                    })
                   ) : (
                     <p className="notification-empty">新しいお知らせはありません。</p>
                   )}
@@ -5378,6 +5642,31 @@ function App() {
                 />
                 {isOnboardingSettings ? <small>小文字の半角英数字、_、. が使えます。</small> : null}
               </label>
+
+              {!isOnboardingSettings ? (
+                <fieldset className="desktop-notification-settings">
+                  <legend>Mac通知</legend>
+                  {([
+                    ["dailyLog", "日報通知"],
+                    ["post", "投稿通知"],
+                    ["friendRequest", "フレンド申請通知"],
+                  ] as const).map(([key, label]) => (
+                    <label key={key}>
+                      <span>{label}</span>
+                      <input
+                        type="checkbox"
+                        checked={desktopNotificationSettings[key]}
+                        onChange={(event) =>
+                          setDesktopNotificationSettings((settings) => ({
+                            ...settings,
+                            [key]: event.target.checked,
+                          }))
+                        }
+                      />
+                    </label>
+                  ))}
+                </fieldset>
+              ) : null}
 
               {settingsError ? <p className="settings-error">{settingsError}</p> : null}
 

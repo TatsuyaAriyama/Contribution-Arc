@@ -21,5 +21,19 @@ contextBridge.exposeInMainWorld(
         ipcRenderer.removeListener("contribution-arc:open-settings", listener);
       };
     },
+    notify: (payload) => {
+      if (!payload || typeof payload !== "object") {
+        return Promise.resolve(false);
+      }
+
+      const title = typeof payload.title === "string" ? payload.title : "";
+      const body = typeof payload.body === "string" ? payload.body : "";
+
+      if (!title || !body) {
+        return Promise.resolve(false);
+      }
+
+      return ipcRenderer.invoke("contribution-arc:notify", { title, body });
+    },
   }),
 );
