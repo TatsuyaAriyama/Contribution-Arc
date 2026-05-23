@@ -4176,9 +4176,6 @@ function App() {
     day: ContributionArcDay,
   ): { day: ContributionArcDay; left: number; top: number; placement: "above" | "below" } | null => {
     const cellRect = target.getBoundingClientRect();
-    const trackEl = target.closest(".contribution-arc-track") as HTMLElement | null;
-    if (!trackEl) return null;
-    const trackRect = trackEl.getBoundingClientRect();
 
     // Estimate tooltip height from the day's actual content so a
     // 4-item + "more" + total + EXP tooltip (~260px) flips below
@@ -4211,10 +4208,13 @@ function App() {
     const placement: "above" | "below" =
       wouldClipAbove && !wouldClipBelowIfFlipped ? "below" : "above";
 
+    // Coordinates are viewport-relative because the tooltip is
+    // `position: fixed` — needed to escape the `.contribution-arc-grid`
+    // scroll container (overflow-x: auto forces overflow-y to clip too).
     return {
       day,
-      left: cellRect.left - trackRect.left + cellRect.width / 2,
-      top: (placement === "below" ? cellRect.bottom : cellRect.top) - trackRect.top,
+      left: cellRect.left + cellRect.width / 2,
+      top: placement === "below" ? cellRect.bottom : cellRect.top,
       placement,
     };
   };

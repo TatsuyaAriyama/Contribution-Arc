@@ -12818,7 +12818,7 @@
 
 /* Rich hover tooltip */
 .contribution-arc-tooltip {
-  position: absolute;
+  position: fixed;
   transform: translate(-50%, calc(-100% - 10px));
   pointer-events: none;
   background: var(--cta-bg);
