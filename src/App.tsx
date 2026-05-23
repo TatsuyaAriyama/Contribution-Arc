@@ -398,6 +398,7 @@ const studyColorOptions = [
 ];
 
 const characterColorOptions = [
+  { name: "ツタ", value: "#3a5a40" },
   { name: "Forest", value: "#1f6f4a" },
   { name: "Deep Green", value: "#176345" },
   { name: "Mint", value: "#2f8f83" },
@@ -555,13 +556,13 @@ const defaultKnowledgeLinks: KnowledgeLink[] = [
 
 const characterOptions: CharacterOption[] = [
   {
-    id: "arc-sprout",
-    name: "アークの芽",
-    englishName: "Arc Sprout",
+    id: "tsuta",
+    name: "ツタ",
+    englishName: "Tsuta",
     label: "初期解放キャラクター",
     concept:
-      "最初の学習記録から生まれる小さな精霊。Contributionの草と学習ログから発生したArc粒子が、まだ小さな生命体として定着した存在。",
-    evolution: "アークの芽 → ログリーフ → アークブルーム → コントリビュート",
+      "繋がりながら、ゆっくり伸びていく蔦の精霊。学習を積み重ねるたびに、新しい葉が芽吹く。",
+    evolution: "ツタ → 若葉 → 蔓 → 群生",
   },
 ];
 
@@ -1564,8 +1565,10 @@ function ProfileCharacterPreview({ color }: { color?: string }) {
       style={{ "--actor-color": color || characterColorOptions[0].value } as CSSProperties}
       aria-hidden="true"
     >
-      <span className="actor-sprite deep">
-        <span className="sprite-body" />
+      <span className="actor-sprite deep is-tsuta">
+        <span className="sprite-sprout" />
+        <span className="sprite-eye sprite-eye-left" />
+        <span className="sprite-eye sprite-eye-right" />
         <span className="sprite-leg sprite-leg-left" />
         <span className="sprite-leg sprite-leg-right" />
       </span>
