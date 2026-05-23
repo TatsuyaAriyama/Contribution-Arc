@@ -14926,3 +14926,54 @@ select:focus-visible,
     transform: none;
   }
 }
+
+/* =====================================================================
+   Mobile touch-target sizing
+   ---------------------------------------------------------------------
+   Apple HIG and Material both call for 44×44 minimum tappable area.
+   Desktop layouts stay dense; only at the mobile breakpoint we bump
+   high-frequency buttons (header icons, log/card actions, search close)
+   to a 44px minimum without changing their visual padding rhythm too
+   much.
+   ===================================================================== */
+@media (max-width: 720px) {
+  .settings-button,
+  .shop-button,
+  .notification-button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .search-close-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .log-like-button,
+  .log-reply-toggle {
+    min-height: 44px;
+    padding: 6px 12px;
+  }
+
+  .log-delete-button,
+  .daily-delete-button,
+  .room-title-edit-button,
+  .room-delete-button {
+    min-height: 44px;
+    padding: 8px 12px;
+  }
+
+  .room-card-footer button {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+
+  .learning-tabs button,
+  .learning-archive-button,
+  .learning-book-toggle,
+  .learning-cancel-button,
+  .learning-save-button {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+}
