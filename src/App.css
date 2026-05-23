@@ -13239,6 +13239,152 @@
   gap: 10px;
 }
 
+.learning-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.learning-modal-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.learning-cancel-button {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 8px 14px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: color 0.16s ease, background 0.16s ease;
+}
+
+.learning-cancel-button:hover {
+  color: var(--ink);
+  background: var(--border);
+}
+
+.learning-save-button {
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 22px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.16s ease;
+}
+
+.learning-save-button:hover {
+  opacity: 0.88;
+}
+
+.learning-archive-button {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.16s ease;
+}
+
+.learning-archive-button:hover {
+  background: var(--border);
+}
+
+.learning-danger-zone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 22px;
+  padding: 14px 16px;
+  border: 1px solid rgba(190, 56, 56, 0.22);
+  border-radius: 12px;
+  background: rgba(190, 56, 56, 0.04);
+}
+
+.learning-danger-zone-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.learning-danger-zone-info strong {
+  font-size: 13px;
+  color: #b03a3a;
+  font-weight: 600;
+}
+
+.learning-danger-zone-info small {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.learning-delete-trigger {
+  border: 1px solid rgba(190, 56, 56, 0.4);
+  background: transparent;
+  color: #b03a3a;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 7px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.learning-delete-trigger:hover {
+  background: rgba(190, 56, 56, 0.08);
+}
+
+.learning-danger-zone-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.learning-delete-cancel {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 12px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.learning-delete-cancel:hover {
+  color: var(--ink);
+}
+
+.learning-delete-confirm {
+  border: 1px solid #b03a3a;
+  background: #b03a3a;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.16s ease;
+}
+
+.learning-delete-confirm:hover {
+  background: #962f2f;
+}
+
 .study-subject-field {
   position: relative;
 }

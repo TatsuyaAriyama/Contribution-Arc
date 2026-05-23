@@ -2583,6 +2583,7 @@ function App() {
   } | null>(null);
   const [learningCategoryTab, setLearningCategoryTab] = useState<"all" | "book" | "stack" | "archived">("all");
   const [learningSearchQuery, setLearningSearchQuery] = useState("");
+  const [isLearningDeleteConfirming, setIsLearningDeleteConfirming] = useState(false);
   const [studySubject, setStudySubject] = useState("React");
   const [studyAmount, setStudyAmount] = useState("1");
   const [studyUnit, setStudyUnit] = useState<"hours" | "minutes">("hours");
@@ -4435,6 +4436,7 @@ function App() {
   };
 
   const openLearningEditorForCreate = (presetName = "") => {
+    setIsLearningDeleteConfirming(false);
     setLearningEditorState({
       mode: "create",
       name: presetName,
@@ -4446,6 +4448,7 @@ function App() {
   };
 
   const openLearningEditorForEdit = (item: LearningItem) => {
+    setIsLearningDeleteConfirming(false);
     setLearningEditorState({
       mode: "edit",
       itemId: item.id,
@@ -4455,6 +4458,11 @@ function App() {
       totalPages: typeof item.totalPages === "number" ? String(item.totalPages) : "",
       currentPages: typeof item.currentPages === "number" ? String(item.currentPages) : "",
     });
+  };
+
+  const closeLearningEditor = () => {
+    setIsLearningDeleteConfirming(false);
+    setLearningEditorState(null);
   };
 
   const handleLearningEditorSave = () => {
@@ -4531,6 +4539,7 @@ function App() {
     void saveLearningItemToCloud(db, updated).catch((error) => {
       console.info("Learning item cloud save skipped.", error);
     });
+    setIsLearningDeleteConfirming(false);
     setLearningEditorState(null);
   };
 
@@ -4539,13 +4548,11 @@ function App() {
       return;
     }
     const targetId = learningEditorState.itemId;
-    if (!window.confirm("この学習対象を削除します。よろしいですか？")) {
-      return;
-    }
     setLearningItems((items) => items.filter((item) => item.id !== targetId));
     void deleteLearningItemFromCloud(db, targetId).catch((error) => {
       console.info("Learning item cloud delete skipped.", error);
     });
+    setIsLearningDeleteConfirming(false);
     setLearningEditorState(null);
   };
 
@@ -6521,7 +6528,7 @@ function App() {
       </motion.header>
 
       {learningEditorState ? (
-        <div className="settings-modal-backdrop" role="presentation" onClick={() => setLearningEditorState(null)}>
+        <div className="settings-modal-backdrop" role="presentation" onClick={closeLearningEditor}>
           <section
             className="settings-modal learning-modal"
             role="dialog"
@@ -6629,27 +6636,65 @@ function App() {
                 </div>
               ) : null}
 
-              <div className="settings-actions">
-                <button type="button" className="settings-cancel" onClick={() => setLearningEditorState(null)}>
-                  キャンセル
-                </button>
+              <div className="learning-modal-actions">
                 {learningEditorState.mode === "edit" ? (
-                  <>
-                    <button type="button" className="settings-cancel" onClick={handleLearningEditorArchiveToggle}>
-                      {learningItems.find((item) => item.id === learningEditorState.itemId)?.archived
-                        ? "アーカイブ解除"
-                        : "アーカイブ"}
-                    </button>
-                    <button type="button" className="settings-cancel" onClick={handleLearningEditorDelete}>
-                      削除
-                    </button>
-                  </>
-                ) : null}
-                <button type="submit" className="settings-save">
-                  保存
-                </button>
+                  <button
+                    type="button"
+                    className="learning-archive-button"
+                    onClick={handleLearningEditorArchiveToggle}
+                  >
+                    {learningItems.find((item) => item.id === learningEditorState.itemId)?.archived
+                      ? "アーカイブ解除"
+                      : "アーカイブ"}
+                  </button>
+                ) : (
+                  <span aria-hidden="true" />
+                )}
+                <div className="learning-modal-actions-right">
+                  <button type="button" className="learning-cancel-button" onClick={closeLearningEditor}>
+                    キャンセル
+                  </button>
+                  <button type="submit" className="learning-save-button">
+                    保存
+                  </button>
+                </div>
               </div>
             </form>
+
+            {learningEditorState.mode === "edit" ? (
+              <div className="learning-danger-zone" role="group" aria-label="危険な操作">
+                <div className="learning-danger-zone-info">
+                  <strong>削除</strong>
+                  <small>この学習対象の登録を完全に削除します。学習ログ自体は残ります。</small>
+                </div>
+                {isLearningDeleteConfirming ? (
+                  <div className="learning-danger-zone-confirm">
+                    <button
+                      type="button"
+                      className="learning-delete-cancel"
+                      onClick={() => setIsLearningDeleteConfirming(false)}
+                    >
+                      やめる
+                    </button>
+                    <button
+                      type="button"
+                      className="learning-delete-confirm"
+                      onClick={handleLearningEditorDelete}
+                    >
+                      本当に削除する
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="learning-delete-trigger"
+                    onClick={() => setIsLearningDeleteConfirming(true)}
+                  >
+                    削除する
+                  </button>
+                )}
+              </div>
+            ) : null}
           </section>
         </div>
       ) : null}
