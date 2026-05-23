@@ -35,6 +35,10 @@ type PremiumSidebarProps = {
   onProfileOpen: () => void;
   onFriendOpen: (friend: FriendPreview) => void;
   onActivityOpen: (activity: LiveActivity) => void;
+  /** Whether the mobile drawer is currently open. Desktop ignores this. */
+  isMobileOpen?: boolean;
+  /** Called after the user taps a nav target — the parent should close the drawer. */
+  onMobileClose?: () => void;
 };
 
 export function PremiumSidebar({
@@ -48,12 +52,28 @@ export function PremiumSidebar({
   onProfileOpen,
   onFriendOpen,
   onActivityOpen,
+  isMobileOpen = false,
+  onMobileClose,
 }: PremiumSidebarProps) {
   const visibleFriends = friends.slice(0, 5);
 
+  // Wraps view-changing nav callbacks so the mobile drawer always closes
+  // after navigation. Desktop ignores it (onMobileClose is a no-op there).
+  const handleNavigate = (run: () => void) => {
+    run();
+    onMobileClose?.();
+  };
+
   return (
-    <aside className="app-sidebar" aria-label="Contribution Arc navigation">
-      <button type="button" className="brand-lockup" onClick={() => onViewChange("home")}>
+    <aside
+      className={`app-sidebar${isMobileOpen ? " is-mobile-open" : ""}`}
+      aria-label="Contribution Arc navigation"
+    >
+      <button
+        type="button"
+        className="brand-lockup"
+        onClick={() => handleNavigate(() => onViewChange("home"))}
+      >
         {logo}
         <span>
           <strong>Contribution Arc</strong>
@@ -65,7 +85,7 @@ export function PremiumSidebar({
         <button
           type="button"
           className={currentView === "home" ? "active" : ""}
-          onClick={() => onViewChange("home")}
+          onClick={() => handleNavigate(() => onViewChange("home"))}
         >
           <span />
           ホーム
@@ -73,7 +93,7 @@ export function PremiumSidebar({
         <button
           type="button"
           className={currentView === "profile" ? "active" : ""}
-          onClick={onProfileOpen}
+          onClick={() => handleNavigate(onProfileOpen)}
         >
           <span />
           プロフィール
@@ -81,7 +101,7 @@ export function PremiumSidebar({
         <button
           type="button"
           className={currentView === "daily" ? "active" : ""}
-          onClick={() => onViewChange("daily")}
+          onClick={() => handleNavigate(() => onViewChange("daily"))}
         >
           <span />
           日報
@@ -89,7 +109,7 @@ export function PremiumSidebar({
         <button
           type="button"
           className={currentView === "learning" ? "active" : ""}
-          onClick={() => onViewChange("learning")}
+          onClick={() => handleNavigate(() => onViewChange("learning"))}
         >
           <span aria-hidden="true">📚</span>
           記録する
@@ -97,7 +117,7 @@ export function PremiumSidebar({
         <button
           type="button"
           className={currentView === "logs" ? "active" : ""}
-          onClick={() => onViewChange("logs")}
+          onClick={() => handleNavigate(() => onViewChange("logs"))}
         >
           <span />
           ログ
@@ -105,7 +125,7 @@ export function PremiumSidebar({
         <button
           type="button"
           className={currentView === "workspace" ? "active" : ""}
-          onClick={() => onViewChange("workspace")}
+          onClick={() => handleNavigate(() => onViewChange("workspace"))}
         >
           <span />
           作業部屋
@@ -122,7 +142,10 @@ export function PremiumSidebar({
           {visibleFriends.length > 0 ? (
             visibleFriends.map((friend) => (
               <article className="friend-sidebar-card" key={friend.uid}>
-                <button type="button" onClick={() => onFriendOpen(friend)}>
+                <button
+                  type="button"
+                  onClick={() => handleNavigate(() => onFriendOpen(friend))}
+                >
                   <span className="friend-avatar">
                     {friend.avatar ? <img src={friend.avatar} alt="" /> : friend.name.slice(0, 1).toUpperCase()}
                     <i className={`friend-status-dot ${friend.status}`} />
@@ -162,7 +185,7 @@ export function PremiumSidebar({
                 type="button"
                 className="live-activity-card"
                 key={activity.id}
-                onClick={() => onActivityOpen(activity)}
+                onClick={() => handleNavigate(() => onActivityOpen(activity))}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1], delay: index * 0.045 }}

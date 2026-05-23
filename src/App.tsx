@@ -2726,6 +2726,23 @@ function App() {
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [friendMessage, setFriendMessage] = useState("");
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+
+  // Mobile drawer: lock body scroll while open, auto-close when the
+  // viewport grows past the mobile breakpoint (e.g. on rotate / resize).
+  useEffect(() => {
+    if (!isMobileNavOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const handleResize = () => {
+      if (window.innerWidth > 720) setIsMobileNavOpen(false);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [isMobileNavOpen]);
   const [lastNotificationReadAt, setLastNotificationReadAt] = useState("");
   const [appNotifications, setAppNotifications] = useState<NotificationItem[]>([]);
   const [desktopNotificationSettings, setDesktopNotificationSettings] = useState<DesktopNotificationSettings>(
@@ -6906,7 +6923,18 @@ function App() {
         }}
         onFriendOpen={handleFriendOpen}
         onActivityOpen={handleLiveActivityOpen}
+        isMobileOpen={isMobileNavOpen}
+        onMobileClose={() => setIsMobileNavOpen(false)}
       />
+
+      {isMobileNavOpen ? (
+        <button
+          type="button"
+          className="mobile-nav-backdrop"
+          aria-label="メニューを閉じる"
+          onClick={() => setIsMobileNavOpen(false)}
+        />
+      ) : null}
 
       <div className="app-main-panel">
       <motion.header
@@ -6915,6 +6943,17 @@ function App() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ ...SPRING_SOFT, delay: 0.06 }}
       >
+        <button
+          type="button"
+          className="mobile-nav-toggle"
+          aria-label="メニューを開く"
+          aria-expanded={isMobileNavOpen}
+          onClick={() => setIsMobileNavOpen(true)}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M4 7h16M4 12h16M4 17h16" />
+          </svg>
+        </button>
         <div className="topbar-context">
           <span className="topbar-date">
             {topbarNow.getMonth() + 1}/{topbarNow.getDate()}（
