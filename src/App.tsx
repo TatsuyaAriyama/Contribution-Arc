@@ -39,7 +39,7 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { auth, db, githubProvider, googleProvider } from "./firebase";
 import {
   deleteStudyLogFromCloud,
@@ -2772,6 +2772,8 @@ function App() {
   const [postReplies, setPostReplies] = useState<ContributionReplyRecord[]>([]);
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [replyError, setReplyError] = useState("");
+  const [openReplyPostIds, setOpenReplyPostIds] = useState<Set<string>>(() => new Set());
+  const [likeBurstPostId, setLikeBurstPostId] = useState<string | null>(null);
   const [isDesktopWelcomeVisible, setIsDesktopWelcomeVisible] = useState(true);
   const [knowledgeGraph, setKnowledgeGraph] = useState<KnowledgeGraphData>(emptyKnowledgeGraph);
   const [selectedKnowledgeId, setSelectedKnowledgeId] = useState("");
@@ -2866,6 +2868,8 @@ function App() {
       setPostReplies([]);
       setReplyDrafts({});
       setReplyError("");
+      setOpenReplyPostIds(new Set());
+      setLikeBurstPostId(null);
       setIsDesktopWelcomeVisible(true);
       setKnowledgeGraph(emptyKnowledgeGraph);
       setSelectedKnowledgeId("");
@@ -4800,10 +4804,30 @@ function App() {
       }),
     );
 
+    if (!isLiked) {
+      setLikeBurstPostId(post.id);
+      window.setTimeout(() => {
+        setLikeBurstPostId((current) => (current === post.id ? null : current));
+      }, 650);
+    }
+
     void togglePostLikeInCloud(db, post.id, currentUser.uid, isLiked).catch((error) => {
       console.info("Post like sync skipped.", error);
       setPostError("リアクションを保存できませんでした。");
     });
+  };
+
+  const togglePostReplyOpen = (postId: string) => {
+    setOpenReplyPostIds((set) => {
+      const next = new Set(set);
+      if (next.has(postId)) {
+        next.delete(postId);
+      } else {
+        next.add(postId);
+      }
+      return next;
+    });
+    setReplyError("");
   };
 
   const handlePostReplySubmit = async (post: ContributionPostRecord) => {
@@ -4830,6 +4854,12 @@ function App() {
     setReplyError("");
     setPostReplies((items) => [reply, ...items.filter((item) => item.id !== reply.id)]);
     setReplyDrafts((drafts) => ({ ...drafts, [post.id]: "" }));
+    setOpenReplyPostIds((set) => {
+      if (!set.has(post.id)) return set;
+      const next = new Set(set);
+      next.delete(post.id);
+      return next;
+    });
 
     try {
       await savePostReplyToCloud(db, reply);
@@ -6287,6 +6317,8 @@ function App() {
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     const visibleReplies = variant === "compact" ? replies.slice(-1) : replies.slice(-3);
     const replyDraft = replyDrafts[post.id] || "";
+    const isReplyOpen = openReplyPostIds.has(post.id);
+    const isBursting = likeBurstPostId === post.id;
 
     return (
       <article className={`log-post-card ${variant === "compact" ? "compact" : ""}`} key={post.id}>
@@ -6307,15 +6339,95 @@ function App() {
         </div>
 
         <div className="log-post-actions">
-          <button
+          <motion.button
             type="button"
             className={isLiked ? "log-like-button liked" : "log-like-button"}
             onClick={() => handlePostLike(post)}
             aria-label={isLiked ? "ハートを取り消す" : "ハートする"}
+            aria-pressed={isLiked}
+            data-tooltip={isLiked ? "Liked" : "Like"}
+            whileTap={{ scale: 0.84 }}
+            transition={{ type: "spring", stiffness: 500, damping: 24 }}
           >
-            <span aria-hidden="true">{isLiked ? "♥" : "♡"}</span>
-            {post.likesCount.toLocaleString()}
+            <span className="log-like-icon" aria-hidden="true">
+              <motion.svg
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                animate={
+                  isBursting
+                    ? { scale: [1, 1.35, 0.92, 1.08, 1] }
+                    : { scale: 1 }
+                }
+                transition={{ duration: 0.55, ease: "easeOut", times: [0, 0.25, 0.5, 0.75, 1] }}
+              >
+                <path
+                  d="M12 20.4s-7.1-4.35-9.05-8.6C1.45 8.55 3.4 5.3 6.6 5.3c1.95 0 3.55 1.05 4.4 2.55h2c.85-1.5 2.45-2.55 4.4-2.55 3.2 0 5.15 3.25 3.65 6.5C19.1 16.05 12 20.4 12 20.4z"
+                  fill={isLiked ? "currentColor" : "none"}
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinejoin="round"
+                />
+              </motion.svg>
+              <AnimatePresence>
+                {isBursting ? (
+                  <>
+                    <motion.span
+                      key="ring"
+                      className="log-like-ring"
+                      initial={{ scale: 0.35, opacity: 0.85 }}
+                      animate={{ scale: 2.2, opacity: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.6, ease: "easeOut" }}
+                    />
+                    <motion.span
+                      key="glow"
+                      className="log-like-glow"
+                      initial={{ scale: 0.6, opacity: 0 }}
+                      animate={{ scale: 1.4, opacity: [0, 0.9, 0] }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.65, ease: "easeOut", times: [0, 0.35, 1] }}
+                    />
+                  </>
+                ) : null}
+              </AnimatePresence>
+            </span>
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.span
+                key={post.likesCount}
+                className="log-like-count"
+                initial={{ y: 8, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -8, opacity: 0 }}
+                transition={{ duration: 0.18 }}
+              >
+                {post.likesCount.toLocaleString()}
+              </motion.span>
+            </AnimatePresence>
+          </motion.button>
+
+          <button
+            type="button"
+            className={isReplyOpen ? "log-reply-toggle is-open" : "log-reply-toggle"}
+            onClick={() => togglePostReplyOpen(post.id)}
+            aria-label={isReplyOpen ? "返信を閉じる" : "返信を書く"}
+            aria-expanded={isReplyOpen}
+            data-tooltip={isReplyOpen ? "閉じる" : "返信"}
+          >
+            <span className="log-reply-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18">
+                <path
+                  d="M4.5 5.5h15c.83 0 1.5.67 1.5 1.5v9c0 .83-.67 1.5-1.5 1.5H9l-4 3.5V17H4.5C3.67 17 3 16.33 3 15.5V7c0-.83.67-1.5 1.5-1.5z"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+            {replies.length > 0 ? <span>{replies.length.toLocaleString()}</span> : null}
           </button>
+
           {post.userId === currentUserUid ? (
             <button type="button" className="log-delete-button" onClick={() => handlePostDelete(post)}>
               削除
@@ -6339,26 +6451,35 @@ function App() {
             </div>
           ) : null}
 
-          <form
-            className="post-reply-form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void handlePostReplySubmit(post);
-            }}
-          >
-            <input
-              value={replyDraft}
-              onChange={(event) => {
-                setReplyDrafts((drafts) => ({ ...drafts, [post.id]: event.target.value }));
-                setReplyError("");
-              }}
-              placeholder="短く返信"
-              maxLength={160}
-            />
-            <button type="submit" disabled={!replyDraft.trim()}>
-              返信
-            </button>
-          </form>
+          <AnimatePresence initial={false}>
+            {isReplyOpen ? (
+              <motion.form
+                className="post-reply-form"
+                initial={{ opacity: 0, height: 0, y: -4 }}
+                animate={{ opacity: 1, height: "auto", y: 0 }}
+                exit={{ opacity: 0, height: 0, y: -4 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void handlePostReplySubmit(post);
+                }}
+              >
+                <input
+                  value={replyDraft}
+                  autoFocus
+                  onChange={(event) => {
+                    setReplyDrafts((drafts) => ({ ...drafts, [post.id]: event.target.value }));
+                    setReplyError("");
+                  }}
+                  placeholder="短く返信"
+                  maxLength={160}
+                />
+                <button type="submit" disabled={!replyDraft.trim()}>
+                  返信
+                </button>
+              </motion.form>
+            ) : null}
+          </AnimatePresence>
         </div>
       </article>
     );
