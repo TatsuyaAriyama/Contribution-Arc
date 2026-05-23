@@ -40,33 +40,33 @@
 
 [data-theme="dark"] {
   color-scheme: dark;
-  color: #ededed;
-  background: #0f0f10;
-  --bg: #0f0f10;
-  --surface: #17181a;
-  --surface-warm: #1a1a1c;
-  --surface-elevated: #1e1f22;
-  /* Flip RGB triplets so all rgba(var(--surface-rgb), X) /
-     rgba(var(--ink-rgb), X) usages invert automatically. */
-  --surface-rgb: 23, 24, 26;
-  --ink-rgb: 237, 237, 237;
-  --ink: #ededed;
+  color: #ffffff;
+  background: #000000;
+  /* Twitter/Instagram-style: pure black canvas, pure white text,
+     separation via 1px borders rather than tonal layering. */
+  --bg: #000000;
+  --surface: #16181c;
+  --surface-warm: #16181c;
+  --surface-elevated: #1e2024;
+  --surface-rgb: 22, 24, 28;
+  --ink-rgb: 255, 255, 255;
+  --ink: #ffffff;
   --ink-strong: #ffffff;
-  /* In dark mode, the primary CTA inverts: light pill, dark text. */
-  --cta-bg: #f1f5f9;
-  --cta-fg: #0a0a0b;
-  --muted: #8b8e94;
-  --line: rgba(255, 255, 255, 0.08);
-  --line-soft: rgba(255, 255, 255, 0.05);
-  --line-strong: rgba(255, 255, 255, 0.12);
+  /* Primary CTA in dark mode = pure white pill, pure black text. */
+  --cta-bg: #ffffff;
+  --cta-fg: #000000;
+  --muted: #a7adb3;
+  --line: rgba(255, 255, 255, 0.14);
+  --line-soft: rgba(255, 255, 255, 0.07);
+  --line-strong: rgba(255, 255, 255, 0.20);
   --green: #4ade80;
   --green-hover: #6ee7b7;
-  --green-soft: rgba(74, 222, 128, 0.14);
+  --green-soft: rgba(74, 222, 128, 0.16);
   --rare: #fbbf24;
   --accent-warm: #fb923c;
-  --shadow-soft: 0 14px 40px rgba(0, 0, 0, 0.5);
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.3);
-  --ring-focus: 0 0 0 3px rgba(74, 222, 128, 0.32);
+  --shadow-soft: 0 14px 40px rgba(0, 0, 0, 0.7);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.6), 0 8px 24px rgba(0, 0, 0, 0.45);
+  --ring-focus: 0 0 0 3px rgba(74, 222, 128, 0.36);
 }
 
 * {
@@ -93,11 +93,7 @@ body {
 }
 
 [data-theme="dark"] body {
-  background:
-    radial-gradient(circle at 12% 0%, rgba(74, 222, 128, 0.06), transparent 30rem),
-    radial-gradient(circle at 94% 14%, rgba(124, 92, 255, 0.05), transparent 28rem),
-    linear-gradient(180deg, #131316 0%, #0f0f10 48%, #0a0a0b 100%),
-    var(--bg);
+  background: var(--bg);
 }
 
 button {
@@ -184,8 +180,7 @@ body::after {
 }
 
 [data-theme="dark"] body::after {
-  opacity: 0.18;
-  filter: invert(1) hue-rotate(180deg);
+  opacity: 0;
 }
 
 body::before {
@@ -216,18 +211,7 @@ body::before {
 }
 
 [data-theme="dark"] body::before {
-  background:
-    radial-gradient(circle at 100% 8%, rgba(74, 222, 128, 0.05), transparent 24rem),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
-    radial-gradient(circle, rgba(255, 255, 255, 0.05) 0 1.4px, transparent 2.4px);
-  background-size:
-    auto,
-    auto,
-    36px 36px,
-    36px 36px,
-    36px 36px;
-  opacity: 0.22;
+  opacity: 0;
 }
 
 body::after {

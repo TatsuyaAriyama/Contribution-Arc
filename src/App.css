@@ -358,13 +358,13 @@
 
 .notification-item small {
   margin-top: 3px;
-  color: #71717a;
+  color: var(--muted);
   font-size: 10px;
   font-weight: 760;
 }
 
 .notification-item small:first-of-type {
-  color: #374151;
+  color: var(--ink);
   font-size: 11px;
 }
 
@@ -383,7 +383,7 @@
 .notification-empty {
   margin: 0;
   padding: 14px;
-  color: #71717a;
+  color: var(--muted);
   font-size: 12px;
   font-weight: 800;
   text-align: center;
@@ -2092,7 +2092,7 @@
   border: 1px solid rgba(var(--ink-rgb), 0.08);
   border-radius: 16px;
   background: rgba(250, 250, 248, 0.86);
-  color: #3f3f46;
+  color: var(--ink);
   cursor: pointer;
   font: inherit;
   transition:
@@ -2397,7 +2397,7 @@
 .member-profile-hero small {
   display: block;
   margin-top: 6px;
-  color: #71717a;
+  color: var(--muted);
   font-size: 13px;
   font-weight: 760;
 }
@@ -2921,7 +2921,7 @@
 
 .post-reply-item p {
   margin: 0;
-  color: #4b5563;
+  color: var(--ink);
   font-size: 12px;
   font-weight: 760;
   line-height: 1.45;
@@ -2970,7 +2970,7 @@
   border: 1px solid rgba(31, 111, 74, 0.12);
   border-radius: 999px;
   background: rgba(244, 247, 245, 0.9);
-  color: #1f2937;
+  color: var(--ink);
   cursor: pointer;
   font-size: 12px;
   font-weight: 850;
@@ -3141,7 +3141,7 @@
   border: 1px solid rgba(31, 111, 74, 0.14);
   border-radius: 999px;
   background: rgba(244, 247, 245, 0.86);
-  color: #1f2937;
+  color: var(--ink);
   cursor: pointer;
   font-size: 13px;
   font-weight: 850;
@@ -3376,7 +3376,7 @@
 
 .daily-shared-list p {
   margin: 0;
-  color: #374151;
+  color: var(--ink);
   font-size: 12px;
   font-weight: 760;
   line-height: 1.55;
@@ -3399,7 +3399,7 @@
 
 .daily-shared-section span {
   overflow-wrap: anywhere;
-  color: #374151;
+  color: var(--ink);
   font-size: 12px;
   font-weight: 760;
   line-height: 1.58;
@@ -4501,7 +4501,7 @@
   border: 1px solid rgba(var(--ink-rgb), 0.08);
   border-radius: 999px;
   background: var(--surface);
-  color: #71717a;
+  color: var(--muted);
   cursor: pointer;
   font-size: 11px;
   font-weight: 850;
@@ -4807,7 +4807,7 @@
 }
 
 .room-owner-actions > span {
-  color: #71717a;
+  color: var(--muted);
   font-size: 11px;
   font-weight: 850;
 }
@@ -5902,7 +5902,7 @@
 .home-workspace-header p:last-child {
   max-width: 640px;
   margin: 10px 0 0;
-  color: #71717a;
+  color: var(--muted);
   font-size: 13px;
   font-weight: 760;
   line-height: 1.6;
@@ -6024,8 +6024,8 @@
   padding: 0 12px;
   border: 1px solid rgba(31, 111, 74, 0.18);
   border-radius: 999px;
-  background: #f4f7f5;
-  color: #3f3f46;
+  background: var(--bg);
+  color: var(--ink);
   font-size: 12px;
   font-weight: 850;
 }
@@ -6594,8 +6594,8 @@
 
 .preset-message-bar .preset-edit-button {
   border-color: rgba(31, 111, 74, 0.14);
-  background: #f4f7f5;
-  color: #1f2937;
+  background: var(--bg);
+  color: var(--ink);
 }
 
 .preset-message-bar .preset-break-toggle {
@@ -6603,7 +6603,7 @@
   background:
     linear-gradient(180deg, rgba(var(--surface-rgb), 0.96), rgba(244, 247, 245, 0.86)),
     #ffffff;
-  color: #4b5563;
+  color: var(--ink);
 }
 
 .preset-message-bar button:not(:disabled):hover {
@@ -6642,7 +6642,7 @@
   height: 24px;
   border-radius: 9px;
   background: var(--bg);
-  color: #71717a;
+  color: var(--muted);
   font-size: 11px;
   font-weight: 900;
 }
@@ -6769,7 +6769,7 @@
 .workspace-activity-list small {
   display: block;
   margin-top: 3px;
-  color: #71717a;
+  color: var(--muted);
   font-size: 11px;
   font-weight: 800;
 }
@@ -7438,7 +7438,7 @@
 }
 
 .premium-dashboard-header .topbar-context .card-kicker {
-  color: #71717a;
+  color: var(--muted);
   font-size: 10px;
   letter-spacing: 0.16em;
 }
@@ -7469,7 +7469,7 @@
   background:
     linear-gradient(180deg, rgba(var(--surface-rgb), 0.82), rgba(244, 244, 245, 0.62)),
     rgba(var(--surface-rgb), 0.64);
-  color: #3f3f46;
+  color: var(--ink);
   box-shadow:
     0 14px 42px rgba(var(--ink-rgb), 0.055),
     inset 0 1px 0 rgba(var(--surface-rgb), 0.9);
@@ -7497,7 +7497,7 @@
   border: 1px solid rgba(var(--ink-rgb), 0.08);
   border-radius: 9px;
   background: rgba(var(--surface-rgb), 0.72);
-  color: #71717a;
+  color: var(--muted);
   font-size: 11px;
   font-style: normal;
   font-weight: 760;
@@ -7601,7 +7601,7 @@
 }
 
 .premium-dashboard-header .workspace-nav-copy small {
-  color: #71717a;
+  color: var(--muted);
   font-size: 11px;
   font-weight: 680;
 }
@@ -7856,7 +7856,7 @@
 }
 
 .friend-sidebar-head span {
-  color: #71717a;
+  color: var(--muted);
   font-size: 11px;
   font-weight: 850;
 }
@@ -7965,13 +7965,13 @@
 
 .friend-sidebar-card small {
   margin-top: 3px;
-  color: #71717a;
+  color: var(--muted);
   font-size: 10px;
   font-weight: 760;
 }
 
 .friend-sidebar-card a {
-  color: #71717a;
+  color: var(--muted);
   font-size: 10px;
   font-weight: 850;
   text-decoration: none;
@@ -7984,7 +7984,7 @@
 
 .friend-empty {
   margin: 0;
-  color: #71717a;
+  color: var(--muted);
   font-size: 11px;
   font-weight: 720;
   line-height: 1.55;
@@ -8030,7 +8030,7 @@
 .friend-profile-card .member-profile-hero small {
   display: block;
   margin-top: 6px;
-  color: #71717a;
+  color: var(--muted);
   font-size: 13px;
   font-weight: 760;
 }
@@ -8051,7 +8051,7 @@
 }
 
 .member-profile-actions span {
-  color: #71717a;
+  color: var(--muted);
   font-size: 12px;
   font-weight: 820;
 }
@@ -8230,7 +8230,7 @@
 
 .live-activity-card small {
   margin-top: 3px;
-  color: #71717a;
+  color: var(--muted);
   font-size: 10px;
   font-weight: 740;
 }
@@ -8684,7 +8684,7 @@
 
 .brand-lockup small {
   margin-top: 4px;
-  color: #71717a;
+  color: var(--muted);
   font-size: 12px;
   font-weight: 800;
 }
@@ -8760,7 +8760,7 @@
 }
 
 .sidebar-presence small {
-  color: #71717a;
+  color: var(--muted);
   font-size: 12px;
   font-weight: 800;
 }
@@ -8915,7 +8915,7 @@
 .study-color-field legend,
 .workspace-task-field span,
 .room-create-form span {
-  color: #71717a;
+  color: var(--muted);
   letter-spacing: 0.12em;
 }
 
@@ -8990,7 +8990,7 @@
 .status-card-link::after {
   border-color: rgba(var(--ink-rgb), 0.08);
   background: var(--bg);
-  color: #3f3f46;
+  color: var(--ink);
 }
 
 .bar-chart {
@@ -9055,7 +9055,7 @@
 }
 
 .workspace-heading p:last-child {
-  color: #71717a;
+  color: var(--muted);
 }
 
 .room-detail {
@@ -9407,7 +9407,7 @@
 
 .knowledge-detail dt {
   margin-bottom: 8px;
-  color: #71717a;
+  color: var(--muted);
   font-size: 11px;
   font-weight: 850;
   letter-spacing: 0.1em;
@@ -9893,7 +9893,7 @@
 .workspace-room-stats span {
   display: block;
   margin-top: 8px;
-  color: #71717a;
+  color: var(--muted);
   font-size: 10px;
   font-weight: 880;
   line-height: 1.35;
@@ -10507,7 +10507,7 @@
 }
 
 .workspace-activity-list p {
-  color: #1f2937;
+  color: var(--ink);
   font-size: 12px;
   font-weight: 830;
 }
@@ -13942,11 +13942,13 @@
 }
 
 [data-theme="dark"] .aurora-backdrop {
-  opacity: 0.42;
-  background:
-    radial-gradient(40vmax 30vmax at 18% 22%, rgba(74, 222, 128, 0.22), transparent 70%),
-    radial-gradient(35vmax 28vmax at 82% 18%, rgba(124, 92, 255, 0.20), transparent 72%),
-    radial-gradient(30vmax 24vmax at 60% 88%, rgba(251, 146, 60, 0.16), transparent 70%);
+  /* Twitter/Instagram-style dark mode: no ambient color overlay,
+     pure black canvas instead. */
+  display: none;
+}
+
+[data-theme="dark"] .cursor-spotlight {
+  display: none;
 }
 
 @keyframes aurora-drift {
