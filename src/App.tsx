@@ -2631,6 +2631,11 @@ function App() {
   const [settingsError, setSettingsError] = useState("");
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    if (typeof window === "undefined") return "dark";
+    const stored = window.localStorage.getItem("contribution-arc-theme");
+    return stored === "light" ? "light" : "dark";
+  });
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("idle");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -3139,6 +3144,15 @@ function App() {
     const interval = window.setInterval(() => setFeedNowTick(Date.now()), 30000);
     return () => window.clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem("contribution-arc-theme", theme);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) {
+      meta.setAttribute("content", theme === "dark" ? "#0f0f10" : "#fafaf8");
+    }
+  }, [theme]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
@@ -7025,6 +7039,30 @@ function App() {
                       <small>{color.name}</small>
                     </button>
                   ))}
+                </div>
+              </div>
+
+              <div className="settings-theme-panel" role="group" aria-label="テーマ">
+                <span className="settings-theme-label">テーマ</span>
+                <div className="settings-theme-toggle">
+                  <button
+                    type="button"
+                    className={theme === "dark" ? "active" : ""}
+                    onClick={() => setTheme("dark")}
+                    aria-pressed={theme === "dark"}
+                  >
+                    <span aria-hidden="true">🌙</span>
+                    ダーク
+                  </button>
+                  <button
+                    type="button"
+                    className={theme === "light" ? "active" : ""}
+                    onClick={() => setTheme("light")}
+                    aria-pressed={theme === "light"}
+                  >
+                    <span aria-hidden="true">☀️</span>
+                    ライト
+                  </button>
                 </div>
               </div>
 

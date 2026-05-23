@@ -818,6 +818,63 @@
   background: rgba(250, 250, 248, 0.72);
 }
 
+.settings-theme-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 18px;
+  background: var(--surface-warm);
+}
+
+.settings-theme-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.settings-theme-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  background: var(--bg);
+}
+
+.settings-theme-toggle button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.settings-theme-toggle button:hover {
+  color: var(--ink);
+}
+
+.settings-theme-toggle button.active {
+  background: var(--surface);
+  color: var(--ink-strong);
+  box-shadow: var(--shadow-card);
+}
+
+[data-theme="dark"] .settings-character-color-panel {
+  border-color: var(--line-strong);
+  background: var(--surface-warm);
+}
+
 .onboarding-settings-modal .settings-character-color-panel {
   gap: 10px;
   padding: 10px;
@@ -13858,4 +13915,185 @@
   justify-content: flex-end;
   gap: 8px;
   margin-top: 8px;
+}
+
+/* ============================================================
+   Dark mode foundational overrides
+   Tokens above handle most surfaces; this block targets the
+   highest-impact hard-coded patterns. Per-feature glitches
+   will be polished iteratively.
+   ============================================================ */
+
+[data-theme="dark"] {
+  /* Backdrops / shells */
+  --backdrop-glass: rgba(15, 15, 16, 0.72);
+}
+
+[data-theme="dark"] .app-shell,
+[data-theme="dark"] .app-main,
+[data-theme="dark"] .app-content,
+[data-theme="dark"] .home-screen,
+[data-theme="dark"] .premium-shell,
+[data-theme="dark"] .premium-main {
+  color: var(--ink);
+}
+
+/* Generic card/surface flips */
+[data-theme="dark"] .card,
+[data-theme="dark"] .feed-card,
+[data-theme="dark"] .post-card,
+[data-theme="dark"] .recruitment-card,
+[data-theme="dark"] .learning-card,
+[data-theme="dark"] .study-card,
+[data-theme="dark"] .daily-card,
+[data-theme="dark"] .profile-card,
+[data-theme="dark"] .home-feed-section,
+[data-theme="dark"] .home-feed-composer,
+[data-theme="dark"] .workspace-session-panel,
+[data-theme="dark"] .workspace-stage,
+[data-theme="dark"] .preset-message-bar,
+[data-theme="dark"] .preset-message-editor,
+[data-theme="dark"] .settings-modal,
+[data-theme="dark"] .learning-modal,
+[data-theme="dark"] .recruitment-modal,
+[data-theme="dark"] .app-error-card {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--ink);
+  box-shadow: var(--shadow-card);
+}
+
+/* Modal backdrops */
+[data-theme="dark"] .settings-modal-backdrop,
+[data-theme="dark"] .learning-modal-backdrop,
+[data-theme="dark"] .recruitment-modal-backdrop,
+[data-theme="dark"] .modal-backdrop {
+  background: rgba(0, 0, 0, 0.62);
+}
+
+/* Inputs */
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background: var(--surface-elevated);
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: var(--muted);
+}
+
+[data-theme="dark"] input:focus,
+[data-theme="dark"] textarea:focus,
+[data-theme="dark"] select:focus {
+  outline: none;
+  box-shadow: var(--ring-focus);
+  border-color: var(--green);
+}
+
+/* Sidebar / navigation */
+[data-theme="dark"] .premium-sidebar,
+[data-theme="dark"] .app-sidebar,
+[data-theme="dark"] .nav-rail,
+[data-theme="dark"] .sidebar {
+  background: var(--surface);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .premium-nav-button,
+[data-theme="dark"] .nav-button {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .premium-nav-button.active,
+[data-theme="dark"] .nav-button.active {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+[data-theme="dark"] .premium-nav-button:hover,
+[data-theme="dark"] .nav-button:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink);
+}
+
+/* Headings / muted text */
+[data-theme="dark"] .card-kicker,
+[data-theme="dark"] small,
+[data-theme="dark"] .muted {
+  color: var(--muted);
+}
+
+/* Recruitment card state pills — re-tint for dark */
+[data-theme="dark"] .recruitment-state-badge.state-upcoming {
+  background: rgba(124, 92, 255, 0.16);
+  color: #b3a3ff;
+}
+
+[data-theme="dark"] .recruitment-state-badge.state-active {
+  background: rgba(251, 113, 133, 0.16);
+  color: #fb7185;
+}
+
+[data-theme="dark"] .recruitment-state-badge.state-ended {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+}
+
+[data-theme="dark"] .recruitment-card.state-active {
+  border-color: rgba(251, 113, 133, 0.32);
+}
+
+[data-theme="dark"] .recruitment-card.state-upcoming {
+  border-color: rgba(124, 92, 255, 0.28);
+}
+
+/* Buttons that hard-coded ink color */
+[data-theme="dark"] .recruitment-join,
+[data-theme="dark"] .room-join-button,
+[data-theme="dark"] .learning-save-button {
+  background: var(--green);
+  color: #0a0f1c;
+}
+
+[data-theme="dark"] .recruitment-join:hover,
+[data-theme="dark"] .room-join-button:hover,
+[data-theme="dark"] .learning-save-button:hover {
+  background: var(--green-hover);
+}
+
+[data-theme="dark"] .recruitment-cancel,
+[data-theme="dark"] .room-leave-button,
+[data-theme="dark"] .learning-cancel-button {
+  background: transparent;
+  color: var(--muted);
+  border-color: var(--line-strong);
+}
+
+/* Floor grid in workspace stage — invert subtle */
+[data-theme="dark"] .workspace-floor-grid {
+  opacity: 0.16;
+  filter: invert(1);
+}
+
+/* Subject donut / chart text */
+[data-theme="dark"] .subject-donut text,
+[data-theme="dark"] svg text {
+  fill: var(--ink);
+}
+
+/* Scrollbar tint for webkit */
+[data-theme="dark"] ::-webkit-scrollbar {
+  background: var(--bg);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.10);
+  border-radius: 8px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.16);
 }

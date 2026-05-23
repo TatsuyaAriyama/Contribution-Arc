@@ -8,7 +8,19 @@
       content="Contribution Arc is a learning and contribution record service for developers."
     />
     <link rel="icon" type="image/svg+xml" href="/contribution-arc-icon.svg" />
+    <meta name="theme-color" content="#0f0f10" />
     <title>Contribution Arc | Learning & Contribution Records</title>
+    <script>
+      (function () {
+        try {
+          var stored = window.localStorage.getItem("contribution-arc-theme");
+          var theme = stored === "light" ? "light" : "dark";
+          document.documentElement.dataset.theme = theme;
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute("content", theme === "dark" ? "#0f0f10" : "#fafaf8");
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
