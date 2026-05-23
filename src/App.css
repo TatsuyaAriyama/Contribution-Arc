@@ -7223,44 +7223,88 @@
     justify-content: stretch;
   }
 
-  .workspace-stage {
-    min-height: 420px;
-    height: 62vh;
+  /* Reflow the workspace canvas into a vertical list of actor rows.
+     Focus presentation keeps its full-screen canvas treatment via the
+     :not(.focus-presentation) guard. */
+  .workspace-2d-shell:not(.focus-presentation) .workspace-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: auto;
+    min-height: 0;
+    padding: 8px;
+    overflow: visible;
     border-radius: 16px;
   }
 
-  .workspace-whiteboard {
-    width: 54%;
+  .workspace-2d-shell:not(.focus-presentation) .workspace-floor-grid,
+  .workspace-2d-shell:not(.focus-presentation) .workspace-whiteboard,
+  .workspace-2d-shell:not(.focus-presentation) .workspace-desk,
+  .workspace-2d-shell:not(.focus-presentation) .workspace-chair,
+  .workspace-2d-shell:not(.focus-presentation) .workspace-plant {
+    display: none;
   }
 
-  .workspace-desk {
-    width: 126px;
-    height: 58px;
+  .workspace-2d-shell:not(.focus-presentation) .workspace-actor {
+    position: static;
+    transform: none;
+    width: 100%;
+    min-height: 64px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(var(--surface-rgb), 0.6);
+    border: 1px solid rgba(var(--ink-rgb), 0.06);
   }
 
-  .workspace-chair {
-    width: 46px;
-    height: 36px;
+  .workspace-2d-shell:not(.focus-presentation) .workspace-actor .actor-shadow,
+  .workspace-2d-shell:not(.focus-presentation) .workspace-actor .workspace-bubble {
+    display: none;
   }
 
-  .workspace-plant {
-    transform: scale(0.78);
+  .workspace-2d-shell:not(.focus-presentation) .workspace-actor .actor-sprite {
+    flex: 0 0 auto;
   }
 
-  .workspace-actor {
+  .workspace-2d-shell:not(.focus-presentation) .workspace-actor .actor-name {
+    font-size: 13px;
+    max-width: none;
+    text-align: left;
+  }
+
+  .workspace-2d-shell:not(.focus-presentation) .workspace-actor .actor-task {
+    max-width: none;
+    text-align: left;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .workspace-2d-shell:not(.focus-presentation) .workspace-actor .actor-task strong {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Focus-presentation canvas (still 2D positioning) keeps the shrink
+     rules so actors don't overflow at phone widths. */
+  .focus-presentation .workspace-actor {
     width: 76px;
   }
 
-  .actor-sprite {
+  .focus-presentation .actor-sprite {
     width: 38px;
     height: 48px;
   }
 
-  .actor-name {
+  .focus-presentation .actor-name {
     font-size: 11px;
   }
 
-  .actor-task {
+  .focus-presentation .actor-task {
     max-width: 76px;
   }
 
