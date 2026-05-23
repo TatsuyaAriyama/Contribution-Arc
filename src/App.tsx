@@ -1,4 +1,5 @@
 import {
+  Fragment,
   useEffect,
   useMemo,
   useRef,
@@ -53,6 +54,17 @@ import {
   saveLearningItemToCloud,
   subscribeLearningItemsFromCloud,
 } from "./services/learningItems";
+import {
+  cancelRecruitmentInCloud,
+  createRecruitmentInCloud,
+  joinRecruitmentInCloud,
+  subscribeActiveRecruitmentsFromCloud,
+  type WorkspaceRecruitmentRecord,
+} from "./services/workspaceRecruitments";
+import {
+  WorkspaceRecruitmentFeedCard,
+  type RecruitmentAuthor,
+} from "./components/feed/WorkspaceRecruitmentFeedCard";
 import {
   savePostToCloud,
   savePostReplyToCloud,
@@ -2668,6 +2680,16 @@ function App() {
   const [postError, setPostError] = useState("");
   const [isPosting, setIsPosting] = useState(false);
   const [timelineFilter, setTimelineFilter] = useState<"following" | "all">("following");
+  const [workspaceRecruitments, setWorkspaceRecruitments] = useState<WorkspaceRecruitmentRecord[]>([]);
+  const [feedNowTick, setFeedNowTick] = useState(() => Date.now());
+  const [isRecruitmentModalOpen, setIsRecruitmentModalOpen] = useState(false);
+  const [recruitmentDraft, setRecruitmentDraft] = useState<{
+    mode: "now" | "scheduled";
+    durationMinutes: number;
+    message: string;
+    scheduledAt: string;
+  }>(() => ({ mode: "now", durationMinutes: 60, message: "", scheduledAt: "" }));
+  const [recruitmentError, setRecruitmentError] = useState("");
   const [dailyReports, setDailyReports] = useState<DailyReport[]>([]);
   const [sharedDailyReports, setSharedDailyReports] = useState<DailyReport[]>([]);
   const [selectedDailyDate, setSelectedDailyDate] = useState(getDateInputValue());
@@ -3100,6 +3122,23 @@ function App() {
       });
     });
   }, [currentUser, isWorkspaceLoaded, learningItems.length, studyLogs.length]);
+
+  useEffect(() => {
+    if (!currentUser || !isWorkspaceLoaded) {
+      return;
+    }
+    const unsubscribe = subscribeActiveRecruitmentsFromCloud(
+      db,
+      (items) => setWorkspaceRecruitments(items),
+      (error) => console.info("Workspace recruitments sync skipped.", error),
+    );
+    return () => unsubscribe();
+  }, [currentUser, isWorkspaceLoaded]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setFeedNowTick(Date.now()), 30000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
@@ -5717,6 +5756,128 @@ function App() {
     closeWorkspaceSession(selectedRoom.id);
   };
 
+  const handleOpenRecruitmentModal = () => {
+    setRecruitmentDraft({
+      mode: "now",
+      durationMinutes: 60,
+      message: "",
+      scheduledAt: (() => {
+        const next = new Date(Date.now() + 60 * 60 * 1000);
+        next.setSeconds(0, 0);
+        // Format for datetime-local input (YYYY-MM-DDTHH:mm)
+        const pad = (value: number) => value.toString().padStart(2, "0");
+        return `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}T${pad(next.getHours())}:${pad(next.getMinutes())}`;
+      })(),
+    });
+    setRecruitmentError("");
+    setIsRecruitmentModalOpen(true);
+  };
+
+  const handleCloseRecruitmentModal = () => {
+    setIsRecruitmentModalOpen(false);
+    setRecruitmentError("");
+  };
+
+  const handleCreateRecruitmentSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!currentUser || !selectedRoom) {
+      setRecruitmentError("入室する作業部屋を選択してください。");
+      return;
+    }
+    const task = workspaceTask.trim();
+    if (!task) {
+      setRecruitmentError("作業内容を入力してから募集してください。");
+      return;
+    }
+    const message = recruitmentDraft.message.trim();
+    if (message.length > 140) {
+      setRecruitmentError("メッセージは140字までです。");
+      return;
+    }
+
+    const now = new Date();
+    let startAtDate = now;
+    if (recruitmentDraft.mode === "scheduled") {
+      if (!recruitmentDraft.scheduledAt) {
+        setRecruitmentError("開始時刻を入力してください。");
+        return;
+      }
+      const scheduled = new Date(recruitmentDraft.scheduledAt);
+      if (Number.isNaN(scheduled.getTime())) {
+        setRecruitmentError("開始時刻が正しくありません。");
+        return;
+      }
+      if (scheduled.getTime() <= now.getTime()) {
+        setRecruitmentError("開始時刻は今より後を指定してください。");
+        return;
+      }
+      const maxFuture = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      if (scheduled.getTime() > maxFuture.getTime()) {
+        setRecruitmentError("予約は24時間以内までです。");
+        return;
+      }
+      startAtDate = scheduled;
+    }
+
+    const duration = Math.max(15, Math.min(240, recruitmentDraft.durationMinutes));
+    const expiresAtDate = new Date(startAtDate.getTime() + duration * 60 * 1000);
+
+    const record: WorkspaceRecruitmentRecord = {
+      id: crypto.randomUUID(),
+      userId: currentUser.uid,
+      roomId: selectedRoom.id,
+      roomName: selectedRoom.name,
+      task,
+      message,
+      durationMinutes: duration,
+      createdAt: now.toISOString(),
+      startAt: startAtDate.toISOString(),
+      expiresAt: expiresAtDate.toISOString(),
+      joinedUserIds: [currentUser.uid],
+    };
+
+    try {
+      await createRecruitmentInCloud(db, record);
+      setWorkspaceRecruitments((prev) => [record, ...prev.filter((item) => item.id !== record.id)]);
+      setIsRecruitmentModalOpen(false);
+      setRecruitmentError("");
+    } catch (error) {
+      console.warn("Failed to create recruitment", error);
+      setRecruitmentError("募集の投稿に失敗しました。時間をおいて再度お試しください。");
+    }
+  };
+
+  const handleJoinRecruitment = (recruitment: WorkspaceRecruitmentRecord) => {
+    if (!currentUser) return;
+    const nowMs = Date.now();
+    const startAtMs = new Date(recruitment.startAt).getTime();
+    const isActive = nowMs >= startAtMs && nowMs < new Date(recruitment.expiresAt).getTime();
+
+    setWorkspaceRecruitments((prev) =>
+      prev.map((item) =>
+        item.id === recruitment.id && !item.joinedUserIds.includes(currentUser.uid)
+          ? { ...item, joinedUserIds: [...item.joinedUserIds, currentUser.uid] }
+          : item,
+      ),
+    );
+
+    void joinRecruitmentInCloud(db, recruitment.id, currentUser.uid).catch((error) => {
+      console.warn("Failed to join recruitment", error);
+    });
+
+    if (isActive) {
+      startWorkspaceSession(recruitment.roomId, recruitment.task, studyColor);
+    }
+  };
+
+  const handleCancelRecruitment = (recruitment: WorkspaceRecruitmentRecord) => {
+    if (!currentUser || recruitment.userId !== currentUser.uid) return;
+    setWorkspaceRecruitments((prev) => prev.filter((item) => item.id !== recruitment.id));
+    void cancelRecruitmentInCloud(db, recruitment.id).catch((error) => {
+      console.warn("Failed to cancel recruitment", error);
+    });
+  };
+
   const handleWorkspacePresetMessage = (message: string) => {
     if (!currentUser || !selectedRoom || !isInSelectedRoom) {
       return;
@@ -6689,6 +6850,111 @@ function App() {
                 )}
               </div>
             ) : null}
+          </section>
+        </div>
+      ) : null}
+
+      {isRecruitmentModalOpen ? (
+        <div className="settings-modal-backdrop" role="presentation" onClick={handleCloseRecruitmentModal}>
+          <section
+            className="settings-modal recruitment-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="recruitment-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div>
+              <p className="card-kicker">Workspace Recruitment</p>
+              <h2 id="recruitment-modal-title">作業部屋の募集を投稿</h2>
+              <p className="recruitment-modal-help">
+                {selectedRoom ? (
+                  <>
+                    部屋: <strong>{selectedRoom.name}</strong> / 作業: <strong>{workspaceTask.trim() || "(作業内容を入力してください)"}</strong>
+                  </>
+                ) : (
+                  "作業部屋を選択してください。"
+                )}
+              </p>
+            </div>
+
+            <form className="settings-form recruitment-form" onSubmit={handleCreateRecruitmentSubmit}>
+              <div className="recruitment-mode-toggle" role="tablist" aria-label="開始タイミング">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={recruitmentDraft.mode === "now"}
+                  className={recruitmentDraft.mode === "now" ? "is-active" : ""}
+                  onClick={() => setRecruitmentDraft((prev) => ({ ...prev, mode: "now" }))}
+                >
+                  今から
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={recruitmentDraft.mode === "scheduled"}
+                  className={recruitmentDraft.mode === "scheduled" ? "is-active" : ""}
+                  onClick={() => setRecruitmentDraft((prev) => ({ ...prev, mode: "scheduled" }))}
+                >
+                  予約
+                </button>
+              </div>
+
+              {recruitmentDraft.mode === "scheduled" ? (
+                <label className="recruitment-field">
+                  <span>開始時刻</span>
+                  <input
+                    type="datetime-local"
+                    value={recruitmentDraft.scheduledAt}
+                    onChange={(event) =>
+                      setRecruitmentDraft((prev) => ({ ...prev, scheduledAt: event.target.value }))
+                    }
+                  />
+                </label>
+              ) : null}
+
+              <div className="recruitment-field">
+                <span>想定時間</span>
+                <div className="recruitment-duration-options" role="radiogroup">
+                  {[30, 60, 120, 180].map((minutes) => (
+                    <button
+                      type="button"
+                      key={minutes}
+                      role="radio"
+                      aria-checked={recruitmentDraft.durationMinutes === minutes}
+                      className={recruitmentDraft.durationMinutes === minutes ? "is-active" : ""}
+                      onClick={() => setRecruitmentDraft((prev) => ({ ...prev, durationMinutes: minutes }))}
+                    >
+                      {minutes >= 60 ? `${minutes / 60}h` : `${minutes}m`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <label className="recruitment-field">
+                <span>メッセージ (任意, 140字)</span>
+                <textarea
+                  value={recruitmentDraft.message}
+                  onChange={(event) =>
+                    setRecruitmentDraft((prev) => ({ ...prev, message: event.target.value }))
+                  }
+                  placeholder="一緒にやりませんか"
+                  maxLength={140}
+                  rows={3}
+                />
+                <small>{recruitmentDraft.message.length}/140</small>
+              </label>
+
+              {recruitmentError ? <p className="log-post-error">{recruitmentError}</p> : null}
+
+              <div className="recruitment-modal-actions">
+                <button type="button" className="learning-cancel-button" onClick={handleCloseRecruitmentModal}>
+                  キャンセル
+                </button>
+                <button type="submit" className="learning-save-button">
+                  投稿する
+                </button>
+              </div>
+            </form>
           </section>
         </div>
       ) : null}
@@ -7706,6 +7972,29 @@ function App() {
                         return ids;
                       })()}
                       onLearningItemRegister={(presetName) => openLearningEditorForCreate(presetName)}
+                      onOpenRecruitmentModal={handleOpenRecruitmentModal}
+                      activeRecruitmentSummary={(() => {
+                        if (!selectedRoom || !currentUser) return null;
+                        const mine = workspaceRecruitments.find(
+                          (rec) =>
+                            rec.userId === currentUser.uid &&
+                            rec.roomId === selectedRoom.id &&
+                            new Date(rec.expiresAt).getTime() > feedNowTick,
+                        );
+                        if (!mine) return null;
+                        const startAtMs = new Date(mine.startAt).getTime();
+                        const isUpcoming = feedNowTick < startAtMs;
+                        return {
+                          stateLabel: isUpcoming
+                            ? `🗓 ${new Date(mine.startAt).toLocaleTimeString("ja-JP", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}開始予定`
+                            : "🔴 募集中",
+                          joinedCount: mine.joinedUserIds.length,
+                          onCancel: () => handleCancelRecruitment(mine),
+                        };
+                      })()}
                     />
                     <section className="room-log-strip" aria-label="このRoomの最近の投稿">
                       <div>
@@ -7739,6 +8028,179 @@ function App() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
       >
+      {(() => {
+        const authorLookup = new Map<string, RecruitmentAuthor>();
+        if (currentUser?.uid) {
+          authorLookup.set(currentUser.uid, {
+            userId: currentUser.uid,
+            displayName: playerName,
+            avatar: playerAvatar,
+            characterColor: playerCharacterColor,
+          });
+        }
+        posts.forEach((post) => {
+          if (!authorLookup.has(post.userId)) {
+            authorLookup.set(post.userId, {
+              userId: post.userId,
+              displayName: post.username || "Builder",
+              avatar: post.avatar || undefined,
+              characterColor: post.characterColor || undefined,
+            });
+          }
+        });
+        friends.forEach((friend) => {
+          if (!authorLookup.has(friend.uid)) {
+            authorLookup.set(friend.uid, {
+              userId: friend.uid,
+              displayName: friend.name || "Builder",
+              avatar: friend.avatar || undefined,
+            });
+          }
+        });
+
+        const followingSet = new Set(following);
+        if (currentUser?.uid) {
+          followingSet.add(currentUser.uid);
+        }
+
+        type FeedEntry =
+          | { kind: "post"; id: string; createdAt: string; post: ContributionPostRecord }
+          | { kind: "recruitment"; id: string; createdAt: string; recruitment: WorkspaceRecruitmentRecord };
+
+        const allEntries: FeedEntry[] = [
+          ...posts.map((post) => ({ kind: "post" as const, id: post.id, createdAt: post.createdAt, post })),
+          ...workspaceRecruitments.map((recruitment) => ({
+            kind: "recruitment" as const,
+            id: recruitment.id,
+            createdAt: recruitment.createdAt,
+            recruitment,
+          })),
+        ];
+
+        const filtered =
+          timelineFilter === "following"
+            ? allEntries.filter((entry) =>
+                followingSet.has(entry.kind === "post" ? entry.post.userId : entry.recruitment.userId),
+              )
+            : allEntries;
+
+        const sorted = filtered.sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        );
+
+        return (
+          <section className="home-feed-section" aria-label="フィード">
+            <header className="home-feed-head">
+              <div>
+                <p className="card-kicker">Feed</p>
+                <h2>静かに流れる学びと募集</h2>
+              </div>
+              <span>{sorted.length.toLocaleString()} 件</span>
+            </header>
+
+            <section className="home-feed-composer" aria-label="投稿を作成">
+              <form className="log-composer" onSubmit={handlePostSubmit}>
+                <ProfileCharacterPreview color={playerCharacterColor} />
+                <div>
+                  <textarea
+                    value={postDraft}
+                    onChange={(event) => {
+                      setPostDraft(event.target.value);
+                      setPostError("");
+                    }}
+                    placeholder="What are you building tonight?"
+                    maxLength={280}
+                    rows={3}
+                  />
+                  <div className="log-composer-footer">
+                    <div className="log-compose-shortcuts">
+                      <button type="button" onClick={useRoomPresenceAsPost}>
+                        Roomから作成
+                      </button>
+                      <button type="button" onClick={useLatestStudyLogAsPost}>
+                        学習ログから作成
+                      </button>
+                    </div>
+                    <span>{postDraft.length}/280</span>
+                    <button type="submit" disabled={isPosting || !postDraft.trim()}>
+                      {isPosting ? "Posting" : "投稿"}
+                    </button>
+                  </div>
+                  {postError ? <p className="log-post-error">{postError}</p> : null}
+                </div>
+              </form>
+            </section>
+
+            <div className="timeline-filter-tabs" role="tablist" aria-label="フィードの表示範囲">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={timelineFilter === "following"}
+                className={`timeline-filter-tab${timelineFilter === "following" ? " is-active" : ""}`}
+                onClick={() => setTimelineFilter("following")}
+              >
+                Following
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={timelineFilter === "all"}
+                className={`timeline-filter-tab${timelineFilter === "all" ? " is-active" : ""}`}
+                onClick={() => setTimelineFilter("all")}
+              >
+                All
+              </button>
+            </div>
+
+            <div className="home-feed-list">
+              {sorted.length > 0 ? (
+                sorted.map((entry) =>
+                  entry.kind === "post" ? (
+                    <Fragment key={`post-${entry.id}`}>{postCard(entry.post)}</Fragment>
+                  ) : (
+                    <WorkspaceRecruitmentFeedCard
+                      key={`recruitment-${entry.id}`}
+                      recruitment={entry.recruitment}
+                      author={authorLookup.get(entry.recruitment.userId) || null}
+                      now={feedNowTick}
+                      currentUserId={currentUser?.uid || ""}
+                      onJoin={(rec) => {
+                        handleJoinRecruitment(rec);
+                        const nowMs = Date.now();
+                        const startAtMs = new Date(rec.startAt).getTime();
+                        if (nowMs >= startAtMs) {
+                          setSelectedRoomId(rec.roomId);
+                          setCurrentView("workspace");
+                        }
+                      }}
+                      onCancel={handleCancelRecruitment}
+                      onAuthorOpen={(author) => {
+                        const friend = friends.find((f) => f.uid === author.userId);
+                        if (friend) handleFriendOpen(friend);
+                      }}
+                    />
+                  ),
+                )
+              ) : (
+                <article className="log-empty-card">
+                  <p className="card-kicker">{timelineFilter === "following" ? "Following" : "Quiet Progress"}</p>
+                  <strong>
+                    {timelineFilter === "following"
+                      ? "フォロー中の投稿はまだありません。"
+                      : "まだ投稿はありません。"}
+                  </strong>
+                  <span>
+                    {timelineFilter === "following"
+                      ? "気になるエンジニアをフォローすると、ここに学びと作業部屋の募集が流れます。"
+                      : "今日作っているもの、学んだこと、作業部屋の募集が静かに流れます。"}
+                  </span>
+                </article>
+              )}
+            </div>
+          </section>
+        );
+      })()}
+
       <section className="contribution-arc-card" aria-label="Contribution Arc">
         <div className="contribution-arc-head">
           <div className="contribution-arc-head-title">

@@ -37,6 +37,12 @@ export type LearningItemSuggestion = {
   color: string;
 };
 
+export type ActiveRecruitmentSummary = {
+  stateLabel: string;
+  joinedCount: number;
+  onCancel: () => void;
+};
+
 type SilentWorkspaceRoomProps = {
   presentation?: "full" | "focus";
   roomName: string;
@@ -67,6 +73,8 @@ type SilentWorkspaceRoomProps = {
   learningItemSuggestions?: LearningItemSuggestion[];
   recentLearningItemIds?: string[];
   onLearningItemRegister?: (presetName: string) => void;
+  onOpenRecruitmentModal?: () => void;
+  activeRecruitmentSummary?: ActiveRecruitmentSummary | null;
 };
 
 function getActorStayLabel(member: RoomActor) {
@@ -120,6 +128,8 @@ export function SilentWorkspaceRoom({
   learningItemSuggestions = [],
   recentLearningItemIds = [],
   onLearningItemRegister,
+  onOpenRecruitmentModal,
+  activeRecruitmentSummary = null,
 }: SilentWorkspaceRoomProps) {
   const isFocusPresentation = presentation === "focus";
   const [isPresetEditorOpen, setIsPresetEditorOpen] = useState(false);
@@ -154,6 +164,15 @@ export function SilentWorkspaceRoom({
                 </span>
               </div>
               <div className="workspace-session-actions">
+                {onOpenRecruitmentModal && isJoined && !activeRecruitmentSummary ? (
+                  <button
+                    type="button"
+                    className="room-recruit-button"
+                    onClick={onOpenRecruitmentModal}
+                  >
+                    📣 募集する
+                  </button>
+                ) : null}
                 {isJoined ? (
                   <button type="button" className="room-leave-button" onClick={onLeave}>
                     退出する
@@ -165,6 +184,22 @@ export function SilentWorkspaceRoom({
                 )}
               </div>
             </div>
+
+            {activeRecruitmentSummary ? (
+              <div className="workspace-active-recruitment" role="status">
+                <span className="workspace-active-recruitment-state">{activeRecruitmentSummary.stateLabel}</span>
+                <span className="workspace-active-recruitment-count">
+                  {activeRecruitmentSummary.joinedCount}人参加中
+                </span>
+                <button
+                  type="button"
+                  className="workspace-active-recruitment-cancel"
+                  onClick={activeRecruitmentSummary.onCancel}
+                >
+                  取り消す
+                </button>
+              </div>
+            ) : null}
 
             <label className="workspace-task-field">
               <span>今やってること</span>
