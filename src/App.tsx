@@ -4170,6 +4170,54 @@ function App() {
     if (!hoveredArcCell) return [] as StudyLog[];
     return studyLogsByDay.get(hoveredArcCell.day.key) || [];
   }, [hoveredArcCell, studyLogsByDay]);
+
+  const computeArcTooltipPlacement = (
+    target: HTMLElement,
+    day: ContributionArcDay,
+  ): { day: ContributionArcDay; left: number; top: number; placement: "above" | "below" } | null => {
+    const cellRect = target.getBoundingClientRect();
+    const trackEl = target.closest(".contribution-arc-track") as HTMLElement | null;
+    if (!trackEl) return null;
+    const trackRect = trackEl.getBoundingClientRect();
+
+    // Estimate tooltip height from the day's actual content so a
+    // 4-item + "more" + total + EXP tooltip (~260px) flips below
+    // earlier than a 1-item tooltip (~110px). Numbers are rough
+    // per-section measurements from the live tooltip CSS.
+    const dayLogs = studyLogsByDay.get(day.key) || [];
+    const visibleItems = Math.min(dayLogs.length, 4);
+    const hasMore = dayLogs.length > 4;
+    const PADDING = 20;
+    const HEAD = 24;
+    let estimatedHeight = PADDING + HEAD;
+    if (day.minutes > 0) {
+      estimatedHeight += 22; // total line
+      estimatedHeight += visibleItems * 22; // each list row
+      if (hasMore) estimatedHeight += 18;
+      estimatedHeight += 22; // EXP footer
+    } else {
+      estimatedHeight += 14;
+    }
+
+    const ARROW_GAP = 10;
+    const VIEWPORT_MARGIN = 12;
+    // If "above" placement would overflow the viewport top, flip below.
+    const wouldClipAbove = cellRect.top < estimatedHeight + ARROW_GAP + VIEWPORT_MARGIN;
+    const viewportH = window.innerHeight;
+    const wouldClipBelowIfFlipped =
+      cellRect.bottom + estimatedHeight + ARROW_GAP + VIEWPORT_MARGIN > viewportH;
+
+    // Prefer "above". Only flip "below" when above clips AND below has room.
+    const placement: "above" | "below" =
+      wouldClipAbove && !wouldClipBelowIfFlipped ? "below" : "above";
+
+    return {
+      day,
+      left: cellRect.left - trackRect.left + cellRect.width / 2,
+      top: (placement === "below" ? cellRect.bottom : cellRect.top) - trackRect.top,
+      placement,
+    };
+  };
   const selectedArcDay = useMemo(() => {
     if (!selectedArcDayKey) return null;
     for (const week of contributionArc.weeks) {
@@ -8751,40 +8799,13 @@ function App() {
                         setSelectedArcDayKey((prev) => (prev === day.key ? null : day.key))
                       }
                       onMouseEnter={(event) => {
-                        const cellRect = event.currentTarget.getBoundingClientRect();
-                        const trackEl = event.currentTarget.closest(
-                          ".contribution-arc-track",
-                        ) as HTMLElement | null;
-                        if (!trackEl) return;
-                        const trackRect = trackEl.getBoundingClientRect();
-                        // Flip below the cell when the tooltip would clip
-                        // the top of the viewport. ~140px covers a 4-line
-                        // tooltip + arrow + breathing room.
-                        const flipBelow = cellRect.top < 140;
-                        setHoveredArcCell({
-                          day,
-                          left: cellRect.left - trackRect.left + cellRect.width / 2,
-                          top:
-                            (flipBelow ? cellRect.bottom : cellRect.top) - trackRect.top,
-                          placement: flipBelow ? "below" : "above",
-                        });
+                        const placement = computeArcTooltipPlacement(event.currentTarget, day);
+                        if (placement) setHoveredArcCell(placement);
                       }}
                       onMouseLeave={() => setHoveredArcCell(null)}
                       onFocus={(event) => {
-                        const cellRect = event.currentTarget.getBoundingClientRect();
-                        const trackEl = event.currentTarget.closest(
-                          ".contribution-arc-track",
-                        ) as HTMLElement | null;
-                        if (!trackEl) return;
-                        const trackRect = trackEl.getBoundingClientRect();
-                        const flipBelow = cellRect.top < 140;
-                        setHoveredArcCell({
-                          day,
-                          left: cellRect.left - trackRect.left + cellRect.width / 2,
-                          top:
-                            (flipBelow ? cellRect.bottom : cellRect.top) - trackRect.top,
-                          placement: flipBelow ? "below" : "above",
-                        });
+                        const placement = computeArcTooltipPlacement(event.currentTarget, day);
+                        if (placement) setHoveredArcCell(placement);
                       }}
                       onBlur={() => setHoveredArcCell(null)}
                       aria-label={`${day.date.getMonth() + 1}月${day.date.getDate()}日 ${
