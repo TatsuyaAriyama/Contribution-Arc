@@ -14037,6 +14037,144 @@ select:focus-visible,
 }
 
 /* ============================================================
+   Living composer
+   Collapses to a single line when empty + unfocused; springs
+   open with footer when focused or typing.
+   ============================================================ */
+
+.home-feed-composer.is-living .log-composer textarea {
+  min-height: 44px;
+  max-height: 44px;
+  padding-block: 12px;
+  resize: none;
+  transition: max-height 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    min-height 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.home-feed-composer.is-living:focus-within .log-composer textarea,
+.home-feed-composer.is-living .log-composer textarea:not(:placeholder-shown) {
+  min-height: 84px;
+  max-height: 220px;
+  resize: vertical;
+}
+
+.home-feed-composer.is-living .log-composer-footer {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: max-height 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 220ms ease, transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.home-feed-composer.is-living:focus-within .log-composer-footer,
+.home-feed-composer.is-living .log-composer textarea:not(:placeholder-shown) ~ .log-composer-footer {
+  max-height: 72px;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+/* Char count ring */
+.char-count-ring {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.char-count-ring small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* ============================================================
+   Living recruitment card
+   Breathing pulse on active state, dot indicator, roll-up
+   counter for the participant number.
+   ============================================================ */
+
+.recruitment-card.state-active {
+  position: relative;
+  animation: recruitment-breathe 4.2s ease-in-out infinite;
+  will-change: box-shadow;
+}
+
+@keyframes recruitment-breathe {
+  0%,
+  100% {
+    box-shadow: var(--shadow-card), 0 0 0 0 rgba(251, 113, 133, 0);
+  }
+  50% {
+    box-shadow: var(--shadow-card), 0 0 0 6px rgba(251, 113, 133, 0.10);
+  }
+}
+
+[data-theme="dark"] .recruitment-card.state-active {
+  animation-name: recruitment-breathe-dark;
+}
+
+@keyframes recruitment-breathe-dark {
+  0%,
+  100% {
+    box-shadow: var(--shadow-card), 0 0 0 0 rgba(251, 113, 133, 0);
+  }
+  50% {
+    box-shadow: var(--shadow-card), 0 0 0 6px rgba(251, 113, 133, 0.18);
+  }
+}
+
+.recruitment-state-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.recruitment-state-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #ef4444;
+  animation: recruitment-dot-pulse 1.2s ease-in-out infinite;
+  will-change: transform, box-shadow;
+}
+
+@keyframes recruitment-dot-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+  }
+  50% {
+    transform: scale(1.18);
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+  }
+}
+
+.recruitment-join-count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+}
+
+.recruitment-join-count > span:first-child {
+  display: inline-block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recruitment-card.state-active,
+  .recruitment-state-dot {
+    animation: none;
+  }
+}
+
+/* ============================================================
    View Transitions API
    Smooth crossfade between app views when supported.
    ============================================================ */

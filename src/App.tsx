@@ -338,6 +338,50 @@ const dayLabels = ["月", "火", "水", "木", "金", "土", "日"];
 // has one coherent physical feel rather than a mix of eased curves.
 const SPRING_SOFT = { type: "spring", stiffness: 280, damping: 28, mass: 0.7 } as const;
 const SPRING_SNAPPY = { type: "spring", stiffness: 380, damping: 30, mass: 0.6 } as const;
+
+// Visual char counter — circular ring that fills as you type and
+// switches to a remaining-count number in the danger zone.
+function CharCountRing({ value, max }: { value: number; max: number }) {
+  const radius = 9;
+  const circumference = 2 * Math.PI * radius;
+  const progress = Math.min(1, value / max);
+  const isNearLimit = value >= max - 20;
+  const isOverLimit = value >= max;
+  const remaining = max - value;
+  const strokeColor = isOverLimit
+    ? "var(--accent-warm, #d3573b)"
+    : isNearLimit
+    ? "#c8a95b"
+    : "var(--green, #1f6f4a)";
+  return (
+    <span className="char-count-ring" aria-label={`${value} / ${max} 文字`}>
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+        <circle
+          cx="12"
+          cy="12"
+          r={radius}
+          fill="none"
+          stroke="var(--line-strong, rgba(0,0,0,0.12))"
+          strokeWidth="2"
+        />
+        <circle
+          cx="12"
+          cy="12"
+          r={radius}
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - progress)}
+          transform="rotate(-90 12 12)"
+          style={{ transition: "stroke-dashoffset 240ms ease, stroke 240ms ease" }}
+        />
+      </svg>
+      {isNearLimit ? <small>{remaining}</small> : null}
+    </span>
+  );
+}
 const studyColorOptions = [
   { name: "Evergreen", value: "#1f6f4a" },
   { name: "Sage", value: "#7aa874" },
@@ -3162,9 +3206,13 @@ function App() {
   }, [currentUser, isWorkspaceLoaded]);
 
   useEffect(() => {
-    const interval = window.setInterval(() => setFeedNowTick(Date.now()), 30000);
+    // Tick at 1s when any active recruitment is visible so countdown text
+    // and breathing pulse stay live. Falls back to 30s when nothing is live.
+    const hasLive = workspaceRecruitments.some((r) => new Date(r.expiresAt).getTime() > Date.now());
+    const intervalMs = hasLive ? 1000 : 30000;
+    const interval = window.setInterval(() => setFeedNowTick(Date.now()), intervalMs);
     return () => window.clearInterval(interval);
-  }, []);
+  }, [workspaceRecruitments]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -8193,7 +8241,7 @@ function App() {
               <span>{sorted.length.toLocaleString()} 件</span>
             </header>
 
-            <section className="home-feed-composer" aria-label="投稿を作成">
+            <section className="home-feed-composer is-living" aria-label="投稿を作成">
               <form className="log-composer" onSubmit={handlePostSubmit}>
                 <ProfileCharacterPreview color={playerCharacterColor} />
                 <div>
@@ -8205,7 +8253,7 @@ function App() {
                     }}
                     placeholder="What are you building tonight?"
                     maxLength={280}
-                    rows={3}
+                    rows={1}
                   />
                   <div className="log-composer-footer">
                     <div className="log-compose-shortcuts">
@@ -8216,7 +8264,7 @@ function App() {
                         学習ログから作成
                       </button>
                     </div>
-                    <span>{postDraft.length}/280</span>
+                    <CharCountRing value={postDraft.length} max={280} />
                     <button type="submit" disabled={isPosting || !postDraft.trim()}>
                       {isPosting ? "Posting" : "投稿"}
                     </button>

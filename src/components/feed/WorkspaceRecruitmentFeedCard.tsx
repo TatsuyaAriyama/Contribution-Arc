@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from "framer-motion";
 import type { WorkspaceRecruitmentRecord } from "../../services/workspaceRecruitments";
 
 export type RecruitmentAuthor = {
@@ -51,6 +52,24 @@ function formatPostedAgo(createdAtIso: string, now: number) {
   return `${days}日前`;
 }
 
+function formatRemaining(msLeft: number) {
+  const totalSeconds = Math.max(0, Math.floor(msLeft / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+    return rest > 0 ? `残り ${hours}時間${rest}分` : `残り ${hours}時間`;
+  }
+  if (minutes >= 5) {
+    return `残り ${minutes}分`;
+  }
+  // Show seconds in the final 5 minutes so the card feels alive.
+  return `残り ${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
+const ROLL_SPRING = { type: "spring" as const, stiffness: 420, damping: 32, mass: 0.6 };
+
 export function WorkspaceRecruitmentFeedCard({
   recruitment,
   author,
@@ -72,13 +91,13 @@ export function WorkspaceRecruitmentFeedCard({
   const avatarLetter = displayName.slice(0, 1).toUpperCase();
   const accentColor = author?.characterColor || "#1f6f4a";
 
-  const stateLabel = isUpcoming ? "🗓 予定" : isActive ? "🔴 募集中" : "終了";
+  const stateLabel = isUpcoming ? "🗓 予定" : isActive ? "募集中" : "終了";
   const stateClassName = isUpcoming ? "state-upcoming" : isActive ? "state-active" : "state-ended";
 
   const timeInfo = isUpcoming
     ? `${formatStartTime(recruitment.startAt)} 開始 · ${formatRelativeFuture(startAtMs - now)}`
     : isActive
-    ? `残り ${Math.max(0, Math.floor((expiresAtMs - now) / 60000))}分`
+    ? formatRemaining(expiresAtMs - now)
     : "終了しました";
 
   return (
@@ -98,7 +117,10 @@ export function WorkspaceRecruitmentFeedCard({
             <small>{formatPostedAgo(recruitment.createdAt, now)}</small>
           </span>
         </button>
-        <span className={`recruitment-state-badge ${stateClassName}`}>{stateLabel}</span>
+        <span className={`recruitment-state-badge ${stateClassName}`}>
+          {isActive ? <span className="recruitment-state-dot" aria-hidden="true" /> : null}
+          {stateLabel}
+        </span>
       </header>
 
       {recruitment.message ? <p className="recruitment-message">{recruitment.message}</p> : null}
@@ -114,7 +136,20 @@ export function WorkspaceRecruitmentFeedCard({
         </div>
         <div>
           <dt>参加</dt>
-          <dd>{joinedCount}人</dd>
+          <dd className="recruitment-join-count">
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.span
+                key={joinedCount}
+                initial={{ y: 14, opacity: 0, filter: "blur(2px)" }}
+                animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
+                exit={{ y: -14, opacity: 0, filter: "blur(2px)" }}
+                transition={ROLL_SPRING}
+              >
+                {joinedCount}
+              </motion.span>
+            </AnimatePresence>
+            <span aria-hidden="true">人</span>
+          </dd>
         </div>
       </dl>
 
