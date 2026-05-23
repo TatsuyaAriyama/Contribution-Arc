@@ -1566,7 +1566,22 @@ function ProfileCharacterPreview({ color }: { color?: string }) {
       aria-hidden="true"
     >
       <span className="actor-sprite deep is-tsuta">
-        <span className="sprite-sprout" />
+        <svg
+          className="sprite-sprout"
+          viewBox="0 0 24 30"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path
+            d="M10 30 Q 6 18 12 7"
+            stroke="#2f4a35"
+            strokeWidth="1.6"
+            fill="none"
+            strokeLinecap="round"
+          />
+          <ellipse cx="8" cy="6.5" rx="4.6" ry="3" fill="#8db090" transform="rotate(-28 8 6.5)" />
+          <ellipse cx="15" cy="5.5" rx="4.6" ry="3" fill="#8db090" transform="rotate(28 15 5.5)" />
+        </svg>
         <span className="sprite-eye sprite-eye-left" />
         <span className="sprite-eye sprite-eye-right" />
         <span className="sprite-leg sprite-leg-left" />

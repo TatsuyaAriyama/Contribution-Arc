@@ -6685,52 +6685,42 @@
 
 .actor-sprite.is-tsuta .sprite-eye {
   position: absolute;
-  top: 56%;
-  width: 17%;
-  height: 17%;
+  top: 46%;
+  width: 18%;
+  height: 18%;
   border-radius: 50%;
   background: #0a0e0c;
 }
 
 .actor-sprite.is-tsuta .sprite-eye-left {
-  left: 24%;
+  left: 25%;
 }
 
 .actor-sprite.is-tsuta .sprite-eye-right {
-  right: 24%;
+  right: 25%;
 }
 
-.actor-sprite.is-tsuta .sprite-sprout {
+/* Tsuta sprout: inline SVG so the stem is a real curve and the
+   two cotyledons sit as overlapping lobes at the top. */
+.actor-sprite.is-tsuta svg.sprite-sprout {
   position: absolute;
-  top: -38%;
-  left: 22%;
-  width: 2px;
-  height: 38%;
-  background: #2f4a35;
-  border-radius: 2px;
-  transform: rotate(-14deg);
-  transform-origin: bottom center;
+  bottom: 92%;
+  left: 18%;
+  width: 60%;
+  height: 75%;
+  overflow: visible;
+  pointer-events: none;
 }
 
-.actor-sprite.is-tsuta .sprite-sprout::before,
-.actor-sprite.is-tsuta .sprite-sprout::after {
-  content: "";
-  position: absolute;
-  top: -3px;
-  width: 10px;
-  height: 8px;
-  background: #8db090;
-  border-radius: 70% 30% 70% 30%;
+/* Spread Tsuta's legs apart to match the reference — the default
+   sprite has them touching at center. Keep the existing leg shape. */
+.actor-sprite.is-tsuta .sprite-leg-left {
+  left: 18%;
 }
 
-.actor-sprite.is-tsuta .sprite-sprout::before {
-  left: -10px;
-  transform: rotate(-32deg);
-}
-
-.actor-sprite.is-tsuta .sprite-sprout::after {
-  left: 0;
-  transform: rotate(28deg);
+.actor-sprite.is-tsuta .sprite-leg-right {
+  left: auto;
+  right: 18%;
 }
 
 .actor-name,
