@@ -20,6 +20,8 @@
   /* Primary CTA palette — flips so contrast stays correct. */
   --cta-bg: #111827;
   --cta-fg: #ffffff;
+  /* RGB triplet so tooltip / CTA copy can render with alpha. */
+  --cta-fg-rgb: 255, 255, 255;
   --muted: #6b7280;
   --line: #e5e7eb;
   --line-soft: rgba(17, 24, 39, 0.06);
@@ -59,6 +61,7 @@
   /* Primary CTA in dark mode = pure white pill, pure black text. */
   --cta-bg: #ffffff;
   --cta-fg: #000000;
+  --cta-fg-rgb: 0, 0, 0;
   --muted: #a7adb3;
   --line: rgba(255, 255, 255, 0.14);
   --line-soft: rgba(255, 255, 255, 0.07);

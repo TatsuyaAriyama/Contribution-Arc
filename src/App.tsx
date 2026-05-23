@@ -2663,7 +2663,7 @@ function App() {
   const [selectedStudyDay, setSelectedStudyDay] = useState(dayLabels[(new Date().getDay() + 6) % 7]);
   const [selectedArcDayKey, setSelectedArcDayKey] = useState<string | null>(null);
   const [hoveredArcCell, setHoveredArcCell] = useState<
-    { day: ContributionArcDay; left: number; top: number } | null
+    { day: ContributionArcDay; left: number; top: number; placement: "above" | "below" } | null
   >(null);
   const [topbarNow, setTopbarNow] = useState(() => new Date());
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -8694,7 +8694,9 @@ function App() {
             ) : null}
             {hoveredArcCell ? (
               <div
-                className="contribution-arc-tooltip"
+                className={`contribution-arc-tooltip${
+                  hoveredArcCell.placement === "below" ? " is-below" : ""
+                }`}
                 style={{ left: hoveredArcCell.left, top: hoveredArcCell.top }}
                 role="tooltip"
               >
@@ -8755,10 +8757,16 @@ function App() {
                         ) as HTMLElement | null;
                         if (!trackEl) return;
                         const trackRect = trackEl.getBoundingClientRect();
+                        // Flip below the cell when the tooltip would clip
+                        // the top of the viewport. ~140px covers a 4-line
+                        // tooltip + arrow + breathing room.
+                        const flipBelow = cellRect.top < 140;
                         setHoveredArcCell({
                           day,
                           left: cellRect.left - trackRect.left + cellRect.width / 2,
-                          top: cellRect.top - trackRect.top,
+                          top:
+                            (flipBelow ? cellRect.bottom : cellRect.top) - trackRect.top,
+                          placement: flipBelow ? "below" : "above",
                         });
                       }}
                       onMouseLeave={() => setHoveredArcCell(null)}
@@ -8769,10 +8777,13 @@ function App() {
                         ) as HTMLElement | null;
                         if (!trackEl) return;
                         const trackRect = trackEl.getBoundingClientRect();
+                        const flipBelow = cellRect.top < 140;
                         setHoveredArcCell({
                           day,
                           left: cellRect.left - trackRect.left + cellRect.width / 2,
-                          top: cellRect.top - trackRect.top,
+                          top:
+                            (flipBelow ? cellRect.bottom : cellRect.top) - trackRect.top,
+                          placement: flipBelow ? "below" : "above",
                         });
                       }}
                       onBlur={() => setHoveredArcCell(null)}

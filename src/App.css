@@ -12821,8 +12821,8 @@
   position: absolute;
   transform: translate(-50%, calc(-100% - 10px));
   pointer-events: none;
-  background: rgba(var(--ink-rgb), 0.96);
-  color: #f5f5f5;
+  background: var(--cta-bg);
+  color: var(--cta-fg);
   padding: 10px 12px;
   border-radius: 8px;
   font-size: 12px;
@@ -12843,8 +12843,19 @@
   transform: translateX(-50%) rotate(45deg);
   width: 10px;
   height: 10px;
-  background: rgba(var(--ink-rgb), 0.96);
+  background: var(--cta-bg);
   border-radius: 1px;
+}
+
+/* When the cell is near the top, flip the tooltip below so it doesn't
+   get clipped above the viewport. */
+.contribution-arc-tooltip.is-below {
+  transform: translate(-50%, 10px);
+}
+
+.contribution-arc-tooltip.is-below::after {
+  top: -5px;
+  bottom: auto;
 }
 
 .contribution-arc-tooltip-head {
@@ -12862,13 +12873,13 @@
 
 .contribution-arc-tooltip-head span {
   font-size: 10px;
-  color: rgba(245, 245, 245, 0.6);
+  color: rgba(var(--cta-fg-rgb), 0.6);
 }
 
 .contribution-arc-tooltip-total {
   margin: 0;
   font-size: 12px;
-  color: rgba(245, 245, 245, 0.92);
+  color: rgba(var(--cta-fg-rgb), 0.92);
 }
 
 .contribution-arc-tooltip-list {
@@ -12896,20 +12907,20 @@
 
 .contribution-arc-tooltip-list li span {
   flex: 1;
-  color: rgba(245, 245, 245, 0.92);
+  color: rgba(var(--cta-fg-rgb), 0.92);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .contribution-arc-tooltip-list li small {
-  color: rgba(245, 245, 245, 0.55);
+  color: rgba(var(--cta-fg-rgb), 0.55);
   font-size: 10px;
   flex-shrink: 0;
 }
 
 .contribution-arc-tooltip-more {
-  color: rgba(245, 245, 245, 0.45) !important;
+  color: rgba(var(--cta-fg-rgb), 0.45) !important;
   font-style: italic;
   font-size: 10px !important;
 }
@@ -12917,16 +12928,16 @@
 .contribution-arc-tooltip-exp {
   margin: 0;
   font-size: 10px;
-  color: rgba(245, 245, 245, 0.5);
+  color: rgba(var(--cta-fg-rgb), 0.5);
   letter-spacing: 0.02em;
   padding-top: 2px;
-  border-top: 1px solid rgba(245, 245, 245, 0.08);
+  border-top: 1px solid rgba(var(--cta-fg-rgb), 0.08);
 }
 
 .contribution-arc-tooltip-empty {
   margin: 0;
   font-size: 11px;
-  color: rgba(245, 245, 245, 0.55);
+  color: rgba(var(--cta-fg-rgb), 0.55);
 }
 
 /* Subject Ribbon */
