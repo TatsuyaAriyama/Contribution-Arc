@@ -2581,7 +2581,7 @@ function App() {
     totalPages: string;
     currentPages: string;
   } | null>(null);
-  const [learningCategoryTab, setLearningCategoryTab] = useState<"all" | "book" | "stack" | "archived">("all");
+  const [learningCategoryTab, setLearningCategoryTab] = useState<"all" | "book" | "archived">("all");
   const [learningSearchQuery, setLearningSearchQuery] = useState("");
   const [isLearningDeleteConfirming, setIsLearningDeleteConfirming] = useState(false);
   const [studySubject, setStudySubject] = useState("React");
@@ -6564,27 +6564,21 @@ function App() {
                 />
               </label>
 
-              <div className="learning-category-tabs" role="radiogroup" aria-label="カテゴリ">
-                {(
-                  [
-                    { value: "stack" as const, label: "🛠 技術スタック" },
-                    { value: "book" as const, label: "📕 書籍" },
-                  ]
-                ).map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    role="radio"
-                    aria-checked={learningEditorState.category === option.value}
-                    className={learningEditorState.category === option.value ? "active" : ""}
-                    onClick={() =>
-                      setLearningEditorState((state) => (state ? { ...state, category: option.value } : state))
-                    }
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
+              <label className="learning-book-toggle">
+                <input
+                  type="checkbox"
+                  checked={learningEditorState.category === "book"}
+                  onChange={(event) =>
+                    setLearningEditorState((state) =>
+                      state ? { ...state, category: event.target.checked ? "book" : "stack" } : state,
+                    )
+                  }
+                />
+                <span>
+                  <strong>📕 書籍として記録する</strong>
+                  <small>チェックするとページ数で進捗を追える</small>
+                </span>
+              </label>
 
               <div className="learning-color-panel">
                 <span>カラー</span>
@@ -7209,7 +7203,6 @@ function App() {
                 [
                   { value: "all" as const, label: "すべて" },
                   { value: "book" as const, label: "書籍" },
-                  { value: "stack" as const, label: "技術スタック" },
                   { value: "archived" as const, label: "アーカイブ" },
                 ]
               ).map((tab) => (
@@ -7242,7 +7235,6 @@ function App() {
                 }
                 if (item.archived) return false;
                 if (learningCategoryTab === "book") return item.category === "book";
-                if (learningCategoryTab === "stack") return item.category === "stack";
                 return true;
               })
               .filter((item) => !lowerQuery || item.name.toLowerCase().includes(lowerQuery));
@@ -7292,9 +7284,11 @@ function App() {
                       onClick={() => openLearningEditorForEdit(item)}
                     >
                       <div className="learning-card-head">
-                        <span className="learning-card-badge" aria-hidden="true">
-                          {isBook ? "📕" : "🛠"}
-                        </span>
+                        {isBook ? (
+                          <span className="learning-card-badge" aria-hidden="true">
+                            📕
+                          </span>
+                        ) : null}
                         <strong>{item.name}</strong>
                       </div>
                       <div className="learning-card-meta">
