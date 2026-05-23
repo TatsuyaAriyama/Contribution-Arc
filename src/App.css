@@ -14880,3 +14880,49 @@ select:focus-visible,
 [data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
   background: rgba(var(--surface-rgb), 0.16);
 }
+
+/* =====================================================================
+   Touch-device tap feedback
+   ---------------------------------------------------------------------
+   On touch devices (hover: none), :hover states get "stuck" until the
+   user taps somewhere else — distracting. We give the most common
+   tappable surfaces a brief opacity/scale pulse on :active instead so
+   taps feel responsive without leaving lingering hover artifacts.
+   ===================================================================== */
+@media (hover: none) {
+  .side-nav button:active,
+  .brand-lockup:active,
+  .friend-sidebar-card button:active,
+  .live-activity-card:active,
+  .card:active,
+  .room-card:active,
+  .log-post-card:active,
+  .learning-card:active,
+  .presence-card:active,
+  .preset-chat-toggle:active,
+  .timeline-filter-tab:active,
+  .study-subject-chips button:active,
+  .subject-ghost-hint:active,
+  .home-workspace-actions button:active,
+  .contribution-arc-cell:active,
+  .map-cell:active,
+  .premium-dashboard-header button:active,
+  .user-menu-button:active,
+  .user-menu-panel > button:active {
+    opacity: 0.72;
+    transition: opacity 0.08s ease;
+  }
+
+  /* Neutralise translate-on-hover transforms so they don't stick after
+     a tap on iOS/Android. */
+  .card:hover,
+  .room-card:hover,
+  .log-post-card:hover,
+  .learning-card:hover,
+  .friend-sidebar-card:hover,
+  .live-activity-card:hover,
+  .presence-card:hover,
+  .home-workspace-focus.card:hover {
+    transform: none;
+  }
+}

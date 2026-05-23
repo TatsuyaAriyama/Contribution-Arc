@@ -97,6 +97,7 @@ body {
     var(--bg);
   overflow-x: hidden;
   transition: background 0.4s ease, color 0.4s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
 [data-theme="dark"] body {
