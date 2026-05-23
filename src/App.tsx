@@ -1,5 +1,6 @@
 import {
   Fragment,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -332,6 +333,11 @@ type ObsidianNoteSource = {
 };
 
 const dayLabels = ["月", "火", "水", "木", "金", "土", "日"];
+
+// Unified motion language — used by all framer-motion components so the app
+// has one coherent physical feel rather than a mix of eased curves.
+const SPRING_SOFT = { type: "spring", stiffness: 280, damping: 28, mass: 0.7 } as const;
+const SPRING_SNAPPY = { type: "spring", stiffness: 380, damping: 30, mass: 0.6 } as const;
 const studyColorOptions = [
   { name: "Evergreen", value: "#1f6f4a" },
   { name: "Sage", value: "#7aa874" },
@@ -2653,7 +2659,21 @@ function App() {
   const [desktopNotificationSettings, setDesktopNotificationSettings] = useState<DesktopNotificationSettings>(
     defaultDesktopNotificationSettings,
   );
-  const [currentView, setCurrentView] = useState<AppView>("logs");
+  const [currentView, setCurrentViewRaw] = useState<AppView>("logs");
+  const setCurrentView = useCallback((next: AppView) => {
+    if (typeof document === "undefined") {
+      setCurrentViewRaw(next);
+      return;
+    }
+    const doc = document as Document & {
+      startViewTransition?: (cb: () => void) => unknown;
+    };
+    if (typeof doc.startViewTransition === "function") {
+      doc.startViewTransition(() => setCurrentViewRaw(next));
+    } else {
+      setCurrentViewRaw(next);
+    }
+  }, []);
   const [profileMember, setProfileMember] = useState<WorkspaceMember | null>(null);
   const [profileUser, setProfileUser] = useState<UserProfile | null>(null);
   const [determination, setDetermination] = useState("");
@@ -6447,7 +6467,7 @@ function App() {
       className={isDesktopApp ? "app-shell premium-shell desktop-shell" : "app-shell premium-shell"}
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      transition={SPRING_SOFT}
     >
       {isDesktopApp ? (
         <header className="desktop-app-header" aria-label="Contribution Arc desktop header">
@@ -6517,7 +6537,7 @@ function App() {
         className="site-header premium-dashboard-header"
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.06 }}
+        transition={{ ...SPRING_SOFT, delay: 0.06 }}
       >
         <div className="topbar-context">
           <span className="topbar-date">
@@ -7307,7 +7327,7 @@ function App() {
           aria-label="Daily report"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          transition={SPRING_SNAPPY}
         >
           <section className="daily-editor-card">
             <div className="daily-editor-head">
@@ -7488,7 +7508,7 @@ function App() {
           aria-label="記録する"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          transition={SPRING_SNAPPY}
         >
           <header className="learning-header">
             <div>
@@ -7620,7 +7640,7 @@ function App() {
           aria-label="Contribution Arc logs"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          transition={SPRING_SNAPPY}
         >
           <section className="today-strip" aria-label="今日の足場">
             <div className="today-strip-stat">
@@ -7748,7 +7768,7 @@ function App() {
           aria-label="Profile"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          transition={SPRING_SNAPPY}
         >
           <div className="profile-topbar">
             <button type="button" onClick={handleProfileBack}>
@@ -7832,7 +7852,7 @@ function App() {
           aria-label="Silent Workspace screen"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          transition={SPRING_SNAPPY}
         >
           <div className="profile-topbar">
             <button type="button" onClick={() => setCurrentView("home")}>
@@ -8064,7 +8084,7 @@ function App() {
         className="home-screen"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+        transition={SPRING_SNAPPY}
       >
       {(() => {
         const authorLookup = new Map<string, RecruitmentAuthor>();
