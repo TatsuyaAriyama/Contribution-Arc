@@ -12,6 +12,9 @@
      and have them auto-flip in dark mode. */
   --surface-rgb: 255, 255, 255;
   --ink-rgb: 17, 24, 39;
+  /* Soft green tint used for surface washes and borders;
+     flips to a neutral white in dark mode so washes don't disappear. */
+  --tint-soft-rgb: 220, 232, 225;
   --ink: #111827;
   --ink-strong: #0a0f1c;
   /* Primary CTA palette — flips so contrast stays correct. */
@@ -50,6 +53,7 @@
   --surface-elevated: #1e2024;
   --surface-rgb: 22, 24, 28;
   --ink-rgb: 255, 255, 255;
+  --tint-soft-rgb: 255, 255, 255;
   --ink: #ffffff;
   --ink-strong: #ffffff;
   /* Primary CTA in dark mode = pure white pill, pure black text. */
