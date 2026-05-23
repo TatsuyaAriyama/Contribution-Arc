@@ -8,8 +8,15 @@
   --surface: #ffffff;
   --surface-warm: #fffdfa;
   --surface-elevated: #ffffff;
+  /* RGB triplets so we can build rgba() with arbitrary alpha
+     and have them auto-flip in dark mode. */
+  --surface-rgb: 255, 255, 255;
+  --ink-rgb: 17, 24, 39;
   --ink: #111827;
   --ink-strong: #0a0f1c;
+  /* Primary CTA palette — flips so contrast stays correct. */
+  --cta-bg: #111827;
+  --cta-fg: #ffffff;
   --muted: #6b7280;
   --line: #e5e7eb;
   --line-soft: rgba(17, 24, 39, 0.06);
@@ -39,8 +46,15 @@
   --surface: #17181a;
   --surface-warm: #1a1a1c;
   --surface-elevated: #1e1f22;
+  /* Flip RGB triplets so all rgba(var(--surface-rgb), X) /
+     rgba(var(--ink-rgb), X) usages invert automatically. */
+  --surface-rgb: 23, 24, 26;
+  --ink-rgb: 237, 237, 237;
   --ink: #ededed;
   --ink-strong: #ffffff;
+  /* In dark mode, the primary CTA inverts: light pill, dark text. */
+  --cta-bg: #f1f5f9;
+  --cta-fg: #0a0a0b;
   --muted: #8b8e94;
   --line: rgba(255, 255, 255, 0.08);
   --line-soft: rgba(255, 255, 255, 0.05);
@@ -154,8 +168,8 @@ button {
   margin-top: 24px;
   border: 0;
   border-radius: 999px;
-  background: var(--ink);
-  color: #ffffff;
+  background: var(--cta-bg);
+  color: var(--cta-fg);
   cursor: pointer;
   font-weight: 900;
 }
