@@ -2707,6 +2707,7 @@ function App() {
   const [timelineFilter, setTimelineFilter] = useState<"following" | "all">("following");
   const [workspaceRecruitments, setWorkspaceRecruitments] = useState<WorkspaceRecruitmentRecord[]>([]);
   const [feedNowTick, setFeedNowTick] = useState(() => Date.now());
+  const spotlightRef = useRef<HTMLDivElement | null>(null);
   const [isRecruitmentModalOpen, setIsRecruitmentModalOpen] = useState(false);
   const [recruitmentDraft, setRecruitmentDraft] = useState<{
     mode: "now" | "scheduled";
@@ -3173,6 +3174,40 @@ function App() {
       meta.setAttribute("content", theme === "dark" ? "#0f0f10" : "#fafaf8");
     }
   }, [theme]);
+
+  // Cursor spotlight — fine pointers only, throttled to rAF for cost
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!window.matchMedia("(pointer: fine)").matches) return;
+    let frame = 0;
+    let nextX = 0;
+    let nextY = 0;
+    const apply = () => {
+      const el = spotlightRef.current;
+      if (el) {
+        el.style.setProperty("--spot-x", `${nextX}px`);
+        el.style.setProperty("--spot-y", `${nextY}px`);
+        if (!el.classList.contains("is-visible")) el.classList.add("is-visible");
+      }
+      frame = 0;
+    };
+    const onMove = (event: MouseEvent) => {
+      nextX = event.clientX;
+      nextY = event.clientY;
+      if (!frame) frame = window.requestAnimationFrame(apply);
+    };
+    const onLeave = () => {
+      const el = spotlightRef.current;
+      if (el) el.classList.remove("is-visible");
+    };
+    window.addEventListener("mousemove", onMove, { passive: true });
+    window.addEventListener("mouseleave", onLeave);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseleave", onLeave);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
@@ -6469,6 +6504,8 @@ function App() {
       animate={{ opacity: 1, y: 0 }}
       transition={SPRING_SOFT}
     >
+      <div className="aurora-backdrop" aria-hidden="true" />
+      <div ref={spotlightRef} className="cursor-spotlight" aria-hidden="true" />
       {isDesktopApp ? (
         <header className="desktop-app-header" aria-label="Contribution Arc desktop header">
           <div className="desktop-app-brand">
