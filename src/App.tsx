@@ -49,6 +49,11 @@ import {
   subscribeStudyLogsFromCloud,
 } from "./services/cloudData";
 import {
+  deleteLearningItemFromCloud,
+  saveLearningItemToCloud,
+  subscribeLearningItemsFromCloud,
+} from "./services/learningItems";
+import {
   savePostToCloud,
   savePostReplyToCloud,
   subscribePostRepliesFromCloud,
@@ -99,6 +104,22 @@ type StudyLog = {
   minutes: number;
   createdAt: string;
   color?: string;
+  learningItemId?: string;
+};
+
+type LearningCategory = "book" | "stack";
+
+type LearningItem = {
+  id: string;
+  userId: string;
+  name: string;
+  category: LearningCategory;
+  color: string;
+  totalPages?: number;
+  currentPages?: number;
+  archived: boolean;
+  createdAt: string;
+  updatedAt: string;
 };
 
 type TitleRank = {
@@ -2002,17 +2023,21 @@ function getSubjectSummary(logs: StudyLog[]) {
     .join(" / ");
 }
 
-function getStudySegments(logs: StudyLog[]): StudySegment[] {
+function getStudySegments(logs: StudyLog[], learningItems: LearningItem[] = []): StudySegment[] {
   if (logs.length === 0) {
     return [];
   }
 
+  const itemById = new Map(learningItems.map((item) => [item.id, item] as const));
+
   const segments = logs.reduce<Record<string, StudySegment>>((acc, log) => {
-    const color = log.color || studyColorOptions[0].value;
-    const key = `${log.subject}-${color}`;
+    const linkedItem = log.learningItemId ? itemById.get(log.learningItemId) : undefined;
+    const subject = linkedItem ? linkedItem.name : log.subject;
+    const color = linkedItem ? linkedItem.color : log.color || studyColorOptions[0].value;
+    const key = linkedItem ? `item:${linkedItem.id}` : `${subject}-${color}`;
     acc[key] = acc[key] || {
       key,
-      subject: log.subject,
+      subject,
       minutes: 0,
       color,
     };
@@ -2546,6 +2571,18 @@ function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [studyLogs, setStudyLogs] = useState<StudyLog[]>(defaultStudyLogs);
+  const [learningItems, setLearningItems] = useState<LearningItem[]>([]);
+  const [learningEditorState, setLearningEditorState] = useState<{
+    mode: "create" | "edit";
+    itemId?: string;
+    name: string;
+    category: LearningCategory;
+    color: string;
+    totalPages: string;
+    currentPages: string;
+  } | null>(null);
+  const [learningCategoryTab, setLearningCategoryTab] = useState<"all" | "book" | "stack" | "archived">("all");
+  const [learningSearchQuery, setLearningSearchQuery] = useState("");
   const [studySubject, setStudySubject] = useState("React");
   const [studyAmount, setStudyAmount] = useState("1");
   const [studyUnit, setStudyUnit] = useState<"hours" | "minutes">("hours");
@@ -2686,6 +2723,7 @@ function App() {
       setWorkspaceProfiles({});
       setSearchError("");
       setStudyLogs(defaultStudyLogs);
+      setLearningItems([]);
       setCustomUserName("");
       setDraftUserName("");
       setUserId("");
@@ -2998,6 +3036,69 @@ function App() {
 
     return () => unsubscribe();
   }, [currentUser, isWorkspaceLoaded]);
+
+  useEffect(() => {
+    if (!currentUser || !isWorkspaceLoaded) {
+      return;
+    }
+
+    const unsubscribe = subscribeLearningItemsFromCloud(
+      db,
+      currentUser.uid,
+      (cloudItems) => {
+        setLearningItems(cloudItems);
+      },
+      (error) => {
+        console.info("Learning items cloud sync skipped.", error);
+      },
+    );
+
+    return () => unsubscribe();
+  }, [currentUser, isWorkspaceLoaded]);
+
+  useEffect(() => {
+    if (!currentUser || !isWorkspaceLoaded) {
+      return;
+    }
+    if (learningItems.length > 0 || studyLogs.length === 0) {
+      return;
+    }
+    const migrationFlagKey = `contribution-arc-learning-items-migration-v1-${currentUser.uid}`;
+    if (window.localStorage.getItem(migrationFlagKey)) {
+      return;
+    }
+    window.localStorage.setItem(migrationFlagKey, "true");
+
+    const grouped = new Map<string, { name: string; color: string }>();
+    studyLogs.forEach((log) => {
+      const trimmed = log.subject.trim();
+      if (!trimmed) return;
+      const key = trimmed.toLowerCase();
+      if (!grouped.has(key)) {
+        grouped.set(key, { name: trimmed, color: log.color || studyColorOptions[0].value });
+      }
+    });
+    const nowIso = new Date().toISOString();
+    const migrated: LearningItem[] = Array.from(grouped.values()).map((entry) => ({
+      id: crypto.randomUUID(),
+      userId: currentUser.uid,
+      name: entry.name.slice(0, 60),
+      category: "stack",
+      color: entry.color || studyColorOptions[0].value,
+      archived: false,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    }));
+    if (migrated.length === 0) {
+      return;
+    }
+    setLearningItems(migrated);
+    migrated.forEach((item) => {
+      void saveLearningItemToCloud(db, item).catch((error) => {
+        console.info("Learning item migration save skipped.", error);
+      });
+    });
+  }, [currentUser, isWorkspaceLoaded, learningItems.length, studyLogs.length]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
@@ -3844,17 +3945,25 @@ function App() {
     const todayWeekday = today.getDay();
     const startDate = new Date(today);
     startDate.setDate(today.getDate() - ((CONTRIBUTION_ARC_WEEKS - 1) * 7 + todayWeekday));
+    const itemById = new Map(learningItems.map((item) => [item.id, item] as const));
     const totals = new Map<string, { subject: string; minutes: number; color: string }>();
     for (const log of studyLogs) {
       const d = new Date(log.createdAt);
       if (Number.isNaN(d.getTime())) continue;
       if (d < startDate) continue;
-      const entry =
-        totals.get(log.subject) ||
-        { subject: log.subject, minutes: 0, color: log.color || "rgba(31,111,74,0.7)" };
+      const linkedItem = log.learningItemId ? itemById.get(log.learningItemId) : undefined;
+      const subject = linkedItem ? linkedItem.name : log.subject;
+      const key = linkedItem ? `item:${linkedItem.id}` : `subject:${subject}`;
+      const fallbackColor = linkedItem ? linkedItem.color : log.color || "rgba(31,111,74,0.7)";
+      const entry = totals.get(key) || { subject, minutes: 0, color: fallbackColor };
       entry.minutes += log.minutes;
-      if (log.color) entry.color = log.color;
-      totals.set(log.subject, entry);
+      if (linkedItem) {
+        entry.color = linkedItem.color;
+        entry.subject = linkedItem.name;
+      } else if (log.color) {
+        entry.color = log.color;
+      }
+      totals.set(key, entry);
     }
     const list = [...totals.values()].sort((a, b) => b.minutes - a.minutes);
     const TOP = 6;
@@ -3866,7 +3975,7 @@ function App() {
     }
     const total = top.reduce((sum, entry) => sum + entry.minutes, 0);
     return { items: top, total };
-  }, [studyLogs]);
+  }, [studyLogs, learningItems]);
   const hoveredArcDayLogs = useMemo(() => {
     if (!hoveredArcCell) return [] as StudyLog[];
     return studyLogsByDay.get(hoveredArcCell.day.key) || [];
@@ -4303,12 +4412,17 @@ function App() {
     }
 
     const minutes = Math.round(studyUnit === "hours" ? amount * 60 : amount);
+    const trimmedSubject = studySubject.trim();
+    const matchedItem = learningItems.find(
+      (item) => !item.archived && item.name.toLowerCase() === trimmedSubject.toLowerCase(),
+    );
     const nextLog: StudyLog = {
       id: crypto.randomUUID(),
-      subject: studySubject.trim(),
+      subject: matchedItem ? matchedItem.name : trimmedSubject,
       minutes,
       createdAt: new Date().toISOString(),
-      color: studyColor,
+      color: matchedItem ? matchedItem.color : studyColor,
+      ...(matchedItem ? { learningItemId: matchedItem.id } : {}),
     };
     setStudyLogs((logs) => [...logs, nextLog]);
     void saveStudyLogToCloud(db, currentUser.uid, nextLog, {
@@ -4318,6 +4432,121 @@ function App() {
       console.info("Study log cloud save skipped.", error);
     });
     setStudyAmount(studyUnit === "hours" ? "1" : "30");
+  };
+
+  const openLearningEditorForCreate = (presetName = "") => {
+    setLearningEditorState({
+      mode: "create",
+      name: presetName,
+      category: "stack",
+      color: studyColorOptions[0].value,
+      totalPages: "",
+      currentPages: "",
+    });
+  };
+
+  const openLearningEditorForEdit = (item: LearningItem) => {
+    setLearningEditorState({
+      mode: "edit",
+      itemId: item.id,
+      name: item.name,
+      category: item.category,
+      color: item.color,
+      totalPages: typeof item.totalPages === "number" ? String(item.totalPages) : "",
+      currentPages: typeof item.currentPages === "number" ? String(item.currentPages) : "",
+    });
+  };
+
+  const handleLearningEditorSave = () => {
+    if (!currentUser || !learningEditorState) {
+      return;
+    }
+    const trimmedName = learningEditorState.name.trim();
+    if (!trimmedName) {
+      return;
+    }
+    const nowIso = new Date().toISOString();
+    const totalPagesNum = Number(learningEditorState.totalPages);
+    const currentPagesNum = Number(learningEditorState.currentPages);
+    const isBook = learningEditorState.category === "book";
+
+    if (learningEditorState.mode === "create") {
+      const newItem: LearningItem = {
+        id: crypto.randomUUID(),
+        userId: currentUser.uid,
+        name: trimmedName.slice(0, 60),
+        category: learningEditorState.category,
+        color: learningEditorState.color,
+        archived: false,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+        ...(isBook && Number.isFinite(totalPagesNum) && totalPagesNum > 0 ? { totalPages: totalPagesNum } : {}),
+        ...(isBook && Number.isFinite(currentPagesNum) && currentPagesNum >= 0 ? { currentPages: currentPagesNum } : {}),
+      };
+      setLearningItems((items) => [...items, newItem]);
+      void saveLearningItemToCloud(db, newItem).catch((error) => {
+        console.info("Learning item cloud save skipped.", error);
+      });
+    } else if (learningEditorState.itemId) {
+      const existing = learningItems.find((item) => item.id === learningEditorState.itemId);
+      if (!existing) {
+        return;
+      }
+      const updated: LearningItem = {
+        ...existing,
+        name: trimmedName.slice(0, 60),
+        category: learningEditorState.category,
+        color: learningEditorState.color,
+        updatedAt: nowIso,
+        ...(isBook && Number.isFinite(totalPagesNum) && totalPagesNum > 0
+          ? { totalPages: totalPagesNum }
+          : { totalPages: undefined }),
+        ...(isBook && Number.isFinite(currentPagesNum) && currentPagesNum >= 0
+          ? { currentPages: currentPagesNum }
+          : { currentPages: undefined }),
+      };
+      setLearningItems((items) => items.map((item) => (item.id === updated.id ? updated : item)));
+      void saveLearningItemToCloud(db, updated).catch((error) => {
+        console.info("Learning item cloud save skipped.", error);
+      });
+    }
+
+    setLearningEditorState(null);
+  };
+
+  const handleLearningEditorArchiveToggle = () => {
+    if (!learningEditorState || !learningEditorState.itemId) {
+      return;
+    }
+    const existing = learningItems.find((item) => item.id === learningEditorState.itemId);
+    if (!existing) {
+      return;
+    }
+    const updated: LearningItem = {
+      ...existing,
+      archived: !existing.archived,
+      updatedAt: new Date().toISOString(),
+    };
+    setLearningItems((items) => items.map((item) => (item.id === updated.id ? updated : item)));
+    void saveLearningItemToCloud(db, updated).catch((error) => {
+      console.info("Learning item cloud save skipped.", error);
+    });
+    setLearningEditorState(null);
+  };
+
+  const handleLearningEditorDelete = () => {
+    if (!learningEditorState || !learningEditorState.itemId) {
+      return;
+    }
+    const targetId = learningEditorState.itemId;
+    if (!window.confirm("この学習対象を削除します。よろしいですか？")) {
+      return;
+    }
+    setLearningItems((items) => items.filter((item) => item.id !== targetId));
+    void deleteLearningItemFromCloud(db, targetId).catch((error) => {
+      console.info("Learning item cloud delete skipped.", error);
+    });
+    setLearningEditorState(null);
   };
 
   const handlePostSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -5310,12 +5539,16 @@ function App() {
       }),
     );
 
+    const matchedSessionItem = learningItems.find(
+      (item) => !item.archived && item.name.toLowerCase() === session.building.trim().toLowerCase(),
+    );
     const sessionLog: StudyLog = {
       id: `workspace-${session.id}`,
-      subject: session.building,
+      subject: matchedSessionItem ? matchedSessionItem.name : session.building,
       minutes: session.minutes,
       createdAt: session.leftAt,
-      color: session.color,
+      color: matchedSessionItem ? matchedSessionItem.color : session.color,
+      ...(matchedSessionItem ? { learningItemId: matchedSessionItem.id } : {}),
     };
 
     setStudyLogs((logs) => [...logs, sessionLog]);
@@ -6287,6 +6520,140 @@ function App() {
         </div>
       </motion.header>
 
+      {learningEditorState ? (
+        <div className="settings-modal-backdrop" role="presentation" onClick={() => setLearningEditorState(null)}>
+          <section
+            className="settings-modal learning-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="learning-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div>
+              <p className="card-kicker">Learning Item</p>
+              <h2 id="learning-modal-title">
+                {learningEditorState.mode === "create" ? "学習対象を追加" : "学習対象を編集"}
+              </h2>
+            </div>
+
+            <form
+              className="settings-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                handleLearningEditorSave();
+              }}
+            >
+              <label>
+                <span>名前</span>
+                <input
+                  value={learningEditorState.name}
+                  onChange={(event) =>
+                    setLearningEditorState((state) => (state ? { ...state, name: event.target.value } : state))
+                  }
+                  placeholder="DDIA / Go言語 など"
+                  maxLength={60}
+                  autoFocus
+                  required
+                />
+              </label>
+
+              <div className="learning-category-tabs" role="radiogroup" aria-label="カテゴリ">
+                {(
+                  [
+                    { value: "stack" as const, label: "🛠 技術スタック" },
+                    { value: "book" as const, label: "📕 書籍" },
+                  ]
+                ).map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={learningEditorState.category === option.value}
+                    className={learningEditorState.category === option.value ? "active" : ""}
+                    onClick={() =>
+                      setLearningEditorState((state) => (state ? { ...state, category: option.value } : state))
+                    }
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="learning-color-panel">
+                <span>カラー</span>
+                <div className="character-color-grid compact" aria-label="カラー">
+                  {studyColorOptions.map((color) => (
+                    <button
+                      type="button"
+                      key={color.value}
+                      className={learningEditorState.color === color.value ? "active" : ""}
+                      onClick={() =>
+                        setLearningEditorState((state) => (state ? { ...state, color: color.value } : state))
+                      }
+                      title={color.name}
+                      aria-label={`${color.name}を選択`}
+                    >
+                      <span style={{ background: color.value }} />
+                      <small>{color.name}</small>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {learningEditorState.category === "book" ? (
+                <div className="learning-book-fields">
+                  <label>
+                    <span>総ページ数</span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={learningEditorState.totalPages}
+                      onChange={(event) =>
+                        setLearningEditorState((state) => (state ? { ...state, totalPages: event.target.value } : state))
+                      }
+                      placeholder="例: 600"
+                    />
+                  </label>
+                  <label>
+                    <span>現在のページ</span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={learningEditorState.currentPages}
+                      onChange={(event) =>
+                        setLearningEditorState((state) => (state ? { ...state, currentPages: event.target.value } : state))
+                      }
+                      placeholder="例: 120"
+                    />
+                  </label>
+                </div>
+              ) : null}
+
+              <div className="settings-actions">
+                <button type="button" className="settings-cancel" onClick={() => setLearningEditorState(null)}>
+                  キャンセル
+                </button>
+                {learningEditorState.mode === "edit" ? (
+                  <>
+                    <button type="button" className="settings-cancel" onClick={handleLearningEditorArchiveToggle}>
+                      {learningItems.find((item) => item.id === learningEditorState.itemId)?.archived
+                        ? "アーカイブ解除"
+                        : "アーカイブ"}
+                    </button>
+                    <button type="button" className="settings-cancel" onClick={handleLearningEditorDelete}>
+                      削除
+                    </button>
+                  </>
+                ) : null}
+                <button type="submit" className="settings-save">
+                  保存
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      ) : null}
+
       {isSettingsOpen ? (
         <div className="settings-modal-backdrop" role="presentation">
           <section
@@ -6772,6 +7139,138 @@ function App() {
             </div>
           </aside>
         </motion.section>
+      ) : currentView === "learning" ? (
+        <motion.section
+          className="learning-screen"
+          aria-label="記録する"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <header className="learning-header">
+            <div>
+              <p className="card-kicker">Learning Items</p>
+              <h2>📚 記録する</h2>
+              <small>学習対象を登録しておくと、ログ入力時にブレずに集計できる。</small>
+            </div>
+            <button type="button" className="learning-add-button" onClick={() => openLearningEditorForCreate("")}>
+              + 追加
+            </button>
+          </header>
+
+          <div className="learning-controls">
+            <div className="learning-tabs" role="tablist">
+              {(
+                [
+                  { value: "all" as const, label: "すべて" },
+                  { value: "book" as const, label: "書籍" },
+                  { value: "stack" as const, label: "技術スタック" },
+                  { value: "archived" as const, label: "アーカイブ" },
+                ]
+              ).map((tab) => (
+                <button
+                  key={tab.value}
+                  type="button"
+                  role="tab"
+                  className={learningCategoryTab === tab.value ? "active" : ""}
+                  onClick={() => setLearningCategoryTab(tab.value)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            <input
+              className="learning-search"
+              type="search"
+              placeholder="名前で検索"
+              value={learningSearchQuery}
+              onChange={(event) => setLearningSearchQuery(event.target.value)}
+            />
+          </div>
+
+          {(() => {
+            const lowerQuery = learningSearchQuery.trim().toLowerCase();
+            const filtered = learningItems
+              .filter((item) => {
+                if (learningCategoryTab === "archived") {
+                  return item.archived;
+                }
+                if (item.archived) return false;
+                if (learningCategoryTab === "book") return item.category === "book";
+                if (learningCategoryTab === "stack") return item.category === "stack";
+                return true;
+              })
+              .filter((item) => !lowerQuery || item.name.toLowerCase().includes(lowerQuery));
+
+            const totalsByItem = new Map<string, number>();
+            studyLogs.forEach((log) => {
+              if (log.learningItemId) {
+                totalsByItem.set(log.learningItemId, (totalsByItem.get(log.learningItemId) || 0) + log.minutes);
+              }
+            });
+
+            const sorted = filtered.slice().sort((a, b) => {
+              const aMin = totalsByItem.get(a.id) || 0;
+              const bMin = totalsByItem.get(b.id) || 0;
+              if (aMin !== bMin) return bMin - aMin;
+              return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            });
+
+            if (sorted.length === 0) {
+              return (
+                <div className="learning-empty">
+                  <p>学習対象を追加して、学習時間を記録しよう。</p>
+                  <button type="button" className="learning-add-button" onClick={() => openLearningEditorForCreate("")}>
+                    + 追加
+                  </button>
+                </div>
+              );
+            }
+
+            return (
+              <div className="learning-grid">
+                {sorted.map((item) => {
+                  const minutes = totalsByItem.get(item.id) || 0;
+                  const totalLabel = formatStudyTimeJa(minutes);
+                  const isBook = item.category === "book";
+                  const hasProgress =
+                    isBook && typeof item.totalPages === "number" && item.totalPages > 0;
+                  const progressPercent = hasProgress
+                    ? Math.min(100, Math.round(((item.currentPages || 0) / (item.totalPages || 1)) * 100))
+                    : 0;
+                  return (
+                    <button
+                      type="button"
+                      key={item.id}
+                      className="learning-card"
+                      style={{ "--learning-card-color": item.color } as CSSProperties}
+                      onClick={() => openLearningEditorForEdit(item)}
+                    >
+                      <div className="learning-card-head">
+                        <span className="learning-card-badge" aria-hidden="true">
+                          {isBook ? "📕" : "🛠"}
+                        </span>
+                        <strong>{item.name}</strong>
+                      </div>
+                      <div className="learning-card-meta">
+                        <span>累計 {totalLabel}</span>
+                        {item.archived ? <span className="learning-card-archived">アーカイブ</span> : null}
+                      </div>
+                      {hasProgress ? (
+                        <div className="learning-card-progress" aria-label={`${progressPercent}%`}>
+                          <span style={{ width: `${progressPercent}%` }} />
+                          <small>
+                            {item.currentPages || 0}/{item.totalPages}p
+                          </small>
+                        </div>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </motion.section>
       ) : currentView === "logs" ? (
         <motion.section
           className="logs-screen"
@@ -7154,6 +7653,20 @@ function App() {
                       }
                       totalLearnedLabel={`${Math.round(roomTotalMinutes / 60).toLocaleString()}h learned`}
                       contributionLabel={`${roomContributions.toLocaleString()} contributions today`}
+                      learningItemSuggestions={learningItems
+                        .filter((item) => !item.archived)
+                        .map((item) => ({ id: item.id, name: item.name, color: item.color }))}
+                      recentLearningItemIds={(() => {
+                        const ids: string[] = [];
+                        for (let i = studyLogs.length - 1; i >= 0 && ids.length < 3; i--) {
+                          const lid = studyLogs[i].learningItemId;
+                          if (lid && !ids.includes(lid) && learningItems.some((item) => item.id === lid && !item.archived)) {
+                            ids.push(lid);
+                          }
+                        }
+                        return ids;
+                      })()}
+                      onLearningItemRegister={(presetName) => openLearningEditorForCreate(presetName)}
                     />
                     <section className="room-log-strip" aria-label="このRoomの最近の投稿">
                       <div>
@@ -7497,7 +8010,7 @@ function App() {
 
           <div className="bar-chart" aria-label="直近7日間の学習時間">
             {weeklyStudyHours.map((item, index) => {
-              const segments = getStudySegments(item.logs);
+              const segments = getStudySegments(item.logs, learningItems);
 
               return (
                 <div
@@ -7585,13 +8098,68 @@ function App() {
 
           <div className="progress-console">
             <form className="study-form" onSubmit={handleStudySubmit}>
-              <label>
+              <label className="study-subject-field">
                 <span>学習内容</span>
-                <input
-                  value={studySubject}
-                  onChange={(event) => setStudySubject(event.target.value)}
-                  placeholder="Java / React / 資格勉強"
-                />
+                {(() => {
+                  const activeItems = learningItems.filter((item) => !item.archived);
+                  const recentItemIds: string[] = [];
+                  for (let logIdx = studyLogs.length - 1; logIdx >= 0 && recentItemIds.length < 3; logIdx--) {
+                    const logItemId = studyLogs[logIdx].learningItemId;
+                    if (logItemId && !recentItemIds.includes(logItemId) && activeItems.some((item) => item.id === logItemId)) {
+                      recentItemIds.push(logItemId);
+                    }
+                  }
+                  const recentChips = recentItemIds
+                    .map((id) => activeItems.find((item) => item.id === id))
+                    .filter((item): item is LearningItem => Boolean(item));
+                  const trimmedSubject = studySubject.trim();
+                  const matchedItem = activeItems.find(
+                    (item) => item.name.toLowerCase() === trimmedSubject.toLowerCase(),
+                  );
+                  const showGhostHint = trimmedSubject.length > 0 && !matchedItem;
+                  return (
+                    <>
+                      {recentChips.length > 0 ? (
+                        <div className="study-subject-chips" aria-label="最近使った学習対象">
+                          {recentChips.map((item) => (
+                            <button
+                              type="button"
+                              key={item.id}
+                              className={matchedItem?.id === item.id ? "active" : ""}
+                              onClick={() => {
+                                setStudySubject(item.name);
+                                setStudyColor(item.color);
+                              }}
+                              style={{ "--chip-color": item.color } as CSSProperties}
+                            >
+                              {item.name}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                      <input
+                        value={studySubject}
+                        onChange={(event) => setStudySubject(event.target.value)}
+                        placeholder="Java / React / 資格勉強"
+                        list="learning-items-datalist"
+                      />
+                      <datalist id="learning-items-datalist">
+                        {activeItems.map((item) => (
+                          <option key={item.id} value={item.name} />
+                        ))}
+                      </datalist>
+                      {showGhostHint ? (
+                        <button
+                          type="button"
+                          className="subject-ghost-hint"
+                          onClick={() => openLearningEditorForCreate(trimmedSubject)}
+                        >
+                          + 「{trimmedSubject}」を記録に追加
+                        </button>
+                      ) : null}
+                    </>
+                  );
+                })()}
               </label>
               <label>
                 <span>時間</span>

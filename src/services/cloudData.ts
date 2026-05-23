@@ -18,6 +18,7 @@ export type StudyLogRecord = {
   minutes: number;
   createdAt: string;
   color?: string;
+  learningItemId?: string;
 };
 
 export type WorkspaceSessionRecord = {
@@ -106,6 +107,7 @@ function studyLogToCloudPayload(
     earnedExp: options.earnedExp ?? Math.round(log.minutes * 1.25),
     createdAt: log.createdAt,
     color: log.color || "",
+    learningItemId: log.learningItemId || "",
     source: options.source || "manual",
     updatedAt: serverTimestamp(),
   };
@@ -133,6 +135,7 @@ export function subscribeStudyLogsFromCloud(
             minutes,
             createdAt: readCreatedAt(data.createdAt),
             color: readString(data.color),
+            learningItemId: readString(data.learningItemId) || undefined,
           };
         })
         .filter((log) => log.minutes > 0)

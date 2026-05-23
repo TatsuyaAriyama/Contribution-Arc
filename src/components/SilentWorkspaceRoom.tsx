@@ -31,6 +31,12 @@ export type RoomActor = {
   tone: "deep" | "green" | "soft" | "blue";
 };
 
+export type LearningItemSuggestion = {
+  id: string;
+  name: string;
+  color: string;
+};
+
 type SilentWorkspaceRoomProps = {
   presentation?: "full" | "focus";
   roomName: string;
@@ -58,6 +64,9 @@ type SilentWorkspaceRoomProps = {
   lastSessionLabel: string;
   totalLearnedLabel: string;
   contributionLabel: string;
+  learningItemSuggestions?: LearningItemSuggestion[];
+  recentLearningItemIds?: string[];
+  onLearningItemRegister?: (presetName: string) => void;
 };
 
 function getActorStayLabel(member: RoomActor) {
@@ -108,6 +117,9 @@ export function SilentWorkspaceRoom({
   onActivityOpen,
   lastSessionLabel,
   contributionLabel,
+  learningItemSuggestions = [],
+  recentLearningItemIds = [],
+  onLearningItemRegister,
 }: SilentWorkspaceRoomProps) {
   const isFocusPresentation = presentation === "focus";
   const [isPresetEditorOpen, setIsPresetEditorOpen] = useState(false);
@@ -156,12 +168,57 @@ export function SilentWorkspaceRoom({
 
             <label className="workspace-task-field">
               <span>今やってること</span>
-              <input
-                value={taskValue}
-                onChange={handleTaskChange}
-                placeholder="作業内容を入力"
-                maxLength={48}
-              />
+              {(() => {
+                const trimmed = taskValue.trim();
+                const matchedItem = learningItemSuggestions.find(
+                  (item) => item.name.toLowerCase() === trimmed.toLowerCase(),
+                );
+                const showGhostHint = trimmed.length > 0 && !matchedItem && Boolean(onLearningItemRegister);
+                const recentChips = recentLearningItemIds
+                  .map((id) => learningItemSuggestions.find((item) => item.id === id))
+                  .filter((item): item is LearningItemSuggestion => Boolean(item))
+                  .slice(0, 3);
+                return (
+                  <>
+                    {recentChips.length > 0 ? (
+                      <div className="study-subject-chips" aria-label="最近使った学習対象">
+                        {recentChips.map((item) => (
+                          <button
+                            type="button"
+                            key={item.id}
+                            className={matchedItem?.id === item.id ? "active" : ""}
+                            onClick={() => onTaskChange(item.name)}
+                            style={{ "--chip-color": item.color } as CSSProperties}
+                          >
+                            {item.name}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                    <input
+                      value={taskValue}
+                      onChange={handleTaskChange}
+                      placeholder="作業内容を入力"
+                      maxLength={48}
+                      list="workspace-learning-items-datalist"
+                    />
+                    <datalist id="workspace-learning-items-datalist">
+                      {learningItemSuggestions.map((item) => (
+                        <option key={item.id} value={item.name} />
+                      ))}
+                    </datalist>
+                    {showGhostHint ? (
+                      <button
+                        type="button"
+                        className="subject-ghost-hint"
+                        onClick={() => onLearningItemRegister?.(trimmed)}
+                      >
+                        + 「{trimmed}」を記録に追加
+                      </button>
+                    ) : null}
+                  </>
+                );
+              })()}
             </label>
           </div>
         ) : null}

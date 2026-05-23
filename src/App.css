@@ -13005,3 +13005,283 @@
   min-width: 30px;
   text-align: right;
 }
+
+/* === Learning Items (記録する) === */
+
+.learning-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 28px 32px 64px;
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.learning-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.learning-header h2 {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 4px 0 2px;
+}
+
+.learning-header small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.learning-add-button {
+  border: 1px solid var(--border);
+  background: var(--ink);
+  color: var(--bg);
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.18s ease;
+}
+
+.learning-add-button:hover {
+  opacity: 0.85;
+}
+
+.learning-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.learning-tabs {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px;
+  background: var(--bg);
+  gap: 2px;
+}
+
+.learning-tabs button {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.learning-tabs button.active {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.learning-search {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  padding: 8px 12px;
+  font-size: 13px;
+  min-width: 200px;
+}
+
+.learning-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.learning-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--learning-card-color, var(--ink));
+  border-radius: 12px;
+  background: var(--bg);
+  padding: 14px 16px;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.learning-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+}
+
+.learning-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.learning-card-badge {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.learning-card-head strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.learning-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.learning-card-archived {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--border);
+  color: var(--muted);
+}
+
+.learning-card-progress {
+  position: relative;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.learning-card-progress span {
+  display: block;
+  height: 100%;
+  background: var(--learning-card-color, var(--ink));
+  border-radius: 3px;
+  transition: width 0.24s ease;
+}
+
+.learning-card-progress small {
+  position: absolute;
+  right: 0;
+  top: 8px;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.learning-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 60px 20px;
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.learning-modal {
+  max-width: 460px;
+}
+
+.learning-category-tabs {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+  background: var(--bg);
+  gap: 2px;
+}
+
+.learning-category-tabs button {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.learning-category-tabs button.active {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.learning-color-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.learning-color-panel > span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.learning-book-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.study-subject-field {
+  position: relative;
+}
+
+.study-subject-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.study-subject-chips button {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--chip-color, var(--ink));
+  background: var(--bg);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.16s ease;
+}
+
+.study-subject-chips button:hover,
+.study-subject-chips button.active {
+  background: var(--border);
+}
+
+.subject-ghost-hint {
+  display: inline-block;
+  margin-top: 4px;
+  align-self: flex-start;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 0.16s ease, border-color 0.16s ease;
+}
+
+.subject-ghost-hint:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+}
