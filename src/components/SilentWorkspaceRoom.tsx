@@ -263,6 +263,18 @@ export function SilentWorkspaceRoom({
 
           {members.map((member) => {
             const isCurrentUser = member.userId === currentUserId;
+            // Drop-in animation gate: any actor whose `joinedAt` is within
+            // the last ~6s gets the `is-just-joined` class, which triggers
+            // the CSS `workspace-drop-in` animation on mount. Because the
+            // outer element's `key` includes `joinedAt`, a fresh join
+            // remounts the actor for *every* subscriber via the Firestore
+            // realtime stream — so both the joiner and other members in the
+            // room see the drop animation play. Computed inline (rather
+            // than tracked in React state) because we don't need to clear
+            // the class precisely; the CSS animation has `forwards` fill so
+            // the actor settles at the same transform once it completes.
+            const isJustJoined =
+              Date.now() - new Date(member.joinedAt).getTime() < 6000;
             const actorStyle = {
               "--actor-x": `${member.x}%`,
               "--actor-y": `${member.y}%`,
@@ -278,7 +290,8 @@ export function SilentWorkspaceRoom({
                   isCurrentUser ? "is-player" : "is-npc",
                   member.status === "on-break" ? "is-resting" : "",
                   isCurrentUser && isPlayerWalking ? "is-walking" : "",
-                ].join(" ")}
+                  isJustJoined ? "is-just-joined" : "",
+                ].filter(Boolean).join(" ")}
                 style={actorStyle}
                 onClick={() => onMemberOpen(member)}
                 aria-label={`${member.name} ${member.currentTask}`}
