@@ -2971,7 +2971,7 @@ function App() {
   const [postDraft, setPostDraft] = useState("");
   const [postError, setPostError] = useState("");
   const [isPosting, setIsPosting] = useState(false);
-  const [timelineFilter, setTimelineFilter] = useState<"following" | "all">("following");
+  const [timelineFilter, setTimelineFilter] = useState<"following" | "all">("all");
   const [workspaceRecruitments, setWorkspaceRecruitments] = useState<WorkspaceRecruitmentRecord[]>([]);
   const [feedNowTick, setFeedNowTick] = useState(() => Date.now());
   const spotlightRef = useRef<HTMLDivElement | null>(null);
