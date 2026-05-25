@@ -1441,23 +1441,55 @@ function getPostTime(post: ContributionPostRecord) {
   return Number.isFinite(time) ? time : 0;
 }
 
+// Deterministic dedupe for posts coming from multiple sources (cloud + local
+// pending). Rules (highest priority first):
+//   1. Drop invalid / daily-report-mirror posts.
+//   2. For the same post id, prefer `synced` (cloud is the source of truth for
+//      likes and other server-side fields) over `pending`.
+//   3. If both are the same syncStatus, prefer the later createdAt.
+// Caller order no longer matters — same input set always produces the same
+// result. This avoids the historical bug where a late-arriving cache load
+// could overwrite cloud data depending on `forEach` ordering.
 function mergePosts(posts: ContributionPostRecord[]) {
   const postMap = new Map<string, ContributionPostRecord>();
 
-  posts.forEach((post) => {
+  for (const post of posts) {
     if (!post.id || !post.userId || !post.text.trim() || isDailyReportMirrorPost(post)) {
-      return;
+      continue;
     }
 
-    const existingPost = postMap.get(post.id);
-    if (!existingPost || post.syncStatus === "synced" || getPostTime(post) >= getPostTime(existingPost)) {
+    const existing = postMap.get(post.id);
+    if (!existing) {
+      postMap.set(post.id, post);
+      continue;
+    }
+
+    const existingIsSynced = existing.syncStatus === "synced";
+    const incomingIsSynced = post.syncStatus === "synced";
+
+    // synced beats pending unconditionally.
+    if (incomingIsSynced && !existingIsSynced) {
+      postMap.set(post.id, post);
+      continue;
+    }
+    if (!incomingIsSynced && existingIsSynced) {
+      continue;
+    }
+
+    // Same syncStatus → newer createdAt wins.
+    if (getPostTime(post) > getPostTime(existing)) {
       postMap.set(post.id, post);
     }
-  });
+  }
 
   return Array.from(postMap.values()).sort((a, b) => getPostTime(b) - getPostTime(a));
 }
 
+// Boot-time UI seed only. We keep `synced` posts from any user (so other
+// users' posts can flash in instantly on reload before the cloud snapshot
+// arrives) and the current user's `pending` posts (their own optimistic
+// writes that haven't been confirmed yet). We never keep *other* users'
+// pending posts because they don't make sense outside the writer's device.
 async function readDurablePosts(currentUid: string) {
   const indexedPosts = await readPersistentItems<ContributionPostRecord>("posts");
   return mergePosts(
@@ -1465,8 +1497,14 @@ async function readDurablePosts(currentUid: string) {
   );
 }
 
+// Fire-and-forget IndexedDB write. Callers should pass `.catch(logPersistError)`
+// when invoking so a failure here doesn't silently rot the cache.
 async function persistPosts(posts: ContributionPostRecord[]) {
   await putPersistentItems("posts", mergePosts(posts));
+}
+
+function logPersistError(error: unknown) {
+  console.warn("Failed to persist posts to IndexedDB:", error);
 }
 
 function isDailyReportMirrorPost(post: Pick<ContributionPostRecord, "text">) {
@@ -3573,110 +3611,104 @@ function App() {
     };
   }, []);
 
+  // Posts feed subscription.
+  //
+  // The posts feed is a global Firestore stream (`allow read: if signedIn()`)
+  // so every signed-in user reads every user's posts. There are three things
+  // this effect has to coordinate without stepping on its own toes:
+  //
+  //   (1) Boot UX:           Seed the UI from IndexedDB so reload is instant.
+  //   (2) Truth from cloud:  Once Firestore delivers a snapshot, that is the
+  //                          source of truth — the cache must never overwrite
+  //                          fresh cloud data.
+  //   (3) Offline writes:    The user's own posts that failed to upload are
+  //                          held as `pending` and retried periodically.
+  //
+  // Historical bugs we are guarding against:
+  //   • A late-arriving cache read silently overwriting cloud data (the cache
+  //     only contained "own posts", so other users' posts vanished). Guarded
+  //     by `cloudHasArrived` — once true, the cache seed is dropped.
+  //   • An infinite reconnect loop on quota errors that hammered the API.
+  //     Quota errors now stop the loop and surface a message instead.
+  //   • Async IndexedDB reads inside the snapshot callback racing with other
+  //     setPosts calls. Resolved by using functional `setPosts(prev => ...)`
+  //     for all merge work.
   useEffect(() => {
-    if (!currentUser || !isWorkspaceLoaded) {
-      return;
-    }
+    if (!currentUser) return;
 
-    // The posts feed is a global stream — every signed-in user reads every
-    // user's posts (the Firestore rule is `allow read: if signedIn()`) so
-    // the timeline can show contributions from everyone. The two failure
-    // modes that previously broke this in practice:
-    //
-    // 1. `onSnapshot` errors (transient network, `resource-exhausted` on
-    //    Spark quota, brief permission hiccup right after sign-in) used to
-    //    leave the listener dead. The user was then stuck on local cache,
-    //    which only contains their own pending posts + the last synced
-    //    snapshot → it *looked* like other users' posts were missing.
-    // 2. Posts saved while writes were failing were marked `pending` and
-    //    only retried on next page load — quota recovery during a session
-    //    didn't help.
-    //
-    // We now reconnect the subscription with exponential backoff and also
-    // run a periodic retry pass for any locally-pending posts so a stale
-    // session naturally heals once the cloud is reachable again.
+    const uid = currentUser.uid;
     let isActive = true;
     let unsubscribe: (() => void) | null = null;
     let reconnectTimer: number | null = null;
     let pendingRetryTimer: number | null = null;
     let reconnectAttempt = 0;
-    const uid = currentUser.uid;
+    // Set to true the first time Firestore delivers a snapshot. After that
+    // point we no longer trust the IndexedDB cache for *reads* — it is purely
+    // a write target.
+    let cloudHasArrived = false;
 
-    const retryPendingPosts = () => {
-      void readDurablePosts(uid).then((cachedPosts) => {
-        if (!isActive) return;
-        cachedPosts
-          .filter((post) => post.userId === uid && post.syncStatus === "pending")
-          .forEach((post) => {
-            void savePostToCloud(db, post)
-              .then(() => {
-                const syncedPost: ContributionPostRecord = {
-                  ...post,
-                  syncStatus: "synced",
-                  syncError: "",
-                };
-                void putPersistentItem("posts", syncedPost);
-                if (isActive) {
-                  setPosts((items) =>
-                    mergePosts([syncedPost, ...items.filter((item) => item.id !== post.id)]),
-                  );
-                }
-              })
-              .catch((error) => {
-                console.info("Pending post sync skipped.", error);
-              });
-          });
+    // (1) Seed UI from cache for an instant first paint. If the cloud snapshot
+    // beats us, drop the seed so we never roll the UI backwards.
+    void readDurablePosts(uid)
+      .then((cachedPosts) => {
+        if (!isActive || cloudHasArrived || cachedPosts.length === 0) return;
+        setPosts(cachedPosts);
+      })
+      .catch((error) => {
+        console.warn("Failed to seed posts from IndexedDB:", error);
       });
-    };
 
+    // (2) Subscribe to the live feed. Cloud is authoritative from here on.
     const subscribe = () => {
       unsubscribe = subscribePostsFromCloud(
         db,
         (cloudPosts) => {
-          // Successful payload → reset backoff and clear any "waiting" hint.
           if (!isActive) return;
+          cloudHasArrived = true;
           reconnectAttempt = 0;
           setPostError("");
+
           const syncedPosts = cloudPosts.map((post) => ({
             ...post,
             syncStatus: "synced" as const,
             syncError: "",
           }));
-          // Functional update: read current pending posts from state directly
-          // instead of doing an async IndexedDB read (which can race with
-          // other setPosts calls and silently discard cloud data).
+
+          // Functional update — read current state synchronously to preserve
+          // the user's own pending posts (not yet uploaded) without an async
+          // IndexedDB read that could race with other setPosts calls.
           setPosts((currentPosts) => {
-            const pendingPosts = currentPosts.filter(
+            const ownPending = currentPosts.filter(
               (post) => post.userId === uid && post.syncStatus === "pending",
             );
-            const nextPosts = mergePosts([...syncedPosts, ...pendingPosts]);
-            void persistPosts(nextPosts);
+            const nextPosts = mergePosts([...syncedPosts, ...ownPending]);
+            void persistPosts(nextPosts).catch(logPersistError);
             return nextPosts;
           });
         },
         (error) => {
-          const errorCode = (error as { code?: string })?.code ?? "";
-          const errorMsg = (error as { message?: string })?.message ?? "";
-          const isQuota =
-            errorCode.includes("resource-exhausted") ||
-            errorMsg.includes("Quota exceeded");
+          if (!isActive) return;
+          const code = (error as { code?: string })?.code ?? "";
+          const message = (error as { message?: string })?.message ?? "";
+          const isQuotaError =
+            code.includes("resource-exhausted") || message.includes("Quota exceeded");
 
-          if (isQuota) {
-            // Quota exhausted: retrying immediately just wastes the
-            // remaining quota. Stop here and show a helpful message.
-            console.info("Post realtime sync paused — quota exhausted.");
+          if (isQuotaError) {
+            // Quota exhausted: retrying just wastes whatever is left. Stop
+            // the loop and surface a message instead.
+            console.info("Posts realtime sync paused — quota exhausted.");
             setPostError("本日の利用上限に達しました。しばらく経ってから再読み込みしてください。");
             return;
           }
 
-          console.info("Post realtime sync errored — will reconnect.", error);
+          console.info("Posts realtime sync errored — will reconnect.", error);
           setPostError("ログの読み込みを待っています。");
           if (unsubscribe) {
             unsubscribe();
             unsubscribe = null;
           }
-          // Exponential backoff: 2s, 4s, 8s, … capped at 60s.
-          const delayMs = Math.min(60000, 2000 * 2 ** reconnectAttempt);
+
+          const delayMs = Math.min(60_000, 2_000 * 2 ** reconnectAttempt);
           reconnectAttempt += 1;
           reconnectTimer = window.setTimeout(() => {
             reconnectTimer = null;
@@ -3685,16 +3717,41 @@ function App() {
         },
       );
     };
-
-    // Seed UI from local cache, kick off the realtime subscription, and
-    // try to sync any locally-pending posts immediately.
-    void readDurablePosts(uid).then((cachedPosts) => {
-      if (!isActive || cachedPosts.length === 0) return;
-      setPosts(cachedPosts);
-    });
     subscribe();
+
+    // (3) Retry locally-pending posts. We do an immediate pass on mount so a
+    // stale session heals as soon as the cloud is reachable, then poll every
+    // 5 minutes as a safety net. Retries are read from current state — never
+    // from IndexedDB — so we don't fight with the cloud snapshot.
+    const retryPendingPosts = () => {
+      if (!isActive) return;
+      setPosts((currentPosts) => {
+        const ownPending = currentPosts.filter(
+          (post) => post.userId === uid && post.syncStatus === "pending",
+        );
+        for (const post of ownPending) {
+          void savePostToCloud(db, post)
+            .then(() => {
+              if (!isActive) return;
+              const syncedPost: ContributionPostRecord = {
+                ...post,
+                syncStatus: "synced",
+                syncError: "",
+              };
+              void putPersistentItem("posts", syncedPost).catch(logPersistError);
+              setPosts((items) =>
+                mergePosts([syncedPost, ...items.filter((item) => item.id !== post.id)]),
+              );
+            })
+            .catch((error) => {
+              console.info("Pending post sync skipped.", error);
+            });
+        }
+        return currentPosts;
+      });
+    };
     retryPendingPosts();
-    pendingRetryTimer = window.setInterval(retryPendingPosts, 300000);
+    pendingRetryTimer = window.setInterval(retryPendingPosts, 300_000);
 
     return () => {
       isActive = false;
@@ -3702,12 +3759,13 @@ function App() {
       if (reconnectTimer) window.clearTimeout(reconnectTimer);
       if (pendingRetryTimer) window.clearInterval(pendingRetryTimer);
     };
-  }, [currentUser, isWorkspaceLoaded]);
+  }, [currentUser]);
 
+  // Reply subscription. Mirrors the posts effect — kicks off as soon as we
+  // have a signed-in user, no `isWorkspaceLoaded` gate so it doesn't get
+  // torn down and rebuilt when the workspace finishes loading.
   useEffect(() => {
-    if (!currentUser || !isWorkspaceLoaded) {
-      return;
-    }
+    if (!currentUser) return;
 
     return subscribePostRepliesFromCloud(
       db,
@@ -3716,7 +3774,7 @@ function App() {
         console.info("Post reply realtime sync skipped.", error);
       },
     );
-  }, [currentUser, isWorkspaceLoaded]);
+  }, [currentUser]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
@@ -5321,14 +5379,14 @@ function App() {
     setIsPosting(true);
     setPostError("");
     setPosts((items) => mergePosts([nextPost, ...items.filter((item) => item.id !== nextPost.id)]));
-    void putPersistentItem("posts", nextPost);
+    void putPersistentItem("posts", nextPost).catch(logPersistError);
     setPostDraft("");
 
     try {
       await savePostToCloud(db, nextPost);
       const syncedPost: ContributionPostRecord = { ...nextPost, syncStatus: "synced", syncError: "" };
       setPosts((items) => mergePosts([syncedPost, ...items.filter((item) => item.id !== nextPost.id)]));
-      void putPersistentItem("posts", syncedPost);
+      void putPersistentItem("posts", syncedPost).catch(logPersistError);
     } catch (error) {
       setPostError(
         getFirestoreErrorMessage(
@@ -5343,7 +5401,7 @@ function App() {
         syncError: "cloud-save-failed",
       };
       setPosts((items) => mergePosts([pendingPost, ...items.filter((item) => item.id !== nextPost.id)]));
-      void putPersistentItem("posts", pendingPost);
+      void putPersistentItem("posts", pendingPost).catch(logPersistError);
     } finally {
       setIsPosting(false);
     }
