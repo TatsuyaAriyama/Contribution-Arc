@@ -6911,6 +6911,50 @@ function App() {
       <PremiumSidebar
         currentView={currentView}
         logo={<ContributionArcLogo />}
+        playerStatus={
+          <button
+            type="button"
+            className="player-status-sidebar"
+            onClick={() => {
+              setProfileMember(null);
+              setProfileUser(null);
+              setCurrentView("profile");
+              setIsMobileNavOpen(false);
+            }}
+            aria-label="プロフィール画面を開く"
+          >
+            <div className="player-status-sidebar-head">
+              <span className="player-status-sidebar-avatar">
+                {playerAvatar ? <img src={playerAvatar} alt="" /> : playerInitial}
+              </span>
+              <div>
+                <strong>{playerName}</strong>
+                <span>Lv.{levelState.level}</span>
+              </div>
+            </div>
+            <div className="player-status-sidebar-exp">
+              <div className="player-status-sidebar-exp-meta">
+                <span>Next Level</span>
+                <strong>
+                  {levelState.currentExp.toLocaleString()} / {levelState.neededExp.toLocaleString()}
+                </strong>
+              </div>
+              <div className="player-status-sidebar-exp-track" aria-hidden="true">
+                <span style={{ width: `${levelState.percent}%` }} />
+              </div>
+            </div>
+            <div className="player-status-sidebar-metrics">
+              <div>
+                <strong>{effortExp.toLocaleString()}</strong>
+                <span>Effort EXP</span>
+              </div>
+              <div>
+                <strong>{outputExp.toLocaleString()}</strong>
+                <span>Output EXP</span>
+              </div>
+            </div>
+          </button>
+        }
         roomOnlineCount={roomOnlineCount}
         weeklyStudyLabel={formatStudyTimeJa(totalWeeklyMinutes)}
         friends={sidebarFriends}
@@ -8997,7 +9041,6 @@ function App() {
 
       <section className="hero-grid" aria-label="Contribution Arc overview">
         <div className="overview-stack">
-          {playerStatusCard(true)}
           <article className="card daily-today-card">
             <div>
               <p className="card-kicker">今日の日報</p>

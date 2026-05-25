@@ -27,6 +27,8 @@ export type LiveActivity = {
 type PremiumSidebarProps = {
   currentView: AppView;
   logo: ReactNode;
+  /** Compact player status card rendered at the top of the sidebar. */
+  playerStatus: ReactNode;
   roomOnlineCount: number;
   weeklyStudyLabel: string;
   friends: FriendPreview[];
@@ -44,6 +46,7 @@ type PremiumSidebarProps = {
 export function PremiumSidebar({
   currentView,
   logo,
+  playerStatus,
   roomOnlineCount,
   weeklyStudyLabel,
   friends,
@@ -69,17 +72,7 @@ export function PremiumSidebar({
       className={`app-sidebar${isMobileOpen ? " is-mobile-open" : ""}`}
       aria-label="Contribution Arc navigation"
     >
-      <button
-        type="button"
-        className="brand-lockup"
-        onClick={() => handleNavigate(() => onViewChange("home"))}
-      >
-        {logo}
-        <span>
-          <strong>Contribution Arc</strong>
-          <small>エンジニアの学びを共有する</small>
-        </span>
-      </button>
+      {playerStatus}
 
       <nav className="side-nav" aria-label="Main navigation">
         <button
@@ -216,6 +209,16 @@ export function PremiumSidebar({
           ))}
         </div>
       </div>
+
+      <button
+        type="button"
+        className="brand-lockup-compact"
+        onClick={() => handleNavigate(() => onViewChange("home"))}
+        aria-label="ホームへ"
+      >
+        <span className="brand-lockup-compact-mark">{logo}</span>
+        <span>Contribution Arc</span>
+      </button>
     </aside>
   );
 }

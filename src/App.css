@@ -14926,6 +14926,197 @@ select:focus-visible,
 }
 
 /* =====================================================================
+   Sidebar Player Status — compact card at the top of the sidebar.
+   Same data as the full profile card, shrunk to fit the narrow column.
+   ===================================================================== */
+.player-status-sidebar {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 14px 16px;
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(31, 111, 74, 0.08), transparent 8rem),
+    linear-gradient(180deg, rgba(var(--surface-rgb), 0.94), rgba(var(--surface-rgb), 0.78)),
+    var(--surface);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  box-shadow:
+    0 18px 48px rgba(var(--ink-rgb), 0.05),
+    inset 0 1px 0 rgba(var(--surface-rgb), 0.96);
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.player-status-sidebar:hover {
+  transform: translateY(-1px);
+  border-color: rgba(31, 111, 74, 0.18);
+  box-shadow:
+    0 24px 60px rgba(var(--ink-rgb), 0.08),
+    inset 0 1px 0 rgba(var(--surface-rgb), 0.96);
+}
+
+.player-status-sidebar-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.player-status-sidebar-avatar {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  background: var(--green);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 900;
+  overflow: hidden;
+}
+
+.player-status-sidebar-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.player-status-sidebar-head > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.player-status-sidebar-head strong {
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-status-sidebar-head span {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.player-status-sidebar-exp {
+  display: grid;
+  gap: 6px;
+}
+
+.player-status-sidebar-exp-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.player-status-sidebar-exp-meta strong {
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.player-status-sidebar-exp-track {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(var(--ink-rgb), 0.08);
+  overflow: hidden;
+}
+
+.player-status-sidebar-exp-track > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--green), #4fa362);
+  border-radius: inherit;
+  transition: width 0.4s ease;
+}
+
+.player-status-sidebar-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.player-status-sidebar-metrics > div {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(var(--ink-rgb), 0.035);
+}
+
+.player-status-sidebar-metrics strong {
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--ink);
+}
+
+.player-status-sidebar-metrics span {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+/* =====================================================================
+   Compact brand at the bottom of the sidebar — replaces the old top
+   brand-lockup. Just a small icon + name, quiet presence.
+   ===================================================================== */
+.brand-lockup-compact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.brand-lockup-compact:hover {
+  color: var(--ink);
+  background: rgba(var(--ink-rgb), 0.035);
+  border-color: rgba(var(--ink-rgb), 0.06);
+}
+
+.brand-lockup-compact-mark {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.brand-lockup-compact-mark svg,
+.brand-lockup-compact-mark img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* =====================================================================
    Touch-device tap feedback
    ---------------------------------------------------------------------
    On touch devices (hover: none), :hover states get "stuck" until the
