@@ -4352,18 +4352,13 @@ function App() {
     }
     return map;
   }, [studyLogs]);
-  const arcSubjectTotals = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayWeekday = today.getDay();
-    const startDate = new Date(today);
-    startDate.setDate(today.getDate() - ((CONTRIBUTION_ARC_WEEKS - 1) * 7 + todayWeekday));
+  // Shared aggregator used for both the 13-week donut and the per-day
+  // donut. Bucketing by linked learning item (when present) keeps the
+  // same item from splitting across multiple raw subject labels.
+  const aggregateSubjectTotals = (logs: StudyLog[]) => {
     const itemById = new Map(learningItems.map((item) => [item.id, item] as const));
     const totals = new Map<string, { subject: string; minutes: number; color: string }>();
-    for (const log of studyLogs) {
-      const d = new Date(log.createdAt);
-      if (Number.isNaN(d.getTime())) continue;
-      if (d < startDate) continue;
+    for (const log of logs) {
       const linkedItem = log.learningItemId ? itemById.get(log.learningItemId) : undefined;
       const subject = linkedItem ? linkedItem.name : log.subject;
       const key = linkedItem ? `item:${linkedItem.id}` : `subject:${subject}`;
@@ -4388,6 +4383,19 @@ function App() {
     }
     const total = top.reduce((sum, entry) => sum + entry.minutes, 0);
     return { items: top, total };
+  };
+  const arcSubjectTotals = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayWeekday = today.getDay();
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - ((CONTRIBUTION_ARC_WEEKS - 1) * 7 + todayWeekday));
+    const windowed = studyLogs.filter((log) => {
+      const d = new Date(log.createdAt);
+      return !Number.isNaN(d.getTime()) && d >= startDate;
+    });
+    return aggregateSubjectTotals(windowed);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studyLogs, learningItems]);
   const hoveredArcDayLogs = useMemo(() => {
     if (!hoveredArcCell) return [] as StudyLog[];
@@ -4454,6 +4462,26 @@ function App() {
     if (!selectedArcDay) return [] as StudyLog[];
     return studyLogsByDay.get(selectedArcDay.key) || [];
   }, [studyLogsByDay, selectedArcDay]);
+  // Donut switches between "selected day" and "13-week total" depending
+  // on whether a heatmap cell is currently selected. Memoised separately
+  // so a selection change only recomputes the small per-day breakdown.
+  const selectedArcDaySubjectTotals = useMemo(() => {
+    if (!selectedArcDay) return null;
+    return aggregateSubjectTotals(selectedArcDayLogs);
+    // aggregateSubjectTotals reads learningItems from closure each render —
+    // that's fine because it's only called inside this memo when inputs change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedArcDay, selectedArcDayLogs, learningItems]);
+  const donutDisplay = useMemo(() => {
+    if (selectedArcDay && selectedArcDaySubjectTotals && selectedArcDaySubjectTotals.total > 0) {
+      return {
+        ...selectedArcDaySubjectTotals,
+        label: `${selectedArcDay.date.getMonth() + 1}月${selectedArcDay.date.getDate()}日`,
+        isDaily: true,
+      };
+    }
+    return { ...arcSubjectTotals, label: "13週合計", isDaily: false };
+  }, [selectedArcDay, selectedArcDaySubjectTotals, arcSubjectTotals]);
   const contributionArcCurvePath = useMemo(() => {
     const weekMinutes = contributionArc.weekMinutes;
     if (weekMinutes.length === 0) return "";
@@ -9066,8 +9094,11 @@ function App() {
             </p>
           )}
         </div>
-        {arcSubjectTotals.total > 0 ? (
-          <div className="contribution-arc-donut" aria-label="学習ジャンル配分">
+        {donutDisplay.total > 0 ? (
+          <div
+            className={`contribution-arc-donut${donutDisplay.isDaily ? " is-daily" : ""}`}
+            aria-label={donutDisplay.isDaily ? `${donutDisplay.label}の学習ジャンル配分` : "13週の学習ジャンル配分"}
+          >
             <div className="contribution-arc-donut-chart">
               <svg viewBox="0 0 160 160" aria-hidden="true">
                 <circle
@@ -9082,8 +9113,8 @@ function App() {
                   const r = 56;
                   const circumference = 2 * Math.PI * r;
                   let cumulative = 0;
-                  return arcSubjectTotals.items.map((item, idx) => {
-                    const dash = (item.minutes / arcSubjectTotals.total) * circumference;
+                  return donutDisplay.items.map((item, idx) => {
+                    const dash = (item.minutes / donutDisplay.total) * circumference;
                     const seg = (
                       <circle
                         key={`${item.subject}-${idx}`}
@@ -9104,14 +9135,14 @@ function App() {
                 })()}
               </svg>
               <div className="contribution-arc-donut-center">
-                <small>13週合計</small>
-                <strong>{formatStudyTimeJa(arcSubjectTotals.total)}</strong>
-                <span>{arcSubjectTotals.items.length}ジャンル</span>
+                <small>{donutDisplay.label}</small>
+                <strong>{formatStudyTimeJa(donutDisplay.total)}</strong>
+                <span>{donutDisplay.items.length}ジャンル</span>
               </div>
             </div>
             <ul className="contribution-arc-donut-legend">
-              {arcSubjectTotals.items.map((item) => {
-                const pct = Math.round((item.minutes / arcSubjectTotals.total) * 100);
+              {donutDisplay.items.map((item) => {
+                const pct = Math.round((item.minutes / donutDisplay.total) * 100);
                 return (
                   <li key={item.subject}>
                     <i style={{ background: item.color }} aria-hidden="true" />
@@ -9122,6 +9153,27 @@ function App() {
                 );
               })}
             </ul>
+            {donutDisplay.isDaily ? (
+              <button
+                type="button"
+                className="contribution-arc-donut-reset"
+                onClick={() => setSelectedArcDayKey(null)}
+                aria-label="13週合計に戻す"
+              >
+                13週合計に戻す
+              </button>
+            ) : null}
+          </div>
+        ) : selectedArcDay ? (
+          <div className="contribution-arc-donut empty is-daily">
+            <p>{donutDisplay.label}の学習記録はありません。</p>
+            <button
+              type="button"
+              className="contribution-arc-donut-reset"
+              onClick={() => setSelectedArcDayKey(null)}
+            >
+              13週合計に戻す
+            </button>
           </div>
         ) : (
           <div className="contribution-arc-donut empty">
