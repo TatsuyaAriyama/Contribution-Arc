@@ -1144,6 +1144,7 @@ function profileToFriend(profile: UserProfile): FriendPreview {
     status: "offline",
     activity: profile.determination || "オフライン",
     githubUrl: getFriendGithubUrl(profile.userId),
+    githubUsername: profile.githubUsername || "",
   };
 }
 

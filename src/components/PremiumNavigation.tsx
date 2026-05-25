@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { motion } from "framer-motion";
+import { FriendGithubMini } from "./FriendGithubMini";
 
 export type AppView = "home" | "profile" | "workspace" | "logs" | "daily" | "learning";
 export type FriendPreviewStatus = "online" | "away" | "offline";
@@ -12,6 +13,7 @@ export type FriendPreview = {
   status: FriendPreviewStatus;
   activity: string;
   githubUrl?: string;
+  githubUsername?: string;
 };
 
 export type LiveActivity = {
@@ -148,6 +150,9 @@ export function PremiumSidebar({
                     <small>{friend.activity}</small>
                   </span>
                 </button>
+                {friend.githubUsername ? (
+                  <FriendGithubMini username={friend.githubUsername} />
+                ) : null}
                 {friend.githubUrl ? (
                   <a href={friend.githubUrl} target="_blank" rel="noreferrer" aria-label={`${friend.name}のGitHubを開く`}>
                     GitHub
