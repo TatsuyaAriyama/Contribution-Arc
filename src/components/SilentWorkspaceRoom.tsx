@@ -315,16 +315,27 @@ export function SilentWorkspaceRoom({
         </div>
 
         <div className={`preset-message-panel ${isPresetTrayOpen ? "is-open" : ""}`}>
-          <button
-            type="button"
-            className="preset-chat-toggle"
-            onClick={() => setIsPresetTrayOpen((isOpen) => !isOpen)}
-            aria-expanded={isPresetTrayOpen}
-            aria-label={isPresetTrayOpen ? "定型文を閉じる" : "定型文を開く"}
-          >
-            <span aria-hidden="true" />
-            <strong>{isPresetTrayOpen ? "閉じる" : "定型文"}</strong>
-          </button>
+          <div className="preset-toggle-row">
+            {isJoined ? (
+              <button
+                type="button"
+                className="preset-break-toggle preset-break-toggle-standalone"
+                onClick={() => onPresetMessage(isCurrentUserOnBreak ? "集中します" : "休憩します")}
+              >
+                {isCurrentUserOnBreak ? "休憩終了" : "休憩"}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="preset-chat-toggle"
+              onClick={() => setIsPresetTrayOpen((isOpen) => !isOpen)}
+              aria-expanded={isPresetTrayOpen}
+              aria-label={isPresetTrayOpen ? "定型文を閉じる" : "定型文を開く"}
+            >
+              <span aria-hidden="true" />
+              <strong>{isPresetTrayOpen ? "閉じる" : "定型文"}</strong>
+            </button>
+          </div>
 
           {isPresetTrayOpen ? (
             <div className="preset-message-bar" aria-label="定型コミュニケーション">
@@ -333,15 +344,6 @@ export function SilentWorkspaceRoom({
                   {message}
                 </button>
               ))}
-              {isJoined ? (
-                <button
-                  type="button"
-                  className="preset-break-toggle"
-                  onClick={() => onPresetMessage(isCurrentUserOnBreak ? "集中します" : "休憩します")}
-                >
-                  {isCurrentUserOnBreak ? "休憩終了" : "休憩"}
-                </button>
-              ) : null}
               <button
                 type="button"
                 className="preset-edit-button"
