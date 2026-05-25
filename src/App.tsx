@@ -8131,7 +8131,6 @@ function App() {
                     onClick={() => setTheme("dark")}
                     aria-pressed={theme === "dark"}
                   >
-                    <span aria-hidden="true">🌙</span>
                     ダーク
                   </button>
                   <button
@@ -8140,7 +8139,6 @@ function App() {
                     onClick={() => setTheme("light")}
                     aria-pressed={theme === "light"}
                   >
-                    <span aria-hidden="true">☀️</span>
                     ライト
                   </button>
                 </div>
