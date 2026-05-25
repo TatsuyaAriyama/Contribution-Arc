@@ -106,7 +106,7 @@ export function PremiumSidebar({
           className={currentView === "learning" ? "active" : ""}
           onClick={() => handleNavigate(() => onViewChange("learning"))}
         >
-          <span aria-hidden="true">📚</span>
+          <span />
           記録する
         </button>
         <button
