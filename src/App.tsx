@@ -13,6 +13,7 @@ import {
 } from "react";
 import {
   createUserWithEmailAndPassword,
+  getAdditionalUserInfo,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -2639,7 +2640,25 @@ function LoginScreen() {
     setIsSubmitting(true);
 
     try {
-      await signInWithPopup(auth, provider === "google" ? googleProvider : githubProvider);
+      const result = await signInWithPopup(
+        auth,
+        provider === "google" ? googleProvider : githubProvider,
+      );
+      // GitHub's Firebase provider exposes the OAuth login (handle) only in
+      // additionalUserInfo.profile, not in providerData. Cache it per-uid so
+      // the contribution heatmap fetcher can target the right user even when
+      // their GitHub display name differs from their login.
+      if (provider === "github") {
+        const additional = getAdditionalUserInfo(result);
+        const login = (additional?.profile as { login?: string } | null | undefined)?.login;
+        if (login && result.user.uid) {
+          try {
+            window.localStorage.setItem(`ca:gh-login:${result.user.uid}`, login);
+          } catch {
+            /* storage disabled — fall back to displayName/userId */
+          }
+        }
+      }
     } catch (error) {
       setAuthError(getAuthErrorDetail(error));
     } finally {
@@ -4433,7 +4452,20 @@ function App() {
   const studyStreak = getStudyStreak(studyLogs);
   const githubProviderInfo = currentUser?.providerData.find((provider) => provider.providerId === "github.com");
   const githubId = githubProviderInfo?.uid || "";
-  const githubUsername = githubProviderInfo?.displayName || (githubProviderInfo ? userId : "");
+  // Prefer the cached GitHub login captured at sign-in (via
+  // getAdditionalUserInfo) because providerData.displayName is the user's
+  // GitHub *display name*, which often differs from the login the
+  // contributions API needs. Fall back to displayName, then to userId.
+  const githubLoginCached = (() => {
+    if (!currentUser || !githubProviderInfo) return "";
+    try {
+      return window.localStorage.getItem(`ca:gh-login:${currentUser.uid}`) || "";
+    } catch {
+      return "";
+    }
+  })();
+  const githubUsername =
+    githubLoginCached || githubProviderInfo?.displayName || (githubProviderInfo ? userId : "");
   // Lazy-fetch the user's public GitHub contribution grid as soon as we
   // know which login to query. The service handles its own 1h cache so
   // re-mounts (route changes, hot reloads) don't re-hit the endpoint.
