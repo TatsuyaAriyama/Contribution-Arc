@@ -13050,6 +13050,36 @@
   margin-top: 2px;
 }
 
+.contribution-arc-github-link-btn {
+  align-self: center;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--ink-rgb), 0.12);
+  background: rgba(var(--ink-rgb), 0.92);
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: transform 0.16s ease, background 0.16s ease, opacity 0.16s ease;
+}
+
+.contribution-arc-github-link-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: rgba(var(--ink-rgb), 1);
+}
+
+.contribution-arc-github-link-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.contribution-arc-github-link-error {
+  margin: 0;
+  font-size: 11px;
+  color: #c0392b;
+}
+
 .contribution-arc-detail {
   border: 1px solid rgba(var(--ink-rgb), 0.08);
   border-radius: 10px;

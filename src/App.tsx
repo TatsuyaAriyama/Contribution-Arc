@@ -14,6 +14,7 @@ import {
 import {
   createUserWithEmailAndPassword,
   getAdditionalUserInfo,
+  linkWithPopup,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -4311,6 +4312,12 @@ function App() {
   // kept around so the UI can render a non-fatal "取得できませんでした" hint.
   const [githubContributions, setGithubContributions] = useState<GithubContributions | null>(null);
   const [githubContributionsError, setGithubContributionsError] = useState<string | null>(null);
+  // Drives the "GitHub アカウントを連携" CTA shown in the contribution-arc
+  // card for users signed in via email or Google. linkWithPopup attaches
+  // the GitHub provider to the existing Firebase user, so they don't need
+  // to create a separate account just to surface their commits.
+  const [isLinkingGithub, setIsLinkingGithub] = useState(false);
+  const [linkGithubError, setLinkGithubError] = useState<string | null>(null);
   const githubContributionArc = useMemo(
     () => (githubContributions ? getGithubContributionArc(githubContributions.days) : null),
     [githubContributions],
@@ -5565,6 +5572,42 @@ function App() {
   if (!currentUser) {
     return <LoginScreen />;
   }
+
+  const handleLinkGithub = async () => {
+    if (!currentUser) return;
+    setIsLinkingGithub(true);
+    setLinkGithubError(null);
+    try {
+      const result = await linkWithPopup(currentUser, githubProvider);
+      // Cache the real GitHub login (additionalUserInfo.profile.login) so
+      // the contribution heatmap fetcher uses the correct handle rather
+      // than the display name on providerData.
+      const additional = getAdditionalUserInfo(result);
+      const login = (additional?.profile as { login?: string } | null | undefined)?.login;
+      if (login && result.user.uid) {
+        try {
+          window.localStorage.setItem(`ca:gh-login:${result.user.uid}`, login);
+        } catch {
+          /* storage disabled — fall back to displayName/userId */
+        }
+      }
+    } catch (err: unknown) {
+      const code = (err as { code?: string } | null)?.code || "";
+      let message: string;
+      if (code === "auth/credential-already-in-use" || code === "auth/email-already-in-use") {
+        message = "この GitHub アカウントは別のユーザーで既に使われています。";
+      } else if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
+        message = "";
+      } else if (code === "auth/provider-already-linked") {
+        message = "既に GitHub と連携済みです。";
+      } else {
+        message = err instanceof Error ? err.message : String(err);
+      }
+      if (message) setLinkGithubError(message);
+    } finally {
+      setIsLinkingGithub(false);
+    }
+  };
 
   const handleSettingsSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -9009,7 +9052,7 @@ function App() {
               ) : githubUsername ? (
                 <span>{githubContributionsError ? "取得に失敗しました" : "読み込み中…"}</span>
               ) : (
-                <span>GitHub でサインインすると表示されます</span>
+                <span>GitHub を連携するとコントリビューションが表示されます</span>
               )}
             </div>
             {githubContributionArc ? (
@@ -9027,8 +9070,20 @@ function App() {
                   <strong>{githubContributionArc.longestStreak}日</strong>
                 </div>
               </div>
+            ) : !githubUsername ? (
+              <button
+                type="button"
+                className="contribution-arc-github-link-btn"
+                onClick={handleLinkGithub}
+                disabled={isLinkingGithub}
+              >
+                {isLinkingGithub ? "連携中…" : "GitHub を連携"}
+              </button>
             ) : null}
           </div>
+          {!githubUsername && linkGithubError ? (
+            <p className="contribution-arc-github-link-error">{linkGithubError}</p>
+          ) : null}
           {githubContributionArc ? (
             <div className="contribution-arc-canvas contribution-arc-github-canvas">
               <div
