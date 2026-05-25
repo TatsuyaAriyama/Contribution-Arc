@@ -3691,7 +3691,7 @@ function App() {
     });
     subscribe();
     retryPendingPosts();
-    pendingRetryTimer = window.setInterval(retryPendingPosts, 30000);
+    pendingRetryTimer = window.setInterval(retryPendingPosts, 300000);
 
     return () => {
       isActive = false;
@@ -3762,7 +3762,7 @@ function App() {
 
     let handledOwnInitialSnapshot = false;
     const ownDailyQuery = query(collection(db, "dailyReports"), where("userId", "==", currentUser.uid));
-    const sharedDailyQuery = query(collection(db, "dailyReports"), orderBy("date", "desc"), limit(120));
+    const sharedDailyQuery = query(collection(db, "dailyReports"), orderBy("date", "desc"), limit(30));
     const unsubscribeOwnReports = onSnapshot(
       ownDailyQuery,
       (snapshot) => {

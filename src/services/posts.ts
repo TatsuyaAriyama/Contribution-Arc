@@ -81,7 +81,7 @@ export function subscribePostsFromCloud(
   onChange: (posts: ContributionPostRecord[]) => void,
   onError: (error: unknown) => void,
 ): Unsubscribe {
-  const postsQuery = query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(80));
+  const postsQuery = query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(40));
 
   return onSnapshot(
     postsQuery,
@@ -131,7 +131,7 @@ export function subscribePostRepliesFromCloud(
   onChange: (replies: ContributionReplyRecord[]) => void,
   onError: (error: unknown) => void,
 ): Unsubscribe {
-  const repliesQuery = query(collectionGroup(db, "replies"), orderBy("createdAt", "desc"), limit(200));
+  const repliesQuery = query(collectionGroup(db, "replies"), orderBy("createdAt", "desc"), limit(80));
 
   return onSnapshot(
     repliesQuery,
