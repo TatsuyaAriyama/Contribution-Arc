@@ -7280,11 +7280,6 @@ function App() {
         friends={sidebarFriends}
         liveActivities={liveActivities}
         onViewChange={setCurrentView}
-        onProfileOpen={() => {
-          setProfileMember(null);
-          setProfileUser(null);
-          setCurrentView("profile");
-        }}
         onFriendOpen={handleFriendOpen}
         onActivityOpen={handleLiveActivityOpen}
         isMobileOpen={isMobileNavOpen}

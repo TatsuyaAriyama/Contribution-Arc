@@ -34,7 +34,6 @@ type PremiumSidebarProps = {
   friends: FriendPreview[];
   liveActivities: LiveActivity[];
   onViewChange: (view: AppView) => void;
-  onProfileOpen: () => void;
   onFriendOpen: (friend: FriendPreview) => void;
   onActivityOpen: (activity: LiveActivity) => void;
   /** Whether the mobile drawer is currently open. Desktop ignores this. */
@@ -50,7 +49,6 @@ export function PremiumSidebar({
   friends,
   liveActivities,
   onViewChange,
-  onProfileOpen,
   onFriendOpen,
   onActivityOpen,
   isMobileOpen = false,
@@ -88,14 +86,6 @@ export function PremiumSidebar({
         >
           <span />
           みんなの記録
-        </button>
-        <button
-          type="button"
-          className={currentView === "profile" ? "active" : ""}
-          onClick={() => handleNavigate(onProfileOpen)}
-        >
-          <span />
-          プロフィール
         </button>
         <button
           type="button"
