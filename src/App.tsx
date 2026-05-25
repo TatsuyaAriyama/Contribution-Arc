@@ -2777,6 +2777,11 @@ function LoginScreen() {
 function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
+  // Forces a re-render after operations that mutate the Firebase User in
+  // place without firing onAuthStateChanged (e.g. linkWithPopup attaches a
+  // provider but keeps the same User reference, so React would otherwise
+  // never see providerData update).
+  const [authRefreshTick, setAuthRefreshTick] = useState(0);
   const [studyLogs, setStudyLogs] = useState<StudyLog[]>(defaultStudyLogs);
   const [learningItems, setLearningItems] = useState<LearningItem[]>([]);
   const [learningEditorState, setLearningEditorState] = useState<{
@@ -5591,6 +5596,10 @@ function App() {
           /* storage disabled — fall back to displayName/userId */
         }
       }
+      // linkWithPopup mutates currentUser.providerData in place without
+      // firing onAuthStateChanged, so we'd never re-render to pick up the
+      // new GitHub provider. Bump a tick to force a fresh derivation pass.
+      setAuthRefreshTick((tick) => tick + 1);
     } catch (err: unknown) {
       const code = (err as { code?: string } | null)?.code || "";
       let message: string;
