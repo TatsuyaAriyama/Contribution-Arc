@@ -11418,27 +11418,32 @@
   animation: workspace-npc-seated 6.8s ease-in-out infinite;
 }
 
-/* Drop-in entrance: actor falls from above the stage with a slight
-   rotation and settles to its base translateY(-8px) end state. The
-   element's React key includes `joinedAt`, so this animation mounts
-   fresh for both the joiner and every other subscriber when Firestore
-   broadcasts the new presence. Played once, then the actor sits still
-   (forwards) — for NPCs the breathing animation is paused for ~6s
-   while the .is-just-joined class is on the element, which is fine. */
+/* Drop-in entrance: actor falls from above the stage, lands with a
+   springy bounce, then settles to its base translateY(-8px). The
+   outer element's React key includes `joinedAt`, so this animation
+   mounts fresh for both the joiner and every other subscriber when
+   Firestore broadcasts the new presence. Duration / drop distance
+   are intentionally dramatic so the entrance is unmistakable. */
 @keyframes workspace-drop-in {
   0% {
-    transform: translate(-50%, -50%) translateY(-440px) rotate(-5deg);
+    transform: translate(-50%, -50%) translateY(-620px) rotate(-8deg) scale(0.88);
     opacity: 0;
   }
-  55% {
-    transform: translate(-50%, -50%) translateY(6px) rotate(2.5deg);
+  35% {
     opacity: 1;
   }
-  75% {
-    transform: translate(-50%, -50%) translateY(-14px) rotate(-1.5deg);
+  60% {
+    transform: translate(-50%, -50%) translateY(18px) rotate(4deg) scaleY(0.84) scaleX(1.18);
+    opacity: 1;
+  }
+  72% {
+    transform: translate(-50%, -50%) translateY(-26px) rotate(-2.5deg) scaleY(1.1) scaleX(0.92);
+  }
+  86% {
+    transform: translate(-50%, -50%) translateY(-4px) rotate(1deg) scale(1);
   }
   100% {
-    transform: translate(-50%, -50%) translateY(-8px) rotate(0deg);
+    transform: translate(-50%, -50%) translateY(-8px) rotate(0deg) scale(1);
     opacity: 1;
   }
 }
@@ -11446,25 +11451,66 @@
 @keyframes workspace-drop-in-shadow {
   0% {
     opacity: 0;
-    transform: scaleX(0.4);
+    transform: scaleX(0.25) scaleY(0.6);
   }
-  55% {
-    opacity: 0.9;
-    transform: scaleX(1.18);
+  60% {
+    opacity: 1;
+    transform: scaleX(1.35) scaleY(1.2);
+  }
+  78% {
+    opacity: 0.88;
+    transform: scaleX(0.85) scaleY(0.9);
   }
   100% {
     opacity: 1;
-    transform: scaleX(1);
+    transform: scaleX(1) scaleY(1);
+  }
+}
+
+@keyframes workspace-drop-in-ring {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.4);
+  }
+  55% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.4);
+  }
+  62% {
+    opacity: 0.7;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2.6);
   }
 }
 
 .workspace-actor.is-just-joined {
-  animation: workspace-drop-in 0.72s cubic-bezier(0.34, 1.4, 0.5, 1) both;
+  animation: workspace-drop-in 1s cubic-bezier(0.28, 1.4, 0.5, 1) both;
 }
 
 .workspace-actor.is-just-joined .actor-shadow {
   transform-origin: center;
-  animation: workspace-drop-in-shadow 0.72s cubic-bezier(0.34, 1.4, 0.5, 1) both;
+  animation: workspace-drop-in-shadow 1s cubic-bezier(0.28, 1.4, 0.5, 1) both;
+}
+
+/* Impact ring — a soft circle that briefly pulses outward from the
+   landing spot, drawn via a pseudo-element on actor-shadow so it
+   shares the ground-plane positioning. */
+.workspace-actor.is-just-joined .actor-shadow::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 60px;
+  height: 60px;
+  border: 2px solid rgba(15, 23, 42, 0.22);
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0.4);
+  opacity: 0;
+  animation: workspace-drop-in-ring 1s cubic-bezier(0.22, 0.8, 0.36, 1) both;
 }
 
 .workspace-actor.is-resting {
