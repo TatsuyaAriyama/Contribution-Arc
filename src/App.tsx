@@ -1730,10 +1730,18 @@ function canSaveProfileLocally(error: unknown) {
       : "";
   const message = error instanceof Error ? error.message : "";
 
+  // `resource-exhausted` is the Firestore daily-quota error on the Spark
+  // plan ("Quota exceeded."). Without treating it as recoverable, a new
+  // user who happens to hit the project-wide quota during onboarding
+  // gets permanently stuck on the settings form. Letting them through
+  // via localStorage means the app stays usable; the cloud sync will
+  // converge when the quota window resets.
   return (
     code.includes("permission-denied") ||
     code.includes("unavailable") ||
-    message.includes("Missing or insufficient permissions")
+    code.includes("resource-exhausted") ||
+    message.includes("Missing or insufficient permissions") ||
+    message.includes("Quota exceeded")
   );
 }
 
