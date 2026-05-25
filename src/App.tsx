@@ -7244,8 +7244,7 @@ function App() {
             </div>
           </button>
         }
-        roomOnlineCount={roomOnlineCount}
-        weeklyStudyLabel={formatStudyTimeJa(totalWeeklyMinutes)}
+        characterColor={playerCharacterColor}
         friends={sidebarFriends}
         liveActivities={liveActivities}
         onViewChange={setCurrentView}

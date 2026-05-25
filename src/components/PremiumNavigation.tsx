@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { motion } from "framer-motion";
 import { FriendGithubMini } from "./FriendGithubMini";
 
@@ -31,8 +31,8 @@ type PremiumSidebarProps = {
   logo: ReactNode;
   /** Compact player status card rendered at the top of the sidebar. */
   playerStatus: ReactNode;
-  roomOnlineCount: number;
-  weeklyStudyLabel: string;
+  /** Color used to tint the sidebar character sprite. Falls back to a green. */
+  characterColor?: string;
   friends: FriendPreview[];
   liveActivities: LiveActivity[];
   onViewChange: (view: AppView) => void;
@@ -49,8 +49,7 @@ export function PremiumSidebar({
   currentView,
   logo,
   playerStatus,
-  roomOnlineCount,
-  weeklyStudyLabel,
+  characterColor,
   friends,
   liveActivities,
   onViewChange,
@@ -204,16 +203,7 @@ export function PremiumSidebar({
         </div>
       </section>
 
-      <div className="sidebar-presence">
-        <p className="card-kicker">Live Contribution</p>
-        <strong>{roomOnlineCount} builders</strong>
-        <small>{weeklyStudyLabel} this week</small>
-        <div aria-hidden="true">
-          {Array.from({ length: 18 }, (_, index) => (
-            <span key={index} className={`heat-${(index + roomOnlineCount) % 5}`} />
-          ))}
-        </div>
-      </div>
+      <SidebarCharacterHabitat color={characterColor} />
 
       <button
         type="button"
@@ -225,5 +215,47 @@ export function PremiumSidebar({
         <span>Contribution Arc</span>
       </button>
     </aside>
+  );
+}
+
+/**
+ * Tiny sidebar habitat that renders the player's Tsuta sprite walking
+ * back and forth on a thin ground line. Pure CSS animation — the
+ * sprite traverses the available width via `left: 0 → calc(100% -
+ * spriteW)` and flips with `scaleX` at each end. Decorative only.
+ */
+function SidebarCharacterHabitat({ color }: { color?: string }) {
+  return (
+    <div
+      className="sidebar-character-habitat"
+      style={{ "--actor-color": color || "#1f6f4a" } as CSSProperties}
+      aria-hidden="true"
+    >
+      <span className="sidebar-character-ground" />
+      <span className="sidebar-character-walker">
+        <span className="actor-sprite is-tsuta sidebar-character-sprite">
+          <svg
+            className="sprite-sprout"
+            viewBox="0 0 24 30"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path
+              d="M10 30 Q 6 18 12 7"
+              stroke="#2f4a35"
+              strokeWidth="1.6"
+              fill="none"
+              strokeLinecap="round"
+            />
+            <ellipse cx="8" cy="6.5" rx="4.6" ry="3" fill="#8db090" transform="rotate(-28 8 6.5)" />
+            <ellipse cx="15" cy="5.5" rx="4.6" ry="3" fill="#8db090" transform="rotate(28 15 5.5)" />
+          </svg>
+          <span className="sprite-eye sprite-eye-left" />
+          <span className="sprite-eye sprite-eye-right" />
+          <span className="sprite-leg sprite-leg-left" />
+          <span className="sprite-leg sprite-leg-right" />
+        </span>
+      </span>
+    </div>
   );
 }
