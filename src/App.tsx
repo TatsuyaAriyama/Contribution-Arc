@@ -9787,7 +9787,7 @@ function App() {
             <header className="home-feed-head">
               <div>
                 <p className="card-kicker">Feed</p>
-                <h2>静かに流れる学びと募集</h2>
+                <h2>みんなと学びを共有・作業仲間を募集</h2>
               </div>
               <span>{sorted.length.toLocaleString()} 件</span>
             </header>
