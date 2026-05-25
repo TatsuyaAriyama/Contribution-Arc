@@ -86,6 +86,7 @@ import {
 import { fetchGithubContributions, type GithubContributions } from "./services/githubContributions";
 import { PremiumSidebar, type AppView, type FriendPreview, type LiveActivity } from "./components/PremiumNavigation";
 import { SilentWorkspaceRoom, type RoomActivityItem } from "./components/SilentWorkspaceRoom";
+import { ShareToXModal } from "./components/ShareToXModal";
 import "./App.css";
 
 declare global {
@@ -4588,6 +4589,23 @@ function App() {
   }, [githubUsername]);
   const totalWeeklyMinutes = weeklyStudyHours.reduce((sum, item) => sum + item.totalMinutes, 0);
   const todayStudyMinutes = weeklyStudyHours.find((item) => item.isToday)?.totalMinutes ?? 0;
+  // Most-time-spent subject of today's logs — used as the share-image label.
+  const todayTopSubject = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todays = studyLogs.filter((log) => {
+      const day = new Date(log.createdAt);
+      day.setHours(0, 0, 0, 0);
+      return day.getTime() === today.getTime();
+    });
+    if (todays.length === 0) return "";
+    const tally = new Map<string, number>();
+    for (const log of todays) {
+      tally.set(log.subject, (tally.get(log.subject) || 0) + log.minutes);
+    }
+    return [...tally.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+  }, [studyLogs]);
+  const [isShareToXOpen, setIsShareToXOpen] = useState(false);
   const lastStudyLog = useMemo(() => {
     if (studyLogs.length === 0) {
       return null;
@@ -7822,6 +7840,18 @@ function App() {
         );
       })() : null}
 
+      <ShareToXModal
+        open={isShareToXOpen}
+        onClose={() => setIsShareToXOpen(false)}
+        input={{
+          displayName: playerName,
+          minutes: todayStudyMinutes,
+          subject: todayTopSubject,
+          date: new Date().toISOString().slice(0, 10),
+          streak: studyStreak,
+        }}
+      />
+
       {isRecruitmentModalOpen ? (
         <div className="settings-modal-backdrop" role="presentation" onClick={handleCloseRecruitmentModal}>
           <section
@@ -8612,6 +8642,16 @@ function App() {
                   <span className="today-strip-value today-strip-recent-subject">{lastStudyLog.subject}</span>
                 </div>
               </>
+            ) : null}
+            {todayStudyMinutes > 0 ? (
+              <button
+                type="button"
+                className="today-strip-share"
+                onClick={() => setIsShareToXOpen(true)}
+                aria-label="今日の作業時間をXでシェア"
+              >
+                Xでシェア
+              </button>
             ) : null}
           </section>
 
