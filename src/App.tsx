@@ -2944,9 +2944,9 @@ function App() {
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">(() => {
-    if (typeof window === "undefined") return "dark";
+    if (typeof window === "undefined") return "light";
     const stored = window.localStorage.getItem("contribution-arc-theme");
-    return stored === "light" ? "light" : "dark";
+    return stored === "dark" ? "dark" : "light";
   });
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("idle");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -8186,7 +8186,6 @@ function App() {
                     onClick={() => setTheme("dark")}
                     aria-pressed={theme === "dark"}
                   >
-                    <span aria-hidden="true">🌙</span>
                     ダーク
                   </button>
                   <button
@@ -8195,7 +8194,6 @@ function App() {
                     onClick={() => setTheme("light")}
                     aria-pressed={theme === "light"}
                   >
-                    <span aria-hidden="true">☀️</span>
                     ライト
                   </button>
                 </div>
