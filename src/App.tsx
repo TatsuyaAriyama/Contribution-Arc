@@ -2687,6 +2687,35 @@ function App() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
+  // Per-user UI scale (browser zoom-like density control). Persisted in
+  // localStorage so the setting survives reloads. Clamped to a sensible
+  // range so we never end up with an unreadably small or huge UI.
+  const UI_SCALE_MIN = 0.8;
+  const UI_SCALE_MAX = 1.15;
+  const [uiScale, setUiScale] = useState<number>(() => {
+    if (typeof window === "undefined") return 1;
+    try {
+      const stored = window.localStorage.getItem("ca:ui-scale");
+      const parsed = stored ? parseFloat(stored) : NaN;
+      if (Number.isFinite(parsed) && parsed >= UI_SCALE_MIN && parsed <= UI_SCALE_MAX) {
+        return parsed;
+      }
+    } catch {
+      /* localStorage unavailable — fall through to default */
+    }
+    return 1;
+  });
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.style.setProperty("--ui-scale", String(uiScale));
+    try {
+      window.localStorage.setItem("ca:ui-scale", String(uiScale));
+    } catch {
+      /* localStorage unavailable — just skip persistence */
+    }
+  }, [uiScale]);
+
   useEffect(() => {
     const id = window.setInterval(() => setTopbarNow(new Date()), 30000);
     return () => window.clearInterval(id);
@@ -7020,6 +7049,47 @@ function App() {
               </span>
             </>
           ) : null}
+        </div>
+        <div className="topbar-zoom" role="group" aria-label="表示サイズ">
+          <button
+            type="button"
+            className="topbar-zoom-step"
+            onClick={() =>
+              setUiScale((v) =>
+                Math.max(UI_SCALE_MIN, Math.round((v - 0.05) * 100) / 100),
+              )
+            }
+            aria-label="表示を小さくする"
+            disabled={uiScale <= UI_SCALE_MIN + 1e-6}
+          >
+            −
+          </button>
+          <input
+            type="range"
+            className="topbar-zoom-slider"
+            min={UI_SCALE_MIN}
+            max={UI_SCALE_MAX}
+            step={0.05}
+            value={uiScale}
+            onChange={(event) => setUiScale(parseFloat(event.target.value))}
+            aria-label="表示サイズスライダー"
+          />
+          <button
+            type="button"
+            className="topbar-zoom-step"
+            onClick={() =>
+              setUiScale((v) =>
+                Math.min(UI_SCALE_MAX, Math.round((v + 0.05) * 100) / 100),
+              )
+            }
+            aria-label="表示を大きくする"
+            disabled={uiScale >= UI_SCALE_MAX - 1e-6}
+          >
+            ＋
+          </button>
+          <span className="topbar-zoom-value" aria-live="polite">
+            {Math.round(uiScale * 100)}%
+          </span>
         </div>
         <div className="user-session">
           <button

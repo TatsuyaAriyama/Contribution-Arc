@@ -13248,6 +13248,105 @@
   user-select: none;
 }
 
+/* === Topbar UI scale slider ===
+   Lets the user shrink/enlarge the whole app via `zoom` on body. The slider
+   itself stays compact so it doesn't crowd the search/notification cluster. */
+.topbar-zoom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(var(--surface-rgb), 0.6);
+  min-height: 32px;
+}
+
+.topbar-zoom-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.12s ease, opacity 0.12s ease;
+}
+
+.topbar-zoom-step:hover:not(:disabled) {
+  background: rgba(var(--ink-rgb), 0.07);
+}
+
+.topbar-zoom-step:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.topbar-zoom-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 96px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(var(--ink-rgb), 0.12);
+  cursor: pointer;
+  outline: none;
+}
+
+.topbar-zoom-slider:focus-visible {
+  box-shadow: var(--ring-focus);
+}
+
+.topbar-zoom-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--ink);
+  border: 2px solid var(--surface);
+  cursor: grab;
+}
+
+.topbar-zoom-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--ink);
+  border: 2px solid var(--surface);
+  cursor: grab;
+}
+
+.topbar-zoom-value {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 32px;
+  text-align: right;
+}
+
+@media (max-width: 720px) {
+  /* The topbar is already crowded on phones — hide the slider there.
+     Users can still zoom with the standard browser pinch/zoom. */
+  .topbar-zoom {
+    display: none;
+  }
+}
+
+/* Apply the user-controlled scale to the whole app. `zoom` reflows, unlike
+   transform: scale(), so layout stays sane at any value within the slider. */
+body {
+  zoom: var(--ui-scale, 1);
+}
+
 /* Slim down the search button */
 .premium-dashboard-header .user-search-button {
   min-height: 36px;
