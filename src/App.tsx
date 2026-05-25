@@ -8829,8 +8829,16 @@ function App() {
         <div className="contribution-arc-head">
           <div className="contribution-arc-head-title">
             <p className="card-kicker">Contribution Arc</p>
-            <strong>{Math.round(contributionArc.totalMinutes / 60)}時間 学習</strong>
-            <span>{contributionArc.activeDays}日間 · 直近13週</span>
+            <strong>
+              {Math.round(contributionArc.totalMinutes / 60)}時間 学習
+              {githubContributionArc ? ` · ${githubContributionArc.total} commit` : ""}
+            </strong>
+            <span>
+              {contributionArc.activeDays}日学習
+              {githubContributionArc ? ` · ${githubContributionArc.activeDays}日コミット` : ""}
+              {githubUsername ? ` · @${githubUsername}` : ""}
+              {" · 直近13週"}
+            </span>
           </div>
           <div className="contribution-arc-stats" aria-label="学習サマリ">
             <div>
@@ -9036,41 +9044,21 @@ function App() {
         )}
         </div>
         <div className="contribution-arc-github">
-          <div className="contribution-arc-github-head">
-            <div>
-              <p className="card-kicker">GitHub Contributions</p>
-              {githubUsername ? (
-                <strong>@{githubUsername}</strong>
-              ) : (
-                <strong>未連携</strong>
-              )}
-              {githubContributionArc ? (
-                <span>
-                  直近13週で {githubContributionArc.total} commit ·{" "}
-                  {githubContributionArc.activeDays}日アクティブ
-                </span>
-              ) : githubUsername ? (
-                <span>{githubContributionsError ? "取得に失敗しました" : "読み込み中…"}</span>
-              ) : (
-                <span>GitHub を連携するとコントリビューションが表示されます</span>
-              )}
+          {githubContributionArc ? (
+            <div className="contribution-arc-github-stats">
+              <span>
+                今週 <strong>{githubContributionArc.thisWeekCount}</strong>
+              </span>
+              <span>
+                先週 <strong>{githubContributionArc.lastWeekCount}</strong>
+              </span>
+              <span>
+                最長連続 <strong>{githubContributionArc.longestStreak}日</strong>
+              </span>
             </div>
-            {githubContributionArc ? (
-              <div className="contribution-arc-github-stats">
-                <div>
-                  <small>今週</small>
-                  <strong>{githubContributionArc.thisWeekCount}</strong>
-                </div>
-                <div>
-                  <small>先週</small>
-                  <strong>{githubContributionArc.lastWeekCount}</strong>
-                </div>
-                <div>
-                  <small>最長連続</small>
-                  <strong>{githubContributionArc.longestStreak}日</strong>
-                </div>
-              </div>
-            ) : !githubUsername ? (
+          ) : !githubUsername ? (
+            <div className="contribution-arc-github-cta">
+              <span>GitHub を連携するとコントリビューションが表示されます</span>
               <button
                 type="button"
                 className="contribution-arc-github-link-btn"
@@ -9079,8 +9067,12 @@ function App() {
               >
                 {isLinkingGithub ? "連携中…" : "GitHub を連携"}
               </button>
-            ) : null}
-          </div>
+            </div>
+          ) : (
+            <p className="contribution-arc-github-status">
+              {githubContributionsError ? "GitHub データの取得に失敗しました" : "GitHub データを読み込み中…"}
+            </p>
+          )}
           {!githubUsername && linkGithubError ? (
             <p className="contribution-arc-github-link-error">{linkGithubError}</p>
           ) : null}

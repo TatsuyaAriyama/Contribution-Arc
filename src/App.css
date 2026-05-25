@@ -12990,60 +12990,42 @@
 
 .contribution-arc-github {
   border-top: 1px solid rgba(var(--ink-rgb), 0.08);
-  padding-top: 14px;
+  padding-top: 12px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-.contribution-arc-github-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.contribution-arc-github-head > div:first-child {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.contribution-arc-github-head strong {
-  font-size: 15px;
-  font-weight: 600;
-  color: rgba(var(--ink-rgb), 0.92);
-}
-
-.contribution-arc-github-head span {
-  font-size: 12px;
-  color: rgba(var(--ink-rgb), 0.55);
+  gap: 8px;
 }
 
 .contribution-arc-github-stats {
   display: flex;
-  gap: 18px;
-}
-
-.contribution-arc-github-stats > div {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  align-items: flex-end;
-}
-
-.contribution-arc-github-stats small {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: rgba(var(--ink-rgb), 0.45);
+  justify-content: flex-end;
+  gap: 16px;
+  font-size: 12px;
+  color: rgba(var(--ink-rgb), 0.55);
 }
 
 .contribution-arc-github-stats strong {
-  font-size: 14px;
-  font-weight: 600;
-  color: rgba(var(--ink-rgb), 0.85);
+  margin-left: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(var(--ink-rgb), 0.88);
+}
+
+.contribution-arc-github-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: rgba(var(--ink-rgb), 0.55);
+}
+
+.contribution-arc-github-status {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(var(--ink-rgb), 0.5);
+  text-align: right;
 }
 
 .contribution-arc-github-canvas {
@@ -13051,8 +13033,7 @@
 }
 
 .contribution-arc-github-link-btn {
-  align-self: center;
-  padding: 8px 16px;
+  padding: 7px 14px;
   border-radius: 999px;
   border: 1px solid rgba(var(--ink-rgb), 0.12);
   background: rgba(var(--ink-rgb), 0.92);
