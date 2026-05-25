@@ -274,7 +274,7 @@ type WorkspaceRoom = {
   history: WorkspaceSessionHistory[];
 };
 
-type OnboardingStep = "idle" | "welcome" | "settings";
+type OnboardingStep = "idle" | "welcome" | "settings" | "firstPost";
 
 type RoomCreateState = "idle" | "saving" | "saved" | "offline";
 
@@ -3374,8 +3374,12 @@ function App() {
         );
         if (resolvedUserId) {
           safeSetLocalStorage(`contribution-arc-user-id-${currentUser.uid}`, resolvedUserId);
-          safeSetLocalStorage(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
-          setOnboardingStep("idle");
+          if (savedOnboardingComplete === "true") {
+            setOnboardingStep("idle");
+          } else {
+            setOnboardingStep("firstPost");
+            setCurrentView("home");
+          }
         } else {
           setOnboardingStep("welcome");
         }
@@ -5382,6 +5386,11 @@ function App() {
     void putPersistentItem("posts", nextPost).catch(logPersistError);
     setPostDraft("");
 
+    if (onboardingStep === "firstPost") {
+      safeSetLocalStorage(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
+      setOnboardingStep("idle");
+    }
+
     try {
       await savePostToCloud(db, nextPost);
       const syncedPost: ContributionPostRecord = { ...nextPost, syncStatus: "synced", syncError: "" };
@@ -6043,13 +6052,16 @@ function App() {
         console.info("Profile cloud sync skipped; saved locally.", error);
       }
 
+      const wasOnboardingSettings = onboardingStep === "settings";
       try {
         const accountScope = getAccountStorageScope(currentUser.uid, nextUserId);
         setUserId(nextUserId);
         setCustomUserName(nextDisplayName);
         safeSetLocalStorage(`contribution-arc-user-id-${currentUser.uid}`, nextUserId);
         safeSetLocalStorage(getAccountStorageKey(accountScope, "name"), nextDisplayName);
-        safeSetLocalStorage(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
+        if (!wasOnboardingSettings) {
+          safeSetLocalStorage(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
+        }
       } catch (error) {
         setSettingsError(
           error instanceof Error
@@ -6059,7 +6071,12 @@ function App() {
         return;
       }
 
-      setOnboardingStep("idle");
+      if (wasOnboardingSettings) {
+        setOnboardingStep("firstPost");
+        setCurrentView("home");
+      } else {
+        setOnboardingStep("idle");
+      }
       setIsSettingsOpen(false);
     } finally {
       // Guarantee the submit button never stays in "Saving…" regardless of
@@ -10077,7 +10094,25 @@ function App() {
               <span>{sorted.length.toLocaleString()} 件</span>
             </header>
 
-            <section className="home-feed-composer is-living" aria-label="投稿を作成">
+            {onboardingStep === "firstPost" ? (
+              <div className="onboarding-firstpost-banner" role="status" aria-live="polite">
+                <div className="onboarding-firstpost-copy">
+                  <p className="card-kicker">チュートリアル · 最後のステップ</p>
+                  <h3>「初めまして！」と投稿してみよう</h3>
+                  <p>
+                    下のフォームに <strong>初めまして！</strong> と入力して、最初の投稿を送信しましょう。投稿が完了するとチュートリアルは終わりです。
+                  </p>
+                </div>
+                <span className="onboarding-firstpost-arrow" aria-hidden="true">↓</span>
+              </div>
+            ) : null}
+
+            <section
+              className={`home-feed-composer is-living${
+                onboardingStep === "firstPost" ? " is-onboarding-highlight" : ""
+              }`}
+              aria-label="投稿を作成"
+            >
               <form className="log-composer" onSubmit={handlePostSubmit}>
                 <ProfileCharacterPreview color={playerCharacterColor} variant="simple" />
                 <div>
@@ -10087,7 +10122,11 @@ function App() {
                       setPostDraft(event.target.value);
                       setPostError("");
                     }}
-                    placeholder="What are you building tonight?"
+                    placeholder={
+                      onboardingStep === "firstPost"
+                        ? "初めまして！ と入力してみよう"
+                        : "What are you building tonight?"
+                    }
                     maxLength={280}
                     rows={1}
                   />
