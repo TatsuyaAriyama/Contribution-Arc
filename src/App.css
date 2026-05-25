@@ -3643,15 +3643,30 @@
 
 .daily-shared-list article > div {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
+  grid-template-columns: 56px minmax(0, 1fr);
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
+/* Daily-feed avatar chip — sized so the Tsuta sprite (40×40 body
+   + sprout above + legs below) is fully visible. Overflow stays
+   visible so the sprout and legs read as part of the character
+   instead of being clipped at the chip edge. */
 .daily-shared-list .profile-character-preview {
-  width: 34px;
-  height: 34px;
-  border-radius: 12px;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  overflow: visible;
+  background:
+    linear-gradient(90deg, rgba(var(--ink-rgb), 0.045) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(var(--ink-rgb), 0.04) 1px, transparent 1px),
+    radial-gradient(circle at 50% 22%, rgba(var(--surface-rgb), 0.9), transparent 1.8rem),
+    #fafafa;
+  background-size: 12px 12px, 12px 12px, auto, auto;
+}
+
+.daily-shared-list .profile-character-preview .actor-sprite {
+  transform: translateY(2px) scale(0.62);
 }
 
 .daily-shared-list strong,
