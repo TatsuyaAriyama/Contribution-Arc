@@ -8101,260 +8101,6 @@ function App() {
           animate={{ opacity: 1, y: 0 }}
           transition={SPRING_SNAPPY}
         >
-          <section className="contribution-arc-card" aria-label="Contribution Arc">
-            <div className="contribution-arc-head">
-              <div className="contribution-arc-head-title">
-                <p className="card-kicker">Contribution Arc</p>
-                <strong>{Math.round(contributionArc.totalMinutes / 60)}時間 学習</strong>
-                <span>{contributionArc.activeDays}日間 · 直近13週</span>
-              </div>
-              <div className="contribution-arc-stats" aria-label="学習サマリ">
-                <div>
-                  <small>今週</small>
-                  <strong>{formatStudyTimeJa(contributionArc.thisWeekMinutes)}</strong>
-                  <span>
-                    {contributionArc.lastWeekMinutes > 0
-                      ? `先週比 ${
-                          contributionArc.thisWeekMinutes - contributionArc.lastWeekMinutes >= 0 ? "+" : ""
-                        }${formatStudyTimeJa(
-                          Math.abs(contributionArc.thisWeekMinutes - contributionArc.lastWeekMinutes),
-                        )}`
-                      : "—"}
-                  </span>
-                </div>
-                <div>
-                  <small>最長連続</small>
-                  <strong>{contributionArc.longestStreak}日</strong>
-                  <span>記録した期間</span>
-                </div>
-                <div>
-                  <small>最も学んだ月</small>
-                  <strong>{contributionArc.topMonthLabel || "—"}</strong>
-                  <span>
-                    {contributionArc.topMonthMinutes > 0
-                      ? formatStudyTimeJa(contributionArc.topMonthMinutes)
-                      : "まだ記録なし"}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="contribution-arc-body">
-            <div className="contribution-arc-left">
-            <div className="contribution-arc-canvas">
-              <div
-                className="contribution-arc-grid"
-                role="img"
-                aria-label={`直近13週で${contributionArc.activeDays}日間学習`}
-              >
-                <div className="contribution-arc-track">
-                {contributionArcCurvePath ? (
-                  <svg
-                    className="contribution-arc-curve"
-                    viewBox="0 0 100 100"
-                    preserveAspectRatio="none"
-                    aria-hidden="true"
-                  >
-                    <path d={contributionArcCurvePath} />
-                  </svg>
-                ) : null}
-                {hoveredArcCell ? (
-                  <div
-                    className={`contribution-arc-tooltip${
-                      hoveredArcCell.placement === "below" ? " is-below" : ""
-                    }`}
-                    style={{ left: hoveredArcCell.left, top: hoveredArcCell.top }}
-                    role="tooltip"
-                  >
-                    <div className="contribution-arc-tooltip-head">
-                      <strong>
-                        {hoveredArcCell.day.date.getMonth() + 1}/{hoveredArcCell.day.date.getDate()}
-                      </strong>
-                      <span>
-                        {["日", "月", "火", "水", "木", "金", "土"][hoveredArcCell.day.date.getDay()]}曜
-                      </span>
-                    </div>
-                    {hoveredArcCell.day.minutes > 0 ? (
-                      <>
-                        <p className="contribution-arc-tooltip-total">
-                          {formatStudyTimeJa(hoveredArcCell.day.minutes)} 学習
-                        </p>
-                        <ul className="contribution-arc-tooltip-list">
-                          {hoveredArcDayLogs.slice(0, 4).map((log) => (
-                            <li key={log.id}>
-                              <i style={{ background: log.color || "rgba(31,111,74,0.7)" }} />
-                              <span>{log.subject}</span>
-                              <small>{formatStudyTime(log.minutes)}</small>
-                            </li>
-                          ))}
-                          {hoveredArcDayLogs.length > 4 ? (
-                            <li className="contribution-arc-tooltip-more">
-                              ほか {hoveredArcDayLogs.length - 4} 件
-                            </li>
-                          ) : null}
-                        </ul>
-                        <p className="contribution-arc-tooltip-exp">
-                          +{Math.round((hoveredArcCell.day.minutes / 60) * 80)} EXP
-                        </p>
-                      </>
-                    ) : (
-                      <p className="contribution-arc-tooltip-empty">学習記録なし</p>
-                    )}
-                  </div>
-                ) : null}
-                {contributionArc.weeks.map((week, wIndex) => (
-                  <div className="contribution-arc-week" key={wIndex}>
-                    <span className="contribution-arc-month">{week.monthLabel || ""}</span>
-                    {week.days.map((day, dIndex) =>
-                      day ? (
-                        <button
-                          type="button"
-                          key={dIndex}
-                          className={`contribution-arc-cell lv-${day.level}${day.isToday ? " today" : ""}${
-                            selectedArcDayKey === day.key ? " selected" : ""
-                          }`}
-                          onClick={() =>
-                            setSelectedArcDayKey((prev) => (prev === day.key ? null : day.key))
-                          }
-                          onMouseEnter={(event) => {
-                            const placement = computeArcTooltipPlacement(event.currentTarget, day);
-                            if (placement) setHoveredArcCell(placement);
-                          }}
-                          onMouseLeave={() => setHoveredArcCell(null)}
-                          onFocus={(event) => {
-                            const placement = computeArcTooltipPlacement(event.currentTarget, day);
-                            if (placement) setHoveredArcCell(placement);
-                          }}
-                          onBlur={() => setHoveredArcCell(null)}
-                          aria-label={`${day.date.getMonth() + 1}月${day.date.getDate()}日 ${
-                            day.minutes > 0 ? formatStudyTime(day.minutes) : "学習なし"
-                          }`}
-                        />
-                      ) : (
-                        <span key={dIndex} className="contribution-arc-cell empty" aria-hidden="true" />
-                      ),
-                    )}
-                  </div>
-                ))}
-                </div>
-              </div>
-            </div>
-              <div className="contribution-arc-legend" aria-hidden="true">
-                <span>少</span>
-                <i className="lv-0" />
-                <i className="lv-1" />
-                <i className="lv-2" />
-                <i className="lv-3" />
-                <i className="lv-4" />
-                <span>多</span>
-              </div>
-            </div>
-            {arcSubjectTotals.total > 0 ? (
-              <div className="contribution-arc-donut" aria-label="学習ジャンル配分">
-                <div className="contribution-arc-donut-chart">
-                  <svg viewBox="0 0 160 160" aria-hidden="true">
-                    <circle
-                      cx="80"
-                      cy="80"
-                      r="56"
-                      fill="none"
-                      stroke="rgba(17, 24, 39, 0.06)"
-                      strokeWidth="16"
-                    />
-                    {(() => {
-                      const r = 56;
-                      const circumference = 2 * Math.PI * r;
-                      let cumulative = 0;
-                      return arcSubjectTotals.items.map((item, idx) => {
-                        const dash = (item.minutes / arcSubjectTotals.total) * circumference;
-                        const seg = (
-                          <circle
-                            key={`${item.subject}-${idx}`}
-                            cx="80"
-                            cy="80"
-                            r={r}
-                            fill="none"
-                            stroke={item.color}
-                            strokeWidth="16"
-                            strokeDasharray={`${dash} ${circumference - dash}`}
-                            strokeDashoffset={-cumulative}
-                            transform="rotate(-90 80 80)"
-                          />
-                        );
-                        cumulative += dash;
-                        return seg;
-                      });
-                    })()}
-                  </svg>
-                  <div className="contribution-arc-donut-center">
-                    <small>13週合計</small>
-                    <strong>{formatStudyTimeJa(arcSubjectTotals.total)}</strong>
-                    <span>{arcSubjectTotals.items.length}ジャンル</span>
-                  </div>
-                </div>
-                <ul className="contribution-arc-donut-legend">
-                  {arcSubjectTotals.items.map((item) => {
-                    const pct = Math.round((item.minutes / arcSubjectTotals.total) * 100);
-                    return (
-                      <li key={item.subject}>
-                        <i style={{ background: item.color }} aria-hidden="true" />
-                        <strong>{item.subject}</strong>
-                        <span>{formatStudyTimeJa(item.minutes)}</span>
-                        <small>{pct}%</small>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ) : (
-              <div className="contribution-arc-donut empty">
-                <p>学習を記録するとここにジャンル分布が現れます。</p>
-              </div>
-            )}
-            </div>
-            {selectedArcDay ? (
-              <div className="contribution-arc-detail" role="region" aria-label="選択日の学習詳細">
-                <div className="contribution-arc-detail-head">
-                  <div>
-                    <strong>
-                      {selectedArcDay.date.getFullYear()}年 {selectedArcDay.date.getMonth() + 1}月
-                      {selectedArcDay.date.getDate()}日
-                    </strong>
-                    <span>
-                      {selectedArcDay.minutes > 0
-                        ? `${formatStudyTimeJa(selectedArcDay.minutes)} 学習`
-                        : "学習記録なし"}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    className="contribution-arc-detail-close"
-                    onClick={() => setSelectedArcDayKey(null)}
-                    aria-label="閉じる"
-                  >
-                    ×
-                  </button>
-                </div>
-                {selectedArcDayLogs.length > 0 ? (
-                  <ul className="contribution-arc-detail-list">
-                    {selectedArcDayLogs.map((log) => (
-                      <li key={log.id}>
-                        <span
-                          className="contribution-arc-detail-dot"
-                          style={{ background: log.color || "rgba(31,111,74,0.7)" }}
-                          aria-hidden="true"
-                        />
-                        <strong>{log.subject}</strong>
-                        <small>{formatStudyTime(log.minutes)}</small>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="contribution-arc-detail-empty">この日はまだ記録がありません。</p>
-                )}
-              </div>
-            ) : null}
-          </section>
-
           <section className="today-strip" aria-label="今日の足場">
             <div className="today-strip-stat">
               <span className="today-strip-label">今日</span>
@@ -8799,6 +8545,260 @@ function App() {
         animate={{ opacity: 1, y: 0 }}
         transition={SPRING_SNAPPY}
       >
+      <section className="contribution-arc-card" aria-label="Contribution Arc">
+        <div className="contribution-arc-head">
+          <div className="contribution-arc-head-title">
+            <p className="card-kicker">Contribution Arc</p>
+            <strong>{Math.round(contributionArc.totalMinutes / 60)}時間 学習</strong>
+            <span>{contributionArc.activeDays}日間 · 直近13週</span>
+          </div>
+          <div className="contribution-arc-stats" aria-label="学習サマリ">
+            <div>
+              <small>今週</small>
+              <strong>{formatStudyTimeJa(contributionArc.thisWeekMinutes)}</strong>
+              <span>
+                {contributionArc.lastWeekMinutes > 0
+                  ? `先週比 ${
+                      contributionArc.thisWeekMinutes - contributionArc.lastWeekMinutes >= 0 ? "+" : ""
+                    }${formatStudyTimeJa(
+                      Math.abs(contributionArc.thisWeekMinutes - contributionArc.lastWeekMinutes),
+                    )}`
+                  : "—"}
+              </span>
+            </div>
+            <div>
+              <small>最長連続</small>
+              <strong>{contributionArc.longestStreak}日</strong>
+              <span>記録した期間</span>
+            </div>
+            <div>
+              <small>最も学んだ月</small>
+              <strong>{contributionArc.topMonthLabel || "—"}</strong>
+              <span>
+                {contributionArc.topMonthMinutes > 0
+                  ? formatStudyTimeJa(contributionArc.topMonthMinutes)
+                  : "まだ記録なし"}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="contribution-arc-body">
+        <div className="contribution-arc-left">
+        <div className="contribution-arc-canvas">
+          <div
+            className="contribution-arc-grid"
+            role="img"
+            aria-label={`直近13週で${contributionArc.activeDays}日間学習`}
+          >
+            <div className="contribution-arc-track">
+            {contributionArcCurvePath ? (
+              <svg
+                className="contribution-arc-curve"
+                viewBox="0 0 100 100"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <path d={contributionArcCurvePath} />
+              </svg>
+            ) : null}
+            {hoveredArcCell ? (
+              <div
+                className={`contribution-arc-tooltip${
+                  hoveredArcCell.placement === "below" ? " is-below" : ""
+                }`}
+                style={{ left: hoveredArcCell.left, top: hoveredArcCell.top }}
+                role="tooltip"
+              >
+                <div className="contribution-arc-tooltip-head">
+                  <strong>
+                    {hoveredArcCell.day.date.getMonth() + 1}/{hoveredArcCell.day.date.getDate()}
+                  </strong>
+                  <span>
+                    {["日", "月", "火", "水", "木", "金", "土"][hoveredArcCell.day.date.getDay()]}曜
+                  </span>
+                </div>
+                {hoveredArcCell.day.minutes > 0 ? (
+                  <>
+                    <p className="contribution-arc-tooltip-total">
+                      {formatStudyTimeJa(hoveredArcCell.day.minutes)} 学習
+                    </p>
+                    <ul className="contribution-arc-tooltip-list">
+                      {hoveredArcDayLogs.slice(0, 4).map((log) => (
+                        <li key={log.id}>
+                          <i style={{ background: log.color || "rgba(31,111,74,0.7)" }} />
+                          <span>{log.subject}</span>
+                          <small>{formatStudyTime(log.minutes)}</small>
+                        </li>
+                      ))}
+                      {hoveredArcDayLogs.length > 4 ? (
+                        <li className="contribution-arc-tooltip-more">
+                          ほか {hoveredArcDayLogs.length - 4} 件
+                        </li>
+                      ) : null}
+                    </ul>
+                    <p className="contribution-arc-tooltip-exp">
+                      +{Math.round((hoveredArcCell.day.minutes / 60) * 80)} EXP
+                    </p>
+                  </>
+                ) : (
+                  <p className="contribution-arc-tooltip-empty">学習記録なし</p>
+                )}
+              </div>
+            ) : null}
+            {contributionArc.weeks.map((week, wIndex) => (
+              <div className="contribution-arc-week" key={wIndex}>
+                <span className="contribution-arc-month">{week.monthLabel || ""}</span>
+                {week.days.map((day, dIndex) =>
+                  day ? (
+                    <button
+                      type="button"
+                      key={dIndex}
+                      className={`contribution-arc-cell lv-${day.level}${day.isToday ? " today" : ""}${
+                        selectedArcDayKey === day.key ? " selected" : ""
+                      }`}
+                      onClick={() =>
+                        setSelectedArcDayKey((prev) => (prev === day.key ? null : day.key))
+                      }
+                      onMouseEnter={(event) => {
+                        const placement = computeArcTooltipPlacement(event.currentTarget, day);
+                        if (placement) setHoveredArcCell(placement);
+                      }}
+                      onMouseLeave={() => setHoveredArcCell(null)}
+                      onFocus={(event) => {
+                        const placement = computeArcTooltipPlacement(event.currentTarget, day);
+                        if (placement) setHoveredArcCell(placement);
+                      }}
+                      onBlur={() => setHoveredArcCell(null)}
+                      aria-label={`${day.date.getMonth() + 1}月${day.date.getDate()}日 ${
+                        day.minutes > 0 ? formatStudyTime(day.minutes) : "学習なし"
+                      }`}
+                    />
+                  ) : (
+                    <span key={dIndex} className="contribution-arc-cell empty" aria-hidden="true" />
+                  ),
+                )}
+              </div>
+            ))}
+            </div>
+          </div>
+        </div>
+          <div className="contribution-arc-legend" aria-hidden="true">
+            <span>少</span>
+            <i className="lv-0" />
+            <i className="lv-1" />
+            <i className="lv-2" />
+            <i className="lv-3" />
+            <i className="lv-4" />
+            <span>多</span>
+          </div>
+        </div>
+        {arcSubjectTotals.total > 0 ? (
+          <div className="contribution-arc-donut" aria-label="学習ジャンル配分">
+            <div className="contribution-arc-donut-chart">
+              <svg viewBox="0 0 160 160" aria-hidden="true">
+                <circle
+                  cx="80"
+                  cy="80"
+                  r="56"
+                  fill="none"
+                  stroke="rgba(17, 24, 39, 0.06)"
+                  strokeWidth="16"
+                />
+                {(() => {
+                  const r = 56;
+                  const circumference = 2 * Math.PI * r;
+                  let cumulative = 0;
+                  return arcSubjectTotals.items.map((item, idx) => {
+                    const dash = (item.minutes / arcSubjectTotals.total) * circumference;
+                    const seg = (
+                      <circle
+                        key={`${item.subject}-${idx}`}
+                        cx="80"
+                        cy="80"
+                        r={r}
+                        fill="none"
+                        stroke={item.color}
+                        strokeWidth="16"
+                        strokeDasharray={`${dash} ${circumference - dash}`}
+                        strokeDashoffset={-cumulative}
+                        transform="rotate(-90 80 80)"
+                      />
+                    );
+                    cumulative += dash;
+                    return seg;
+                  });
+                })()}
+              </svg>
+              <div className="contribution-arc-donut-center">
+                <small>13週合計</small>
+                <strong>{formatStudyTimeJa(arcSubjectTotals.total)}</strong>
+                <span>{arcSubjectTotals.items.length}ジャンル</span>
+              </div>
+            </div>
+            <ul className="contribution-arc-donut-legend">
+              {arcSubjectTotals.items.map((item) => {
+                const pct = Math.round((item.minutes / arcSubjectTotals.total) * 100);
+                return (
+                  <li key={item.subject}>
+                    <i style={{ background: item.color }} aria-hidden="true" />
+                    <strong>{item.subject}</strong>
+                    <span>{formatStudyTimeJa(item.minutes)}</span>
+                    <small>{pct}%</small>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : (
+          <div className="contribution-arc-donut empty">
+            <p>学習を記録するとここにジャンル分布が現れます。</p>
+          </div>
+        )}
+        </div>
+        {selectedArcDay ? (
+          <div className="contribution-arc-detail" role="region" aria-label="選択日の学習詳細">
+            <div className="contribution-arc-detail-head">
+              <div>
+                <strong>
+                  {selectedArcDay.date.getFullYear()}年 {selectedArcDay.date.getMonth() + 1}月
+                  {selectedArcDay.date.getDate()}日
+                </strong>
+                <span>
+                  {selectedArcDay.minutes > 0
+                    ? `${formatStudyTimeJa(selectedArcDay.minutes)} 学習`
+                    : "学習記録なし"}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="contribution-arc-detail-close"
+                onClick={() => setSelectedArcDayKey(null)}
+                aria-label="閉じる"
+              >
+                ×
+              </button>
+            </div>
+            {selectedArcDayLogs.length > 0 ? (
+              <ul className="contribution-arc-detail-list">
+                {selectedArcDayLogs.map((log) => (
+                  <li key={log.id}>
+                    <span
+                      className="contribution-arc-detail-dot"
+                      style={{ background: log.color || "rgba(31,111,74,0.7)" }}
+                      aria-hidden="true"
+                    />
+                    <strong>{log.subject}</strong>
+                    <small>{formatStudyTime(log.minutes)}</small>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="contribution-arc-detail-empty">この日はまだ記録がありません。</p>
+            )}
+          </div>
+        ) : null}
+      </section>
+
       <AnimatePresence initial={false}>
         {(() => {
           const hasTodayPlan = !!(todayDailyReport && todayDailyReport.plan.trim());
