@@ -14215,6 +14215,26 @@ body {
   color: var(--green);
 }
 
+/* "Selected day with zero study minutes" — gray ring stays, center
+ * reads 0時間 / 学習記録なし. Keeps the swap animation legible. */
+.contribution-arc-donut.is-empty-daily .contribution-arc-donut-center strong {
+  color: rgba(var(--ink-rgb), 0.45);
+}
+
+.contribution-arc-donut-empty-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* Origin point for the swap rotation; without this the rotate happens
+ * around the top-left corner and looks like the chart is sliding off. */
+.contribution-arc-donut {
+  transform-origin: 30% 50%;
+  will-change: transform, opacity;
+}
+
 /* === Learning Items (記録する) === */
 
 .learning-screen {
