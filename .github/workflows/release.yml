@@ -1,0 +1,70 @@
+name: Release Desktop Binaries
+
+# Triggers on a version tag push (e.g. `git tag v0.1.0 && git push --tags`).
+# Builds Mac (x64 + arm64), Windows (x64), and Linux (AppImage) binaries
+# in parallel on the matching runner OS, then attaches them to a GitHub
+# Release named after the tag so the download links on the landing page
+# can use the `/releases/latest/download/<filename>` convention.
+#
+# Note: builds are unsigned. Mac users will need to right-click → Open
+# (or `xattr -cr` the .app) to bypass Gatekeeper, and Windows users will
+# see a SmartScreen warning. Switching this on requires an Apple
+# Developer account and a Windows code-signing certificate.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            artifact_glob: 'release/*.dmg release/*.zip'
+          - os: windows-latest
+            artifact_glob: 'release/*.exe'
+          - os: ubuntu-latest
+            artifact_glob: 'release/*.AppImage'
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web bundle
+        run: npm run build
+        env:
+          ELECTRON_BUILD: true
+
+      - name: Package desktop app
+        run: npx electron-builder --publish never
+        env:
+          ELECTRON_BUILD: true
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/*.dmg
+            release/*.zip
+            release/*.exe
+            release/*.AppImage
+          fail_on_unmatched_files: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

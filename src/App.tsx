@@ -2706,6 +2706,7 @@ function LoginScreen() {
         </div>
       </section>
 
+      <div className="login-side-stack">
       <section className="card login-card">
         <p className="card-kicker">Authentication</p>
         <h2>記録を始めよう。</h2>
@@ -2797,7 +2798,62 @@ function LoginScreen() {
           </div>
         ) : null}
       </section>
+
+      <DesktopDownloadCard />
+      </div>
     </main>
+  );
+}
+
+/**
+ * Lists the latest desktop builds (Mac / Windows / Linux) on the login
+ * screen. The links point at GitHub's "latest release" convention so the
+ * URL doesn't have to be bumped when a new version is published — the
+ * release workflow (.github/workflows/release.yml) attaches the build
+ * artifacts to the tagged release automatically.
+ */
+function DesktopDownloadCard() {
+  const releasesBase = "https://github.com/TatsuyaAriyama/Contribution-Arc/releases";
+  return (
+    <section className="card download-card" aria-label="デスクトップアプリのダウンロード">
+      <p className="card-kicker">Desktop App</p>
+      <h2>デスクトップアプリで使う</h2>
+      <p className="download-card-copy">
+        ブラウザを開かなくても、独立したウィンドウで Contribution Arc を起動できます。
+      </p>
+      <div className="download-grid">
+        <a
+          className="download-button"
+          href={`${releasesBase}/latest`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <span className="download-os">macOS</span>
+          <span className="download-meta">.dmg · Intel / Apple Silicon</span>
+        </a>
+        <a
+          className="download-button"
+          href={`${releasesBase}/latest`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <span className="download-os">Windows</span>
+          <span className="download-meta">.exe · 64bit</span>
+        </a>
+        <a
+          className="download-button"
+          href={`${releasesBase}/latest`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <span className="download-os">Linux</span>
+          <span className="download-meta">.AppImage</span>
+        </a>
+      </div>
+      <p className="download-card-note">
+        ※ 現在ビルドは未署名です。Mac は初回起動時に右クリック →「開く」、Windows は SmartScreen の「詳細情報 → 実行」で起動してください。
+      </p>
+    </section>
   );
 }
 

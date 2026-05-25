@@ -1434,6 +1434,89 @@
   padding: 40px 0;
 }
 
+.login-side-stack {
+  display: grid;
+  gap: 18px;
+  align-content: center;
+  min-width: 0;
+}
+
+.download-card {
+  display: grid;
+  gap: 12px;
+}
+
+.download-card h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 850;
+  color: var(--ink);
+}
+
+.download-card-copy {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.download-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@media (max-width: 540px) {
+  .download-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.download-button {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid rgba(var(--ink-rgb), 0.1);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(124, 92, 255, 0.04), rgba(124, 92, 255, 0)),
+    var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.download-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(124, 92, 255, 0.4);
+  box-shadow: 0 14px 30px rgba(124, 92, 255, 0.16);
+}
+
+.download-os {
+  font-size: 13px;
+  font-weight: 850;
+  letter-spacing: 0.02em;
+}
+
+.download-meta {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.download-card-note {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(var(--ink-rgb), 0.04);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
 .login-shell.loading-auth {
   grid-template-columns: minmax(0, 520px);
   justify-content: center;
