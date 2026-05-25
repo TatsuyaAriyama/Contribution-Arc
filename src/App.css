@@ -3668,7 +3668,15 @@
 }
 
 .daily-shared-list .profile-character-preview .actor-sprite {
-  transform: translateY(8px) scale(0.78);
+  transform: translateY(-2px) scale(0.78);
+}
+
+/* Simple variant: no sprout/eyes, so the actor-sprite is just the
+   colored body + inner highlight + two legs. Hide the eye positioning
+   from .is-tsuta in case it leaks in, and center the body so the
+   legs sit comfortably above the chip's bottom edge. */
+.profile-character-preview.is-simple .actor-sprite.is-tsuta .sprite-eye {
+  display: none;
 }
 
 .daily-shared-list strong,
