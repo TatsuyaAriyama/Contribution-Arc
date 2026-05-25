@@ -12724,15 +12724,15 @@
 
 /* Contribution Arc heatmap (home top) */
 .contribution-arc-card {
-  padding: 20px 22px 16px;
+  padding: 16px 22px 12px;
   border: 1px solid rgba(var(--ink-rgb), 0.06);
   border-radius: 14px;
   background: var(--surface);
   box-shadow: none;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  margin-bottom: 18px;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
 .contribution-arc-head {
@@ -12857,7 +12857,7 @@
 
 .contribution-arc-track {
   display: flex;
-  gap: 5px;
+  gap: 4px;
   position: relative;
   width: max-content;
 }
@@ -12866,10 +12866,10 @@
   position: absolute;
   left: 0;
   right: 0;
-  top: 23px;
+  top: 18px;
   bottom: 0;
   width: 100%;
-  height: calc(100% - 23px);
+  height: calc(100% - 18px);
   pointer-events: none;
   z-index: 1;
 }
@@ -12899,8 +12899,8 @@
 
 .contribution-arc-week {
   display: grid;
-  grid-template-rows: 18px repeat(7, 18px);
-  gap: 5px;
+  grid-template-rows: 14px repeat(7, 14px);
+  gap: 4px;
   flex-shrink: 0;
 }
 
@@ -12908,14 +12908,14 @@
   font-size: 11px;
   color: var(--muted);
   white-space: nowrap;
-  line-height: 18px;
+  line-height: 14px;
   letter-spacing: 0;
 }
 
 .contribution-arc-cell {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
   display: block;
   border: none;
   padding: 0;
@@ -13492,8 +13492,8 @@
 
 .contribution-arc-donut-chart {
   position: relative;
-  width: 160px;
-  height: 160px;
+  width: 132px;
+  height: 132px;
   flex-shrink: 0;
 }
 
@@ -13527,7 +13527,7 @@
 }
 
 .contribution-arc-donut-center strong {
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 600;
   color: var(--ink);
   line-height: 1.1;
