@@ -3319,8 +3319,17 @@ function App() {
     const apply = () => {
       const el = spotlightRef.current;
       if (el) {
-        el.style.setProperty("--spot-x", `${nextX}px`);
-        el.style.setProperty("--spot-y", `${nextY}px`);
+        // body has `zoom: var(--ui-scale)` applied, but clientX/Y are raw
+        // viewport coords. position:fixed children of a zoomed ancestor get
+        // their `transform` translate values multiplied by that zoom, so we
+        // pre-divide here to keep the spotlight centered on the real cursor.
+        const scaleRaw = getComputedStyle(document.documentElement)
+          .getPropertyValue("--ui-scale")
+          .trim();
+        const scale = parseFloat(scaleRaw);
+        const z = Number.isFinite(scale) && scale > 0 ? scale : 1;
+        el.style.setProperty("--spot-x", `${nextX / z}px`);
+        el.style.setProperty("--spot-y", `${nextY / z}px`);
         if (!el.classList.contains("is-visible")) el.classList.add("is-visible");
       }
       frame = 0;
