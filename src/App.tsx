@@ -8717,6 +8717,245 @@ function App() {
                 {playerStatusCard(false)}
 
                 <div className="profile-panel-stack">
+                  <article className="card hours-card weekly-card is-compact">
+                    <div className="section-heading compact">
+                      <div>
+                        <p className="card-kicker">学習ログ</p>
+                        <p className="study-total">今週 {formatStudyTimeJa(totalWeeklyMinutes)}</p>
+                      </div>
+                      <span className="soft-pill">7日間</span>
+                    </div>
+
+                    <div className="bar-chart" aria-label="直近7日間の学習時間">
+                      {weeklyStudyHours.map((item, index) => {
+                        const segments = getStudySegments(item.logs, learningItems);
+
+                        return (
+                          <div
+                            className={[
+                              "bar-item",
+                              item.isToday ? "today" : "",
+                              selectedStudyDayData?.day === item.day ? "selected" : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            key={item.day}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => setSelectedStudyDay(item.day)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                setSelectedStudyDay(item.day);
+                              }
+                            }}
+                            aria-label={`${item.day}曜日の学習詳細を表示`}
+                          >
+                            <div
+                              className="bar-shell"
+                              style={
+                                {
+                                  "--bar-height": segments.length
+                                    ? `${Math.max((item.totalMinutes / maxStudyMinutes) * 100, 4)}%`
+                                    : "0%",
+                                } as CSSProperties
+                              }
+                            >
+                              {segments.length > 0 ? (
+                                <motion.div
+                                  className="bar-stack"
+                                  initial={{ scaleY: 0, opacity: 0.62, filter: "blur(2px)" }}
+                                  animate={{ scaleY: 1, opacity: 1, filter: "blur(0px)" }}
+                                  transition={{
+                                    delay: 0.12 + index * 0.075,
+                                    type: "spring",
+                                    stiffness: 92,
+                                    damping: 18,
+                                    mass: 0.82,
+                                  }}
+                                  style={{ transformOrigin: "bottom center" }}
+                                >
+                                  {segments.map((segment) => (
+                                    <motion.span
+                                      key={segment.key}
+                                      title={`${segment.subject} ${formatStudyTime(segment.minutes)}`}
+                                      initial={{ opacity: 0.58 }}
+                                      animate={{ opacity: 1 }}
+                                      transition={{
+                                        delay: 0.24 + index * 0.075,
+                                        duration: 0.42,
+                                        ease: [0.22, 1, 0.36, 1],
+                                      }}
+                                      style={
+                                        {
+                                          "--segment-ratio": `${(segment.minutes / item.totalMinutes) * 100}%`,
+                                          "--bar-color": segment.color,
+                                        } as CSSProperties
+                                      }
+                                    />
+                                  ))}
+                                </motion.div>
+                              ) : null}
+                            </div>
+                            <div className="bar-tooltip" role="tooltip">
+                              <div>
+                                <strong>
+                                  {item.dateLabel}（{item.day}）
+                                </strong>
+                                <span>{formatStudyTimeJa(item.totalMinutes)} 学習</span>
+                              </div>
+                              <p>{getSubjectSummary(item.logs)}</p>
+                              <small>+{Math.round(item.hours * 80)} EXP</small>
+                            </div>
+                            <strong>{item.day}</strong>
+                            <small>{item.totalMinutes > 0 ? formatStudyTime(item.totalMinutes) : "0h"}</small>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="progress-console">
+                      <form className="study-form" onSubmit={handleStudySubmit}>
+                        <label className="study-subject-field">
+                          <span>学習内容</span>
+                          {(() => {
+                            const activeItems = learningItems.filter((item) => !item.archived);
+                            const recentItemIds: string[] = [];
+                            for (let logIdx = studyLogs.length - 1; logIdx >= 0 && recentItemIds.length < 3; logIdx--) {
+                              const logItemId = studyLogs[logIdx].learningItemId;
+                              if (logItemId && !recentItemIds.includes(logItemId) && activeItems.some((item) => item.id === logItemId)) {
+                                recentItemIds.push(logItemId);
+                              }
+                            }
+                            const recentChips = recentItemIds
+                              .map((id) => activeItems.find((item) => item.id === id))
+                              .filter((item): item is LearningItem => Boolean(item));
+                            const trimmedSubject = studySubject.trim();
+                            const matchedItem = activeItems.find(
+                              (item) => item.name.toLowerCase() === trimmedSubject.toLowerCase(),
+                            );
+                            const showGhostHint = trimmedSubject.length > 0 && !matchedItem;
+                            return (
+                              <>
+                                {recentChips.length > 0 ? (
+                                  <div className="study-subject-chips" aria-label="最近使った学習対象">
+                                    {recentChips.map((item) => (
+                                      <button
+                                        type="button"
+                                        key={item.id}
+                                        className={matchedItem?.id === item.id ? "active" : ""}
+                                        onClick={() => {
+                                          setStudySubject(item.name);
+                                          setStudyColor(item.color);
+                                        }}
+                                        style={{ "--chip-color": item.color } as CSSProperties}
+                                      >
+                                        {item.name}
+                                      </button>
+                                    ))}
+                                  </div>
+                                ) : null}
+                                <input
+                                  value={studySubject}
+                                  onChange={(event) => setStudySubject(event.target.value)}
+                                  placeholder="Java / React / 資格勉強"
+                                  list="learning-items-datalist"
+                                />
+                                <datalist id="learning-items-datalist">
+                                  {activeItems.map((item) => (
+                                    <option key={item.id} value={item.name} />
+                                  ))}
+                                </datalist>
+                                {showGhostHint ? (
+                                  <button
+                                    type="button"
+                                    className="subject-ghost-hint"
+                                    onClick={() => openLearningEditorForCreate(trimmedSubject)}
+                                  >
+                                    + 「{trimmedSubject}」を記録に追加
+                                  </button>
+                                ) : null}
+                              </>
+                            );
+                          })()}
+                        </label>
+                        <label>
+                          <span>時間</span>
+                          <input
+                            type="number"
+                            min="0.1"
+                            step="0.1"
+                            value={studyAmount}
+                            onChange={(event) => setStudyAmount(event.target.value)}
+                          />
+                        </label>
+                        <label>
+                          <span>単位</span>
+                          <select
+                            value={studyUnit}
+                            onChange={(event) => setStudyUnit(event.target.value as "hours" | "minutes")}
+                          >
+                            <option value="hours">h</option>
+                            <option value="minutes">m</option>
+                          </select>
+                        </label>
+                        <fieldset className="study-color-field">
+                          <legend>カラー</legend>
+                          <div className="study-color-options">
+                            {studyColorOptions.map((color) => (
+                              <label key={color.value} title={color.name}>
+                                <input
+                                  type="radio"
+                                  name="study-color"
+                                  value={color.value}
+                                  checked={studyColor === color.value}
+                                  onChange={(event) => setStudyColor(event.target.value)}
+                                />
+                                <span style={{ background: color.value }} />
+                              </label>
+                            ))}
+                          </div>
+                        </fieldset>
+                        <button type="submit">記録 +EXP</button>
+                      </form>
+
+                      {selectedStudyDayData ? (
+                        <div className="study-day-detail" aria-label={`${selectedStudyDayData.day}曜日の学習詳細`}>
+                          <div className="study-day-detail-head">
+                            <div>
+                              <p className="card-kicker">{selectedStudyDayData.dateLabel}（{selectedStudyDayData.day}）</p>
+                              <strong>{formatStudyTimeJa(selectedStudyDayData.totalMinutes)} 学習</strong>
+                            </div>
+                            <span>+{Math.round(selectedStudyDayData.hours * 80)} EXP</span>
+                          </div>
+
+                          {selectedStudyDayData.logs.length > 0 ? (
+                            <div className="study-day-detail-list">
+                              {selectedStudyDayData.logs.map((log) => (
+                                <article key={log.id}>
+                                  <span>
+                                    <i style={{ background: log.color || studyColorOptions[0].value }} />
+                                    <b>{log.subject}</b>
+                                  </span>
+                                  <strong>{formatStudyTime(log.minutes)}</strong>
+                                  <button
+                                    type="button"
+                                    className="study-log-delete-button"
+                                    onClick={() => handleStudyLogDelete(log.id)}
+                                    aria-label={`${log.subject}の学習記録を削除`}
+                                  >
+                                    削除
+                                  </button>
+                                </article>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="study-day-empty">この日の学習記録はまだありません</p>
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
+                  </article>
                   <article className="card character-color-card">
                     <div className="character-color-head">
                       <div>
@@ -9684,245 +9923,6 @@ function App() {
           </article>
         </div>
 
-        <article className="card hours-card weekly-card">
-          <div className="section-heading compact">
-            <div>
-              <p className="card-kicker">学習ログ</p>
-              <p className="study-total">今週 {formatStudyTimeJa(totalWeeklyMinutes)}</p>
-            </div>
-            <span className="soft-pill">7日間</span>
-          </div>
-
-          <div className="bar-chart" aria-label="直近7日間の学習時間">
-            {weeklyStudyHours.map((item, index) => {
-              const segments = getStudySegments(item.logs, learningItems);
-
-              return (
-                <div
-                  className={[
-                    "bar-item",
-                    item.isToday ? "today" : "",
-                    selectedStudyDayData?.day === item.day ? "selected" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  key={item.day}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setSelectedStudyDay(item.day)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      setSelectedStudyDay(item.day);
-                    }
-                  }}
-                  aria-label={`${item.day}曜日の学習詳細を表示`}
-                >
-                  <div
-                    className="bar-shell"
-                    style={
-                      {
-                        "--bar-height": segments.length
-                          ? `${Math.max((item.totalMinutes / maxStudyMinutes) * 100, 4)}%`
-                          : "0%",
-                      } as CSSProperties
-                    }
-                  >
-                    {segments.length > 0 ? (
-                      <motion.div
-                        className="bar-stack"
-                        initial={{ scaleY: 0, opacity: 0.62, filter: "blur(2px)" }}
-                        animate={{ scaleY: 1, opacity: 1, filter: "blur(0px)" }}
-                        transition={{
-                          delay: 0.12 + index * 0.075,
-                          type: "spring",
-                          stiffness: 92,
-                          damping: 18,
-                          mass: 0.82,
-                        }}
-                        style={{ transformOrigin: "bottom center" }}
-                      >
-                        {segments.map((segment) => (
-                          <motion.span
-                            key={segment.key}
-                            title={`${segment.subject} ${formatStudyTime(segment.minutes)}`}
-                            initial={{ opacity: 0.58 }}
-                            animate={{ opacity: 1 }}
-                            transition={{
-                              delay: 0.24 + index * 0.075,
-                              duration: 0.42,
-                              ease: [0.22, 1, 0.36, 1],
-                            }}
-                            style={
-                              {
-                                "--segment-ratio": `${(segment.minutes / item.totalMinutes) * 100}%`,
-                                "--bar-color": segment.color,
-                              } as CSSProperties
-                            }
-                          />
-                        ))}
-                      </motion.div>
-                    ) : null}
-                  </div>
-                  <div className="bar-tooltip" role="tooltip">
-                    <div>
-                      <strong>
-                        {item.dateLabel}（{item.day}）
-                      </strong>
-                      <span>{formatStudyTimeJa(item.totalMinutes)} 学習</span>
-                    </div>
-                    <p>{getSubjectSummary(item.logs)}</p>
-                    <small>+{Math.round(item.hours * 80)} EXP</small>
-                  </div>
-                  <strong>{item.day}</strong>
-                  <small>{item.totalMinutes > 0 ? formatStudyTime(item.totalMinutes) : "0h"}</small>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="progress-console">
-            <form className="study-form" onSubmit={handleStudySubmit}>
-              <label className="study-subject-field">
-                <span>学習内容</span>
-                {(() => {
-                  const activeItems = learningItems.filter((item) => !item.archived);
-                  const recentItemIds: string[] = [];
-                  for (let logIdx = studyLogs.length - 1; logIdx >= 0 && recentItemIds.length < 3; logIdx--) {
-                    const logItemId = studyLogs[logIdx].learningItemId;
-                    if (logItemId && !recentItemIds.includes(logItemId) && activeItems.some((item) => item.id === logItemId)) {
-                      recentItemIds.push(logItemId);
-                    }
-                  }
-                  const recentChips = recentItemIds
-                    .map((id) => activeItems.find((item) => item.id === id))
-                    .filter((item): item is LearningItem => Boolean(item));
-                  const trimmedSubject = studySubject.trim();
-                  const matchedItem = activeItems.find(
-                    (item) => item.name.toLowerCase() === trimmedSubject.toLowerCase(),
-                  );
-                  const showGhostHint = trimmedSubject.length > 0 && !matchedItem;
-                  return (
-                    <>
-                      {recentChips.length > 0 ? (
-                        <div className="study-subject-chips" aria-label="最近使った学習対象">
-                          {recentChips.map((item) => (
-                            <button
-                              type="button"
-                              key={item.id}
-                              className={matchedItem?.id === item.id ? "active" : ""}
-                              onClick={() => {
-                                setStudySubject(item.name);
-                                setStudyColor(item.color);
-                              }}
-                              style={{ "--chip-color": item.color } as CSSProperties}
-                            >
-                              {item.name}
-                            </button>
-                          ))}
-                        </div>
-                      ) : null}
-                      <input
-                        value={studySubject}
-                        onChange={(event) => setStudySubject(event.target.value)}
-                        placeholder="Java / React / 資格勉強"
-                        list="learning-items-datalist"
-                      />
-                      <datalist id="learning-items-datalist">
-                        {activeItems.map((item) => (
-                          <option key={item.id} value={item.name} />
-                        ))}
-                      </datalist>
-                      {showGhostHint ? (
-                        <button
-                          type="button"
-                          className="subject-ghost-hint"
-                          onClick={() => openLearningEditorForCreate(trimmedSubject)}
-                        >
-                          + 「{trimmedSubject}」を記録に追加
-                        </button>
-                      ) : null}
-                    </>
-                  );
-                })()}
-              </label>
-              <label>
-                <span>時間</span>
-                <input
-                  type="number"
-                  min="0.1"
-                  step="0.1"
-                  value={studyAmount}
-                  onChange={(event) => setStudyAmount(event.target.value)}
-                />
-              </label>
-              <label>
-                <span>単位</span>
-                <select
-                  value={studyUnit}
-                  onChange={(event) => setStudyUnit(event.target.value as "hours" | "minutes")}
-                >
-                  <option value="hours">h</option>
-                  <option value="minutes">m</option>
-                </select>
-              </label>
-              <fieldset className="study-color-field">
-                <legend>カラー</legend>
-                <div className="study-color-options">
-                  {studyColorOptions.map((color) => (
-                    <label key={color.value} title={color.name}>
-                      <input
-                        type="radio"
-                        name="study-color"
-                        value={color.value}
-                        checked={studyColor === color.value}
-                        onChange={(event) => setStudyColor(event.target.value)}
-                      />
-                      <span style={{ background: color.value }} />
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-              <button type="submit">記録 +EXP</button>
-            </form>
-
-            {selectedStudyDayData ? (
-              <div className="study-day-detail" aria-label={`${selectedStudyDayData.day}曜日の学習詳細`}>
-                <div className="study-day-detail-head">
-                  <div>
-                    <p className="card-kicker">{selectedStudyDayData.dateLabel}（{selectedStudyDayData.day}）</p>
-                    <strong>{formatStudyTimeJa(selectedStudyDayData.totalMinutes)} 学習</strong>
-                  </div>
-                  <span>+{Math.round(selectedStudyDayData.hours * 80)} EXP</span>
-                </div>
-
-                {selectedStudyDayData.logs.length > 0 ? (
-                  <div className="study-day-detail-list">
-                    {selectedStudyDayData.logs.map((log) => (
-                      <article key={log.id}>
-                        <span>
-                          <i style={{ background: log.color || studyColorOptions[0].value }} />
-                          <b>{log.subject}</b>
-                        </span>
-                        <strong>{formatStudyTime(log.minutes)}</strong>
-                        <button
-                          type="button"
-                          className="study-log-delete-button"
-                          onClick={() => handleStudyLogDelete(log.id)}
-                          aria-label={`${log.subject}の学習記録を削除`}
-                        >
-                          削除
-                        </button>
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="study-day-empty">この日の学習記録はまだありません</p>
-                )}
-              </div>
-            ) : null}
-          </div>
-        </article>
       </section>
 
       </motion.div>

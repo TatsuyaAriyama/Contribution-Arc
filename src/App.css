@@ -5040,6 +5040,169 @@
   font-weight: 800;
 }
 
+/* Compact variant — used inside the profile panel stack.
+   Keeps the bar chart's visual rhythm (rounded tops, stacked color
+   segments, today/hover glow) while shrinking heights and padding so the
+   card sits comfortably alongside the determination / character cards. */
+.weekly-card.is-compact {
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+}
+
+.weekly-card.is-compact .section-heading {
+  margin-bottom: 0;
+  gap: 6px;
+}
+
+.weekly-card.is-compact .section-heading h2 {
+  margin-top: 2px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.weekly-card.is-compact .card-kicker {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.weekly-card.is-compact .study-total {
+  margin-top: 2px;
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: -0.005em;
+}
+
+.weekly-card.is-compact .soft-pill {
+  padding: 4px 10px;
+  font-size: 10px;
+}
+
+.weekly-card.is-compact .bar-chart {
+  gap: 6px;
+  padding: 10px 2px 0;
+}
+
+.weekly-card.is-compact .bar-shell {
+  height: clamp(120px, 18vh, 160px);
+  border-radius: 12px 12px 8px 8px;
+}
+
+.weekly-card.is-compact .bar-item {
+  gap: 5px;
+}
+
+.weekly-card.is-compact .bar-item > strong {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.weekly-card.is-compact .bar-item > small {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.weekly-card.is-compact .bar-stack {
+  min-height: 6px;
+}
+
+.weekly-card.is-compact .bar-tooltip {
+  width: min(180px, calc(100vw - 32px));
+  padding: 9px 10px;
+  font-size: 11px;
+  border-radius: 12px;
+}
+
+.weekly-card.is-compact .progress-console {
+  gap: 8px;
+}
+
+.weekly-card.is-compact .study-form {
+  grid-template-columns: minmax(0, 1fr) 64px 56px;
+  grid-auto-rows: auto;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 14px;
+}
+
+.weekly-card.is-compact .study-form .study-subject-field {
+  grid-column: 1 / -1;
+}
+
+.weekly-card.is-compact .study-form .study-color-field {
+  grid-column: 1 / span 2;
+}
+
+.weekly-card.is-compact .study-form button {
+  grid-column: 3 / 4;
+  align-self: end;
+  height: 30px;
+  border-radius: 10px;
+  font-size: 10px;
+}
+
+.weekly-card.is-compact .study-form label span,
+.weekly-card.is-compact .study-color-field legend {
+  font-size: 9px;
+  letter-spacing: 0.07em;
+}
+
+.weekly-card.is-compact .study-form input,
+.weekly-card.is-compact .study-form select {
+  height: 30px;
+  border-radius: 9px;
+  font-size: 12px;
+  padding: 0 9px;
+}
+
+.weekly-card.is-compact .study-color-options {
+  height: 30px;
+  padding: 0 6px;
+  border-radius: 10px;
+  gap: 3px;
+}
+
+.weekly-card.is-compact .study-color-options span {
+  width: 14px;
+  height: 14px;
+  border-radius: 5px;
+  border-width: 2px;
+}
+
+.weekly-card.is-compact .study-subject-chips {
+  gap: 4px;
+}
+
+.weekly-card.is-compact .study-subject-chips button {
+  padding: 3px 8px;
+  font-size: 10px;
+}
+
+.weekly-card.is-compact .study-day-detail {
+  gap: 8px;
+  padding: 10px;
+  border-radius: 14px;
+}
+
+.weekly-card.is-compact .study-day-detail-head strong {
+  font-size: 13px;
+}
+
+.weekly-card.is-compact .study-day-detail-head > span {
+  font-size: 10px;
+  padding: 3px 9px;
+}
+
+.weekly-card.is-compact .study-day-detail-list article {
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+.weekly-card.is-compact .study-day-detail-list strong {
+  font-size: 11px;
+}
+
 .silent-workspace {
   margin-top: 12px;
   padding: clamp(16px, 2.6vw, 24px);
