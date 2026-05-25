@@ -3652,6 +3652,20 @@ function App() {
           });
         },
         (error) => {
+          const errorCode = (error as { code?: string })?.code ?? "";
+          const errorMsg = (error as { message?: string })?.message ?? "";
+          const isQuota =
+            errorCode.includes("resource-exhausted") ||
+            errorMsg.includes("Quota exceeded");
+
+          if (isQuota) {
+            // Quota exhausted: retrying immediately just wastes the
+            // remaining quota. Stop here and show a helpful message.
+            console.info("Post realtime sync paused — quota exhausted.");
+            setPostError("本日の利用上限に達しました。しばらく経ってから再読み込みしてください。");
+            return;
+          }
+
           console.info("Post realtime sync errored — will reconnect.", error);
           setPostError("ログの読み込みを待っています。");
           if (unsubscribe) {
