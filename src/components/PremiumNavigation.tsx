@@ -83,6 +83,14 @@ export function PremiumSidebar({
         </button>
         <button
           type="button"
+          className={currentView === "logs" ? "active" : ""}
+          onClick={() => handleNavigate(() => onViewChange("logs"))}
+        >
+          <span />
+          みんなの記録
+        </button>
+        <button
+          type="button"
           className={currentView === "profile" ? "active" : ""}
           onClick={() => handleNavigate(onProfileOpen)}
         >
@@ -104,14 +112,6 @@ export function PremiumSidebar({
         >
           <span />
           記録する
-        </button>
-        <button
-          type="button"
-          className={currentView === "logs" ? "active" : ""}
-          onClick={() => handleNavigate(() => onViewChange("logs"))}
-        >
-          <span />
-          ログ
         </button>
         <button
           type="button"

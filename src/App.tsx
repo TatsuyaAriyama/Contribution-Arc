@@ -7002,7 +7002,7 @@ function App() {
         <div className="profile-log-head">
           <p className="card-kicker">{title}</p>
           <button type="button" onClick={() => setCurrentView("logs")}>
-            ログを見る
+            みんなの記録を見る
           </button>
         </div>
         {recentPosts.length > 0 ? (
