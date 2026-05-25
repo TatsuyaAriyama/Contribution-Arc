@@ -81,6 +81,7 @@ import {
   putPersistentItems,
   readPersistentItems,
 } from "./services/persistentCache";
+import { fetchGithubContributions, type GithubContributions } from "./services/githubContributions";
 import { PremiumSidebar, type AppView, type FriendPreview, type LiveActivity } from "./components/PremiumNavigation";
 import { SilentWorkspaceRoom, type RoomActivityItem } from "./components/SilentWorkspaceRoom";
 import "./App.css";
@@ -935,6 +936,101 @@ function getContributionArc(logs: StudyLog[]): {
     longestStreak,
     topMonthLabel,
     topMonthMinutes,
+  };
+}
+
+/**
+ * GitHub-equivalent of getContributionArc — same 13-week, today-anchored
+ * grid so the heatmap renders identically to the study one. Takes the raw
+ * day list from the jogruber endpoint and projects it onto the same date
+ * scaffold the study heatmap already walks.
+ */
+type GithubArcDay = {
+  date: Date;
+  key: string;
+  count: number;
+  level: 0 | 1 | 2 | 3 | 4;
+  isToday: boolean;
+};
+type GithubArcWeek = { monthLabel: string | null; days: (GithubArcDay | null)[] };
+
+function getGithubContributionArc(days: { date: string; count: number; level: 0 | 1 | 2 | 3 | 4 }[]): {
+  weeks: GithubArcWeek[];
+  total: number;
+  activeDays: number;
+  thisWeekCount: number;
+  lastWeekCount: number;
+  longestStreak: number;
+} {
+  const WEEKS = CONTRIBUTION_ARC_WEEKS;
+  // The endpoint uses ISO "YYYY-MM-DD" keys, but our grid walks with
+  // (year, month, day) integers — normalize the lookup map to the same
+  // composite key the grid uses so lookups are O(1).
+  const byKey = new Map<string, { count: number; level: 0 | 1 | 2 | 3 | 4 }>();
+  for (const d of days) {
+    const [y, m, dd] = d.date.split("-").map((n) => Number(n));
+    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(dd)) continue;
+    byKey.set(`${y}-${m - 1}-${dd}`, { count: d.count, level: d.level });
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayWeekday = today.getDay();
+  const todayKey = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+  const startOffset = (WEEKS - 1) * 7 + todayWeekday;
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - startOffset);
+
+  let total = 0;
+  let activeDays = 0;
+  let lastMonthShown = -1;
+  let currentStreak = 0;
+  let longestStreak = 0;
+  const weeks: GithubArcWeek[] = [];
+  const weekCounts: number[] = [];
+
+  for (let w = 0; w < WEEKS; w++) {
+    const cells: (GithubArcDay | null)[] = [];
+    let weekTotal = 0;
+    let monthLabel: string | null = null;
+    for (let d = 0; d < 7; d++) {
+      const cellDate = new Date(startDate);
+      cellDate.setDate(startDate.getDate() + w * 7 + d);
+      if (cellDate > today) {
+        cells.push(null);
+        continue;
+      }
+      const key = `${cellDate.getFullYear()}-${cellDate.getMonth()}-${cellDate.getDate()}`;
+      const hit = byKey.get(key);
+      const count = hit?.count || 0;
+      const level = hit?.level ?? 0;
+      if (count > 0) {
+        total += count;
+        activeDays += 1;
+        currentStreak += 1;
+        if (currentStreak > longestStreak) longestStreak = currentStreak;
+      } else {
+        currentStreak = 0;
+      }
+      weekTotal += count;
+      cells.push({ date: cellDate, key, count, level, isToday: key === todayKey });
+    }
+    weekCounts.push(weekTotal);
+    const firstCell = cells.find((c) => c !== null) as GithubArcDay | undefined;
+    if (firstCell && firstCell.date.getMonth() !== lastMonthShown && firstCell.date.getDate() <= 7) {
+      monthLabel = `${firstCell.date.getMonth() + 1}月`;
+      lastMonthShown = firstCell.date.getMonth();
+    }
+    weeks.push({ monthLabel, days: cells });
+  }
+
+  return {
+    weeks,
+    total,
+    activeDays,
+    thisWeekCount: weekCounts[weekCounts.length - 1] || 0,
+    lastWeekCount: weekCounts[weekCounts.length - 2] || 0,
+    longestStreak,
   };
 }
 
@@ -4190,6 +4286,15 @@ function App() {
   const weeklyStudyHours = getWeeklyStudyHours(studyLogs);
   const maxStudyMinutes = Math.max(1, ...weeklyStudyHours.map((item) => item.totalMinutes));
   const contributionArc = useMemo(() => getContributionArc(studyLogs), [studyLogs]);
+  // GitHub contribution heatmap state. Fetched lazily from the public
+  // jogruber endpoint once we know the user's GitHub username. Errors are
+  // kept around so the UI can render a non-fatal "取得できませんでした" hint.
+  const [githubContributions, setGithubContributions] = useState<GithubContributions | null>(null);
+  const [githubContributionsError, setGithubContributionsError] = useState<string | null>(null);
+  const githubContributionArc = useMemo(
+    () => (githubContributions ? getGithubContributionArc(githubContributions.days) : null),
+    [githubContributions],
+  );
   const studyLogsByDay = useMemo(() => {
     const map = new Map<string, StudyLog[]>();
     for (const log of studyLogs) {
@@ -4328,6 +4433,26 @@ function App() {
   const githubProviderInfo = currentUser?.providerData.find((provider) => provider.providerId === "github.com");
   const githubId = githubProviderInfo?.uid || "";
   const githubUsername = githubProviderInfo?.displayName || (githubProviderInfo ? userId : "");
+  // Lazy-fetch the user's public GitHub contribution grid as soon as we
+  // know which login to query. The service handles its own 1h cache so
+  // re-mounts (route changes, hot reloads) don't re-hit the endpoint.
+  useEffect(() => {
+    if (!githubUsername) return;
+    let cancelled = false;
+    setGithubContributionsError(null);
+    fetchGithubContributions(githubUsername)
+      .then((data) => {
+        if (!cancelled) setGithubContributions(data);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        const message = err instanceof Error ? err.message : String(err);
+        setGithubContributionsError(message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [githubUsername]);
   const totalWeeklyMinutes = weeklyStudyHours.reduce((sum, item) => sum + item.totalMinutes, 0);
   const todayStudyMinutes = weeklyStudyHours.find((item) => item.isToday)?.totalMinutes ?? 0;
   const lastStudyLog = useMemo(() => {
@@ -8833,6 +8958,77 @@ function App() {
             <p>学習を記録するとここにジャンル分布が現れます。</p>
           </div>
         )}
+        </div>
+        <div className="contribution-arc-github">
+          <div className="contribution-arc-github-head">
+            <div>
+              <p className="card-kicker">GitHub Contributions</p>
+              {githubUsername ? (
+                <strong>@{githubUsername}</strong>
+              ) : (
+                <strong>未連携</strong>
+              )}
+              {githubContributionArc ? (
+                <span>
+                  直近13週で {githubContributionArc.total} commit ·{" "}
+                  {githubContributionArc.activeDays}日アクティブ
+                </span>
+              ) : githubUsername ? (
+                <span>{githubContributionsError ? "取得に失敗しました" : "読み込み中…"}</span>
+              ) : (
+                <span>GitHub でサインインすると表示されます</span>
+              )}
+            </div>
+            {githubContributionArc ? (
+              <div className="contribution-arc-github-stats">
+                <div>
+                  <small>今週</small>
+                  <strong>{githubContributionArc.thisWeekCount}</strong>
+                </div>
+                <div>
+                  <small>先週</small>
+                  <strong>{githubContributionArc.lastWeekCount}</strong>
+                </div>
+                <div>
+                  <small>最長連続</small>
+                  <strong>{githubContributionArc.longestStreak}日</strong>
+                </div>
+              </div>
+            ) : null}
+          </div>
+          {githubContributionArc ? (
+            <div className="contribution-arc-canvas contribution-arc-github-canvas">
+              <div
+                className="contribution-arc-grid"
+                role="img"
+                aria-label={`GitHub: 直近13週で${githubContributionArc.activeDays}日コミット`}
+              >
+                <div className="contribution-arc-track">
+                  {githubContributionArc.weeks.map((week, wIndex) => (
+                    <div className="contribution-arc-week" key={wIndex}>
+                      <span className="contribution-arc-month">{week.monthLabel || ""}</span>
+                      {week.days.map((day, dIndex) =>
+                        day ? (
+                          <span
+                            key={dIndex}
+                            className={`contribution-arc-cell lv-${day.level}${day.isToday ? " today" : ""}`}
+                            title={`${day.date.getMonth() + 1}/${day.date.getDate()} · ${day.count} commit`}
+                            aria-label={`${day.date.getMonth() + 1}月${day.date.getDate()}日 ${day.count} commit`}
+                          />
+                        ) : (
+                          <span
+                            key={dIndex}
+                            className="contribution-arc-cell empty"
+                            aria-hidden="true"
+                          />
+                        ),
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
         {selectedArcDay ? (
           <div className="contribution-arc-detail" role="region" aria-label="選択日の学習詳細">
