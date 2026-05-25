@@ -5743,104 +5743,136 @@ function App() {
     setIsSavingSettings(true);
     setSettingsError("");
 
-    try {
-      const userRef = doc(db, "users", currentUser.uid);
-
-      await runTransaction(db, async (transaction) => {
-        const userSnapshot = await transaction.get(userRef);
-        const currentProfile = userSnapshot.exists()
-          ? normalizeUserProfile(currentUser.uid, userSnapshot.data() as Partial<UserProfile>)
-          : normalizeUserProfile(currentUser.uid, {
-              displayName: playerName,
-              following,
-              photoURL: playerAvatar,
-              determination,
-              characterColor: playerCharacterColor,
-            });
-        const currentUserId = currentProfile.userId || userId;
-        const nextUserIdRef = doc(db, "usernames", nextUserId);
-        const nextUserIdSnapshot = await transaction.get(nextUserIdRef);
-
-        if (nextUserIdSnapshot.exists() && nextUserIdSnapshot.data().uid !== currentUser.uid) {
-          throw new Error("このユーザーIDはすでに使われています。");
-        }
-
-        if (currentUserId && currentUserId !== nextUserId) {
-          transaction.delete(doc(db, "usernames", currentUserId));
-        }
-
-        transaction.set(nextUserIdRef, {
-          uid: currentUser.uid,
-          updatedAt: serverTimestamp(),
-        });
-        transaction.set(
-          userRef,
-          {
-            uid: currentUser.uid,
-            userId: nextUserId,
-            displayName: nextDisplayName,
-            email: currentUser.email || "",
-            avatarUrl: getSerializableAvatar(playerAvatar || currentUser.photoURL || ""),
-            photoURL: getSerializableAvatar(playerAvatar || currentUser.photoURL || ""),
-            determination,
-            characterColor: playerCharacterColor,
-            searchName: nextDisplayName.toLowerCase(),
-            following: currentProfile.following,
-            followers: currentProfile.followers,
-            level: levelState.level,
-            effortExp,
-            outputExp,
-            currentTitle,
-            currentCharacter: characterOptions[0].id,
-            streak: studyStreak,
-            unlockedCharacters: [characterOptions[0].id],
-            characterExp: effortExp,
-            githubId,
-            githubUsername,
-            contributionCount: outputStats.contributions,
-            lastSyncedAt: new Date().toISOString(),
-            ...(userSnapshot.exists() ? {} : { createdAt: serverTimestamp() }),
-            updatedAt: serverTimestamp(),
+    // Wrap the Firestore transaction with a hard timeout. `runTransaction`
+    // has no built-in deadline — on a flaky network it can sit pending
+    // indefinitely, which was leaving the onboarding "Saving…" button
+    // stuck forever. Tag the timeout error with `code: "unavailable"` so
+    // it routes through the existing `canSaveProfileLocally` fallback and
+    // the user can still complete onboarding via localStorage.
+    const withTimeout = <T,>(promise: Promise<T>, ms: number) =>
+      new Promise<T>((resolve, reject) => {
+        const timer = window.setTimeout(() => {
+          const err = new Error("Firestore profile sync timed out");
+          (err as Error & { code?: string }).code = "unavailable";
+          reject(err);
+        }, ms);
+        promise.then(
+          (value) => {
+            window.clearTimeout(timer);
+            resolve(value);
           },
-          { merge: true },
+          (error) => {
+            window.clearTimeout(timer);
+            reject(error);
+          },
         );
       });
-    } catch (error) {
-      if (!canSaveProfileLocally(error)) {
-        setSettingsError(
-          getFirestoreErrorMessage(
-            error,
-            "ユーザーIDを保存できませんでした。",
-            "ユーザーIDの保存権限が有効になっていません。少し時間を置いて再度お試しください。",
-          ),
+
+    try {
+      try {
+        const userRef = doc(db, "users", currentUser.uid);
+
+        await withTimeout(
+          runTransaction(db, async (transaction) => {
+            const userSnapshot = await transaction.get(userRef);
+            const currentProfile = userSnapshot.exists()
+              ? normalizeUserProfile(currentUser.uid, userSnapshot.data() as Partial<UserProfile>)
+              : normalizeUserProfile(currentUser.uid, {
+                  displayName: playerName,
+                  following,
+                  photoURL: playerAvatar,
+                  determination,
+                  characterColor: playerCharacterColor,
+                });
+            const currentUserId = currentProfile.userId || userId;
+            const nextUserIdRef = doc(db, "usernames", nextUserId);
+            const nextUserIdSnapshot = await transaction.get(nextUserIdRef);
+
+            if (nextUserIdSnapshot.exists() && nextUserIdSnapshot.data().uid !== currentUser.uid) {
+              throw new Error("このユーザーIDはすでに使われています。");
+            }
+
+            if (currentUserId && currentUserId !== nextUserId) {
+              transaction.delete(doc(db, "usernames", currentUserId));
+            }
+
+            transaction.set(nextUserIdRef, {
+              uid: currentUser.uid,
+              updatedAt: serverTimestamp(),
+            });
+            transaction.set(
+              userRef,
+              {
+                uid: currentUser.uid,
+                userId: nextUserId,
+                displayName: nextDisplayName,
+                email: currentUser.email || "",
+                avatarUrl: getSerializableAvatar(playerAvatar || currentUser.photoURL || ""),
+                photoURL: getSerializableAvatar(playerAvatar || currentUser.photoURL || ""),
+                determination,
+                characterColor: playerCharacterColor,
+                searchName: nextDisplayName.toLowerCase(),
+                following: currentProfile.following,
+                followers: currentProfile.followers,
+                level: levelState.level,
+                effortExp,
+                outputExp,
+                currentTitle,
+                currentCharacter: characterOptions[0].id,
+                streak: studyStreak,
+                unlockedCharacters: [characterOptions[0].id],
+                characterExp: effortExp,
+                githubId,
+                githubUsername,
+                contributionCount: outputStats.contributions,
+                lastSyncedAt: new Date().toISOString(),
+                ...(userSnapshot.exists() ? {} : { createdAt: serverTimestamp() }),
+                updatedAt: serverTimestamp(),
+              },
+              { merge: true },
+            );
+          }),
+          12000,
         );
-        setIsSavingSettings(false);
+      } catch (error) {
+        if (!canSaveProfileLocally(error)) {
+          setSettingsError(
+            getFirestoreErrorMessage(
+              error,
+              "ユーザーIDを保存できませんでした。",
+              "ユーザーIDの保存権限が有効になっていません。少し時間を置いて再度お試しください。",
+            ),
+          );
+          return;
+        }
+
+        console.info("Profile cloud sync skipped; saved locally.", error);
+      }
+
+      try {
+        const accountScope = getAccountStorageScope(currentUser.uid, nextUserId);
+        setUserId(nextUserId);
+        setCustomUserName(nextDisplayName);
+        safeSetLocalStorage(`contribution-arc-user-id-${currentUser.uid}`, nextUserId);
+        safeSetLocalStorage(getAccountStorageKey(accountScope, "name"), nextDisplayName);
+        safeSetLocalStorage(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
+      } catch (error) {
+        setSettingsError(
+          error instanceof Error
+            ? error.message
+            : "プロフィールをこのブラウザに保存できませんでした。ブラウザのストレージ設定を確認してください。",
+        );
         return;
       }
 
-      console.info("Profile cloud sync skipped; saved locally.", error);
-    }
-
-    try {
-      const accountScope = getAccountStorageScope(currentUser.uid, nextUserId);
-      setUserId(nextUserId);
-      setCustomUserName(nextDisplayName);
-      safeSetLocalStorage(`contribution-arc-user-id-${currentUser.uid}`, nextUserId);
-      safeSetLocalStorage(getAccountStorageKey(accountScope, "name"), nextDisplayName);
-      safeSetLocalStorage(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
-    } catch (error) {
-      setSettingsError(
-        error instanceof Error
-          ? error.message
-          : "プロフィールをこのブラウザに保存できませんでした。ブラウザのストレージ設定を確認してください。",
-      );
+      setOnboardingStep("idle");
+      setIsSettingsOpen(false);
+    } finally {
+      // Guarantee the submit button never stays in "Saving…" regardless of
+      // which exit path (success, validation error, sync failure, timeout)
+      // we took above.
       setIsSavingSettings(false);
-      return;
     }
-
-    setIsSavingSettings(false);
-    setOnboardingStep("idle");
-    setIsSettingsOpen(false);
   };
 
   const handleUserSearch = async (event?: FormEvent<HTMLFormElement>) => {
