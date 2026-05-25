@@ -8509,7 +8509,95 @@
 
   .silent-workspace {
     margin-top: 0;
-    padding: 14px;
+    padding: 12px;
+    border-radius: 20px;
+  }
+
+  .workspace-2d-card .workspace-layout {
+    gap: 12px;
+  }
+
+  .workspace-2d-card .room-list {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .room-create-form {
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .room-create-form input {
+    height: 38px;
+  }
+
+  .room-create-form button {
+    min-height: 38px;
+  }
+
+  .room-card {
+    padding: 10px 12px;
+    border-radius: 14px;
+  }
+
+  .room-card-name {
+    font-size: 13px;
+  }
+
+  .room-card-meta {
+    font-size: 11px;
+  }
+
+  .room-card-footer {
+    padding-top: 6px;
+  }
+
+  .workspace-2d-main {
+    padding: 8px;
+    gap: 8px;
+    border-radius: 16px;
+  }
+
+  .workspace-session-panel {
+    padding: 12px;
+    gap: 10px;
+    justify-content: flex-start;
+    border-radius: 14px;
+  }
+
+  .workspace-session-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .workspace-session-title {
+    width: 100%;
+  }
+
+  .workspace-session-title strong {
+    white-space: normal;
+    font-size: 16px;
+    line-height: 1.35;
+  }
+
+  .workspace-session-actions {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .workspace-session-actions .room-join-button,
+  .workspace-session-actions .room-leave-button,
+  .workspace-session-actions .room-recruit-button {
+    flex: 1 1 auto;
+    min-height: 38px;
+    padding: 0 12px;
+  }
+
+  .workspace-active-recruitment {
+    flex-wrap: wrap;
   }
 
   .workspace-heading {

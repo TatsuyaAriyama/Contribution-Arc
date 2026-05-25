@@ -9924,19 +9924,6 @@ function App() {
                         };
                       })()}
                     />
-                    <section className="room-log-strip" aria-label="このRoomの最近の投稿">
-                      <div>
-                        <p className="card-kicker">Room Logs</p>
-                        <button type="button" onClick={() => setCurrentView("logs")}>
-                          ログを開く
-                        </button>
-                      </div>
-                      {selectedRoomPosts.length > 0 ? (
-                        <div>{selectedRoomPosts.slice(0, 3).map((post) => postCard(post, "compact"))}</div>
-                      ) : (
-                        <span>このRoomの投稿はまだありません。</span>
-                      )}
-                    </section>
                   </>
                 ) : (
                   <div className="room-empty-detail">
