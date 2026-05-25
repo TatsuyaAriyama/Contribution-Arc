@@ -3578,57 +3578,112 @@ function App() {
       return;
     }
 
+    // The posts feed is a global stream — every signed-in user reads every
+    // user's posts (the Firestore rule is `allow read: if signedIn()`) so
+    // the timeline can show contributions from everyone. The two failure
+    // modes that previously broke this in practice:
+    //
+    // 1. `onSnapshot` errors (transient network, `resource-exhausted` on
+    //    Spark quota, brief permission hiccup right after sign-in) used to
+    //    leave the listener dead. The user was then stuck on local cache,
+    //    which only contains their own pending posts + the last synced
+    //    snapshot → it *looked* like other users' posts were missing.
+    // 2. Posts saved while writes were failing were marked `pending` and
+    //    only retried on next page load — quota recovery during a session
+    //    didn't help.
+    //
+    // We now reconnect the subscription with exponential backoff and also
+    // run a periodic retry pass for any locally-pending posts so a stale
+    // session naturally heals once the cloud is reachable again.
     let isActive = true;
-    void readDurablePosts(currentUser.uid).then((cachedPosts) => {
-      if (!isActive || cachedPosts.length === 0) {
-        return;
-      }
+    let unsubscribe: (() => void) | null = null;
+    let reconnectTimer: number | null = null;
+    let pendingRetryTimer: number | null = null;
+    let reconnectAttempt = 0;
+    const uid = currentUser.uid;
 
-      setPosts(cachedPosts);
+    const retryPendingPosts = () => {
+      void readDurablePosts(uid).then((cachedPosts) => {
+        if (!isActive) return;
+        cachedPosts
+          .filter((post) => post.userId === uid && post.syncStatus === "pending")
+          .forEach((post) => {
+            void savePostToCloud(db, post)
+              .then(() => {
+                const syncedPost: ContributionPostRecord = {
+                  ...post,
+                  syncStatus: "synced",
+                  syncError: "",
+                };
+                void putPersistentItem("posts", syncedPost);
+                if (isActive) {
+                  setPosts((items) =>
+                    mergePosts([syncedPost, ...items.filter((item) => item.id !== post.id)]),
+                  );
+                }
+              })
+              .catch((error) => {
+                console.info("Pending post sync skipped.", error);
+              });
+          });
+      });
+    };
 
-      cachedPosts
-        .filter((post) => post.userId === currentUser.uid && post.syncStatus === "pending")
-        .forEach((post) => {
-          void savePostToCloud(db, post)
-            .then(() => {
-              const syncedPost: ContributionPostRecord = { ...post, syncStatus: "synced", syncError: "" };
-              void putPersistentItem("posts", syncedPost);
-              if (isActive) {
-                setPosts((items) => mergePosts([syncedPost, ...items.filter((item) => item.id !== post.id)]));
-              }
-            })
-            .catch((error) => {
-              console.info("Pending post sync skipped.", error);
-            });
-        });
-    });
-
-    const unsubscribe = subscribePostsFromCloud(
-      db,
-      (cloudPosts) => {
-        const syncedPosts = cloudPosts.map((post) => ({ ...post, syncStatus: "synced" as const, syncError: "" }));
-        void readDurablePosts(currentUser.uid).then((cachedPosts) => {
-          if (!isActive) {
-            return;
+    const subscribe = () => {
+      unsubscribe = subscribePostsFromCloud(
+        db,
+        (cloudPosts) => {
+          // Successful payload → reset backoff and clear any "waiting" hint.
+          reconnectAttempt = 0;
+          setPostError("");
+          const syncedPosts = cloudPosts.map((post) => ({
+            ...post,
+            syncStatus: "synced" as const,
+            syncError: "",
+          }));
+          void readDurablePosts(uid).then((cachedPosts) => {
+            if (!isActive) return;
+            const pendingPosts = cachedPosts.filter(
+              (post) => post.userId === uid && post.syncStatus === "pending",
+            );
+            const nextPosts = mergePosts([...syncedPosts, ...pendingPosts]);
+            setPosts(nextPosts);
+            void persistPosts(nextPosts);
+          });
+        },
+        (error) => {
+          console.info("Post realtime sync errored — will reconnect.", error);
+          setPostError("ログの読み込みを待っています。");
+          if (unsubscribe) {
+            unsubscribe();
+            unsubscribe = null;
           }
+          // Exponential backoff: 2s, 4s, 8s, … capped at 60s.
+          const delayMs = Math.min(60000, 2000 * 2 ** reconnectAttempt);
+          reconnectAttempt += 1;
+          reconnectTimer = window.setTimeout(() => {
+            reconnectTimer = null;
+            if (isActive) subscribe();
+          }, delayMs);
+        },
+      );
+    };
 
-          const pendingPosts = cachedPosts.filter(
-            (post) => post.userId === currentUser.uid && post.syncStatus === "pending",
-          );
-          const nextPosts = mergePosts([...syncedPosts, ...pendingPosts]);
-          setPosts(nextPosts);
-          void persistPosts(nextPosts);
-        });
-      },
-      (error) => {
-        console.info("Post realtime sync skipped.", error);
-        setPostError("ログの読み込みを待っています。");
-      },
-    );
+    // Seed UI from local cache, kick off the realtime subscription, and
+    // try to sync any locally-pending posts immediately.
+    void readDurablePosts(uid).then((cachedPosts) => {
+      if (!isActive || cachedPosts.length === 0) return;
+      setPosts(cachedPosts);
+    });
+    subscribe();
+    retryPendingPosts();
+    pendingRetryTimer = window.setInterval(retryPendingPosts, 30000);
 
     return () => {
       isActive = false;
-      unsubscribe();
+      if (unsubscribe) unsubscribe();
+      if (reconnectTimer) window.clearTimeout(reconnectTimer);
+      if (pendingRetryTimer) window.clearInterval(pendingRetryTimer);
     };
   }, [currentUser, isWorkspaceLoaded]);
 
@@ -8720,6 +8775,404 @@ function App() {
           animate={{ opacity: 1, y: 0 }}
           transition={SPRING_SNAPPY}
         >
+      <section className="contribution-arc-card" aria-label="Contribution Arc">
+        <div className="contribution-arc-head">
+          <div className="contribution-arc-head-title">
+            <p className="card-kicker">Contribution Arc</p>
+            <strong>
+              {Math.round(contributionArc.totalMinutes / 60)}時間 学習
+              {githubContributionArc ? ` · ${githubContributionArc.total} commit` : ""}
+            </strong>
+            <span>
+              {contributionArc.activeDays}日学習
+              {githubContributionArc ? ` · ${githubContributionArc.activeDays}日コミット` : ""}
+              {githubUsername ? ` · @${githubUsername}` : ""}
+              {" · 直近13週"}
+            </span>
+          </div>
+          <div className="contribution-arc-stats" aria-label="学習サマリ">
+            <div>
+              <small>今週</small>
+              <strong>{formatStudyTimeJa(contributionArc.thisWeekMinutes)}</strong>
+              <span>
+                {contributionArc.lastWeekMinutes > 0
+                  ? `先週比 ${
+                      contributionArc.thisWeekMinutes - contributionArc.lastWeekMinutes >= 0 ? "+" : ""
+                    }${formatStudyTimeJa(
+                      Math.abs(contributionArc.thisWeekMinutes - contributionArc.lastWeekMinutes),
+                    )}`
+                  : "—"}
+              </span>
+            </div>
+            <div>
+              <small>最長連続</small>
+              <strong>{contributionArc.longestStreak}日</strong>
+              <span>記録した期間</span>
+            </div>
+            <div>
+              <small>最も学んだ月</small>
+              <strong>{contributionArc.topMonthLabel || "—"}</strong>
+              <span>
+                {contributionArc.topMonthMinutes > 0
+                  ? formatStudyTimeJa(contributionArc.topMonthMinutes)
+                  : "まだ記録なし"}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="contribution-arc-body">
+        <div className="contribution-arc-left">
+        <div className="contribution-arc-canvas">
+          <div
+            className="contribution-arc-grid"
+            role="img"
+            aria-label={`直近13週: ${contributionArc.activeDays}日学習${
+              githubContributionArc ? ` · ${githubContributionArc.activeDays}日コミット` : ""
+            }`}
+          >
+            <div className="contribution-arc-track">
+            {contributionArcCurvePath ? (
+              <svg
+                className="contribution-arc-curve"
+                viewBox="0 0 100 100"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <path d={contributionArcCurvePath} />
+              </svg>
+            ) : null}
+            {hoveredArcCell ? (() => {
+              const hoveredCommits = githubByKey.get(hoveredArcCell.day.key)?.count ?? 0;
+              const hasStudy = hoveredArcCell.day.minutes > 0;
+              const hasCommits = hoveredCommits > 0;
+              return (
+                <div
+                  className={`contribution-arc-tooltip${
+                    hoveredArcCell.placement === "below" ? " is-below" : ""
+                  }`}
+                  style={{ left: hoveredArcCell.left, top: hoveredArcCell.top }}
+                  role="tooltip"
+                >
+                  <div className="contribution-arc-tooltip-head">
+                    <strong>
+                      {hoveredArcCell.day.date.getMonth() + 1}/{hoveredArcCell.day.date.getDate()}
+                    </strong>
+                    <span>
+                      {["日", "月", "火", "水", "木", "金", "土"][hoveredArcCell.day.date.getDay()]}曜
+                    </span>
+                  </div>
+                  {hasStudy ? (
+                    <>
+                      <p className="contribution-arc-tooltip-total">
+                        {formatStudyTimeJa(hoveredArcCell.day.minutes)} 学習
+                      </p>
+                      <ul className="contribution-arc-tooltip-list">
+                        {hoveredArcDayLogs.slice(0, 4).map((log) => (
+                          <li key={log.id}>
+                            <i style={{ background: log.color || "rgba(31,111,74,0.7)" }} />
+                            <span>{log.subject}</span>
+                            <small>{formatStudyTime(log.minutes)}</small>
+                          </li>
+                        ))}
+                        {hoveredArcDayLogs.length > 4 ? (
+                          <li className="contribution-arc-tooltip-more">
+                            ほか {hoveredArcDayLogs.length - 4} 件
+                          </li>
+                        ) : null}
+                      </ul>
+                    </>
+                  ) : null}
+                  {hasCommits ? (
+                    <p className="contribution-arc-tooltip-commits">
+                      <i aria-hidden="true" />
+                      <span>{hoveredCommits} commit</span>
+                    </p>
+                  ) : null}
+                  {hasStudy ? (
+                    <p className="contribution-arc-tooltip-exp">
+                      +{Math.round((hoveredArcCell.day.minutes / 60) * 80)} EXP
+                    </p>
+                  ) : null}
+                  {!hasStudy && !hasCommits ? (
+                    <p className="contribution-arc-tooltip-empty">記録なし</p>
+                  ) : null}
+                </div>
+              );
+            })() : null}
+            {contributionArc.weeks.map((week, wIndex) => (
+              <div className="contribution-arc-week" key={wIndex}>
+                <span className="contribution-arc-month">{week.monthLabel || ""}</span>
+                {week.days.map((day, dIndex) => {
+                  if (!day) {
+                    return (
+                      <span key={dIndex} className="contribution-arc-cell empty" aria-hidden="true" />
+                    );
+                  }
+                  // Blend study + commit activity: pick the higher level so a
+                  // day that's heavy on either axis still shows up in the grid.
+                  // Falls back to study-only when GitHub isn't linked.
+                  const githubInfo = githubByKey.get(day.key);
+                  const githubLevel = githubInfo?.level ?? 0;
+                  const commitCount = githubInfo?.count ?? 0;
+                  const displayLevel = (
+                    githubContributionArc ? Math.max(day.level, githubLevel) : day.level
+                  ) as 0 | 1 | 2 | 3 | 4;
+                  const ariaParts: string[] = [];
+                  if (day.minutes > 0) ariaParts.push(formatStudyTime(day.minutes));
+                  if (commitCount > 0) ariaParts.push(`${commitCount}コミット`);
+                  const ariaLabel = `${day.date.getMonth() + 1}月${day.date.getDate()}日 ${
+                    ariaParts.length > 0 ? ariaParts.join(" / ") : "記録なし"
+                  }`;
+                  return (
+                    <button
+                      type="button"
+                      key={dIndex}
+                      className={`contribution-arc-cell lv-${displayLevel}${day.isToday ? " today" : ""}${
+                        selectedArcDayKey === day.key ? " selected" : ""
+                      }`}
+                      onClick={() =>
+                        setSelectedArcDayKey((prev) => (prev === day.key ? null : day.key))
+                      }
+                      onMouseEnter={(event) => {
+                        const placement = computeArcTooltipPlacement(event.currentTarget, day);
+                        if (placement) setHoveredArcCell(placement);
+                      }}
+                      onMouseLeave={() => setHoveredArcCell(null)}
+                      onFocus={(event) => {
+                        const placement = computeArcTooltipPlacement(event.currentTarget, day);
+                        if (placement) setHoveredArcCell(placement);
+                      }}
+                      onBlur={() => setHoveredArcCell(null)}
+                      aria-label={ariaLabel}
+                    />
+                  );
+                })}
+              </div>
+            ))}
+            </div>
+          </div>
+        </div>
+          <div className="contribution-arc-legend" aria-hidden="true">
+            <span>少</span>
+            <i className="lv-0" />
+            <i className="lv-1" />
+            <i className="lv-2" />
+            <i className="lv-3" />
+            <i className="lv-4" />
+            <span>多</span>
+          </div>
+          {githubContributionArc ? (
+            <div className="contribution-arc-github-stats">
+              <span>
+                今週 <strong>{githubContributionArc.thisWeekCount}</strong> commit
+              </span>
+              <span>
+                先週 <strong>{githubContributionArc.lastWeekCount}</strong>
+              </span>
+              <span>
+                最長 <strong>{githubContributionArc.longestStreak}日</strong>
+              </span>
+            </div>
+          ) : !githubUsername ? (
+            <div className="contribution-arc-github-cta">
+              <span>GitHub を連携すると commit もこの図に重なります</span>
+              <button
+                type="button"
+                className="contribution-arc-github-link-btn"
+                onClick={handleLinkGithub}
+                disabled={isLinkingGithub}
+              >
+                {isLinkingGithub ? "連携中…" : "GitHub を連携"}
+              </button>
+              {linkGithubError ? (
+                <p className="contribution-arc-github-link-error">{linkGithubError}</p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="contribution-arc-github-status">
+              {githubContributionsError ? "GitHub データの取得に失敗しました" : "GitHub データを読み込み中…"}
+            </p>
+          )}
+        </div>
+        {/* AnimatePresence drives the swap animation when the selected day
+            (or 13-week mode) changes. mode="wait" so the outgoing card
+            finishes its exit before the new one fades/rotates in. The
+            key is the only thing distinguishing each state for
+            framer-motion. */}
+        <AnimatePresence mode="wait" initial={false}>
+          {donutDisplay.total > 0 ? (
+            <motion.div
+              key={donutDisplay.key}
+              className={`contribution-arc-donut${donutDisplay.isDaily ? " is-daily" : ""}`}
+              aria-label={donutDisplay.isDaily ? `${donutDisplay.label}の学習ジャンル配分` : "13週の学習ジャンル配分"}
+              initial={{ opacity: 0, scale: 0.94, rotate: -6 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              exit={{ opacity: 0, scale: 0.94, rotate: 6 }}
+              transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <div className="contribution-arc-donut-chart">
+                <svg viewBox="0 0 160 160" aria-hidden="true">
+                  <circle
+                    cx="80"
+                    cy="80"
+                    r="56"
+                    fill="none"
+                    stroke="rgba(17, 24, 39, 0.06)"
+                    strokeWidth="16"
+                  />
+                  {(() => {
+                    const r = 56;
+                    const circumference = 2 * Math.PI * r;
+                    let cumulative = 0;
+                    return donutDisplay.items.map((item, idx) => {
+                      const dash = (item.minutes / donutDisplay.total) * circumference;
+                      const seg = (
+                        <circle
+                          key={`${item.subject}-${idx}`}
+                          cx="80"
+                          cy="80"
+                          r={r}
+                          fill="none"
+                          stroke={item.color}
+                          strokeWidth="16"
+                          strokeDasharray={`${dash} ${circumference - dash}`}
+                          strokeDashoffset={-cumulative}
+                          transform="rotate(-90 80 80)"
+                        />
+                      );
+                      cumulative += dash;
+                      return seg;
+                    });
+                  })()}
+                </svg>
+                <div className="contribution-arc-donut-center">
+                  <small>{donutDisplay.label}</small>
+                  <strong>{formatStudyTimeJa(donutDisplay.total)}</strong>
+                  <span>{donutDisplay.items.length}ジャンル</span>
+                </div>
+              </div>
+              <ul className="contribution-arc-donut-legend">
+                {donutDisplay.items.map((item) => {
+                  const pct = Math.round((item.minutes / donutDisplay.total) * 100);
+                  return (
+                    <li key={item.subject}>
+                      <i style={{ background: item.color }} aria-hidden="true" />
+                      <strong>{item.subject}</strong>
+                      <span>{formatStudyTimeJa(item.minutes)}</span>
+                      <small>{pct}%</small>
+                    </li>
+                  );
+                })}
+              </ul>
+              {donutDisplay.isDaily ? (
+                <button
+                  type="button"
+                  className="contribution-arc-donut-reset"
+                  onClick={() => setSelectedArcDayKey(null)}
+                  aria-label="13週合計に戻す"
+                >
+                  13週合計に戻す
+                </button>
+              ) : null}
+            </motion.div>
+          ) : donutDisplay.isDaily ? (
+            // Selected-day-but-empty: keep the donut shape (gray ring +
+            // "0時間 / 記録なし") so the swap animation reads as "the
+            // chart changed to this day", not "the chart disappeared".
+            <motion.div
+              key={donutDisplay.key}
+              className="contribution-arc-donut is-daily is-empty-daily"
+              aria-label={`${donutDisplay.label}の学習ジャンル配分（記録なし）`}
+              initial={{ opacity: 0, scale: 0.94, rotate: -6 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              exit={{ opacity: 0, scale: 0.94, rotate: 6 }}
+              transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <div className="contribution-arc-donut-chart">
+                <svg viewBox="0 0 160 160" aria-hidden="true">
+                  <circle
+                    cx="80"
+                    cy="80"
+                    r="56"
+                    fill="none"
+                    stroke="rgba(17, 24, 39, 0.06)"
+                    strokeWidth="16"
+                  />
+                </svg>
+                <div className="contribution-arc-donut-center">
+                  <small>{donutDisplay.label}</small>
+                  <strong>0時間</strong>
+                  <span>学習記録なし</span>
+                </div>
+              </div>
+              <p className="contribution-arc-donut-empty-note">この日はまだ学習が記録されていません。</p>
+              <button
+                type="button"
+                className="contribution-arc-donut-reset"
+                onClick={() => setSelectedArcDayKey(null)}
+                aria-label="13週合計に戻す"
+              >
+                13週合計に戻す
+              </button>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="empty-all"
+              className="contribution-arc-donut empty"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+            >
+              <p>学習を記録するとここにジャンル分布が現れます。</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        </div>
+        {selectedArcDay ? (
+          <div className="contribution-arc-detail" role="region" aria-label="選択日の学習詳細">
+            <div className="contribution-arc-detail-head">
+              <div>
+                <strong>
+                  {selectedArcDay.date.getFullYear()}年 {selectedArcDay.date.getMonth() + 1}月
+                  {selectedArcDay.date.getDate()}日
+                </strong>
+                <span>
+                  {selectedArcDay.minutes > 0
+                    ? `${formatStudyTimeJa(selectedArcDay.minutes)} 学習`
+                    : "学習記録なし"}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="contribution-arc-detail-close"
+                onClick={() => setSelectedArcDayKey(null)}
+                aria-label="閉じる"
+              >
+                ×
+              </button>
+            </div>
+            {selectedArcDayLogs.length > 0 ? (
+              <ul className="contribution-arc-detail-list">
+                {selectedArcDayLogs.map((log) => (
+                  <li key={log.id}>
+                    <span
+                      className="contribution-arc-detail-dot"
+                      style={{ background: log.color || "rgba(31,111,74,0.7)" }}
+                      aria-hidden="true"
+                    />
+                    <strong>{log.subject}</strong>
+                    <small>{formatStudyTime(log.minutes)}</small>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="contribution-arc-detail-empty">この日はまだ記録がありません。</p>
+            )}
+          </div>
+        ) : null}
+      </section>
+
           <section className="today-strip" aria-label="今日の足場">
             <div className="today-strip-stat">
               <span className="today-strip-label">今日</span>
@@ -9413,404 +9866,6 @@ function App() {
         animate={{ opacity: 1, y: 0 }}
         transition={SPRING_SNAPPY}
       >
-      <section className="contribution-arc-card" aria-label="Contribution Arc">
-        <div className="contribution-arc-head">
-          <div className="contribution-arc-head-title">
-            <p className="card-kicker">Contribution Arc</p>
-            <strong>
-              {Math.round(contributionArc.totalMinutes / 60)}時間 学習
-              {githubContributionArc ? ` · ${githubContributionArc.total} commit` : ""}
-            </strong>
-            <span>
-              {contributionArc.activeDays}日学習
-              {githubContributionArc ? ` · ${githubContributionArc.activeDays}日コミット` : ""}
-              {githubUsername ? ` · @${githubUsername}` : ""}
-              {" · 直近13週"}
-            </span>
-          </div>
-          <div className="contribution-arc-stats" aria-label="学習サマリ">
-            <div>
-              <small>今週</small>
-              <strong>{formatStudyTimeJa(contributionArc.thisWeekMinutes)}</strong>
-              <span>
-                {contributionArc.lastWeekMinutes > 0
-                  ? `先週比 ${
-                      contributionArc.thisWeekMinutes - contributionArc.lastWeekMinutes >= 0 ? "+" : ""
-                    }${formatStudyTimeJa(
-                      Math.abs(contributionArc.thisWeekMinutes - contributionArc.lastWeekMinutes),
-                    )}`
-                  : "—"}
-              </span>
-            </div>
-            <div>
-              <small>最長連続</small>
-              <strong>{contributionArc.longestStreak}日</strong>
-              <span>記録した期間</span>
-            </div>
-            <div>
-              <small>最も学んだ月</small>
-              <strong>{contributionArc.topMonthLabel || "—"}</strong>
-              <span>
-                {contributionArc.topMonthMinutes > 0
-                  ? formatStudyTimeJa(contributionArc.topMonthMinutes)
-                  : "まだ記録なし"}
-              </span>
-            </div>
-          </div>
-        </div>
-        <div className="contribution-arc-body">
-        <div className="contribution-arc-left">
-        <div className="contribution-arc-canvas">
-          <div
-            className="contribution-arc-grid"
-            role="img"
-            aria-label={`直近13週: ${contributionArc.activeDays}日学習${
-              githubContributionArc ? ` · ${githubContributionArc.activeDays}日コミット` : ""
-            }`}
-          >
-            <div className="contribution-arc-track">
-            {contributionArcCurvePath ? (
-              <svg
-                className="contribution-arc-curve"
-                viewBox="0 0 100 100"
-                preserveAspectRatio="none"
-                aria-hidden="true"
-              >
-                <path d={contributionArcCurvePath} />
-              </svg>
-            ) : null}
-            {hoveredArcCell ? (() => {
-              const hoveredCommits = githubByKey.get(hoveredArcCell.day.key)?.count ?? 0;
-              const hasStudy = hoveredArcCell.day.minutes > 0;
-              const hasCommits = hoveredCommits > 0;
-              return (
-                <div
-                  className={`contribution-arc-tooltip${
-                    hoveredArcCell.placement === "below" ? " is-below" : ""
-                  }`}
-                  style={{ left: hoveredArcCell.left, top: hoveredArcCell.top }}
-                  role="tooltip"
-                >
-                  <div className="contribution-arc-tooltip-head">
-                    <strong>
-                      {hoveredArcCell.day.date.getMonth() + 1}/{hoveredArcCell.day.date.getDate()}
-                    </strong>
-                    <span>
-                      {["日", "月", "火", "水", "木", "金", "土"][hoveredArcCell.day.date.getDay()]}曜
-                    </span>
-                  </div>
-                  {hasStudy ? (
-                    <>
-                      <p className="contribution-arc-tooltip-total">
-                        {formatStudyTimeJa(hoveredArcCell.day.minutes)} 学習
-                      </p>
-                      <ul className="contribution-arc-tooltip-list">
-                        {hoveredArcDayLogs.slice(0, 4).map((log) => (
-                          <li key={log.id}>
-                            <i style={{ background: log.color || "rgba(31,111,74,0.7)" }} />
-                            <span>{log.subject}</span>
-                            <small>{formatStudyTime(log.minutes)}</small>
-                          </li>
-                        ))}
-                        {hoveredArcDayLogs.length > 4 ? (
-                          <li className="contribution-arc-tooltip-more">
-                            ほか {hoveredArcDayLogs.length - 4} 件
-                          </li>
-                        ) : null}
-                      </ul>
-                    </>
-                  ) : null}
-                  {hasCommits ? (
-                    <p className="contribution-arc-tooltip-commits">
-                      <i aria-hidden="true" />
-                      <span>{hoveredCommits} commit</span>
-                    </p>
-                  ) : null}
-                  {hasStudy ? (
-                    <p className="contribution-arc-tooltip-exp">
-                      +{Math.round((hoveredArcCell.day.minutes / 60) * 80)} EXP
-                    </p>
-                  ) : null}
-                  {!hasStudy && !hasCommits ? (
-                    <p className="contribution-arc-tooltip-empty">記録なし</p>
-                  ) : null}
-                </div>
-              );
-            })() : null}
-            {contributionArc.weeks.map((week, wIndex) => (
-              <div className="contribution-arc-week" key={wIndex}>
-                <span className="contribution-arc-month">{week.monthLabel || ""}</span>
-                {week.days.map((day, dIndex) => {
-                  if (!day) {
-                    return (
-                      <span key={dIndex} className="contribution-arc-cell empty" aria-hidden="true" />
-                    );
-                  }
-                  // Blend study + commit activity: pick the higher level so a
-                  // day that's heavy on either axis still shows up in the grid.
-                  // Falls back to study-only when GitHub isn't linked.
-                  const githubInfo = githubByKey.get(day.key);
-                  const githubLevel = githubInfo?.level ?? 0;
-                  const commitCount = githubInfo?.count ?? 0;
-                  const displayLevel = (
-                    githubContributionArc ? Math.max(day.level, githubLevel) : day.level
-                  ) as 0 | 1 | 2 | 3 | 4;
-                  const ariaParts: string[] = [];
-                  if (day.minutes > 0) ariaParts.push(formatStudyTime(day.minutes));
-                  if (commitCount > 0) ariaParts.push(`${commitCount}コミット`);
-                  const ariaLabel = `${day.date.getMonth() + 1}月${day.date.getDate()}日 ${
-                    ariaParts.length > 0 ? ariaParts.join(" / ") : "記録なし"
-                  }`;
-                  return (
-                    <button
-                      type="button"
-                      key={dIndex}
-                      className={`contribution-arc-cell lv-${displayLevel}${day.isToday ? " today" : ""}${
-                        selectedArcDayKey === day.key ? " selected" : ""
-                      }`}
-                      onClick={() =>
-                        setSelectedArcDayKey((prev) => (prev === day.key ? null : day.key))
-                      }
-                      onMouseEnter={(event) => {
-                        const placement = computeArcTooltipPlacement(event.currentTarget, day);
-                        if (placement) setHoveredArcCell(placement);
-                      }}
-                      onMouseLeave={() => setHoveredArcCell(null)}
-                      onFocus={(event) => {
-                        const placement = computeArcTooltipPlacement(event.currentTarget, day);
-                        if (placement) setHoveredArcCell(placement);
-                      }}
-                      onBlur={() => setHoveredArcCell(null)}
-                      aria-label={ariaLabel}
-                    />
-                  );
-                })}
-              </div>
-            ))}
-            </div>
-          </div>
-        </div>
-          <div className="contribution-arc-legend" aria-hidden="true">
-            <span>少</span>
-            <i className="lv-0" />
-            <i className="lv-1" />
-            <i className="lv-2" />
-            <i className="lv-3" />
-            <i className="lv-4" />
-            <span>多</span>
-          </div>
-          {githubContributionArc ? (
-            <div className="contribution-arc-github-stats">
-              <span>
-                今週 <strong>{githubContributionArc.thisWeekCount}</strong> commit
-              </span>
-              <span>
-                先週 <strong>{githubContributionArc.lastWeekCount}</strong>
-              </span>
-              <span>
-                最長 <strong>{githubContributionArc.longestStreak}日</strong>
-              </span>
-            </div>
-          ) : !githubUsername ? (
-            <div className="contribution-arc-github-cta">
-              <span>GitHub を連携すると commit もこの図に重なります</span>
-              <button
-                type="button"
-                className="contribution-arc-github-link-btn"
-                onClick={handleLinkGithub}
-                disabled={isLinkingGithub}
-              >
-                {isLinkingGithub ? "連携中…" : "GitHub を連携"}
-              </button>
-              {linkGithubError ? (
-                <p className="contribution-arc-github-link-error">{linkGithubError}</p>
-              ) : null}
-            </div>
-          ) : (
-            <p className="contribution-arc-github-status">
-              {githubContributionsError ? "GitHub データの取得に失敗しました" : "GitHub データを読み込み中…"}
-            </p>
-          )}
-        </div>
-        {/* AnimatePresence drives the swap animation when the selected day
-            (or 13-week mode) changes. mode="wait" so the outgoing card
-            finishes its exit before the new one fades/rotates in. The
-            key is the only thing distinguishing each state for
-            framer-motion. */}
-        <AnimatePresence mode="wait" initial={false}>
-          {donutDisplay.total > 0 ? (
-            <motion.div
-              key={donutDisplay.key}
-              className={`contribution-arc-donut${donutDisplay.isDaily ? " is-daily" : ""}`}
-              aria-label={donutDisplay.isDaily ? `${donutDisplay.label}の学習ジャンル配分` : "13週の学習ジャンル配分"}
-              initial={{ opacity: 0, scale: 0.94, rotate: -6 }}
-              animate={{ opacity: 1, scale: 1, rotate: 0 }}
-              exit={{ opacity: 0, scale: 0.94, rotate: 6 }}
-              transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <div className="contribution-arc-donut-chart">
-                <svg viewBox="0 0 160 160" aria-hidden="true">
-                  <circle
-                    cx="80"
-                    cy="80"
-                    r="56"
-                    fill="none"
-                    stroke="rgba(17, 24, 39, 0.06)"
-                    strokeWidth="16"
-                  />
-                  {(() => {
-                    const r = 56;
-                    const circumference = 2 * Math.PI * r;
-                    let cumulative = 0;
-                    return donutDisplay.items.map((item, idx) => {
-                      const dash = (item.minutes / donutDisplay.total) * circumference;
-                      const seg = (
-                        <circle
-                          key={`${item.subject}-${idx}`}
-                          cx="80"
-                          cy="80"
-                          r={r}
-                          fill="none"
-                          stroke={item.color}
-                          strokeWidth="16"
-                          strokeDasharray={`${dash} ${circumference - dash}`}
-                          strokeDashoffset={-cumulative}
-                          transform="rotate(-90 80 80)"
-                        />
-                      );
-                      cumulative += dash;
-                      return seg;
-                    });
-                  })()}
-                </svg>
-                <div className="contribution-arc-donut-center">
-                  <small>{donutDisplay.label}</small>
-                  <strong>{formatStudyTimeJa(donutDisplay.total)}</strong>
-                  <span>{donutDisplay.items.length}ジャンル</span>
-                </div>
-              </div>
-              <ul className="contribution-arc-donut-legend">
-                {donutDisplay.items.map((item) => {
-                  const pct = Math.round((item.minutes / donutDisplay.total) * 100);
-                  return (
-                    <li key={item.subject}>
-                      <i style={{ background: item.color }} aria-hidden="true" />
-                      <strong>{item.subject}</strong>
-                      <span>{formatStudyTimeJa(item.minutes)}</span>
-                      <small>{pct}%</small>
-                    </li>
-                  );
-                })}
-              </ul>
-              {donutDisplay.isDaily ? (
-                <button
-                  type="button"
-                  className="contribution-arc-donut-reset"
-                  onClick={() => setSelectedArcDayKey(null)}
-                  aria-label="13週合計に戻す"
-                >
-                  13週合計に戻す
-                </button>
-              ) : null}
-            </motion.div>
-          ) : donutDisplay.isDaily ? (
-            // Selected-day-but-empty: keep the donut shape (gray ring +
-            // "0時間 / 記録なし") so the swap animation reads as "the
-            // chart changed to this day", not "the chart disappeared".
-            <motion.div
-              key={donutDisplay.key}
-              className="contribution-arc-donut is-daily is-empty-daily"
-              aria-label={`${donutDisplay.label}の学習ジャンル配分（記録なし）`}
-              initial={{ opacity: 0, scale: 0.94, rotate: -6 }}
-              animate={{ opacity: 1, scale: 1, rotate: 0 }}
-              exit={{ opacity: 0, scale: 0.94, rotate: 6 }}
-              transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <div className="contribution-arc-donut-chart">
-                <svg viewBox="0 0 160 160" aria-hidden="true">
-                  <circle
-                    cx="80"
-                    cy="80"
-                    r="56"
-                    fill="none"
-                    stroke="rgba(17, 24, 39, 0.06)"
-                    strokeWidth="16"
-                  />
-                </svg>
-                <div className="contribution-arc-donut-center">
-                  <small>{donutDisplay.label}</small>
-                  <strong>0時間</strong>
-                  <span>学習記録なし</span>
-                </div>
-              </div>
-              <p className="contribution-arc-donut-empty-note">この日はまだ学習が記録されていません。</p>
-              <button
-                type="button"
-                className="contribution-arc-donut-reset"
-                onClick={() => setSelectedArcDayKey(null)}
-                aria-label="13週合計に戻す"
-              >
-                13週合計に戻す
-              </button>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="empty-all"
-              className="contribution-arc-donut empty"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.18 }}
-            >
-              <p>学習を記録するとここにジャンル分布が現れます。</p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        </div>
-        {selectedArcDay ? (
-          <div className="contribution-arc-detail" role="region" aria-label="選択日の学習詳細">
-            <div className="contribution-arc-detail-head">
-              <div>
-                <strong>
-                  {selectedArcDay.date.getFullYear()}年 {selectedArcDay.date.getMonth() + 1}月
-                  {selectedArcDay.date.getDate()}日
-                </strong>
-                <span>
-                  {selectedArcDay.minutes > 0
-                    ? `${formatStudyTimeJa(selectedArcDay.minutes)} 学習`
-                    : "学習記録なし"}
-                </span>
-              </div>
-              <button
-                type="button"
-                className="contribution-arc-detail-close"
-                onClick={() => setSelectedArcDayKey(null)}
-                aria-label="閉じる"
-              >
-                ×
-              </button>
-            </div>
-            {selectedArcDayLogs.length > 0 ? (
-              <ul className="contribution-arc-detail-list">
-                {selectedArcDayLogs.map((log) => (
-                  <li key={log.id}>
-                    <span
-                      className="contribution-arc-detail-dot"
-                      style={{ background: log.color || "rgba(31,111,74,0.7)" }}
-                      aria-hidden="true"
-                    />
-                    <strong>{log.subject}</strong>
-                    <small>{formatStudyTime(log.minutes)}</small>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="contribution-arc-detail-empty">この日はまだ記録がありません。</p>
-            )}
-          </div>
-        ) : null}
-      </section>
-
 
       <AnimatePresence initial={false}>
         {(() => {
