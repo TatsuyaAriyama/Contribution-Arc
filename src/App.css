@@ -14976,6 +14976,155 @@ body {
   }
 }
 
+@media (max-width: 720px) {
+  .contribution-arc-card {
+    padding: 14px 14px 12px;
+    border-radius: 18px;
+    gap: 14px;
+    margin-bottom: 12px;
+  }
+
+  .contribution-arc-head {
+    gap: 10px;
+  }
+
+  .contribution-arc-head-title strong {
+    font-size: 17px;
+    line-height: 1.3;
+  }
+
+  .contribution-arc-head-title > span {
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  .contribution-arc-stats {
+    flex-wrap: wrap;
+    gap: 12px 18px;
+    padding: 10px 12px;
+    border: 1px solid rgba(var(--ink-rgb), 0.06);
+    border-radius: 12px;
+    background: rgba(var(--ink-rgb), 0.02);
+  }
+
+  .contribution-arc-stats > div {
+    flex: 1 1 calc(50% - 18px);
+    min-width: 0;
+  }
+
+  .contribution-arc-stats small {
+    font-size: 10px;
+  }
+
+  .contribution-arc-stats strong {
+    font-size: 14px;
+  }
+
+  .contribution-arc-stats span {
+    font-size: 10px;
+  }
+
+  .contribution-arc-body {
+    gap: 16px;
+  }
+
+  /* Heatmap: keep 13-week grid but allow horizontal scroll if needed.
+     Use smaller cells on phones so the full 13 weeks fit ~280px wide. */
+  .contribution-arc-grid {
+    justify-content: flex-start;
+    margin: 0 -4px;
+    padding: 0 4px 4px;
+  }
+
+  .contribution-arc-track {
+    gap: 3px;
+  }
+
+  .contribution-arc-cell {
+    width: 12px;
+    height: 12px;
+    border-radius: 2.5px;
+  }
+
+  .contribution-arc-week {
+    grid-template-rows: 14px repeat(7, 12px);
+    gap: 3px;
+  }
+
+  .contribution-arc-month {
+    font-size: 10px;
+    line-height: 14px;
+  }
+
+  /* Donut: keep the visual donut + legend, just tighter spacing. */
+  .contribution-arc-donut {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 14px;
+    align-items: center;
+  }
+
+  .contribution-arc-donut-chart {
+    width: 112px;
+    height: 112px;
+  }
+
+  .contribution-arc-donut-center small {
+    font-size: 10px;
+  }
+
+  .contribution-arc-donut-center strong {
+    font-size: 16px;
+  }
+
+  .contribution-arc-donut-center span {
+    font-size: 10px;
+  }
+
+  .contribution-arc-donut-legend {
+    gap: 6px;
+  }
+
+  .contribution-arc-donut-legend li {
+    grid-template-columns: 8px minmax(0, 1fr) auto auto;
+    gap: 6px;
+    font-size: 11px;
+  }
+
+  .contribution-arc-donut-legend li i {
+    width: 8px;
+    height: 8px;
+  }
+
+  .contribution-arc-donut-legend li strong {
+    font-size: 11px;
+  }
+
+  .contribution-arc-donut-legend li span {
+    font-size: 10px;
+  }
+
+  .contribution-arc-donut-legend li small {
+    font-size: 10px;
+  }
+
+  .contribution-arc-donut-reset {
+    width: 100%;
+    margin-top: 8px;
+    min-height: 36px;
+  }
+
+  .contribution-arc-github {
+    padding-top: 10px;
+    gap: 8px;
+  }
+
+  /* Tooltip placement: keep it readable on small screens */
+  .contribution-arc-tooltip {
+    max-width: min(240px, calc(100vw - 32px));
+    font-size: 11px;
+  }
+}
+
 .contribution-arc-left {
   display: flex;
   flex-direction: column;
