@@ -2963,6 +2963,10 @@ function App() {
   const [dailyReflectionDraft, setDailyReflectionDraft] = useState("");
   const [dailyHistoryDateFilter, setDailyHistoryDateFilter] = useState("");
   const [dailyHistorySearch, setDailyHistorySearch] = useState("");
+  // Modal state for the "tap a past daily report" → expanded detail
+  // view in the Team Daily feed. Stores the full report; we look up
+  // study/commit data for that date on the fly when rendering.
+  const [expandedDailyReport, setExpandedDailyReport] = useState<DailyReport | null>(null);
   const [dailyMessage, setDailyMessage] = useState("");
   const [isSavingDailyReport, setIsSavingDailyReport] = useState(false);
   const [postReplies, setPostReplies] = useState<ContributionReplyRecord[]>([]);
@@ -7676,6 +7680,107 @@ function App() {
         </div>
       ) : null}
 
+      {expandedDailyReport ? (() => {
+        const report = expandedDailyReport;
+        const isMine = report.userId === currentUserUid;
+        const displayName =
+          report.userName || (isMine ? playerName : "Developer");
+        // studyLogsByDay / githubByKey are keyed as `Y-M-D` with 0-indexed
+        // month. report.date arrives as "YYYY-MM-DD" so convert.
+        const [yStr, mStr, dStr] = report.date.split("-");
+        const dayKey = `${Number(yStr)}-${Number(mStr) - 1}-${Number(dStr)}`;
+        const logsForDay = isMine ? studyLogsByDay.get(dayKey) || [] : [];
+        const totalMinutes = logsForDay.reduce((sum, log) => sum + log.minutes, 0);
+        const commitCount = isMine ? githubByKey.get(dayKey)?.count ?? 0 : 0;
+        return (
+          <div
+            className="settings-modal-backdrop"
+            role="presentation"
+            onClick={() => setExpandedDailyReport(null)}
+          >
+            <section
+              className="settings-modal daily-detail-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="daily-detail-modal-title"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <header className="daily-detail-modal-head">
+                <ProfileCharacterPreview color={report.characterColor || characterColorOptions[0].value} />
+                <div>
+                  <p className="card-kicker">Daily Report</p>
+                  <h2 id="daily-detail-modal-title">{displayName}</h2>
+                  <small>{formatDailyDate(report.date)}</small>
+                </div>
+                <button
+                  type="button"
+                  className="daily-detail-modal-close"
+                  onClick={() => setExpandedDailyReport(null)}
+                  aria-label="閉じる"
+                >
+                  ×
+                </button>
+              </header>
+
+              {report.plan ? (
+                <section className="daily-detail-modal-section">
+                  <h3>今日やること</h3>
+                  <p>{report.plan}</p>
+                </section>
+              ) : null}
+
+              {report.reflection ? (
+                <section className="daily-detail-modal-section">
+                  <h3>振り返り</h3>
+                  <p>{report.reflection}</p>
+                </section>
+              ) : null}
+
+              {!report.plan && !report.reflection ? (
+                <p className="daily-detail-modal-empty">本文はまだ書かれていません。</p>
+              ) : null}
+
+              {isMine ? (
+                <section className="daily-detail-modal-section">
+                  <h3>この日のデータ</h3>
+                  <div className="daily-detail-modal-metrics">
+                    <div>
+                      <small>学習時間</small>
+                      <strong>{totalMinutes > 0 ? formatStudyTimeJa(totalMinutes) : "—"}</strong>
+                    </div>
+                    <div>
+                      <small>commit</small>
+                      <strong>{commitCount > 0 ? commitCount : "—"}</strong>
+                    </div>
+                    <div>
+                      <small>記録</small>
+                      <strong>{logsForDay.length > 0 ? `${logsForDay.length}件` : "—"}</strong>
+                    </div>
+                  </div>
+                  {logsForDay.length > 0 ? (
+                    <ul className="daily-detail-modal-logs">
+                      {logsForDay.map((log) => (
+                        <li key={log.id}>
+                          <i style={{ background: log.color || "rgba(31,111,74,0.7)" }} aria-hidden="true" />
+                          <strong>{log.subject}</strong>
+                          <span>{formatStudyTime(log.minutes)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="daily-detail-modal-empty">この日の学習ログはありません。</p>
+                  )}
+                </section>
+              ) : (
+                <p className="daily-detail-modal-empty">
+                  他のメンバーの学習データはここでは表示されません。
+                </p>
+              )}
+            </section>
+          </div>
+        );
+      })() : null}
+
       {isRecruitmentModalOpen ? (
         <div className="settings-modal-backdrop" role="presentation" onClick={handleCloseRecruitmentModal}>
           <section
@@ -8251,38 +8356,53 @@ function App() {
               </div>
               {visibleSharedDailyReports.length > 0 ? (
                 <div className="daily-shared-list">
-                  {visibleSharedDailyReports.map((report) => (
-                    <article key={`shared-${report.id}`} className={report.userId === currentUserUid ? "mine" : ""}>
-                      <div>
-                        <ProfileCharacterPreview color={report.characterColor || characterColorOptions[0].value} />
-                        <span>
-                          <strong>{report.userName || (report.userId === currentUserUid ? playerName : "Developer")}</strong>
-                          <small>{formatDailyDate(report.date)}</small>
-                        </span>
-                      </div>
-                      {report.plan ? (
-                        <p className="daily-shared-section">
-                          <strong>今日やること</strong>
-                          <span>{report.plan}</span>
-                        </p>
-                      ) : null}
-                      {report.reflection ? (
-                        <p className="daily-shared-section">
-                          <strong>振り返り</strong>
-                          <span>{report.reflection}</span>
-                        </p>
-                      ) : null}
-                      {report.userId === currentUserUid ? (
+                  {visibleSharedDailyReports.map((report) => {
+                    const isMine = report.userId === currentUserUid;
+                    const displayName =
+                      report.userName || (isMine ? playerName : "Developer");
+                    return (
+                      <article
+                        key={`shared-${report.id}`}
+                        className={`is-clickable${isMine ? " mine" : ""}`}
+                      >
                         <button
                           type="button"
-                          className="daily-delete-button"
-                          onClick={() => handleDailyReportDelete(report)}
+                          className="daily-shared-card-trigger"
+                          onClick={() => setExpandedDailyReport(report)}
+                          aria-label={`${displayName}の${formatDailyDate(report.date)}の日報を開く`}
                         >
-                          削除
+                          <div>
+                            <ProfileCharacterPreview color={report.characterColor || characterColorOptions[0].value} />
+                            <span>
+                              <strong>{displayName}</strong>
+                              <small>{formatDailyDate(report.date)}</small>
+                            </span>
+                          </div>
+                          {report.plan ? (
+                            <p className="daily-shared-section">
+                              <strong>今日やること</strong>
+                              <span>{report.plan}</span>
+                            </p>
+                          ) : null}
+                          {report.reflection ? (
+                            <p className="daily-shared-section">
+                              <strong>振り返り</strong>
+                              <span>{report.reflection}</span>
+                            </p>
+                          ) : null}
                         </button>
-                      ) : null}
-                    </article>
-                  ))}
+                        {isMine ? (
+                          <button
+                            type="button"
+                            className="daily-delete-button"
+                            onClick={() => handleDailyReportDelete(report)}
+                          >
+                            削除
+                          </button>
+                        ) : null}
+                      </article>
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="daily-shared-empty">共有された日報はまだありません。</p>
