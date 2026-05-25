@@ -3634,6 +3634,7 @@ function App() {
         db,
         (cloudPosts) => {
           // Successful payload → reset backoff and clear any "waiting" hint.
+          if (!isActive) return;
           reconnectAttempt = 0;
           setPostError("");
           const syncedPosts = cloudPosts.map((post) => ({
@@ -3641,14 +3642,16 @@ function App() {
             syncStatus: "synced" as const,
             syncError: "",
           }));
-          void readDurablePosts(uid).then((cachedPosts) => {
-            if (!isActive) return;
-            const pendingPosts = cachedPosts.filter(
+          // Functional update: read current pending posts from state directly
+          // instead of doing an async IndexedDB read (which can race with
+          // other setPosts calls and silently discard cloud data).
+          setPosts((currentPosts) => {
+            const pendingPosts = currentPosts.filter(
               (post) => post.userId === uid && post.syncStatus === "pending",
             );
             const nextPosts = mergePosts([...syncedPosts, ...pendingPosts]);
-            setPosts(nextPosts);
             void persistPosts(nextPosts);
+            return nextPosts;
           });
         },
         (error) => {
