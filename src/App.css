@@ -3643,30 +3643,32 @@
 
 .daily-shared-list article > div {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr);
+  grid-template-columns: 72px minmax(0, 1fr);
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
-/* Daily-feed avatar chip — sized so the Tsuta sprite (40×40 body
-   + sprout above + legs below) is fully visible. Overflow stays
-   visible so the sprout and legs read as part of the character
-   instead of being clipped at the chip edge. */
+/* Daily-feed avatar chip — modeled after the profile-character-preview
+   on the profile screen, just smaller. The Tsuta sprite is 40×40 body
+   with a sprout above and legs below; we keep overflow:hidden so the
+   character is properly framed within the chip's grid background, and
+   nudge the sprite down a touch so the body + legs read as a single
+   centered figure (sprout extends up into the chip's gradient halo). */
 .daily-shared-list .profile-character-preview {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  overflow: visible;
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  overflow: hidden;
   background:
     linear-gradient(90deg, rgba(var(--ink-rgb), 0.045) 1px, transparent 1px),
     linear-gradient(180deg, rgba(var(--ink-rgb), 0.04) 1px, transparent 1px),
-    radial-gradient(circle at 50% 22%, rgba(var(--surface-rgb), 0.9), transparent 1.8rem),
+    radial-gradient(circle at 50% 18%, rgba(var(--surface-rgb), 0.9), transparent 2rem),
     #fafafa;
-  background-size: 12px 12px, 12px 12px, auto, auto;
+  background-size: 14px 14px, 14px 14px, auto, auto;
 }
 
 .daily-shared-list .profile-character-preview .actor-sprite {
-  transform: translateY(2px) scale(0.62);
+  transform: translateY(8px) scale(0.78);
 }
 
 .daily-shared-list strong,
