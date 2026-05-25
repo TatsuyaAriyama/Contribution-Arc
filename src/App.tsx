@@ -4327,6 +4327,19 @@ function App() {
     () => (githubContributions ? getGithubContributionArc(githubContributions.days) : null),
     [githubContributions],
   );
+  // Flatten the GitHub 13-week grid into a date-keyed map so the unified
+  // heatmap can look up commit count/level per cell in O(1) and blend it
+  // with the study level on the same date.
+  const githubByKey = useMemo(() => {
+    const map = new Map<string, { count: number; level: 0 | 1 | 2 | 3 | 4 }>();
+    if (!githubContributionArc) return map;
+    for (const week of githubContributionArc.weeks) {
+      for (const day of week.days) {
+        if (day) map.set(day.key, { count: day.count, level: day.level });
+      }
+    }
+    return map;
+  }, [githubContributionArc]);
   const studyLogsByDay = useMemo(() => {
     const map = new Map<string, StudyLog[]>();
     for (const log of studyLogs) {
@@ -8885,7 +8898,9 @@ function App() {
           <div
             className="contribution-arc-grid"
             role="img"
-            aria-label={`直近13週で${contributionArc.activeDays}日間学習`}
+            aria-label={`直近13週: ${contributionArc.activeDays}日学習${
+              githubContributionArc ? ` · ${githubContributionArc.activeDays}日コミット` : ""
+            }`}
           >
             <div className="contribution-arc-track">
             {contributionArcCurvePath ? (
@@ -8898,59 +8913,93 @@ function App() {
                 <path d={contributionArcCurvePath} />
               </svg>
             ) : null}
-            {hoveredArcCell ? (
-              <div
-                className={`contribution-arc-tooltip${
-                  hoveredArcCell.placement === "below" ? " is-below" : ""
-                }`}
-                style={{ left: hoveredArcCell.left, top: hoveredArcCell.top }}
-                role="tooltip"
-              >
-                <div className="contribution-arc-tooltip-head">
-                  <strong>
-                    {hoveredArcCell.day.date.getMonth() + 1}/{hoveredArcCell.day.date.getDate()}
-                  </strong>
-                  <span>
-                    {["日", "月", "火", "水", "木", "金", "土"][hoveredArcCell.day.date.getDay()]}曜
-                  </span>
-                </div>
-                {hoveredArcCell.day.minutes > 0 ? (
-                  <>
-                    <p className="contribution-arc-tooltip-total">
-                      {formatStudyTimeJa(hoveredArcCell.day.minutes)} 学習
+            {hoveredArcCell ? (() => {
+              const hoveredCommits = githubByKey.get(hoveredArcCell.day.key)?.count ?? 0;
+              const hasStudy = hoveredArcCell.day.minutes > 0;
+              const hasCommits = hoveredCommits > 0;
+              return (
+                <div
+                  className={`contribution-arc-tooltip${
+                    hoveredArcCell.placement === "below" ? " is-below" : ""
+                  }`}
+                  style={{ left: hoveredArcCell.left, top: hoveredArcCell.top }}
+                  role="tooltip"
+                >
+                  <div className="contribution-arc-tooltip-head">
+                    <strong>
+                      {hoveredArcCell.day.date.getMonth() + 1}/{hoveredArcCell.day.date.getDate()}
+                    </strong>
+                    <span>
+                      {["日", "月", "火", "水", "木", "金", "土"][hoveredArcCell.day.date.getDay()]}曜
+                    </span>
+                  </div>
+                  {hasStudy ? (
+                    <>
+                      <p className="contribution-arc-tooltip-total">
+                        {formatStudyTimeJa(hoveredArcCell.day.minutes)} 学習
+                      </p>
+                      <ul className="contribution-arc-tooltip-list">
+                        {hoveredArcDayLogs.slice(0, 4).map((log) => (
+                          <li key={log.id}>
+                            <i style={{ background: log.color || "rgba(31,111,74,0.7)" }} />
+                            <span>{log.subject}</span>
+                            <small>{formatStudyTime(log.minutes)}</small>
+                          </li>
+                        ))}
+                        {hoveredArcDayLogs.length > 4 ? (
+                          <li className="contribution-arc-tooltip-more">
+                            ほか {hoveredArcDayLogs.length - 4} 件
+                          </li>
+                        ) : null}
+                      </ul>
+                    </>
+                  ) : null}
+                  {hasCommits ? (
+                    <p className="contribution-arc-tooltip-commits">
+                      <i aria-hidden="true" />
+                      <span>{hoveredCommits} commit</span>
                     </p>
-                    <ul className="contribution-arc-tooltip-list">
-                      {hoveredArcDayLogs.slice(0, 4).map((log) => (
-                        <li key={log.id}>
-                          <i style={{ background: log.color || "rgba(31,111,74,0.7)" }} />
-                          <span>{log.subject}</span>
-                          <small>{formatStudyTime(log.minutes)}</small>
-                        </li>
-                      ))}
-                      {hoveredArcDayLogs.length > 4 ? (
-                        <li className="contribution-arc-tooltip-more">
-                          ほか {hoveredArcDayLogs.length - 4} 件
-                        </li>
-                      ) : null}
-                    </ul>
+                  ) : null}
+                  {hasStudy ? (
                     <p className="contribution-arc-tooltip-exp">
                       +{Math.round((hoveredArcCell.day.minutes / 60) * 80)} EXP
                     </p>
-                  </>
-                ) : (
-                  <p className="contribution-arc-tooltip-empty">学習記録なし</p>
-                )}
-              </div>
-            ) : null}
+                  ) : null}
+                  {!hasStudy && !hasCommits ? (
+                    <p className="contribution-arc-tooltip-empty">記録なし</p>
+                  ) : null}
+                </div>
+              );
+            })() : null}
             {contributionArc.weeks.map((week, wIndex) => (
               <div className="contribution-arc-week" key={wIndex}>
                 <span className="contribution-arc-month">{week.monthLabel || ""}</span>
-                {week.days.map((day, dIndex) =>
-                  day ? (
+                {week.days.map((day, dIndex) => {
+                  if (!day) {
+                    return (
+                      <span key={dIndex} className="contribution-arc-cell empty" aria-hidden="true" />
+                    );
+                  }
+                  // Blend study + commit activity: pick the higher level so a
+                  // day that's heavy on either axis still shows up in the grid.
+                  // Falls back to study-only when GitHub isn't linked.
+                  const githubInfo = githubByKey.get(day.key);
+                  const githubLevel = githubInfo?.level ?? 0;
+                  const commitCount = githubInfo?.count ?? 0;
+                  const displayLevel = (
+                    githubContributionArc ? Math.max(day.level, githubLevel) : day.level
+                  ) as 0 | 1 | 2 | 3 | 4;
+                  const ariaParts: string[] = [];
+                  if (day.minutes > 0) ariaParts.push(formatStudyTime(day.minutes));
+                  if (commitCount > 0) ariaParts.push(`${commitCount}コミット`);
+                  const ariaLabel = `${day.date.getMonth() + 1}月${day.date.getDate()}日 ${
+                    ariaParts.length > 0 ? ariaParts.join(" / ") : "記録なし"
+                  }`;
+                  return (
                     <button
                       type="button"
                       key={dIndex}
-                      className={`contribution-arc-cell lv-${day.level}${day.isToday ? " today" : ""}${
+                      className={`contribution-arc-cell lv-${displayLevel}${day.isToday ? " today" : ""}${
                         selectedArcDayKey === day.key ? " selected" : ""
                       }`}
                       onClick={() =>
@@ -8966,14 +9015,10 @@ function App() {
                         if (placement) setHoveredArcCell(placement);
                       }}
                       onBlur={() => setHoveredArcCell(null)}
-                      aria-label={`${day.date.getMonth() + 1}月${day.date.getDate()}日 ${
-                        day.minutes > 0 ? formatStudyTime(day.minutes) : "学習なし"
-                      }`}
+                      aria-label={ariaLabel}
                     />
-                  ) : (
-                    <span key={dIndex} className="contribution-arc-cell empty" aria-hidden="true" />
-                  ),
-                )}
+                  );
+                })}
               </div>
             ))}
             </div>
@@ -8988,6 +9033,38 @@ function App() {
             <i className="lv-4" />
             <span>多</span>
           </div>
+          {githubContributionArc ? (
+            <div className="contribution-arc-github-stats">
+              <span>
+                今週 <strong>{githubContributionArc.thisWeekCount}</strong> commit
+              </span>
+              <span>
+                先週 <strong>{githubContributionArc.lastWeekCount}</strong>
+              </span>
+              <span>
+                最長 <strong>{githubContributionArc.longestStreak}日</strong>
+              </span>
+            </div>
+          ) : !githubUsername ? (
+            <div className="contribution-arc-github-cta">
+              <span>GitHub を連携すると commit もこの図に重なります</span>
+              <button
+                type="button"
+                className="contribution-arc-github-link-btn"
+                onClick={handleLinkGithub}
+                disabled={isLinkingGithub}
+              >
+                {isLinkingGithub ? "連携中…" : "GitHub を連携"}
+              </button>
+              {linkGithubError ? (
+                <p className="contribution-arc-github-link-error">{linkGithubError}</p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="contribution-arc-github-status">
+              {githubContributionsError ? "GitHub データの取得に失敗しました" : "GitHub データを読み込み中…"}
+            </p>
+          )}
         </div>
         {arcSubjectTotals.total > 0 ? (
           <div className="contribution-arc-donut" aria-label="学習ジャンル配分">
@@ -9051,73 +9128,6 @@ function App() {
             <p>学習を記録するとここにジャンル分布が現れます。</p>
           </div>
         )}
-        </div>
-        <div className="contribution-arc-github">
-          {githubContributionArc ? (
-            <div className="contribution-arc-github-stats">
-              <span>
-                今週 <strong>{githubContributionArc.thisWeekCount}</strong>
-              </span>
-              <span>
-                先週 <strong>{githubContributionArc.lastWeekCount}</strong>
-              </span>
-              <span>
-                最長連続 <strong>{githubContributionArc.longestStreak}日</strong>
-              </span>
-            </div>
-          ) : !githubUsername ? (
-            <div className="contribution-arc-github-cta">
-              <span>GitHub を連携するとコントリビューションが表示されます</span>
-              <button
-                type="button"
-                className="contribution-arc-github-link-btn"
-                onClick={handleLinkGithub}
-                disabled={isLinkingGithub}
-              >
-                {isLinkingGithub ? "連携中…" : "GitHub を連携"}
-              </button>
-            </div>
-          ) : (
-            <p className="contribution-arc-github-status">
-              {githubContributionsError ? "GitHub データの取得に失敗しました" : "GitHub データを読み込み中…"}
-            </p>
-          )}
-          {!githubUsername && linkGithubError ? (
-            <p className="contribution-arc-github-link-error">{linkGithubError}</p>
-          ) : null}
-          {githubContributionArc ? (
-            <div className="contribution-arc-canvas contribution-arc-github-canvas">
-              <div
-                className="contribution-arc-grid"
-                role="img"
-                aria-label={`GitHub: 直近13週で${githubContributionArc.activeDays}日コミット`}
-              >
-                <div className="contribution-arc-track">
-                  {githubContributionArc.weeks.map((week, wIndex) => (
-                    <div className="contribution-arc-week" key={wIndex}>
-                      <span className="contribution-arc-month">{week.monthLabel || ""}</span>
-                      {week.days.map((day, dIndex) =>
-                        day ? (
-                          <span
-                            key={dIndex}
-                            className={`contribution-arc-cell lv-${day.level}${day.isToday ? " today" : ""}`}
-                            title={`${day.date.getMonth() + 1}/${day.date.getDate()} · ${day.count} commit`}
-                            aria-label={`${day.date.getMonth() + 1}月${day.date.getDate()}日 ${day.count} commit`}
-                          />
-                        ) : (
-                          <span
-                            key={dIndex}
-                            className="contribution-arc-cell empty"
-                            aria-hidden="true"
-                          />
-                        ),
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : null}
         </div>
         {selectedArcDay ? (
           <div className="contribution-arc-detail" role="region" aria-label="選択日の学習詳細">

@@ -13270,6 +13270,28 @@
   color: rgba(var(--cta-fg-rgb), 0.55);
 }
 
+.contribution-arc-tooltip-commits {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: rgba(var(--cta-fg-rgb), 0.78);
+  letter-spacing: 0.01em;
+}
+
+.contribution-arc-tooltip-commits i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2ea043;
+  box-shadow: 0 0 0 2px rgba(46, 160, 67, 0.18);
+}
+
+.contribution-arc-tooltip-commits strong {
+  color: rgba(var(--cta-fg-rgb), 0.92);
+}
+
 /* Subject Ribbon */
 .contribution-arc-ribbon {
   display: flex;
