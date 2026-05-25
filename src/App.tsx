@@ -6850,7 +6850,7 @@ function App() {
     return (
       <article className={`log-post-card ${variant === "compact" ? "compact" : ""}`} key={post.id}>
         <button type="button" className="log-post-author" onClick={() => handlePostAuthorOpen(post)}>
-          <ProfileCharacterPreview color={post.characterColor} />
+          <ProfileCharacterPreview color={post.characterColor} variant="simple" />
           <span>
             <strong>{post.username}</strong>
             <small>{formatPostTime(post.createdAt)}</small>
@@ -6967,7 +6967,7 @@ function App() {
             <div className="post-reply-list">
               {visibleReplies.map((reply) => (
                 <article key={reply.id} className="post-reply-item">
-                  <ProfileCharacterPreview color={reply.characterColor} />
+                  <ProfileCharacterPreview color={reply.characterColor} variant="simple" />
                   <p>
                     <strong>{reply.username}</strong>
                     <span>{reply.text}</span>
@@ -8625,7 +8625,7 @@ function App() {
             </div>
 
             <form className="log-composer" onSubmit={handlePostSubmit}>
-              <ProfileCharacterPreview color={playerCharacterColor} />
+              <ProfileCharacterPreview color={playerCharacterColor} variant="simple" />
               <div>
                 <textarea
                   value={postDraft}
@@ -9815,7 +9815,7 @@ function App() {
 
             <section className="home-feed-composer is-living" aria-label="投稿を作成">
               <form className="log-composer" onSubmit={handlePostSubmit}>
-                <ProfileCharacterPreview color={playerCharacterColor} />
+                <ProfileCharacterPreview color={playerCharacterColor} variant="simple" />
                 <div>
                   <textarea
                     value={postDraft}

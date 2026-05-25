@@ -2598,6 +2598,14 @@
   border-radius: 12px;
 }
 
+/* Simple-variant avatars in the feed composer and post header.
+   Scale the 40x40 sprite down so body + legs fit inside the chip
+   without the legs clipping at the bottom edge. */
+.log-composer .profile-character-preview.is-simple .actor-sprite,
+.log-post-author .profile-character-preview.is-simple .actor-sprite {
+  transform: translateY(-1px) scale(0.78);
+}
+
 .log-composer textarea {
   width: 100%;
   min-height: 76px;
@@ -3093,6 +3101,12 @@
   width: 28px;
   height: 28px;
   border-radius: 10px;
+}
+
+/* Simple-variant reply avatar — even tighter chip; scale smaller
+   to keep the legs visible inside the 28px box. */
+.post-reply-item .profile-character-preview.is-simple .actor-sprite {
+  transform: translateY(-1px) scale(0.55);
 }
 
 .post-reply-item p {
