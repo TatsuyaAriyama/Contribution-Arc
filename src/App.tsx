@@ -4410,7 +4410,16 @@ function App() {
   }, [currentUser, isWorkspaceLoaded, workspaceNow]);
 
   useEffect(() => {
-    if (!currentUser || !isWorkspaceLoaded || !isPageVisible) {
+    // Cost control: the workspaceRooms / legacyWorkspaceRooms collections are
+    // subscribed *without* a where/limit filter — every doc fans out to every
+    // listener. Keeping this live on every screen turned out to dominate
+    // Firestore reads (the 2026-05-26 usage spike), so we only subscribe when
+    // the user is actually looking at the workspace. Other views render from
+    // whatever customRooms / workspaceProfiles snapshot was last in memory,
+    // which is fine — presence freshness only matters inside the workspace
+    // itself. The legacy collection is migrated out as it arrives, so missing
+    // a few seconds of legacy snapshots while on another view is a non-issue.
+    if (!currentUser || !isWorkspaceLoaded || !isPageVisible || currentView !== "workspace") {
       return;
     }
 
@@ -4512,7 +4521,7 @@ function App() {
       unsubscribeRooms();
       unsubscribeLegacyRooms();
     };
-  }, [currentUser, isWorkspaceLoaded, isPageVisible]);
+  }, [currentUser, isWorkspaceLoaded, isPageVisible, currentView]);
 
   useEffect(() => {
     if (!currentUser) {
