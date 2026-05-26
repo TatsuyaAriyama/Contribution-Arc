@@ -18286,14 +18286,20 @@ select:focus-visible,
 
 /* 1. Collapse the two-pane shell on workspace view and hide the feed.
    `:has()` is supported in all modern evergreen browsers (2023+) and
-   is the cleanest way to scope this without touching React. */
+   is the cleanest way to scope this without touching React.
+
+   Belt-and-suspenders alongside the React conditional in App.tsx:
+   even if (hot-reload, service-worker cache, etc.) the right pane
+   somehow lingers in the DOM, this collapses it. Applies at every
+   width so the mobile flex-column layout also keeps the feed hidden
+   underneath the workspace. */
+.two-pane-shell:has(.workspace-screen) .two-pane-right {
+  display: none;
+}
+
 @media (min-width: 1081px) {
   .two-pane-shell:has(.workspace-screen) {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .two-pane-shell:has(.workspace-screen) .two-pane-right {
-    display: none;
   }
 }
 
