@@ -182,6 +182,10 @@ type UserProfile = {
   followers: string[];
   determination?: string;
   characterColor?: string;
+  /* Visual silhouette of the user's actor sprite. Optional for
+     backward compatibility — undefined means the original
+     "body + 2 legs" shape. */
+  characterShape?: CharacterShape;
   level?: number;
   effortExp?: number;
   outputExp?: number;
@@ -220,11 +224,17 @@ type CharacterOption = {
 
 type RoomUserStatus = "working" | "deep-work" | "on-break";
 
+/* Sprite silhouette. Defaults to the original humanoid shape;
+   "ghost" is the floating soul shape (body only, wavy hem,
+   gentle vertical bob). New shapes can be added here. */
+type CharacterShape = "default" | "ghost";
+
 type RoomUser = {
   id: string;
   name: string;
   avatar?: string;
   characterColor?: string;
+  characterShape?: CharacterShape;
   x: number;
   y: number;
   currentTask: string;
@@ -401,6 +411,18 @@ const studyColorOptions = [
   { name: "Clay", value: "#b87555" },
   { name: "Amber", value: "#c8a95b" },
   { name: "Moss", value: "#6f8f45" },
+];
+
+/* Character silhouette options offered in the profile editor.
+   Order is intentional — "default" stays first so it's the
+   visual fallback for legacy users. Adding a new shape here also
+   requires:
+   - extending the CharacterShape type
+   - adding the shape to CHARACTER_SHAPES (the runtime allow-list)
+   - implementing `.actor-sprite.shape-<value>` styles in App.css */
+const characterShapeOptions: { value: CharacterShape; name: string }[] = [
+  { value: "default", name: "人型" },
+  { value: "ghost", name: "おばけ" },
 ];
 
 const characterColorOptions = [
@@ -1109,6 +1131,7 @@ function normalizeUserProfile(uid: string, data: Partial<UserProfile>): UserProf
     followers: Array.isArray(data.followers) ? data.followers : [],
     determination: data.determination || "",
     characterColor: getSafeCharacterColor(data.characterColor),
+    characterShape: getSafeCharacterShape(data.characterShape),
     level: data.level || 1,
     effortExp: data.effortExp || 0,
     outputExp: data.outputExp || 0,
@@ -1133,6 +1156,16 @@ function getSafeCharacterColor(color: string | undefined): string {
   return color && characterColorOptions.some((option) => option.value === color)
     ? color
     : characterColorOptions[0].value;
+}
+
+/* Allow-list guard for character shape. Anything outside the known
+   set (including legacy `undefined` from older profile docs) falls
+   back to "default" — the original humanoid silhouette. */
+const CHARACTER_SHAPES: readonly CharacterShape[] = ["default", "ghost"];
+function getSafeCharacterShape(shape: unknown): CharacterShape {
+  return typeof shape === "string" && (CHARACTER_SHAPES as readonly string[]).includes(shape)
+    ? (shape as CharacterShape)
+    : "default";
 }
 
 function getFriendGithubUrl(userId: string) {
@@ -1712,18 +1745,33 @@ function getStudyLogPostVerb(subject: string) {
 function ProfileCharacterPreview({
   color,
   variant = "tsuta",
+  shape = "default",
 }: {
   color?: string;
   variant?: "tsuta" | "simple";
+  /* When set to "ghost" the preview switches to the soul shape
+     (no legs, no sprout, wavy hem, floating). Other shapes can be
+     added here in the future. */
+  shape?: CharacterShape;
 }) {
+  const isGhost = shape === "ghost";
   return (
     <div
-      className={`profile-character-preview${variant === "simple" ? " is-simple" : ""}`}
+      className={`profile-character-preview${variant === "simple" ? " is-simple" : ""}${
+        isGhost ? " is-ghost" : ""
+      }`}
       style={{ "--actor-color": color || characterColorOptions[0].value } as CSSProperties}
       aria-hidden="true"
     >
-      <span className="actor-sprite deep is-tsuta">
-        {variant === "tsuta" ? (
+      <span className={`actor-sprite deep shape-${shape} ${isGhost ? "" : "is-tsuta"}`}>
+        {isGhost ? (
+          <>
+            <span className="sprite-body" />
+            <span className="sprite-eye sprite-eye-left" />
+            <span className="sprite-eye sprite-eye-right" />
+            <span className="sprite-tail" />
+          </>
+        ) : variant === "tsuta" ? (
           <>
             <svg
               className="sprite-sprout"
@@ -1743,12 +1791,16 @@ function ProfileCharacterPreview({
             </svg>
             <span className="sprite-eye sprite-eye-left" />
             <span className="sprite-eye sprite-eye-right" />
+            <span className="sprite-leg sprite-leg-left" />
+            <span className="sprite-leg sprite-leg-right" />
           </>
         ) : (
-          <span className="sprite-body" />
+          <>
+            <span className="sprite-body" />
+            <span className="sprite-leg sprite-leg-left" />
+            <span className="sprite-leg sprite-leg-right" />
+          </>
         )}
-        <span className="sprite-leg sprite-leg-left" />
-        <span className="sprite-leg sprite-leg-right" />
       </span>
     </div>
   );
@@ -3211,6 +3263,7 @@ function App() {
   const [draftDetermination, setDraftDetermination] = useState("");
   const [playerAvatar, setPlayerAvatar] = useState("");
   const [playerCharacterColor, setPlayerCharacterColor] = useState(characterColorOptions[0].value);
+  const [playerCharacterShape, setPlayerCharacterShape] = useState<CharacterShape>("default");
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [customRooms, setCustomRooms] = useState<WorkspaceRoom[]>([]);
   const [isWorkspaceLoaded, setIsWorkspaceLoaded] = useState(false);
@@ -3444,6 +3497,9 @@ function App() {
     const savedCharacterColor =
       window.localStorage.getItem(getAccountStorageKey(accountScope, "character-color")) ||
       (shouldUseLegacyUserStorage ? window.localStorage.getItem(`contribution-arc-character-color-${currentUser.uid}`) : null);
+    const savedCharacterShape = window.localStorage.getItem(
+      getAccountStorageKey(accountScope, "character-shape"),
+    );
     const savedFriends =
       window.localStorage.getItem(getAccountStorageKey(accountScope, "friends")) ||
       (shouldUseLegacyUserStorage ? window.localStorage.getItem(`contribution-arc-friends-${currentUser.uid}`) : null);
@@ -3517,6 +3573,7 @@ function App() {
     setDraftDetermination(savedDetermination || "");
     setPlayerAvatar(savedAvatar || currentUser.photoURL || "");
     setPlayerCharacterColor(savedCharacterColor || characterColorOptions[0].value);
+    setPlayerCharacterShape(getSafeCharacterShape(savedCharacterShape));
     setCustomRooms(seededRooms);
     if (savedRoomId && seededRooms.some((room) => room.id === savedRoomId)) {
       setSelectedRoomId(savedRoomId);
@@ -3577,6 +3634,9 @@ function App() {
         setDraftDetermination(profile.determination || savedDetermination || "");
         setPlayerAvatar(profile.photoURL || savedAvatar || currentUser.photoURL || "");
         setPlayerCharacterColor(profile.characterColor || savedCharacterColor || characterColorOptions[0].value);
+        setPlayerCharacterShape(
+          getSafeCharacterShape(profile.characterShape || savedCharacterShape || "default"),
+        );
         setOpenedWorkspaceGiftLevels((levels) =>
           Array.from(new Set([...levels, ...(profile.openedWorkspaceGiftLevels || [])])).sort(
             (first, second) => first - second,
@@ -4336,6 +4396,15 @@ function App() {
     }
     const accountScope = getAccountStorageScope(currentUser.uid, userId);
 
+    safeSetLocalStorage(getAccountStorageKey(accountScope, "character-shape"), playerCharacterShape);
+  }, [currentUser, playerCharacterShape, isWorkspaceLoaded, userId]);
+
+  useEffect(() => {
+    if (!currentUser || !isWorkspaceLoaded) {
+      return;
+    }
+    const accountScope = getAccountStorageScope(currentUser.uid, userId);
+
     safeSetLocalStorage(
       getAccountStorageKey(accountScope, "workspace-preset-messages"),
       JSON.stringify(workspacePresetMessages.slice(0, 6)),
@@ -4608,7 +4677,8 @@ function App() {
             member.name === nextName &&
             member.building === nextBuilding &&
             member.avatar === playerAvatar &&
-            member.characterColor === playerCharacterColor
+            member.characterColor === playerCharacterColor &&
+            (member.characterShape || "default") === playerCharacterShape
           ) {
             return member;
           }
@@ -4621,6 +4691,7 @@ function App() {
             currentTask: nextBuilding,
             avatar: playerAvatar,
             characterColor: playerCharacterColor,
+            characterShape: playerCharacterShape,
           };
         });
 
@@ -4643,7 +4714,7 @@ function App() {
 
       return changed ? nextRooms : rooms;
     });
-  }, [currentUser, customUserName, isWorkspaceLoaded, playerAvatar, playerCharacterColor, studySubject, workspaceTask]);
+  }, [currentUser, customUserName, isWorkspaceLoaded, playerAvatar, playerCharacterColor, playerCharacterShape, studySubject, workspaceTask]);
 
   useEffect(() => {
     if (!currentUser) {
@@ -5125,12 +5196,21 @@ function App() {
     const nextCharacterColor = isCurrentUserMember
       ? playerCharacterColor
       : getSafeCharacterColor(profile?.characterColor || member.characterColor || member.color);
+    /* Shape resolves in the same priority order as color:
+       - Current user always reflects local state immediately
+       - Other users prefer their live profile, then the snapshot
+         that was stored on their presence entry. Falls back to
+         "default" for legacy data. */
+    const nextCharacterShape: CharacterShape = isCurrentUserMember
+      ? playerCharacterShape
+      : getSafeCharacterShape(profile?.characterShape || member.characterShape);
 
     return {
       ...member,
       name: nextName,
       characterColor: nextCharacterColor,
       color: nextCharacterColor,
+      characterShape: nextCharacterShape,
       avatar: "",
     };
   });
@@ -6301,6 +6381,7 @@ function App() {
                   photoURL: playerAvatar,
                   determination,
                   characterColor: playerCharacterColor,
+                  characterShape: playerCharacterShape,
                 });
             const currentUserId = currentProfile.userId || userId;
             const nextUserIdRef = doc(db, "usernames", nextUserId);
@@ -6328,6 +6409,7 @@ function App() {
                 photoURL: getSerializableAvatar(playerAvatar || currentUser.photoURL || ""),
                 determination,
                 characterColor: playerCharacterColor,
+                characterShape: playerCharacterShape,
                 searchName: nextDisplayName.toLowerCase(),
                 following: currentProfile.following,
                 followers: currentProfile.followers,
@@ -6914,6 +6996,7 @@ function App() {
       tone: "deep",
       avatar: playerAvatar,
       characterColor: playerCharacterColor,
+      characterShape: playerCharacterShape,
     });
 
     setSelectedRoomId(roomId);
@@ -9217,17 +9300,11 @@ function App() {
               <div className="settings-character-color-panel">
                 <div className="settings-character-color-head">
                   <span>分身カラー</span>
-                  <div
-                    className="character-color-preview compact"
-                    style={{ "--actor-color": playerCharacterColor } as CSSProperties}
-                    aria-hidden="true"
-                  >
-                    <span className="actor-sprite deep">
-                      <span className="sprite-body" />
-                      <span className="sprite-leg sprite-leg-left" />
-                      <span className="sprite-leg sprite-leg-right" />
-                    </span>
-                  </div>
+                  <ProfileCharacterPreview
+                    color={playerCharacterColor}
+                    variant="simple"
+                    shape={playerCharacterShape}
+                  />
                 </div>
 
                 <div className="character-color-grid compact" aria-label="分身カラー">
@@ -9242,6 +9319,25 @@ function App() {
                     >
                       <span style={{ background: color.value }} />
                       <small>{color.name}</small>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="character-shape-grid compact" aria-label="キャラクターの形">
+                  {characterShapeOptions.map((option) => (
+                    <button
+                      type="button"
+                      key={option.value}
+                      className={playerCharacterShape === option.value ? "active" : ""}
+                      onClick={() => setPlayerCharacterShape(option.value)}
+                      title={option.name}
+                      aria-label={`${option.name}を選択`}
+                    >
+                      <span
+                        className={`character-shape-swatch shape-${option.value}`}
+                        style={{ "--actor-color": playerCharacterColor } as CSSProperties}
+                      />
+                      <small>{option.name}</small>
                     </button>
                   ))}
                 </div>
@@ -10292,19 +10388,13 @@ function App() {
                     <div className="character-color-head">
                       <div>
                         <p className="card-kicker">分身カラー</p>
-                        <h3>キャラクターの色を選択</h3>
+                        <h3>キャラクターの色と形を選択</h3>
                       </div>
-                      <div
-                        className="character-color-preview"
-                        style={{ "--actor-color": playerCharacterColor } as CSSProperties}
-                        aria-hidden="true"
-                      >
-                        <span className="actor-sprite deep">
-                          <span className="sprite-body" />
-                          <span className="sprite-leg sprite-leg-left" />
-                          <span className="sprite-leg sprite-leg-right" />
-                        </span>
-                      </div>
+                      <ProfileCharacterPreview
+                        color={playerCharacterColor}
+                        variant="simple"
+                        shape={playerCharacterShape}
+                      />
                     </div>
 
                     <div className="character-color-grid" aria-label="分身カラー">
@@ -10319,6 +10409,25 @@ function App() {
                         >
                           <span style={{ background: color.value }} />
                           <small>{color.name}</small>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="character-shape-grid" aria-label="キャラクターの形">
+                      {characterShapeOptions.map((option) => (
+                        <button
+                          type="button"
+                          key={option.value}
+                          className={playerCharacterShape === option.value ? "active" : ""}
+                          onClick={() => setPlayerCharacterShape(option.value)}
+                          title={option.name}
+                          aria-label={`${option.name}を選択`}
+                        >
+                          <span
+                            className={`character-shape-swatch shape-${option.value}`}
+                            style={{ "--actor-color": playerCharacterColor } as CSSProperties}
+                          />
+                          <small>{option.name}</small>
                         </button>
                       ))}
                     </div>

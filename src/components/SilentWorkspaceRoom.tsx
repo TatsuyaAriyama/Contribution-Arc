@@ -12,12 +12,15 @@ export type RoomActivityItem = {
 
 type RoomActorStatus = "working" | "deep-work" | "on-break";
 
+export type CharacterShape = "default" | "ghost";
+
 export type RoomActor = {
   id: string;
   userId: string;
   name: string;
   avatar?: string;
   characterColor?: string;
+  characterShape?: CharacterShape;
   x: number;
   y: number;
   currentTask: string;
@@ -299,10 +302,17 @@ export function SilentWorkspaceRoom({
                 {isCurrentUser && bubbleMessage ? <span className="workspace-bubble">{bubbleMessage}</span> : null}
                 {member.status === "on-break" ? <span className="actor-rest-mark" aria-hidden="true">Zz</span> : null}
                 <span className="actor-shadow" />
-                <span className={`actor-sprite ${member.tone}`}>
+                <span
+                  className={`actor-sprite ${member.tone} shape-${member.characterShape || "default"}`}
+                >
                   <span className="sprite-body" />
                   <span className="sprite-leg sprite-leg-left" />
                   <span className="sprite-leg sprite-leg-right" />
+                  {/* Ghost-only face elements. Rendered for every shape
+                      but only made visible via CSS for .shape-ghost. */}
+                  <span className="sprite-eye sprite-eye-left" />
+                  <span className="sprite-eye sprite-eye-right" />
+                  <span className="sprite-tail" />
                 </span>
                 <span className="actor-name">{member.name}</span>
                 <span className="actor-task">
