@@ -18567,3 +18567,124 @@ select:focus-visible,
   }
 }
 
+/* =================================================================
+   Mobile-first navigation & layout polish
+   =================================================================
+   The desktop topbar tries to do too much on a phone: 4 view buttons +
+   today's-study text + 2 popover icons + search + bell + avatar = a
+   dozen tap targets fighting for ~360px. Split it the way every modern
+   SNS app does:
+
+   - Top header is just identity + notifications + search.
+   - Primary navigation lives in a sticky bottom tab bar so any view
+     is one tap away (no hamburger dig).
+   - Secondary surfaces (friends / live activity) collapse off the
+     top bar — their popovers are still reachable but no longer
+     occupy header real estate the user can't afford on a phone.
+   ================================================================= */
+
+.mobile-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  /* Hide the topbar's inline view nav and the secondary popover icons
+     — the bottom nav handles primary moves, and friends / live can be
+     reached from the avatar menu (or restored to a "more" tab later). */
+  .premium-dashboard-header .topbar-nav,
+  .premium-dashboard-header .topbar-popover-wrap {
+    display: none;
+  }
+
+  /* Top header tightens up: brand area · spacer · bell · avatar. The
+     search pill stays on the second row from the earlier redesign so
+     the user can still find people. */
+  .premium-dashboard-header {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "meta bell avatar"
+      "search search search";
+  }
+  .premium-dashboard-header .topbar-context {
+    grid-area: meta;
+  }
+
+  /* Reserve room at the bottom of every scroll so the last card never
+     hides behind the fixed bottom nav. svh accounts for mobile viewport
+     chrome, env() picks up the iOS home-indicator safe area. */
+  .app-shell.premium-shell {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .mobile-bottom-nav {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 70;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0;
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    background: rgba(var(--surface-rgb), 0.94);
+    border-top: 1px solid rgba(var(--ink-rgb), 0.08);
+    backdrop-filter: blur(20px) saturate(1.05);
+    -webkit-backdrop-filter: blur(20px) saturate(1.05);
+    box-shadow: 0 -8px 32px rgba(var(--ink-rgb), 0.06);
+  }
+
+  .mobile-bottom-nav button {
+    appearance: none;
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 3px;
+    min-height: 56px;
+    padding: 6px 2px;
+    border: 0;
+    background: transparent;
+    color: rgba(var(--ink-rgb), 0.5);
+    cursor: pointer;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0;
+    transition: color 0.15s ease, transform 0.12s ease;
+    touch-action: manipulation;
+  }
+
+  .mobile-bottom-nav button svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .mobile-bottom-nav button:active {
+    transform: scale(0.94);
+  }
+
+  .mobile-bottom-nav button.is-active {
+    color: var(--ink-strong, var(--ink));
+  }
+
+  .mobile-bottom-nav button.is-active svg {
+    /* Subtle active fill so the highlight reads from across the screen
+       without needing color the brand might not provide. */
+    background: rgba(var(--ink-rgb), 0.06);
+    border-radius: 12px;
+    padding: 3px;
+  }
+
+  /* The "記録する" CTA stands out a touch — it's the most-used action
+     on the app and lives in the middle slot Twitter/Threads-style. */
+  .mobile-bottom-nav button.is-cta svg {
+    background: var(--ink-strong, #111827);
+    color: var(--surface);
+    border-radius: 14px;
+    padding: 5px;
+    width: 30px;
+    height: 30px;
+    box-shadow: 0 8px 22px rgba(var(--ink-rgb), 0.18);
+  }
+
+  .mobile-bottom-nav button.is-cta {
+    color: var(--ink-strong, var(--ink));
+  }
+}
+
