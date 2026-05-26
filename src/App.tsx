@@ -2747,11 +2747,12 @@ function LoginScreen() {
 
       <div className="login-side-stack">
       <section className="card login-card">
-        <p className="card-kicker">Authentication</p>
-        <h2>記録を始めよう。</h2>
+        <header className="login-card-head">
+          <p className="card-kicker">Sign in</p>
+          <h2>アカウントにログイン</h2>
+        </header>
         <p className="login-copy">
-          <span>メール、Google、GitHubでログインできます。</span>
-          <span className="login-copy-highlight">今日の学習ログを明日の成長へ。</span>
+          メール、Google、GitHub のいずれかでログインできます。
         </p>
 
         <div className="auth-mode-tabs" aria-label="認証モード">
