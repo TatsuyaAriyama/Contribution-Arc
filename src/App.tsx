@@ -1295,6 +1295,12 @@ function getDateInputValue(date = new Date()) {
 // day's prompt only appears once the user wakes up.
 const DAILY_CUTOFF_HOUR = 6;
 
+// LIVE ACTIVITY only surfaces study sessions of at least this many minutes.
+// Sub-5-minute pings would crowd the timeline with low-signal noise — they're
+// still persisted to Firestore, just hidden from the public ticker. Bump this
+// up if the feed still feels too chatty.
+const LIVE_ACTIVITY_MIN_MINUTES = 5;
+
 function getLearnerDate(now: Date = new Date()) {
   const shifted = new Date(now.getTime() - DAILY_CUTOFF_HOUR * 60 * 60 * 1000);
   return getDateInputValue(shifted);
@@ -5115,15 +5121,30 @@ function App() {
 
     return friend;
   });
-  const recentStudyActivities: LiveActivity[] = [...studyLogs]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  // Hide short pings, then collapse runs of identical sessions (same subject +
+  // minutes from the same author) into a single row with a ×N badge so the
+  // ticker doesn't repeat "Ari completed 5分 開発" five times in a row.
+  const eligibleStudyLogs = [...studyLogs]
+    .filter((log) => log.minutes >= LIVE_ACTIVITY_MIN_MINUTES)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  type StudyActivityGroup = { log: StudyLog; count: number };
+  const studyActivityGroups: StudyActivityGroup[] = [];
+  for (const log of eligibleStudyLogs) {
+    const last = studyActivityGroups[studyActivityGroups.length - 1];
+    if (last && last.log.subject === log.subject && last.log.minutes === log.minutes) {
+      last.count += 1;
+    } else {
+      studyActivityGroups.push({ log, count: 1 });
+    }
+  }
+  const recentStudyActivities: LiveActivity[] = studyActivityGroups
     .slice(0, 3)
-    .map((log) => ({
+    .map(({ log, count }) => ({
       id: `study-${log.id}`,
       userId: currentUserUid,
       userName: playerName,
       avatar: playerAvatar,
-      text: `${playerName} completed ${formatStudyTimeJa(log.minutes)} ${log.subject}`,
+      text: `${playerName} completed ${formatStudyTimeJa(log.minutes)} ${log.subject}${count > 1 ? ` (×${count})` : ""}`,
       meta: new Date(log.createdAt).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
       status: "recent",
     }));
@@ -7288,7 +7309,10 @@ function App() {
     const isBursting = likeBurstPostId === post.id;
 
     return (
-      <article className={`log-post-card ${variant === "compact" ? "compact" : ""}`} key={post.id}>
+      <article
+        className={`log-post-card ${variant === "compact" ? "compact" : ""}${post.userId === currentUserUid ? " is-own" : ""}`}
+        key={post.id}
+      >
         <button type="button" className="log-post-author" onClick={() => handlePostAuthorOpen(post)}>
           <ProfileCharacterPreview color={post.characterColor} variant="simple" />
           <span>
@@ -10170,9 +10194,10 @@ function App() {
                   type="button"
                   className="daily-plan-prompt-skip"
                   onClick={handleDailyPromptDismiss}
-                  aria-label="今日は書かない"
+                  aria-label="今日は書かずに進む"
+                  data-tooltip="今日は書かずに進む"
                 >
-                  あとで
+                  スキップ
                 </button>
               </div>
               <form
@@ -10187,7 +10212,7 @@ function App() {
                     setDailyPromptDraft(event.target.value);
                     setDailyPromptError("");
                   }}
-                  placeholder="例: DDIA Ch.7 を読み切る / Tauri の sidecar 検証 / PR レビュー2件"
+                  placeholder="例: DDIA Ch.7 を読み切る"
                   rows={2}
                   maxLength={400}
                 />
