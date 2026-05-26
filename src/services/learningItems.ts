@@ -8,8 +8,11 @@ import {
   setDoc,
   where,
   type Firestore,
+  type QuerySnapshot,
   type Unsubscribe,
 } from "firebase/firestore";
+
+import { guardedOnSnapshot } from "./firebaseGuard";
 
 export type LearningCategory = "book" | "stack";
 
@@ -61,8 +64,9 @@ export function subscribeLearningItemsFromCloud(
 ): Unsubscribe {
   const itemsQuery = query(collection(db, "learningItems"), where("userId", "==", userId));
 
-  return onSnapshot(
-    itemsQuery,
+  return guardedOnSnapshot<QuerySnapshot>(
+    `learningItems:${userId}`,
+    (next, err) => onSnapshot(itemsQuery, next, err),
     (snapshot) => {
       const items = snapshot.docs
         .map((entry) => {
@@ -86,7 +90,7 @@ export function subscribeLearningItemsFromCloud(
 
       onChange(items);
     },
-    onError,
+    (error) => onError(error),
   );
 }
 

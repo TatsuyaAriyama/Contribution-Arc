@@ -11,8 +11,11 @@ import {
   updateDoc,
   where,
   type Firestore,
+  type QuerySnapshot,
   type Unsubscribe,
 } from "firebase/firestore";
+
+import { guardedOnSnapshot } from "./firebaseGuard";
 
 export type WorkspaceRecruitmentRecord = {
   id: string;
@@ -73,8 +76,9 @@ export function subscribeActiveRecruitmentsFromCloud(
     limit(50),
   );
 
-  return onSnapshot(
-    recruitmentsQuery,
+  return guardedOnSnapshot<QuerySnapshot>(
+    "workspaceRecruitments",
+    (next, err) => onSnapshot(recruitmentsQuery, next, err),
     (snapshot) => {
       const recruitments = snapshot.docs
         .map((entry) => {
@@ -98,7 +102,7 @@ export function subscribeActiveRecruitmentsFromCloud(
 
       onChange(recruitments);
     },
-    onError,
+    (error) => onError(error),
   );
 }
 
