@@ -10590,12 +10590,28 @@
     align-items: start;
   }
 
-  /* Right pane flows with the page — no sticky, no fixed height, no
-     internal scroll. The feed grows with its content; once the page
-     height exceeds the viewport, the page itself scrolls. The previous
-     setup (sticky + fixed viewport height + internal-only scroll) left
-     a tall empty zone whenever the feed was short, which is the
-     wasted-space the user flagged. */
+  /* Right pane = independent scroll column. It's sticky at top: 92px
+     and owns its own overflow so the feed can be scrolled without
+     moving the left view, and vice versa. No outer card chrome on
+     the section itself — that lives on the individual post cards. */
+  .two-pane-right {
+    position: sticky;
+    top: 92px;
+    height: calc(100svh - 108px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* Hide scrollbar so the chromeless right pane stays visually clean
+     (Twitter-style). Content still scrolls; only the indicator is
+     suppressed. */
+  .two-pane-right::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+  .two-pane-right {
+    scrollbar-width: none;
+  }
 }
 
 /* ===== Topbar: nav + popovers =====
