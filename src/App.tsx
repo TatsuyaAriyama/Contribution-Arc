@@ -91,7 +91,9 @@ import { type AppView, type FriendPreview, type LiveActivity } from "./component
 import { SilentWorkspaceRoom, type RoomActivityItem } from "./components/SilentWorkspaceRoom";
 import { ShareToXModal } from "./components/ShareToXModal";
 import { TutorialHint } from "./components/TutorialHint";
+import { ToastHost } from "./components/ToastHost";
 import { resetAllTutorials } from "./services/tutorial";
+import { showToast } from "./services/toast";
 import "./App.css";
 
 declare global {
@@ -3169,23 +3171,6 @@ function App() {
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [friendMessage, setFriendMessage] = useState("");
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
-
-  // Mobile drawer: lock body scroll while open, auto-close when the
-  // viewport grows past the mobile breakpoint (e.g. on rotate / resize).
-  useEffect(() => {
-    if (!isMobileNavOpen) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const handleResize = () => {
-      if (window.innerWidth > 720) setIsMobileNavOpen(false);
-    };
-    window.addEventListener("resize", handleResize);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("resize", handleResize);
-    };
-  }, [isMobileNavOpen]);
   const [lastNotificationReadAt, setLastNotificationReadAt] = useState("");
   const [appNotifications, setAppNotifications] = useState<NotificationItem[]>([]);
   const [desktopNotificationSettings, setDesktopNotificationSettings] = useState<DesktopNotificationSettings>(
@@ -3198,13 +3183,32 @@ function App() {
       setCurrentViewRaw(next);
       return;
     }
+
+    // After the view actually mounts, the window scroll position is
+    // still wherever it was on the previous view. Snap it back to the
+    // top so the user starts each surface at the beginning — the
+    // typical browser SPA expectation and what every SNS app does on
+    // tab change. Run on next frame so it lands AFTER any view
+    // transition has begun.
+    const scrollToTop = () => {
+      if (typeof window === "undefined") return;
+      // `instant` keeps the snap silent — the view-transition animation
+      // is doing the perceived smoothness, a smooth scroll on top of
+      // it just looks jittery.
+      window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+    };
+
     const doc = document as Document & {
       startViewTransition?: (cb: () => void) => unknown;
     };
     if (typeof doc.startViewTransition === "function") {
-      doc.startViewTransition(() => setCurrentViewRaw(next));
+      doc.startViewTransition(() => {
+        setCurrentViewRaw(next);
+        requestAnimationFrame(scrollToTop);
+      });
     } else {
       setCurrentViewRaw(next);
+      requestAnimationFrame(scrollToTop);
     }
   }, []);
   const [profileMember, setProfileMember] = useState<WorkspaceMember | null>(null);
@@ -5691,6 +5695,10 @@ function App() {
       const syncedPost: ContributionPostRecord = { ...nextPost, syncStatus: "synced", syncError: "" };
       setPosts((items) => mergePosts([syncedPost, ...items.filter((item) => item.id !== nextPost.id)]));
       void putPersistentItem("posts", syncedPost).catch(logPersistError);
+      // The new post appears in the feed below, but on a long list it's
+      // easy to miss the visual update. The toast confirms the send so
+      // the user doesn't second-guess whether their tap landed.
+      showToast("投稿しました", { kind: "success" });
     } catch (error) {
       setPostError(
         getFirestoreErrorMessage(
@@ -6392,6 +6400,10 @@ function App() {
         setCurrentView("home");
       } else {
         setOnboardingStep("idle");
+        // Onboarding has its own celebratory flow ("first post" banner),
+        // so only toast for regular saves — otherwise the user sees both
+        // and the banner gets stepped on.
+        showToast("プロフィールを保存しました", { kind: "success" });
       }
       setIsSettingsOpen(false);
     } finally {
@@ -6520,8 +6532,13 @@ function App() {
         createdAt: outgoingRequest.createdAt,
         updatedAt: serverTimestamp(),
       });
+      // Profile screens / search results don't visibly change state when
+      // a request is sent (the "リクエスト" button just goes disabled),
+      // so a confirmation toast keeps the user from re-tapping.
+      showToast(`${profile.displayName} にフレンド申請を送りました`, { kind: "success" });
     } catch (error) {
       console.info("Friend request cloud send skipped.", error);
+      showToast("フレンド申請をローカルに保存しました。再接続後に同期します。", { kind: "info" });
     }
 
     setFriendMessage("フレンド申請を送信しました。承認されるとFriendsに表示されます。");
@@ -6586,6 +6603,7 @@ function App() {
     }
 
     setFriendMessage("フレンドになりました。");
+    showToast(`${nextFriend.name} とフレンドになりました`, { kind: "success" });
   };
 
   const handleNotificationFriendAccept = (
@@ -6870,6 +6888,16 @@ function App() {
       console.error("Workspace study log cloud save failed.", error);
     });
     setLastRoomSession(session);
+    // EXP/minute earnings only become visible on the profile screen,
+    // which the user usually isn't looking at when they leave a room.
+    // The toast surfaces the reward immediately so the action feels
+    // rewarding rather than empty.
+    if (session.durationMinutes > 0) {
+      showToast(
+        `退室しました ・ ${formatStayTime(session.durationMinutes)} で +${session.earnedExp} EXP`,
+        { kind: "success" },
+      );
+    }
   };
 
   const resetWorkspacePresence = () => {
@@ -10872,6 +10900,12 @@ function App() {
           </button>
         </nav>
       ) : null}
+
+      {/* Global toast host. Mounted once near the root so any handler
+          can `showToast(...)` without prop-drilling. The fixed
+          positioning + high z-index makes it the topmost UI surface,
+          including on top of the mobile bottom nav. */}
+      <ToastHost />
     </motion.main>
   );
 }
