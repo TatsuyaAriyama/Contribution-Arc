@@ -3456,13 +3456,14 @@
 
 .timeline-filter-tabs {
   display: inline-flex;
-  gap: 4px;
-  padding: 4px;
-  background: rgba(var(--ink-rgb), 0.04);
-  border-radius: 999px;
-  align-self: start;
-  justify-self: start;
-  margin-bottom: 2px;
+  gap: 18px;
+  padding: 0;
+  background: transparent;
+  border-bottom: 1px solid rgba(var(--ink-rgb), 0.08);
+  border-radius: 0;
+  align-self: stretch;
+  justify-self: stretch;
+  margin-bottom: 6px;
 }
 
 .timeline-filter-tab {
@@ -3470,28 +3471,34 @@
   border: 0;
   background: transparent;
   color: var(--muted);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 16px;
+  font-weight: 600;
   letter-spacing: 0.01em;
-  padding: 6px 14px;
-  border-radius: 999px;
+  padding: 8px 4px 10px;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
   cursor: pointer;
-  transition: background 0.18s ease, color 0.18s ease;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
 }
 
 .timeline-filter-tab:hover {
   color: var(--ink);
+  background: rgba(var(--ink-rgb), 0.025);
 }
 
 .timeline-filter-tab.is-active {
-  background: var(--surface);
-  color: var(--ink);
-  box-shadow: 0 1px 2px rgba(var(--ink-rgb), 0.06);
+  background: transparent;
+  color: var(--green);
+  border-bottom-color: var(--green);
+  box-shadow: none;
+  font-weight: 700;
 }
 
 .timeline-filter-tab:focus-visible {
   outline: 2px solid var(--green);
   outline-offset: 2px;
+  border-radius: 4px;
 }
 
 .log-post-card {
@@ -3513,6 +3520,25 @@
   gap: 8px;
   padding: 12px 14px;
   border-radius: 12px;
+}
+
+/* Subtle accent for the current user's own posts: thin green left edge
+   + barely-there tint, so attribution reads without dominating the feed. */
+.log-post-card.is-own {
+  border-left: 3px solid var(--green);
+  background: linear-gradient(
+    90deg,
+    rgba(31, 111, 74, 0.035) 0%,
+    var(--surface) 60%
+  );
+}
+
+[data-theme="dark"] .log-post-card.is-own {
+  background: linear-gradient(
+    90deg,
+    rgba(74, 222, 128, 0.07) 0%,
+    var(--surface) 60%
+  );
 }
 
 .log-post-author {
@@ -4006,6 +4032,39 @@
 .daily-plan-prompt-skip:hover {
   background: rgba(var(--ink-rgb), 0.06);
   color: var(--ink);
+}
+
+/* Tooltip clarifying what "スキップ" does — appears below the button on hover.
+   Right-aligned so it doesn't overflow the card edge. */
+.daily-plan-prompt-skip[data-tooltip] {
+  position: relative;
+}
+
+.daily-plan-prompt-skip[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  padding: 6px 10px;
+  background: var(--ink);
+  color: rgba(var(--cta-fg-rgb), 0.96);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  border-radius: 8px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity 0.16s ease, transform 0.16s ease;
+  z-index: 30;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+}
+
+.daily-plan-prompt-skip[data-tooltip]:hover::after,
+.daily-plan-prompt-skip[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .daily-plan-prompt form {
@@ -16688,49 +16747,14 @@ body {
    and rendered above body but below #root content.
    ============================================================ */
 
-/* Aurora — slow drifting color field, very low opacity */
-.aurora-backdrop {
-  position: fixed;
-  inset: -20vmax;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.55;
-  filter: blur(80px) saturate(1.1);
-  background:
-    radial-gradient(40vmax 30vmax at 18% 22%, rgba(31, 111, 74, 0.35), transparent 70%),
-    radial-gradient(35vmax 28vmax at 82% 18%, rgba(124, 92, 255, 0.28), transparent 72%),
-    radial-gradient(30vmax 24vmax at 60% 88%, rgba(211, 87, 59, 0.22), transparent 70%);
-  animation: aurora-drift 38s ease-in-out infinite alternate;
-  will-change: transform;
-  mix-blend-mode: normal;
-}
-
-[data-theme="dark"] .aurora-backdrop {
-  /* Twitter/Instagram-style dark mode: no ambient color overlay,
-     pure black canvas instead. */
-  display: none;
-}
+/* The old `.aurora-backdrop` (drifting green/violet/orange radial gradients
+   in the corners) was replaced by `.ambient-backdrop`, which is driven by
+   [data-time="..."] on the shell root. The aurora rules below used to live
+   here. See the "Sticky flat header" section earlier in this file for the
+   new gradient palettes. */
 
 [data-theme="dark"] .cursor-spotlight {
   display: none;
-}
-
-@keyframes aurora-drift {
-  0% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(-3vmax, 2vmax, 0) scale(1.06);
-  }
-  100% {
-    transform: translate3d(2vmax, -2vmax, 0) scale(1.02);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .aurora-backdrop {
-    animation: none;
-  }
 }
 
 /* Cursor spotlight — only on real cursors */
