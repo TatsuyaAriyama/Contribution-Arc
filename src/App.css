@@ -10590,38 +10590,12 @@
     align-items: start;
   }
 
-  .two-pane-right {
-    position: sticky;
-    top: 92px;
-    /* Fixed `height` (not `max-height`) so the pane reserves the full
-       available viewport even when content is short. With `max-height`
-       the pane would shrink to its content, leaving the inner card's
-       `flex: 1` nothing to grow into and producing the "card cut off
-       mid-screen" look. */
-    height: calc(100svh - 108px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
-
-  .two-pane-right .home-feed-section {
-    /* Fill the right pane top-to-bottom so the card frame reaches the
-       viewport edge instead of ending mid-screen when there are only a
-       handful of posts. `.two-pane-right` is already a column flex; the
-       section is its sole child here. `min-height: 0` lets the inner list
-       shrink to enable its own overflow scroll below. */
-    flex: 1 1 auto;
-    min-height: 0;
-    margin-bottom: 0;
-  }
-
-  .two-pane-right .home-feed-list {
-    /* The list owns the internal scroll so the card's header / composer /
-       filter tabs stay pinned at top while posts scroll inside. */
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
+  /* Right pane flows with the page — no sticky, no fixed height, no
+     internal scroll. The feed grows with its content; once the page
+     height exceeds the viewport, the page itself scrolls. The previous
+     setup (sticky + fixed viewport height + internal-only scroll) left
+     a tall empty zone whenever the feed was short, which is the
+     wasted-space the user flagged. */
 }
 
 /* ===== Topbar: nav + popovers =====
@@ -16701,15 +16675,15 @@ body {
   border-color: var(--ink);
 }
 
-/* ===== Home Feed (Phase 1: engineer-Twitter) ===== */
+/* ===== Home Feed (Phase 1: engineer-Twitter) =====
+   No outer card chrome: the section is just a flex column. Each post
+   card carries its own border/bg, so wrapping the whole feed in another
+   card created a frame the user explicitly didn't want — and the empty
+   space inside that frame whenever the feed was short. */
 .home-feed-section {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 24px;
-  background: var(--surface, #fff);
-  border: 1px solid rgba(var(--ink-rgb), 0.08);
-  border-radius: 18px;
   margin-bottom: 24px;
 }
 
@@ -17405,7 +17379,6 @@ select:focus-visible,
 [data-theme="dark"] .study-card,
 [data-theme="dark"] .daily-card,
 [data-theme="dark"] .profile-card,
-[data-theme="dark"] .home-feed-section,
 [data-theme="dark"] .home-feed-composer,
 [data-theme="dark"] .workspace-session-panel,
 [data-theme="dark"] .workspace-stage,
