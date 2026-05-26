@@ -8042,6 +8042,17 @@
   transform: translate(-50%, -50%);
 }
 
+/* The walk loop updates `playerPosition` at ~30fps (33ms cadence) to
+   keep the React render budget reasonable. A short linear transition
+   on left/top interpolates between those ticks so the avatar reads as
+   smoothly moving rather than ticking 30 times per second. Slightly
+   longer than one tick (70ms vs 33ms) so the eye never catches the
+   step. Only applied while walking — releasing keys snaps cleanly to
+   the final position without a drifting tail. */
+.workspace-actor.is-walking {
+  transition: left 70ms linear, top 70ms linear;
+}
+
 .workspace-actor.is-npc {
   animation: workspace-npc-idle 4.8s ease-in-out infinite;
 }

@@ -4739,21 +4739,63 @@ function App() {
       pressedWorkspaceKeysRef.current.delete(key);
     };
 
+    // Walk loop. Two problems with the previous implementation:
+    //   1. `setIsPlayerWalking(isMoving)` + `setPlayerPosition(...)` ran
+    //      on every single rAF tick (~60fps). App.tsx is a ~10k-line
+    //      monolith, so paying for a full re-render 60 times a second
+    //      was the actual jank — the avatar appeared to stutter.
+    //   2. The per-frame Δ was a fixed `0.42%`, so any frame that got
+    //      delayed (GC, layout, etc.) effectively teleported the avatar
+    //      a variable distance the next tick.
+    // Fix: throttle state updates to ~30fps, only flip the walking flag
+    // on actual transitions, and scale movement by real elapsed time so
+    // speed stays constant regardless of frame pacing. The CSS rule
+    // `.workspace-actor.is-walking { transition: left/top 70ms linear }`
+    // bridges the 33ms state cadence into visually-smooth motion.
+    const TARGET_TICK_MS = 1000 / 30;
+    const SPEED_PERCENT_PER_SEC = 25;
     let frameId = 0;
-    const tick = () => {
+    let lastUpdateAt = 0;
+    let lastWalking: boolean | null = null;
+    const tick = (timestamp: number) => {
       const keys = pressedWorkspaceKeysRef.current;
       const dx = (keys.has("d") || keys.has("arrowright") ? 1 : 0) - (keys.has("a") || keys.has("arrowleft") ? 1 : 0);
       const dy = (keys.has("s") || keys.has("arrowdown") ? 1 : 0) - (keys.has("w") || keys.has("arrowup") ? 1 : 0);
       const isMoving = dx !== 0 || dy !== 0;
 
-      setIsPlayerWalking(isMoving);
-      if (isMoving) {
-        const length = Math.hypot(dx, dy) || 1;
-        setPlayerPosition((position) => ({
-          x: clampNumber(position.x + (dx / length) * 0.42, 7, 93),
-          y: clampNumber(position.y + (dy / length) * 0.42, 14, 88),
-        }));
+      if (lastWalking !== isMoving) {
+        setIsPlayerWalking(isMoving);
+        lastWalking = isMoving;
       }
+
+      if (!isMoving) {
+        lastUpdateAt = 0;
+        frameId = window.requestAnimationFrame(tick);
+        return;
+      }
+
+      if (lastUpdateAt === 0) {
+        // First active tick after a key was pressed — record the
+        // timestamp and wait one frame so the next iteration has a
+        // valid Δt to integrate against.
+        lastUpdateAt = timestamp;
+        frameId = window.requestAnimationFrame(tick);
+        return;
+      }
+
+      const elapsed = timestamp - lastUpdateAt;
+      if (elapsed < TARGET_TICK_MS) {
+        frameId = window.requestAnimationFrame(tick);
+        return;
+      }
+
+      lastUpdateAt = timestamp;
+      const length = Math.hypot(dx, dy) || 1;
+      const seconds = elapsed / 1000;
+      setPlayerPosition((position) => ({
+        x: clampNumber(position.x + (dx / length) * SPEED_PERCENT_PER_SEC * seconds, 7, 93),
+        y: clampNumber(position.y + (dy / length) * SPEED_PERCENT_PER_SEC * seconds, 14, 88),
+      }));
 
       frameId = window.requestAnimationFrame(tick);
     };
