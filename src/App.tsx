@@ -3051,7 +3051,6 @@ function App() {
   const [hoveredArcCell, setHoveredArcCell] = useState<
     { day: ContributionArcDay; left: number; top: number; placement: "above" | "below" } | null
   >(null);
-  const [topbarNow, setTopbarNow] = useState(() => new Date());
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -3083,11 +3082,6 @@ function App() {
       /* localStorage unavailable — just skip persistence */
     }
   }, [uiScale]);
-
-  useEffect(() => {
-    const id = window.setInterval(() => setTopbarNow(new Date()), 30000);
-    return () => window.clearInterval(id);
-  }, []);
 
   useEffect(() => {
     if (!isUserMenuOpen) return;
@@ -8112,68 +8106,11 @@ function App() {
           </svg>
         </button>
         <div className="topbar-context">
-          <span className="topbar-date">
-            {topbarNow.getMonth() + 1}/{topbarNow.getDate()}（
-            {["日", "月", "火", "水", "木", "金", "土"][topbarNow.getDay()]}）
-          </span>
-          <span className="topbar-divider" aria-hidden="true">
-            ·
-          </span>
-          <span className="topbar-time">
-            {topbarNow.getHours().toString().padStart(2, "0")}:
-            {topbarNow.getMinutes().toString().padStart(2, "0")}
-          </span>
           {todayStudyMinutes > 0 ? (
-            <>
-              <span className="topbar-divider" aria-hidden="true">
-                ·
-              </span>
-              <span className="topbar-today">
-                今日 {formatStudyTimeJa(todayStudyMinutes)} 学習
-              </span>
-            </>
+            <span className="topbar-today">
+              今日 {formatStudyTimeJa(todayStudyMinutes)} 学習
+            </span>
           ) : null}
-        </div>
-        <div className="topbar-zoom" role="group" aria-label="表示サイズ">
-          <button
-            type="button"
-            className="topbar-zoom-step"
-            onClick={() =>
-              setUiScale((v) =>
-                Math.max(UI_SCALE_MIN, Math.round((v - 0.05) * 100) / 100),
-              )
-            }
-            aria-label="表示を小さくする"
-            disabled={uiScale <= UI_SCALE_MIN + 1e-6}
-          >
-            −
-          </button>
-          <input
-            type="range"
-            className="topbar-zoom-slider"
-            min={UI_SCALE_MIN}
-            max={UI_SCALE_MAX}
-            step={0.05}
-            value={uiScale}
-            onChange={(event) => setUiScale(parseFloat(event.target.value))}
-            aria-label="表示サイズスライダー"
-          />
-          <button
-            type="button"
-            className="topbar-zoom-step"
-            onClick={() =>
-              setUiScale((v) =>
-                Math.min(UI_SCALE_MAX, Math.round((v + 0.05) * 100) / 100),
-              )
-            }
-            aria-label="表示を大きくする"
-            disabled={uiScale >= UI_SCALE_MAX - 1e-6}
-          >
-            ＋
-          </button>
-          <span className="topbar-zoom-value" aria-live="polite">
-            {Math.round(uiScale * 100)}%
-          </span>
         </div>
         <div className="user-session">
           <button
@@ -8195,7 +8132,9 @@ function App() {
               onClick={handleNotificationsToggle}
             >
               <BellIcon />
-              {unreadNotificationCount > 0 ? <span>{unreadNotificationCount}</span> : null}
+              {unreadNotificationCount > 0 ? (
+                <span className="notification-dot" aria-hidden="true" />
+              ) : null}
             </button>
 
             {isNotificationsOpen ? (
@@ -8295,6 +8234,31 @@ function App() {
                     <small>@{userId || "未設定"}</small>
                   </span>
                 </div>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    setCurrentView("profile");
+                  }}
+                >
+                  <svg
+                    className="user-menu-icon"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <circle cx="12" cy="8" r="3.6" fill="none" stroke="currentColor" strokeWidth="1.6" />
+                    <path
+                      d="M4.5 20c1.4-3.6 4.4-5.5 7.5-5.5s6.1 1.9 7.5 5.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <span>プロフィール</span>
+                </button>
                 <button
                   type="button"
                   role="menuitem"
@@ -8806,6 +8770,53 @@ function App() {
                     aria-pressed={theme === "light"}
                   >
                     ライト
+                  </button>
+                </div>
+              </div>
+
+              <div className="settings-zoom-panel" role="group" aria-label="表示サイズ">
+                <div className="settings-zoom-head">
+                  <span className="settings-theme-label">表示サイズ</span>
+                  <span className="settings-zoom-value" aria-live="polite">
+                    {Math.round(uiScale * 100)}%
+                  </span>
+                </div>
+                <div className="settings-zoom-control">
+                  <button
+                    type="button"
+                    className="settings-zoom-step"
+                    onClick={() =>
+                      setUiScale((v) =>
+                        Math.max(UI_SCALE_MIN, Math.round((v - 0.05) * 100) / 100),
+                      )
+                    }
+                    aria-label="表示を小さくする"
+                    disabled={uiScale <= UI_SCALE_MIN + 1e-6}
+                  >
+                    −
+                  </button>
+                  <input
+                    type="range"
+                    className="settings-zoom-slider"
+                    min={UI_SCALE_MIN}
+                    max={UI_SCALE_MAX}
+                    step={0.05}
+                    value={uiScale}
+                    onChange={(event) => setUiScale(parseFloat(event.target.value))}
+                    aria-label="表示サイズスライダー"
+                  />
+                  <button
+                    type="button"
+                    className="settings-zoom-step"
+                    onClick={() =>
+                      setUiScale((v) =>
+                        Math.min(UI_SCALE_MAX, Math.round((v + 0.05) * 100) / 100),
+                      )
+                    }
+                    aria-label="表示を大きくする"
+                    disabled={uiScale >= UI_SCALE_MAX - 1e-6}
+                  >
+                    ＋
                   </button>
                 </div>
               </div>

@@ -1538,12 +1538,12 @@
 .login-shell {
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
-  align-items: center;
+  align-items: start;
   gap: 28px;
   width: min(1180px, calc(100% - 40px));
   min-height: 100vh;
   margin: 0 auto;
-  padding: 40px 0;
+  padding: 40px 0 56px;
 }
 
 .login-side-stack {
@@ -14515,19 +14515,36 @@
 }
 .contribution-arc-legend i.lv-1,
 .contribution-arc-cell.lv-1 {
-  background: rgba(31, 111, 74, 0.28);
+  background: #b8d8be;
 }
 .contribution-arc-legend i.lv-2,
 .contribution-arc-cell.lv-2 {
-  background: rgba(31, 111, 74, 0.5);
+  background: #6fb079;
 }
 .contribution-arc-legend i.lv-3,
 .contribution-arc-cell.lv-3 {
-  background: rgba(31, 111, 74, 0.72);
+  background: #3a8c5a;
 }
 .contribution-arc-legend i.lv-4,
 .contribution-arc-cell.lv-4 {
-  background: rgba(31, 111, 74, 0.95);
+  background: #1f5a3a;
+}
+
+[data-theme="dark"] .contribution-arc-legend i.lv-1,
+[data-theme="dark"] .contribution-arc-cell.lv-1 {
+  background: #0e3d24;
+}
+[data-theme="dark"] .contribution-arc-legend i.lv-2,
+[data-theme="dark"] .contribution-arc-cell.lv-2 {
+  background: #1f6a3a;
+}
+[data-theme="dark"] .contribution-arc-legend i.lv-3,
+[data-theme="dark"] .contribution-arc-cell.lv-3 {
+  background: #3aa55a;
+}
+[data-theme="dark"] .contribution-arc-legend i.lv-4,
+[data-theme="dark"] .contribution-arc-cell.lv-4 {
+  background: #59e08a;
 }
 
 .contribution-arc-canvas {
@@ -15453,15 +15470,16 @@ body {
     height: 8px;
   }
 
-  .contribution-arc-donut-legend li strong {
+  .contribution-arc-donut-legend li .legend-name {
     font-size: 11px;
   }
 
-  .contribution-arc-donut-legend li span {
-    font-size: 10px;
+  .contribution-arc-donut-legend li .legend-pct {
+    font-size: 13px;
+    min-width: 36px;
   }
 
-  .contribution-arc-donut-legend li small {
+  .contribution-arc-donut-legend li .legend-time {
     font-size: 10px;
   }
 
@@ -15583,7 +15601,7 @@ body {
 .contribution-arc-donut-legend li {
   display: grid;
   grid-template-columns: 10px minmax(0, 1fr) auto auto;
-  align-items: center;
+  align-items: baseline;
   gap: 8px;
   font-size: 12px;
 }
@@ -15593,29 +15611,34 @@ body {
   height: 10px;
   border-radius: 3px;
   display: block;
+  align-self: center;
 }
 
-.contribution-arc-donut-legend li strong {
+.contribution-arc-donut-legend li .legend-name {
   font-weight: 500;
   color: var(--ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 12px;
 }
 
-.contribution-arc-donut-legend li span {
-  color: var(--muted);
-  font-size: 11px;
-  white-space: nowrap;
-}
-
-.contribution-arc-donut-legend li small {
+.contribution-arc-donut-legend li .legend-pct {
   color: var(--ink);
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  min-width: 42px;
+  text-align: right;
+}
+
+.contribution-arc-donut-legend li .legend-time {
+  color: var(--muted);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   font-weight: 500;
-  min-width: 30px;
-  text-align: right;
+  white-space: nowrap;
 }
 
 .contribution-arc-donut-reset {
