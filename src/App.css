@@ -16917,3 +16917,167 @@ select:focus-visible,
     padding: 10px 14px;
   }
 }
+
+/* ======================================================================
+   Dark Mode – comprehensive visibility fixes
+   The default tokens flip ink/surface but many element-level colours are
+   hard-coded to light-mode values (dark-forest-green, low-alpha borders,
+   etc.).  This block overrides the worst offenders so every screen is
+   comfortably readable on the black canvas.
+   ====================================================================== */
+
+/* --- Heatmap cells ---------------------------------------------------- */
+/* Light mode uses rgba(31,111,74,…) — a dark forest green that is
+   nearly indistinguishable from the black background in dark mode.
+   Switch to the dark-mode --green (#4ade80 = rgb(74,222,128)) palette. */
+[data-theme="dark"] .contribution-arc-legend i.lv-0,
+[data-theme="dark"] .contribution-arc-cell.lv-0 {
+  background: rgba(255, 255, 255, 0.11);
+}
+[data-theme="dark"] .contribution-arc-legend i.lv-1,
+[data-theme="dark"] .contribution-arc-cell.lv-1 {
+  background: rgba(74, 222, 128, 0.30);
+}
+[data-theme="dark"] .contribution-arc-legend i.lv-2,
+[data-theme="dark"] .contribution-arc-cell.lv-2 {
+  background: rgba(74, 222, 128, 0.52);
+}
+[data-theme="dark"] .contribution-arc-legend i.lv-3,
+[data-theme="dark"] .contribution-arc-cell.lv-3 {
+  background: rgba(74, 222, 128, 0.74);
+}
+[data-theme="dark"] .contribution-arc-legend i.lv-4,
+[data-theme="dark"] .contribution-arc-cell.lv-4 {
+  background: rgba(74, 222, 128, 0.96);
+}
+
+/* --- Contribution Arc card borders / surfaces ------------------------- */
+[data-theme="dark"] .contribution-arc-card {
+  border-color: rgba(255, 255, 255, 0.10);
+}
+
+[data-theme="dark"] .contribution-arc-detail {
+  border-color: rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .contribution-arc-github {
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="dark"] .contribution-arc-donut.empty {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+[data-theme="dark"] .contribution-arc-ribbon-bar {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .contribution-arc-github-link-error {
+  color: #ff7070;
+}
+
+/* Today's cell ring stays readable against bright cells. */
+[data-theme="dark"] .contribution-arc-cell.today {
+  outline-color: rgba(255, 255, 255, 0.65);
+}
+
+/* Mobile stats tile: bump near-invisible 2% white fill/border. */
+@media (max-width: 720px) {
+  [data-theme="dark"] .contribution-arc-stats {
+    border-color: rgba(255, 255, 255, 0.10);
+    background: rgba(255, 255, 255, 0.04);
+  }
+}
+
+/* --- Log / timeline cards -------------------------------------------- */
+[data-theme="dark"] .log-post-card {
+  border-color: rgba(255, 255, 255, 0.10);
+}
+
+[data-theme="dark"] .log-post-card:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+[data-theme="dark"] .today-strip {
+  border-color: rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .today-strip-divider {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Timeline filter pill container: 4% white is nearly invisible → 7%. */
+[data-theme="dark"] .timeline-filter-tabs {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+[data-theme="dark"] .timeline-filter-tab.is-active {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+/* --- Sidebar / navigation -------------------------------------------- */
+/* Active/hovered nav items: surface-over-surface is imperceptible on
+   the black canvas.  Use a green-tinted highlight instead. */
+[data-theme="dark"] .side-nav button:hover,
+[data-theme="dark"] .side-nav button.active {
+  background: rgba(74, 222, 128, 0.08);
+  border-color: rgba(74, 222, 128, 0.18);
+  color: var(--ink);
+}
+
+/* Active indicator dot glow — was rgba(31,111,74,0.1) = invisible. */
+[data-theme="dark"] .side-nav button.active span {
+  box-shadow: 0 0 0 5px rgba(74, 222, 128, 0.20);
+}
+
+/* Sidebar presence mini-heatmap heat cells. */
+[data-theme="dark"] .sidebar-presence .heat-2 {
+  background: rgba(255, 255, 255, 0.20);
+}
+[data-theme="dark"] .sidebar-presence .heat-4 {
+  background: rgba(74, 222, 128, 0.40);
+}
+
+/* Sidebar presence card border — bump opacity. */
+[data-theme="dark"] .sidebar-presence {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* --- Home / feed section borders ------------------------------------- */
+[data-theme="dark"] .home-feed-section {
+  border-color: rgba(255, 255, 255, 0.10);
+}
+
+[data-theme="dark"] .home-feed-composer {
+  border-bottom-color: rgba(255, 255, 255, 0.10);
+}
+
+[data-theme="dark"] .home-feed-list .feed-card,
+[data-theme="dark"] .home-feed-list .recruitment-card {
+  border-color: rgba(255, 255, 255, 0.10);
+}
+
+/* --- Misc small components ------------------------------------------- */
+/* Profile / daily cards and other generic cards. */
+[data-theme="dark"] .card {
+  border-color: rgba(255, 255, 255, 0.10);
+}
+
+/* Mobile sticky topbar. */
+[data-theme="dark"] .site-header {
+  border-color: rgba(255, 255, 255, 0.10);
+}
+
+/* Settings / theme toggle button border. */
+[data-theme="dark"] .settings-button,
+[data-theme="dark"] .theme-toggle {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+/* Mobile nav trigger button. */
+[data-theme="dark"] .mobile-nav-toggle {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+}
