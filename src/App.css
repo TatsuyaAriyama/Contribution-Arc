@@ -12725,7 +12725,11 @@
     width: 74px;
   }
 
-  .actor-sprite {
+  /* Workspace-only sprite resize. Scoped to .workspace-actor so it
+     doesn't leak into the FEED/profile chips, where the sprite must
+     stay 40x40 (a bare .actor-sprite rule here stretched the body
+     and pushed the legs past the chip's overflow:hidden bound). */
+  .workspace-actor .actor-sprite {
     width: 40px;
     height: 52px;
   }
