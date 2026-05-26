@@ -20,7 +20,6 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signInWithPopup,
-  signInWithRedirect,
   signOut,
   type User,
 } from "firebase/auth";
@@ -2713,32 +2712,20 @@ function LoginScreen() {
     setAuthError(null);
     setIsSubmitting(true);
 
-    // Popups are unreliable on mobile browsers (iOS Safari blocks them
-    // outright; in-app webviews silently close them). Detect a touch /
-    // small-viewport context and use the redirect flow there — the result
-    // is picked up by the getRedirectResult effect on the next page load.
-    const isMobileContext =
-      typeof window !== "undefined" &&
-      (window.matchMedia?.("(max-width: 720px)").matches ||
-        /Mobi|Android|iPhone|iPad/i.test(window.navigator.userAgent));
-
+    // Always use `signInWithPopup`, even on mobile. The previous
+    // `signInWithRedirect` branch for mobile broke real-world sign-in:
+    // this site is on `tatsuyaariyama.github.io` but the Firebase
+    // `authDomain` is `github-contribution-rpg.firebaseapp.com`. The
+    // redirect flow needs to hand the OAuth result back across those
+    // two origins via storage on the auth domain, which iOS Safari /
+    // strict browsers block under third-party storage restrictions —
+    // the user signs in successfully on Google's side and then gets
+    // dropped back at the login screen with no error.
+    //
+    // Modern iOS Safari / Chrome allow popups opened from a user
+    // gesture (which this is — the user just tapped the button), so
+    // popup works in practice on the platforms where redirect breaks.
     const oauthProvider = provider === "google" ? googleProvider : githubProvider;
-
-    if (isMobileContext) {
-      try {
-        // Remember which provider initiated the redirect so the result
-        // handler can do provider-specific bookkeeping (e.g. cache the
-        // GitHub login handle) when the browser comes back.
-        window.sessionStorage.setItem("ca:pending-oauth-provider", provider);
-        await signInWithRedirect(auth, oauthProvider);
-        // signInWithRedirect navigates away — the next line won't run.
-        return;
-      } catch (error) {
-        setAuthError(getAuthErrorDetail(error));
-        setIsSubmitting(false);
-        return;
-      }
-    }
 
     try {
       const result = await signInWithPopup(auth, oauthProvider);
@@ -3403,11 +3390,13 @@ function App() {
     });
   }, []);
 
-  // Pick up the result of a redirect-based OAuth sign-in (used on mobile
-  // where `signInWithPopup` is unreliable). Runs once on mount: if the
-  // browser came back from a Google/GitHub redirect, this finalises the
-  // session and performs the same provider-specific bookkeeping that
-  // `handleProviderLogin` does for the popup flow (caching GitHub login).
+  // Safety net for users whose previous session went through the now-
+  // removed `signInWithRedirect` path. `getRedirectResult` resolves on
+  // mount with whatever the SDK stashed during a redirect — for fresh
+  // popup-based sessions it's a no-op (`result === null`). Without this,
+  // anyone mid-redirect during the deploy could get stuck at the login
+  // screen forever. Safe to leave in even after the redirect callers
+  // are gone; the cost is one synchronous SDK call per page load.
   useEffect(() => {
     getRedirectResult(auth)
       .then((result) => {
