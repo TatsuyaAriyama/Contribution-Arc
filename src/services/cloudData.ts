@@ -37,7 +37,6 @@ export type UserProgressRecord = {
   uid: string;
   userId: string;
   displayName: string;
-  email: string;
   avatarUrl: string;
   photoURL: string;
   level: number;
@@ -210,7 +209,6 @@ export async function saveUserProgressToCloud(db: Firestore, profile: UserProgre
       uid: profile.uid,
       userId: profile.userId,
       displayName: profile.displayName,
-      email: profile.email,
       avatarUrl: profile.avatarUrl,
       photoURL: profile.photoURL,
       searchName: profile.displayName.toLowerCase(),

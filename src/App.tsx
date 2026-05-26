@@ -176,7 +176,6 @@ type UserProfile = {
   uid: string;
   userId: string;
   displayName: string;
-  email?: string;
   avatarUrl?: string;
   photoURL: string;
   searchName: string;
@@ -1104,7 +1103,6 @@ function normalizeUserProfile(uid: string, data: Partial<UserProfile>): UserProf
     uid,
     userId: data.userId || "",
     displayName: data.displayName || "Developer",
-    email: data.email || "",
     avatarUrl: data.avatarUrl || "",
     photoURL: data.photoURL || data.avatarUrl || "",
     searchName: data.searchName || (data.displayName || "Developer").toLowerCase(),
@@ -6083,7 +6081,6 @@ function App() {
       uid: currentUser.uid,
       userId,
       displayName: playerName,
-      email: currentUser.email || "",
       avatarUrl: safeAvatar,
       photoURL: safeAvatar,
       level: levelState.level,
@@ -6291,7 +6288,6 @@ function App() {
                 uid: currentUser.uid,
                 userId: nextUserId,
                 displayName: nextDisplayName,
-                email: currentUser.email || "",
                 avatarUrl: getSerializableAvatar(playerAvatar || currentUser.photoURL || ""),
                 photoURL: getSerializableAvatar(playerAvatar || currentUser.photoURL || ""),
                 determination,

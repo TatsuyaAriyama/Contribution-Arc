@@ -3,3 +3,9 @@ dist
 release
 .DS_Store
 *.local
+
+# Environment files — never commit secrets. The example template is
+# safe to share (it has no real values) so it stays tracked.
+.env
+.env.*
+!.env.example
