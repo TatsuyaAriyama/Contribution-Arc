@@ -91,7 +91,13 @@ body {
   min-height: 100vh;
   margin: 0;
   background: #ffffff;
-  overflow-x: hidden;
+  /* `clip` (not `hidden`) so body suppresses horizontal scrollbars
+     without becoming a scroll container. `overflow-x: hidden` turns
+     body into a scroller and silently breaks `position: sticky`
+     anywhere inside (the right-pane FEED relies on it). `clip` keeps
+     the document as the single scroll context, which is what sticky
+     needs. */
+  overflow-x: clip;
   transition: color 0.4s ease;
   -webkit-tap-highlight-color: transparent;
 }
