@@ -17816,3 +17816,171 @@ select:focus-visible,
     padding: 10px 14px;
   }
 }
+
+
+/* ============================================================
+   header-fix overrides (feature/header-fix)
+   ------------------------------------------------------------
+   Three coordinated home-screen fixes layered on top of the
+   topbar-nav redesign:
+   1. Sticky flat header — flush to viewport top, full-bleed,
+      no radius, hairline bottom border, no floating shadow.
+   2. Active tab green accent — the active nav pill picks up
+      a calm green text + a 2px bottom rail so the current
+      view reads clearly without a separate <h1> page title.
+   3. Time-of-day "学びの大地" — body background swaps via a
+      data-time attribute on <html>, cross-fading over 2s.
+   ============================================================ */
+
+/* --- 2. Sticky flat header ----------------------------------
+   The base rule (line ~9186) is a floating glass card with
+   border-radius:28px, a heavy shadow, and top:24px so it
+   hangs off the top of the shell. This override pulls it
+   flush to the viewport top and stretches it edge-to-edge. */
+.premium-shell {
+  /* The shell's 24px top padding pushes a sticky top:0 header
+     24px down. Strip it so the header truly hugs the viewport. */
+  padding-top: 0;
+}
+
+.premium-dashboard-header {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+
+  /* Full-bleed: the .premium-shell is centered with a 48px
+     horizontal gutter. The 100vw + negative-margin trick lets
+     this single child escape that gutter and span the viewport. */
+  width: 100vw;
+  margin-inline: calc(50% - 50vw);
+
+  /* Re-center the inner content to align with the shell's
+     content column when the viewport is wider than 1560px. */
+  padding: 12px max(20px, calc((100vw - 1560px) / 2 + 22px));
+
+  min-height: 64px;
+  gap: clamp(14px, 1.6vw, 28px);
+  overflow: visible;
+
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px) saturate(1.04);
+  -webkit-backdrop-filter: blur(12px) saturate(1.04);
+  box-shadow: none;
+}
+
+[data-theme="dark"] .premium-dashboard-header {
+  background: rgba(20, 22, 24, 0.78);
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Kill the inner gradient sheen that gave the header its
+   card-like feel. */
+.premium-dashboard-header::before {
+  display: none !important;
+}
+
+/* --- 1. Active tab green accent ------------------------------
+   Keep the segmented-control pill style but tint the active
+   tab's text in the brand green and add a thin underline so
+   the current view is obvious at a glance. */
+.topbar-nav button.is-active {
+  position: relative;
+  color: var(--green, #1f6f4a);
+}
+
+.topbar-nav button.is-active::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--green, #1f6f4a);
+  opacity: 0.85;
+}
+
+/* --- 3. Time-of-day "学びの大地" background ------------------
+   `body` already paints the page background; we just swap it
+   based on data-time on <html>. The 2s transition lives on the
+   body rule (extended in index.css), so the cross-fade is
+   automatic when the hook reports a new bucket.
+
+   Each palette keeps a subtle corner radial-gradient + a vertical
+   linear-gradient that mirrors the sky at that hour. Cards stay
+   on their own surface, so legibility doesn't depend on the
+   ambient color. */
+/* `:has(.app-shell.premium-shell)` scopes the palette to the
+   authenticated app. The login screen is mounted as `.login-shell`
+   instead, so it keeps the default body background and stays
+   readable even at night. */
+[data-time="morning"] body:has(.app-shell.premium-shell) {
+  background:
+    radial-gradient(circle at 8% 0%, rgba(255, 195, 110, 0.10), transparent 28rem),
+    linear-gradient(180deg, #fdf6e3 0%, #f3eedf 45%, #ecf2eb 100%);
+}
+
+[data-time="day"] body:has(.app-shell.premium-shell) {
+  background:
+    radial-gradient(circle at 96% 8%, rgba(31, 111, 74, 0.06), transparent 26rem),
+    linear-gradient(180deg, #f7f6f0 0%, #eef3ec 50%, #e6ede2 100%);
+}
+
+[data-time="evening"] body:has(.app-shell.premium-shell) {
+  background:
+    radial-gradient(circle at 10% 18%, rgba(220, 110, 80, 0.10), transparent 28rem),
+    linear-gradient(180deg, #f4e8dc 0%, #ecd9d8 55%, #e3d3df 100%);
+}
+
+[data-time="night"] body:has(.app-shell.premium-shell) {
+  background:
+    radial-gradient(circle at 70% 8%, rgba(110, 150, 220, 0.10), transparent 30rem),
+    linear-gradient(180deg, #2a3140 0%, #1a1f2e 55%, #0f1320 100%);
+}
+
+/* Subtle decorative overlays look fine at morning/day/evening
+   but the dark grid lines + green dot pattern over a near-navy
+   night sky come out as muddy noise. Fade them out at night so
+   the sky reads clean. (Scoped to authenticated only — same as
+   the gradients above.) */
+[data-time="night"] body:has(.app-shell.premium-shell)::before {
+  opacity: 0;
+}
+
+[data-time="night"] body:has(.app-shell.premium-shell)::after {
+  opacity: 0.35;
+}
+
+/* Night mode also tweaks the header chrome so the title bar
+   doesn't glow white against the dark sky. */
+[data-time="night"] .premium-dashboard-header {
+  background: rgba(32, 36, 48, 0.72);
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+[data-time="night"] .topbar-nav {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-time="night"] .topbar-nav button {
+  color: rgba(232, 236, 244, 0.7);
+}
+
+[data-time="night"] .topbar-nav button:hover {
+  color: #f3f3f3;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+[data-time="night"] .topbar-nav button.is-active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #c8e0d3;
+}
+
+[data-time="night"] .topbar-nav button.is-active::after {
+  background: #7ec99e;
+  opacity: 0.9;
+}
