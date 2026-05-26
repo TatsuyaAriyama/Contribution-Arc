@@ -7723,7 +7723,11 @@
 
 .workspace-2d-shell {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.27fr);
+  /* Single column: the right-hand activity panel was removed from
+     SilentWorkspaceRoom, so the 2nd grid column (formerly
+     `.workspace-activity-panel`) reserved ~260-300px of dead space
+     that pushed the stage into the left half of the screen. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   min-width: 0;
 }
@@ -12639,7 +12643,9 @@
 }
 
 .workspace-2d-shell {
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.27fr);
+  /* Cozy refresh re-override — keep as single column (see earlier
+     definition for why the activity-panel column was retired). */
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
 }
 
@@ -18166,5 +18172,241 @@ select:focus-visible,
   border-radius: 2px;
   background: var(--green, #1f6f4a);
   opacity: 0.85;
+}
+
+/* ============================================================
+   Immersive workspace view (Option A)
+   ============================================================
+   When the user is on the Silent Workspace screen we collapse the
+   two-pane shell, hide the feed, strip every layer of card chrome
+   above the stage, and float the session / action / preset UIs as
+   glass overlays on top of the dark room canvas. The stage itself
+   takes up the bulk of the viewport so it feels like you've stepped
+   into the room.
+   Character positions remain percentage-based (`--actor-x` /
+   `--actor-y`) so a wider stage just spreads actors further apart;
+   we never touch member.x / member.y, so character layout cannot
+   break. Movement is upgraded to GPU-friendly compositing with
+   short transitions on the position properties so walks interpolate
+   smoothly at refresh rate instead of snapping.
+   ============================================================ */
+
+/* 1. Collapse the two-pane shell on workspace view and hide the feed.
+   `:has()` is supported in all modern evergreen browsers (2023+) and
+   is the cleanest way to scope this without touching React. */
+@media (min-width: 1081px) {
+  .two-pane-shell:has(.workspace-screen) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .two-pane-shell:has(.workspace-screen) .two-pane-right {
+    display: none;
+  }
+}
+
+/* 2. Workspace screen layout — give it room to breathe and let the
+   stage break out toward the desktop-shell edges. */
+.workspace-screen {
+  gap: 10px;
+}
+
+/* 3. Strip the outer card chrome. The dark room IS the visual frame. */
+.workspace-screen .workspace-2d-card {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+/* Hide the Silent Workspace kicker + description — it competes with
+   the immersive stage. Room context already lives in the floating
+   session panel. */
+.workspace-screen .workspace-2d-card .workspace-heading {
+  display: none;
+}
+
+/* Room pills strip: keep as a thin floating bar above the stage. */
+.workspace-screen .workspace-room-strip {
+  padding: 8px 10px;
+  border-radius: 14px;
+}
+
+/* 4. Strip the inner chrome layers so the stage truly fills the
+   available width. */
+.workspace-screen .workspace-2d-card .workspace-layout {
+  gap: 10px;
+  /* Override `align-items: start` set later in the file (line ~13582)
+     so flex children stretch to fill the full layout width. Without
+     this the stage collapses to ~128px in the immersive view. */
+  align-items: stretch;
+}
+
+.workspace-screen .workspace-2d-shell {
+  gap: 0;
+}
+
+.workspace-screen .workspace-2d-main {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  gap: 0;
+}
+
+/* The OUTER `.workspace-stage` (the one rendered by App.tsx that
+   wraps stage-actions + SilentWorkspaceRoom) — strip its frame so
+   the only visible "stage" is the actual dark room inside. */
+.workspace-screen .workspace-layout > .workspace-stage {
+  position: relative;
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+/* 5. Promote the INNER stage (the actual dark room rendered by
+   SilentWorkspaceRoom) to edge-to-edge and viewport-tall. The actor
+   positioning is percentage-based so this just gives them more
+   canvas. We re-establish the dark gradient + grid here so the
+   chromeless wrappers above don't dilute it. */
+.workspace-screen .workspace-2d-main > .workspace-stage {
+  position: relative;
+  height: clamp(620px, 82svh, 940px);
+  min-height: 620px;
+  border-radius: 26px;
+  /* Keep the cozy 2.5D light-room aesthetic (defined at line ~12751)
+     but deepen the drop shadow so the immersive stage feels lifted
+     off the page. Inset highlights stay light so we don't fight the
+     warm gradient floor. */
+  box-shadow:
+    inset 0 0 0 1px rgba(15, 23, 42, 0.06),
+    inset 0 80px 120px rgba(255, 255, 255, 0.55),
+    0 42px 110px rgba(15, 23, 42, 0.14);
+}
+
+/* 6. Float the stage-actions row (名前変更 / 解体) as a small glass
+   pill cluster anchored to the top-right of the stage. */
+.workspace-screen .workspace-layout > .workspace-stage > .workspace-stage-actions {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 12;
+  gap: 6px;
+}
+
+.workspace-screen .workspace-stage-action {
+  background: rgba(var(--surface-rgb), 0.78);
+  backdrop-filter: blur(12px) saturate(1.05);
+  -webkit-backdrop-filter: blur(12px) saturate(1.05);
+  border-color: rgba(var(--surface-rgb), 0.5);
+  color: var(--ink);
+}
+
+/* 7. Float the session-panel (room name + 入室する + 今やってること)
+   as a light glass overlay at the top-left of the stage. Light
+   glass matches the cozy 2.5D room and the Linear/Arc-style
+   minimal-low-saturation design language used elsewhere in the
+   app. */
+.workspace-screen .workspace-2d-shell .workspace-session-panel {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 180px; /* leave room for stage-actions on the right */
+  z-index: 11;
+  padding: 10px 14px;
+  border: 1px solid rgba(var(--ink-rgb), 0.07);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(var(--surface-rgb), 0.86), rgba(var(--surface-rgb), 0.72)),
+    rgba(var(--surface-rgb), 0.7);
+  color: var(--ink);
+  backdrop-filter: blur(20px) saturate(1.1);
+  -webkit-backdrop-filter: blur(20px) saturate(1.1);
+  box-shadow:
+    0 18px 40px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(var(--surface-rgb), 0.94);
+}
+
+/* 8. Float the preset-message-panel along the bottom-center of the
+   stage so it sits like an in-room HUD instead of stacking below
+   the canvas. */
+.workspace-screen .workspace-2d-shell .preset-message-panel {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 12;
+  width: min(680px, calc(100% - 28px));
+  padding: 6px 10px;
+  border: 1px solid rgba(var(--ink-rgb), 0.07);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(var(--surface-rgb), 0.86), rgba(var(--surface-rgb), 0.72)),
+    rgba(var(--surface-rgb), 0.7);
+  backdrop-filter: blur(20px) saturate(1.1);
+  -webkit-backdrop-filter: blur(20px) saturate(1.1);
+  box-shadow:
+    0 18px 40px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(var(--surface-rgb), 0.94);
+  justify-items: center;
+}
+
+/* 9. Smooth, GPU-friendly character movement.
+   Previously `.workspace-actor` set `left` / `top` from CSS vars
+   with no transition, so when React updated a position the actor
+   snapped. We add a short transition on both axes (browsers can
+   composite-animate `left` / `top` when `will-change` hints them)
+   plus a translateZ to force a GPU layer for the actor itself. The
+   walking leg cadence is tightened from 0.42s → 0.36s for a
+   slightly more responsive gait without going cartoonish. */
+.workspace-actor {
+  transition:
+    left 0.55s cubic-bezier(0.22, 0.61, 0.36, 1),
+    top 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: left, top, transform;
+  transform: translate3d(-50%, -50%, 0);
+  backface-visibility: hidden;
+}
+
+.workspace-actor.is-walking .actor-sprite {
+  animation-duration: 0.36s;
+}
+
+.workspace-actor.is-walking .sprite-leg-left,
+.workspace-actor.is-walking .sprite-leg-right {
+  animation-duration: 0.36s;
+}
+
+/* Respect reduced-motion: snap rather than glide. */
+@media (prefers-reduced-motion: reduce) {
+  .workspace-actor {
+    transition: none;
+  }
+}
+
+/* Narrow viewports — the floating overlays would crowd the room
+   on phones, so let them flow underneath like cards again. */
+@media (max-width: 720px) {
+  .workspace-screen .workspace-2d-shell .workspace-session-panel,
+  .workspace-screen .workspace-layout > .workspace-stage > .workspace-stage-actions,
+  .workspace-screen .workspace-2d-shell .preset-message-panel {
+    position: static;
+    transform: none;
+    width: auto;
+    right: auto;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .workspace-screen .workspace-2d-main > .workspace-stage {
+    height: clamp(420px, 62svh, 560px);
+    min-height: 420px;
+  }
 }
 
