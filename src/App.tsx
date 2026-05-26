@@ -10,6 +10,7 @@ import {
   type FormEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
+  type ReactNode,
 } from "react";
 import {
   createUserWithEmailAndPassword,
@@ -2854,43 +2855,126 @@ function DesktopDownloadCard() {
   const releasesLatest = "https://github.com/TatsuyaAriyama/Contribution-Arc/releases/latest";
   const releasesDownload = "https://github.com/TatsuyaAriyama/Contribution-Arc/releases/latest/download";
 
+  const detectedOS = (() => {
+    if (typeof navigator === "undefined") return null;
+    const ua = navigator.userAgent;
+    if (/Mac/.test(ua)) return "mac";
+    if (/Windows/.test(ua)) return "win";
+    if (/Linux/.test(ua) && !/Android/.test(ua)) return "linux";
+    return null;
+  })();
+
+  const platforms: Array<{
+    id: "mac" | "win" | "linux";
+    label: string;
+    meta: string;
+    size: string;
+    href: string;
+    download: boolean;
+    icon: ReactNode;
+  }> = [
+    {
+      id: "mac",
+      label: "macOS",
+      meta: "Apple Silicon / Intel",
+      size: "143–154 MB",
+      href: releasesLatest,
+      download: false,
+      icon: (
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M16.365 1.43c0 1.14-.466 2.23-1.21 3.02-.8.84-2.05 1.5-3.15 1.43-.14-1.1.41-2.27 1.16-3.04.86-.86 2.27-1.5 3.2-1.41zm3.5 16.66c-.43.98-.95 1.9-1.55 2.74-.85 1.18-1.55 2-2.07 2.45-.81.71-1.68 1.07-2.6 1.08-.66 0-1.45-.19-2.36-.57-.92-.38-1.76-.57-2.53-.57-.81 0-1.67.19-2.59.57-.92.38-1.66.58-2.21.6-.89.04-1.78-.33-2.67-1.11-.56-.49-1.29-1.34-2.18-2.55-.96-1.3-1.75-2.81-2.37-4.53-.66-1.86-.99-3.66-.99-5.4 0-2 .43-3.72 1.3-5.16.68-1.16 1.59-2.07 2.72-2.74 1.13-.67 2.36-1.01 3.68-1.03.7 0 1.6.22 2.72.65 1.11.43 1.83.65 2.13.65.23 0 1.03-.26 2.4-.77 1.3-.47 2.39-.67 3.29-.59 2.45.2 4.29 1.17 5.51 2.92-2.19 1.33-3.28 3.19-3.25 5.58.02 1.86.7 3.41 2.02 4.64.6.57 1.27 1.01 2.01 1.32-.16.46-.32.91-.5 1.34z" />
+        </svg>
+      ),
+    },
+    {
+      id: "win",
+      label: "Windows",
+      meta: ".exe · 64-bit",
+      size: "121 MB",
+      href: `${releasesDownload}/Contribution-Arc-Setup-0.0.0.exe`,
+      download: true,
+      icon: (
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M3 5.5 11 4.3v7.4H3V5.5zm0 7.5h8v7.4L3 19.2v-6.2zM12 4.1l9-1.4v9H12V4.1zm0 8.9h9v9l-9-1.4V13z" />
+        </svg>
+      ),
+    },
+    {
+      id: "linux",
+      label: "Linux",
+      meta: ".AppImage",
+      size: "161 MB",
+      href: `${releasesDownload}/Contribution-Arc-0.0.0.AppImage`,
+      download: true,
+      icon: (
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 1.6c-2.1 0-3.3 1.7-3.3 4.1 0 1.5.5 2.9 1.1 4-1.4 1.1-2.6 2.5-3.4 4.1-.7 1.4-1.1 2.8-1.1 4 0 .9.2 1.7.5 2.4.1.2.1.5.1.7 0 .4.2.7.5.9.3.2.7.3 1.2.3.5 0 1-.1 1.5-.3.6-.3 1-.7 1.3-1.1.4.4.9.7 1.5 1 .7.3 1.4.4 2.1.4s1.4-.1 2.1-.4c.6-.3 1.1-.6 1.5-1 .3.4.7.8 1.3 1.1.5.2 1 .3 1.5.3.5 0 .9-.1 1.2-.3.3-.2.5-.5.5-.9 0-.2 0-.5.1-.7.3-.7.5-1.5.5-2.4 0-1.2-.4-2.6-1.1-4-.8-1.6-2-3-3.4-4.1.6-1.1 1.1-2.5 1.1-4 0-2.4-1.2-4.1-3.3-4.1zm-1.1 4.7c.4 0 .8.4.8 1s-.4 1-.8 1-.8-.4-.8-1 .4-1 .8-1zm2.2 0c.4 0 .8.4.8 1s-.4 1-.8 1-.8-.4-.8-1 .4-1 .8-1zm-1.1 3c1.4 0 2.7.7 3.5 1.7-.3.1-.6.2-.9.2-.4 0-.8-.1-1.1-.2-.5-.2-.9-.5-1.5-.5s-1 .3-1.5.5c-.3.1-.7.2-1.1.2-.3 0-.6-.1-.9-.2.8-1 2.1-1.7 3.5-1.7z" />
+        </svg>
+      ),
+    },
+  ];
+
   return (
     <section className="card download-card" aria-label="デスクトップアプリのダウンロード">
-      <p className="card-kicker">Desktop App</p>
-      <h2>デスクトップアプリで使う</h2>
+      <header className="download-card-head">
+        <div>
+          <p className="card-kicker">Desktop App</p>
+          <h2>ネイティブアプリで使う</h2>
+        </div>
+        {detectedOS && (
+          <span className="download-detected" aria-label="お使いの OS">
+            <span className="download-detected-dot" aria-hidden="true" />
+            {detectedOS === "mac" ? "macOS" : detectedOS === "win" ? "Windows" : "Linux"} を検出
+          </span>
+        )}
+      </header>
       <p className="download-card-copy">
-        ブラウザを開かなくても、独立したウィンドウで Contribution Arc を起動できます。
+        ブラウザを閉じても独立したウィンドウで動作します。
       </p>
       <div className="download-grid">
-        <a
-          className="download-button"
-          href={releasesLatest}
-          target="_blank"
-          rel="noreferrer"
-        >
-          <span className="download-os">macOS</span>
-          <span className="download-meta">.dmg · Intel / Apple Silicon</span>
-        </a>
-        <a
-          className="download-button"
-          href={`${releasesDownload}/Contribution-Arc-Setup-0.0.0.exe`}
-          download
-        >
-          <span className="download-os">Windows</span>
-          <span className="download-meta">.exe · 64bit</span>
-        </a>
-        <a
-          className="download-button"
-          href={`${releasesDownload}/Contribution-Arc-0.0.0.AppImage`}
-          download
-        >
-          <span className="download-os">Linux</span>
-          <span className="download-meta">.AppImage</span>
-        </a>
+        {platforms.map((p) => {
+          const isRecommended = detectedOS === p.id;
+          return (
+            <a
+              key={p.id}
+              className={`download-button${isRecommended ? " is-recommended" : ""}`}
+              href={p.href}
+              {...(p.download ? { download: true } : { target: "_blank", rel: "noreferrer" })}
+            >
+              <span className="download-button-top">
+                <span className="download-icon" aria-hidden="true">{p.icon}</span>
+                {isRecommended && <span className="download-pill">推奨</span>}
+              </span>
+              <span className="download-button-body">
+                <span className="download-os">{p.label}</span>
+                <span className="download-meta">{p.meta}</span>
+              </span>
+              <span className="download-button-foot">
+                <span className="download-size">{p.size}</span>
+                <span className="download-arrow" aria-hidden="true">
+                  {p.download ? (
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M8 3v8m0 0 3-3m-3 3-3-3M3 13h10" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M6 3l5 5-5 5" />
+                    </svg>
+                  )}
+                </span>
+              </span>
+            </a>
+          );
+        })}
       </div>
-      <p className="download-card-note">
-        ※ 現在ビルドは未署名です。Mac は初回起動時に右クリック →「開く」、Windows は SmartScreen の「詳細情報 → 実行」で起動してください。
-      </p>
+      <details className="download-card-note">
+        <summary>未署名ビルドの起動方法</summary>
+        <ul>
+          <li><strong>macOS</strong> — .dmg を開き、初回は右クリック →「開く」で起動。</li>
+          <li><strong>Windows</strong> — SmartScreen が出たら「詳細情報 → 実行」をクリック。</li>
+          <li><strong>Linux</strong> — .AppImage に実行権限を付与（<code>chmod +x</code>）してダブルクリック。</li>
+        </ul>
+      </details>
     </section>
   );
 }
