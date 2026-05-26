@@ -54,7 +54,6 @@
       "category": "public.app-category.productivity",
       "icon": "assets/icon.icns",
       "identity": null,
-      "signingIdentity": null,
       "target": [
         {
           "target": "dmg",
