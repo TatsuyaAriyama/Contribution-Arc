@@ -1556,6 +1556,13 @@
 .download-card {
   display: grid;
   gap: 16px;
+  padding: 22px 22px 18px;
+}
+
+@media (max-width: 540px) {
+  .download-card {
+    padding: 18px 16px 14px;
+  }
 }
 
 .download-card-head {
