@@ -90,6 +90,8 @@ import { fetchGithubContributions, type GithubContributions } from "./services/g
 import { type AppView, type FriendPreview, type LiveActivity } from "./components/PremiumNavigation";
 import { SilentWorkspaceRoom, type RoomActivityItem } from "./components/SilentWorkspaceRoom";
 import { ShareToXModal } from "./components/ShareToXModal";
+import { TutorialHint } from "./components/TutorialHint";
+import { resetAllTutorials } from "./services/tutorial";
 import "./App.css";
 
 declare global {
@@ -8776,6 +8778,22 @@ function App() {
                   <SettingsIcon />
                   <span>設定</span>
                 </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    if (currentUser) {
+                      resetAllTutorials(currentUser.uid);
+                    }
+                    // Bounce through home so any already-rendered view
+                    // remounts and re-reads the (now cleared) flag.
+                    setCurrentView("home");
+                  }}
+                >
+                  <span aria-hidden="true">↻</span>
+                  <span>チュートリアルをもう一度</span>
+                </button>
                 <div className="user-menu-separator" aria-hidden="true" />
                 <button
                   type="button"
@@ -9562,6 +9580,20 @@ function App() {
           animate={{ opacity: 1, y: 0 }}
           transition={SPRING_SNAPPY}
         >
+          {currentUser ? (
+            <TutorialHint
+              uid={currentUser.uid}
+              feature="daily"
+              title="日報 — 1日のはじまりと締めくくり"
+              body="その日の計画と振り返りを残すと、明日の自分への布石になります。"
+              bullets={[
+                "「計画」欄に朝の予定を、「振り返り」欄に夜の感想を書きます",
+                "保存は自動。書きかけのまま画面を離れても消えません",
+                "他の人の日報もここから読めて、刺激を受けられます",
+                "編集できるのは当日と前日まで(過去の自分に向き合うため)",
+              ]}
+            />
+          ) : null}
           <section className="daily-editor-card">
             <div className="daily-editor-head">
               <div>
@@ -9761,6 +9793,20 @@ function App() {
           animate={{ opacity: 1, y: 0 }}
           transition={SPRING_SNAPPY}
         >
+          {currentUser ? (
+            <TutorialHint
+              uid={currentUser.uid}
+              feature="learning"
+              title="記録する — 学びの時間を積み上げる中心"
+              body="勉強・読書・アウトプットの時間を残すと、ホームのグラフに反映されます。"
+              bullets={[
+                "「学習対象」をジャンルと色で登録(例: React=青、英語=橙)",
+                "時間を入力すると、その分だけ Effort EXP が貯まります",
+                "ページ数を持つ本タイプは「現在ページ / 総ページ」も追えます",
+                "使わなくなった対象はアーカイブ。記録は残ります",
+              ]}
+            />
+          ) : null}
           <header className="learning-header">
             <div>
               <p className="card-kicker">Learning Items</p>
@@ -9893,6 +9939,20 @@ function App() {
           animate={{ opacity: 1, y: 0 }}
           transition={SPRING_SNAPPY}
         >
+          {currentUser ? (
+            <TutorialHint
+              uid={currentUser.uid}
+              feature="logs"
+              title="みんなの記録 — 仲間の積み上げが流れる場所"
+              body="他のユーザーが今日何をしているかをタイムラインで追えます。"
+              bullets={[
+                "投稿に❤︎ で応援、返信で対話",
+                "「Following / All」タブで自分のフォロー先だけに絞れます",
+                "気になる人をフォローすると、その人の投稿が優先で流れる",
+                "あなたの学習を投稿すると、誰かの励みになります",
+              ]}
+            />
+          ) : null}
       {contributionArcCardSection}
 
           <section className="today-strip" aria-label="今日の足場">
@@ -10033,6 +10093,20 @@ function App() {
           animate={{ opacity: 1, y: 0 }}
           transition={SPRING_SNAPPY}
         >
+          {currentUser && !profileMember && !profileUser ? (
+            <TutorialHint
+              uid={currentUser.uid}
+              feature="profile"
+              title="プロフィール — あなたの足跡と設定"
+              body="積み上げの累計と、見た目・連携の設定をここでまとめます。"
+              bullets={[
+                "キャラクターの色を変えて、作業部屋での自分を識別しやすく",
+                "GitHub を連携すると、commit が学習グラフに重なります",
+                "「決意」欄に短い宣言を書いておくと、毎日の起動時に思い出せます",
+                "あなたのユーザーID (@xxx) は他の人があなたを検索する手掛かり",
+              ]}
+            />
+          ) : null}
           <div className="profile-topbar">
             <button type="button" onClick={handleProfileBack}>
               ← ホーム
@@ -10356,6 +10430,20 @@ function App() {
           animate={{ opacity: 1, y: 0 }}
           transition={SPRING_SNAPPY}
         >
+          {currentUser ? (
+            <TutorialHint
+              uid={currentUser.uid}
+              feature="workspace"
+              title="作業部屋 — 同じ時間に手を動かす場所"
+              body="通話なしで、気配だけを共有しながら集中作業ができる空間です。"
+              bullets={[
+                "「今やってること」を入力 → 入室すると 2D 部屋にあなたのキャラが現れます",
+                "他の人のキャラをタップするとプロフィールが見られます",
+                "「📣 募集する」で同じ時間に集まる仲間を呼べます",
+                "退室すると今回の作業時間が記録され、EXP として加算されます",
+              ]}
+            />
+          ) : null}
           <div className="profile-topbar">
             <button type="button" onClick={() => setCurrentView("home")}>
               ← Home
@@ -10591,6 +10679,21 @@ function App() {
         animate={{ opacity: 1, y: 0 }}
         transition={SPRING_SNAPPY}
       >
+
+      {currentUser ? (
+        <TutorialHint
+          uid={currentUser.uid}
+          feature="home"
+          title="ホーム — あなたの学習を一望できる場所"
+          body="積み上げの全体像と、いま仲間が何をしているかをまとめて見られます。"
+          bullets={[
+            "13週間のコントリビューショングラフで毎日の取り組みを可視化",
+            "今週の学習時間・最長連続日数・ジャンル分布をひと目で",
+            "GitHub を連携すると commit もこのグラフに合流します",
+            "下の「みんなの記録」「日報」もここから流れてきます",
+          ]}
+        />
+      ) : null}
 
       {contributionArcCardSection}
 
