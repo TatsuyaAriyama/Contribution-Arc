@@ -8761,7 +8761,7 @@
   }
 
   .workspace-2d-shell:not(.focus-presentation) .workspace-actor .actor-task {
-    max-width: 90px;
+    max-width: 132px;
     font-size: 10px;
   }
 
@@ -8792,7 +8792,7 @@
   }
 
   .focus-presentation .actor-task {
-    max-width: 76px;
+    max-width: 124px;
   }
 
   .preset-message-bar {
@@ -13306,13 +13306,17 @@
 }
 
 .actor-task {
-  display: grid;
-  justify-items: center;
-  gap: 1px;
+  /* Single-line "task · stay" pill. Was a 2-row grid (strong on top,
+     small below), which read as the task label wrapping to two rows.
+     Inline-flex keeps both on one line; ellipsis bites the task side
+     so the stay time stays visible. */
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
   width: max-content;
-  max-width: 92px;
+  max-width: 132px;
   margin-top: 4px;
-  padding: 5px 8px;
+  padding: 4px 9px;
   background: rgba(255, 255, 255, 0.96);
   color: #0b1110;
   box-shadow:
@@ -13322,23 +13326,25 @@
 }
 
 .actor-task strong {
-  display: block;
-  max-width: 78px;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 92px;
   overflow: hidden;
   color: #0b1110;
   font-size: 10px;
   font-weight: 900;
-  line-height: 1;
+  line-height: 1.1;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .actor-task small {
-  display: block;
+  flex: 0 0 auto;
   color: rgba(15, 23, 42, 0.55);
   font-size: 9px;
   font-weight: 820;
-  line-height: 1.05;
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
 .workspace-bubble {
@@ -13562,7 +13568,7 @@
   }
 
   .actor-task {
-    max-width: 74px;
+    max-width: 116px;
   }
 
   .preset-message-bar {
@@ -14734,12 +14740,13 @@
 }
 
 .workspace-growth-stage .actor-task {
-  display: grid;
-  justify-items: center;
-  gap: 1px;
-  max-width: 64px;
+  /* Match the inline-flex single-line layout used by the main stage. */
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  max-width: 108px;
   margin-top: 6px;
-  padding: 4px 7px;
+  padding: 3px 8px;
   border: 1px solid rgba(31, 111, 74, 0.08);
   background: rgba(var(--surface-rgb), 0.78);
   color: var(--ink);
@@ -14748,12 +14755,15 @@
 }
 
 .workspace-growth-stage .actor-task strong {
-  max-width: 54px;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 76px;
   color: var(--ink);
   font-size: 9px;
 }
 
 .workspace-growth-stage .actor-task small {
+  flex: 0 0 auto;
   color: rgba(var(--ink-rgb), 0.52);
   font-size: 8px;
 }
