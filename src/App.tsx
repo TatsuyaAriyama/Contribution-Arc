@@ -10714,6 +10714,72 @@ function App() {
 
       </div>
       </div>
+
+      {/* Mobile-only bottom navigation. Visible at ≤720px (CSS-gated).
+          5 primary destinations match the desktop topbar-nav so the
+          mobile user never has to dig through a menu to switch views.
+          Hidden on desktop and during onboarding. */}
+      {currentView && onboardingStep !== "welcome" ? (
+        <nav className="mobile-bottom-nav" aria-label="メインナビゲーション">
+          <button
+            type="button"
+            className={currentView === "home" ? "is-active" : ""}
+            onClick={() => setCurrentView("home")}
+            aria-label="ホーム"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M4 11.5 12 5l8 6.5V20a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+            </svg>
+            <span>ホーム</span>
+          </button>
+          <button
+            type="button"
+            className={currentView === "logs" ? "is-active" : ""}
+            onClick={() => setCurrentView("logs")}
+            aria-label="みんなの記録"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M4 7h16M4 12h16M4 17h10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+            <span>記録</span>
+          </button>
+          <button
+            type="button"
+            className={`is-cta${currentView === "learning" ? " is-active" : ""}`}
+            onClick={() => setCurrentView("learning")}
+            aria-label="記録する"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            <span>記録する</span>
+          </button>
+          <button
+            type="button"
+            className={currentView === "workspace" ? "is-active" : ""}
+            onClick={() => setCurrentView("workspace")}
+            aria-label="作業部屋"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+              <path d="M4 10h16" fill="none" stroke="currentColor" strokeWidth="1.6" />
+            </svg>
+            <span>作業部屋</span>
+          </button>
+          <button
+            type="button"
+            className={currentView === "daily" ? "is-active" : ""}
+            onClick={() => setCurrentView("daily")}
+            aria-label="日報"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <rect x="4" y="5" width="16" height="15" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+              <path d="M4 10h16M9 3v4M15 3v4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+            <span>日報</span>
+          </button>
+        </nav>
+      ) : null}
     </motion.main>
   );
 }
