@@ -8759,18 +8759,59 @@
     line-height: 1.35;
   }
 
-  .workspace-session-actions {
+  .workspace-session-panel .workspace-session-actions {
     display: flex;
     gap: 8px;
     width: 100%;
   }
 
-  .workspace-session-actions .room-join-button,
-  .workspace-session-actions .room-leave-button,
-  .workspace-session-actions .room-recruit-button {
+  /* The global `.workspace-session-actions .room-join-button` rule
+     (specificity 0,2,0) appears later in the file and was overriding the
+     intended mobile min-height down to 30px — too small for a reliable
+     tap target. Bump specificity by qualifying with the panel ancestor
+     and raise the target to 48px (Apple/Material guideline) so the
+     primary "入室する" CTA is comfortably tappable on phones. */
+  .workspace-session-panel .workspace-session-actions .room-join-button,
+  .workspace-session-panel .workspace-session-actions .room-leave-button,
+  .workspace-session-panel .workspace-session-actions .room-recruit-button {
     flex: 1 1 auto;
-    min-height: 38px;
-    padding: 0 12px;
+    min-height: 48px;
+    padding: 0 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    touch-action: manipulation;
+  }
+
+  /* Reorder on mobile so the primary CTA sits BELOW the task input —
+     natural top-to-bottom flow: room title → task → join button.
+     `.workspace-session-actions` lives inside `.workspace-session-header`
+     in the DOM, so flatten the header with display:contents and then use
+     order to place title at top and the button block at the bottom.
+     Selectors are qualified with `.workspace-2d-shell` to beat the later
+     global `.workspace-session-panel { display: grid }` rule. */
+  .workspace-2d-shell .workspace-session-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .workspace-2d-shell .workspace-session-panel .workspace-session-header {
+    display: contents;
+  }
+  .workspace-2d-shell .workspace-session-panel .workspace-session-title {
+    order: 1;
+  }
+  .workspace-2d-shell .workspace-session-panel .workspace-active-recruitment {
+    order: 2;
+  }
+  .workspace-2d-shell .workspace-session-panel .workspace-task-field {
+    order: 3;
+  }
+  .workspace-2d-shell .workspace-session-panel .workspace-session-actions {
+    order: 4;
+    width: 100%;
+    margin-top: 4px;
+    flex-shrink: 1;
   }
 
   .workspace-active-recruitment {
