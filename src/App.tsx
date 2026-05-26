@@ -10828,9 +10828,15 @@ function App() {
 
       </div>
 
-      <aside className="two-pane-right" aria-label="フィード">
-        {feedSection}
-      </aside>
+      {/* Workspace view fills the canvas with the 2D room and its own
+          presence/chat tools — overlaying the global FEED next to it
+          competes for attention, makes the desktop layout cramped, and
+          hides the room behind feed scroll on mobile. Hide it there. */}
+      {currentView !== "workspace" ? (
+        <aside className="two-pane-right" aria-label="フィード">
+          {feedSection}
+        </aside>
+      ) : null}
 
       </div>
       </div>
