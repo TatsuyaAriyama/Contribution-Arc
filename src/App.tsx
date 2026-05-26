@@ -8340,18 +8340,6 @@ function App() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ ...SPRING_SOFT, delay: 0.06 }}
       >
-        <button
-          type="button"
-          className="topbar-brand"
-          onClick={() => setCurrentView("home")}
-          aria-label="ホームへ"
-        >
-          <span className="topbar-brand-mark" aria-hidden="true">
-            <ContributionArcLogo />
-          </span>
-          <strong>Contribution Arc</strong>
-        </button>
-
         <nav className="topbar-nav" aria-label="Main navigation">
           <button
             type="button"

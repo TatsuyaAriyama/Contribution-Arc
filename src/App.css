@@ -10603,49 +10603,11 @@
   }
 }
 
-/* ===== Topbar: brand + nav + popovers =====
-   The topbar now hosts everything that used to live in the left sidebar:
-   the brand mark, primary nav (4 buttons), and on-demand popovers for
-   Friends and Live Activity. Search / Notifications / User menu remain
-   at the far right. Layout strategy: flex with brand fixed-left, nav
-   centered-ish, popovers + user-session pinned right; gap absorbs slack. */
-.topbar-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 10px 6px 6px;
-  border: 0;
-  border-radius: 14px;
-  background: transparent;
-  color: var(--ink);
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.topbar-brand:hover {
-  background: rgba(var(--ink-rgb), 0.04);
-}
-
-.topbar-brand-mark {
-  display: grid;
-  width: 30px;
-  height: 30px;
-  place-items: center;
-  border-radius: 9px;
-  background: rgba(var(--ink-rgb), 0.04);
-}
-
-.topbar-brand-mark svg {
-  width: 22px;
-  height: 22px;
-}
-
-.topbar-brand strong {
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: -0.005em;
-}
-
+/* ===== Topbar: nav + popovers =====
+   The topbar hosts the primary nav (4 buttons) and on-demand popovers
+   for Friends and Live Activity. Search / Notifications / User menu
+   remain at the far right. No brand mark — the user found it redundant
+   with the avatar on the right. */
 .topbar-nav {
   display: inline-flex;
   align-items: center;
