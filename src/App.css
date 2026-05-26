@@ -18567,3 +18567,417 @@ select:focus-visible,
   }
 }
 
+/* ============================================================
+   Workspace lobby — pre-entry view (room card list)
+
+   Shown when the user is not currently in any room. The
+   immersive room is intentionally hidden behind this screen,
+   so the only way to see a room's interior is to join it.
+   The aesthetic matches the rest of the app: white surface,
+   soft 1px borders, the existing --green accent on the
+   primary "入室する" CTA.
+   ============================================================ */
+
+.workspace-lobby {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 4px 2px 32px;
+}
+
+.workspace-lobby-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 2px 4px;
+}
+
+.workspace-lobby-header h2 {
+  margin: 2px 0 0;
+  color: var(--ink);
+  font-size: clamp(22px, 2.6vw, 28px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.workspace-lobby-sub {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 56ch;
+}
+
+/* New-room form sits as a single full-width section above the
+   cards. Quiet by default — the "作成" button picks up emphasis
+   on hover but doesn't compete with the green entry CTAs. */
+.workspace-lobby-create {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow-card);
+}
+
+.workspace-lobby-create-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.workspace-lobby-create-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.workspace-lobby-create-row input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 15px;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.workspace-lobby-create-row input::placeholder {
+  color: rgba(var(--ink-rgb), 0.34);
+}
+
+.workspace-lobby-create-row input:focus {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: var(--ring-focus);
+}
+
+.workspace-lobby-create-row button {
+  height: 40px;
+  padding: 0 18px;
+  border: 1px solid rgba(var(--ink-rgb), 0.12);
+  border-radius: 10px;
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: transform 0.14s ease, background 0.16s ease, opacity 0.16s ease;
+}
+
+.workspace-lobby-create-row button:hover {
+  transform: translateY(-1px);
+  opacity: 0.92;
+}
+
+.workspace-lobby-create-row button:active {
+  transform: translateY(0);
+}
+
+.workspace-lobby-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 28px 20px;
+  background: var(--surface);
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  color: var(--muted);
+  text-align: left;
+}
+
+.workspace-lobby-empty h3 {
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.workspace-lobby-empty p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Grid: auto-fill so single column on phones, 2-3 columns on
+   wider screens. minmax floor of 280px keeps cards comfortable
+   without going gaudy-wide. */
+.workspace-room-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.workspace-room-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 18px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.16s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.workspace-room-card:hover {
+  border-color: rgba(31, 111, 74, 0.32);
+  box-shadow: 0 2px 4px rgba(17, 24, 39, 0.04), 0 10px 28px rgba(17, 24, 39, 0.07);
+  transform: translateY(-1px);
+}
+
+.workspace-room-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 28px;
+}
+
+.workspace-room-card-name {
+  margin: 0;
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  line-height: 1.2;
+  /* Long names ellipsize so the head row stays one line. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+
+.workspace-room-card-owner-tag {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  background: var(--green-soft);
+  color: var(--green);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.workspace-room-card-rename {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.workspace-room-card-rename input {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.workspace-room-card-rename input:focus {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: var(--ring-focus);
+}
+
+.workspace-room-card-rename-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.workspace-room-card-rename-actions button {
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.14s ease, border-color 0.14s ease;
+}
+
+.workspace-room-card-rename-actions button[type="submit"] {
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+  border-color: rgba(var(--ink-rgb), 0.12);
+}
+
+.workspace-room-card-rename-actions button:hover {
+  border-color: rgba(var(--ink-rgb), 0.24);
+}
+
+/* Avatar stack — small color circles representing each active
+   member. Stops at 5; further members fold into a "+N" pill. */
+.workspace-room-card-avatars {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-height: 28px;
+}
+
+.workspace-room-card-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.12);
+}
+
+.workspace-room-card-avatar + .workspace-room-card-avatar {
+  margin-left: -8px;
+}
+
+.workspace-room-card-avatar-more {
+  margin-left: 6px;
+  padding: 0 8px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  background: rgba(var(--ink-rgb), 0.06);
+  color: var(--muted);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.workspace-room-card-avatars-empty {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.workspace-room-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.workspace-room-card-meta > span[aria-hidden="true"] {
+  color: rgba(var(--ink-rgb), 0.22);
+}
+
+/* Action row — entry CTA + (owner only) rename/delete. The
+   entry button gets the project's green accent so the call to
+   action is unmistakable; owner actions are quiet text buttons
+   that only the owner sees. */
+.workspace-room-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+.workspace-room-card-enter {
+  flex: 1;
+  height: 40px;
+  padding: 0 18px;
+  border: 1px solid var(--green);
+  border-radius: 10px;
+  background: var(--green);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, transform 0.14s ease,
+    box-shadow 0.18s ease;
+}
+
+.workspace-room-card-enter:hover {
+  background: var(--green-hover);
+  border-color: var(--green-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(31, 111, 74, 0.22);
+}
+
+.workspace-room-card-enter:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(31, 111, 74, 0.18);
+}
+
+.workspace-room-card-enter:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-focus);
+}
+
+.workspace-room-card-owner-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.workspace-room-card-owner-actions button {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.14s ease, background 0.14s ease, border-color 0.14s ease;
+}
+
+.workspace-room-card-owner-actions button:hover {
+  color: var(--ink);
+  background: rgba(var(--ink-rgb), 0.04);
+  border-color: var(--line);
+}
+
+.workspace-room-card-owner-actions button.danger:hover {
+  color: var(--accent-warm);
+  border-color: rgba(211, 87, 59, 0.28);
+}
+
+/* Narrow viewports — single column, slightly tighter padding. */
+@media (max-width: 600px) {
+  .workspace-lobby {
+    gap: 18px;
+  }
+
+  .workspace-room-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-room-card {
+    padding: 16px 16px 14px;
+  }
+}
+
+/* Respect reduced-motion preferences — disable hover lifts that
+   trigger sub-pixel paint shifts. */
+@media (prefers-reduced-motion: reduce) {
+  .workspace-room-card,
+  .workspace-room-card-enter,
+  .workspace-lobby-create-row button {
+    transition: none;
+  }
+
+  .workspace-room-card:hover,
+  .workspace-room-card-enter:hover,
+  .workspace-lobby-create-row button:hover {
+    transform: none;
+  }
+}
+

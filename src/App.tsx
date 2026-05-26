@@ -5122,6 +5122,16 @@ function App() {
   const currentBuilding = workspaceTask.trim() || studySubject.trim() || "Deep work";
   const activeRoom =
     allWorkspaceRooms.find((room) => room.activeMembers.some((member) => member.userId === currentUserUid)) || null;
+  // Keep selectedRoomId pinned to whichever room the user is actually in,
+  // so derived state (workspaceActors, currentPresence, etc.) stays
+  // consistent with the immersive view. Without this, an app reload while
+  // the user has Firestore presence in room A but selectedRoomId pointing
+  // at room B can cause a one-render mismatch.
+  useEffect(() => {
+    if (activeRoom && activeRoom.id !== selectedRoomId) {
+      setSelectedRoomId(activeRoom.id);
+    }
+  }, [activeRoom?.id, selectedRoomId]);
   const githubConnectionLabel = githubId ? "GitHub connected" : "GitHub ready";
   const isInSelectedRoom = Boolean(
     selectedRoom?.activeMembers.some((member) => member.userId === currentUserUid),
@@ -10372,227 +10382,312 @@ function App() {
             </button>
           </div>
 
-          <section className="card silent-workspace workspace-2d-card" aria-label="Silent Workspace">
-            <div className="workspace-heading">
-              <div>
-                <p className="card-kicker">Silent Workspace</p>
-                <p>通話も雑談も主役にしない。同じ時間に手を動かしている気配だけを共有します。</p>
-              </div>
-              <span className="workspace-live-pill">quiet presence</span>
-            </div>
+          {/* Entry flow split:
+              - When the user is NOT in any room, render the lobby
+                (cards grid + new-room form). The immersive room is
+                hidden so we never reveal a room's interior before the
+                user joins.
+              - When the user IS in a room (Firestore presence in
+                activeMembers), render the immersive view of that room. */}
+          <AnimatePresence mode="wait" initial={false}>
+            {activeRoom ? (
+              <motion.div
+                key="workspace-immersive"
+                className="workspace-immersive-wrap"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.32, ease: [0.22, 0.61, 0.36, 1] }}
+              >
+                <section className="card silent-workspace workspace-2d-card" aria-label="Silent Workspace">
+                  <div className="workspace-heading">
+                    <div>
+                      <p className="card-kicker">Silent Workspace</p>
+                      <p>通話も雑談も主役にしない。同じ時間に手を動かしている気配だけを共有します。</p>
+                    </div>
+                    <span className="workspace-live-pill">quiet presence</span>
+                  </div>
 
-            <div className="workspace-layout">
-              {/* Compact room selector — pills along the top so the
-                  character map below gets the full canvas. */}
-              <div className="workspace-room-strip" aria-label="Workspace rooms">
+                  <div className="workspace-layout">
+                    <div className="workspace-room-canvas">
+                      {selectedRoom ? (
+                        <SilentWorkspaceRoom
+                          roomName={selectedRoom.name}
+                          roomDescription={getRoomDescription(selectedRoom)}
+                          onlineCount={roomOnlineCount}
+                          commitLabel={roomCommits.toLocaleString()}
+                          members={workspaceActors}
+                          currentUserId={currentUser.uid}
+                          isJoined={isInSelectedRoom}
+                          currentStayLabel={formatStayTime(currentStayMinutes)}
+                          joinedAtLabel={
+                            currentPresence
+                              ? new Date(currentPresence.joinedAt).toLocaleTimeString("ja-JP", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })
+                              : ""
+                          }
+                          taskValue={workspaceTask}
+                          onTaskChange={setWorkspaceTask}
+                          onJoin={() => handleRoomJoin(selectedRoom.id)}
+                          onLeave={handleRoomLeave}
+                          onResetPresence={resetWorkspacePresence}
+                          presetMessages={workspacePresetMessages}
+                          onPresetMessagesChange={setWorkspacePresetMessages}
+                          onPresetMessage={handleWorkspacePresetMessage}
+                          bubbleMessage={workspaceBubble}
+                          isPlayerWalking={isPlayerWalking}
+                          activityItems={roomActivityItems}
+                          onMemberOpen={handleMemberProfileOpen}
+                          onActivityOpen={handleRoomActivityOpen}
+                          lastSessionLabel={
+                            lastRoomSession
+                              ? `+${lastRoomSession.exp} EXP / ${formatStayTime(lastRoomSession.minutes)}を記録`
+                              : ""
+                          }
+                          totalLearnedLabel={`${Math.round(roomTotalMinutes / 60).toLocaleString()}h learned`}
+                          contributionLabel={`${roomContributions.toLocaleString()} contributions today`}
+                          learningItemSuggestions={learningItems
+                            .filter((item) => !item.archived)
+                            .map((item) => ({ id: item.id, name: item.name, color: item.color }))}
+                          recentLearningItemIds={(() => {
+                            const ids: string[] = [];
+                            for (let i = studyLogs.length - 1; i >= 0 && ids.length < 3; i--) {
+                              const lid = studyLogs[i].learningItemId;
+                              if (lid && !ids.includes(lid) && learningItems.some((item) => item.id === lid && !item.archived)) {
+                                ids.push(lid);
+                              }
+                            }
+                            return ids;
+                          })()}
+                          onLearningItemRegister={(presetName) => openLearningEditorForCreate(presetName)}
+                          onOpenRecruitmentModal={handleOpenRecruitmentModal}
+                          activeRecruitmentSummary={(() => {
+                            if (!selectedRoom || !currentUser) return null;
+                            const mine = workspaceRecruitments.find(
+                              (rec) =>
+                                rec.userId === currentUser.uid &&
+                                rec.roomId === selectedRoom.id &&
+                                new Date(rec.expiresAt).getTime() > feedNowTick,
+                            );
+                            if (!mine) return null;
+                            const startAtMs = new Date(mine.startAt).getTime();
+                            const isUpcoming = feedNowTick < startAtMs;
+                            return {
+                              stateLabel: isUpcoming
+                                ? `🗓 ${new Date(mine.startAt).toLocaleTimeString("ja-JP", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}開始予定`
+                                : "🔴 募集中",
+                              joinedCount: mine.joinedUserIds.length,
+                              onCancel: () => handleCancelRecruitment(mine),
+                            };
+                          })()}
+                        />
+                      ) : null}
+                    </div>
+                  </div>
+                </section>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="workspace-lobby"
+                className="workspace-lobby"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.32, ease: [0.22, 0.61, 0.36, 1] }}
+              >
+                <header className="workspace-lobby-header">
+                  <p className="card-kicker">Silent Workspace</p>
+                  <h2>作業部屋を選ぶ</h2>
+                  <p className="workspace-lobby-sub">
+                    通話も雑談も主役にしない。同じ時間に手を動かしている気配だけを共有する場所です。
+                  </p>
+                </header>
+
                 <form
-                  className="workspace-room-create"
+                  className="workspace-lobby-create"
                   onSubmit={(event) => {
                     event.preventDefault();
                     handleRoomCreate();
                   }}
                 >
-                  <input
-                    value={newRoomName}
-                    onChange={(event) => {
-                      setNewRoomName(event.target.value);
-                      if (roomCreateState !== "saving") {
-                        setRoomCreateState("idle");
-                        setRoomCreateMessage("");
-                      }
-                    }}
-                    placeholder="新しい場所"
-                    maxLength={32}
-                    aria-label="Roomを作成"
-                    onKeyDown={(event) => {
-                      if (event.nativeEvent.isComposing) {
-                        return;
-                      }
+                  <label htmlFor="workspace-lobby-create-input" className="workspace-lobby-create-label">
+                    新しい部屋を作る
+                  </label>
+                  <div className="workspace-lobby-create-row">
+                    <input
+                      id="workspace-lobby-create-input"
+                      value={newRoomName}
+                      onChange={(event) => {
+                        setNewRoomName(event.target.value);
+                        if (roomCreateState !== "saving") {
+                          setRoomCreateState("idle");
+                          setRoomCreateMessage("");
+                        }
+                      }}
+                      placeholder="部屋の名前 (例: v.0.0.1)"
+                      maxLength={32}
+                      aria-label="新しい部屋の名前"
+                      onKeyDown={(event) => {
+                        if (event.nativeEvent.isComposing) {
+                          return;
+                        }
 
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        handleRoomCreate();
-                      }
-                    }}
-                  />
-                  <button type="submit">作成</button>
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          handleRoomCreate();
+                        }
+                      }}
+                    />
+                    <button type="submit">作成</button>
+                  </div>
+                  {roomCreateMessage ? (
+                    <p className={`room-create-message ${roomCreateState}`}>{roomCreateMessage}</p>
+                  ) : null}
                 </form>
 
-                <div className="workspace-room-pills" role="tablist" aria-label="作業部屋一覧">
-                  {allWorkspaceRooms.map((room) => {
-                    const isActiveRoom = room.id === selectedRoom?.id;
-                    const roomMembers = room.activeMembers || [];
-                    const isJoinedRoom = roomMembers.some((member) => member.userId === currentUser.uid);
+                {allWorkspaceRooms.length === 0 ? (
+                  <div className="workspace-lobby-empty">
+                    <p className="card-kicker">No rooms yet</p>
+                    <h3>まだ部屋がありません。</h3>
+                    <p>上の入力欄から、自分の集中場所を作成しましょう。</p>
+                  </div>
+                ) : (
+                  <div className="workspace-room-card-grid" role="list" aria-label="作業部屋一覧">
+                    {allWorkspaceRooms.map((room) => {
+                      const members = room.activeMembers || [];
+                      const isOwner = room.createdBy === currentUser.uid;
+                      const hours = Math.round(room.totalMinutes / 60);
+                      const isEditingThisRoom = editingRoomId === room.id;
+                      const visibleAvatars = members.slice(0, 5);
+                      const extraCount = Math.max(0, members.length - visibleAvatars.length);
 
-                    return (
-                      <button
-                        key={room.id}
-                        type="button"
-                        role="tab"
-                        aria-selected={isActiveRoom}
-                        className={[
-                          "workspace-room-pill",
-                          isActiveRoom ? "active" : "",
-                          isJoinedRoom ? "joined" : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
-                        onClick={() => setSelectedRoomId(room.id)}
-                      >
-                        <span className="workspace-room-pill-name">{room.name}</span>
-                        <span className="workspace-room-pill-meta">
-                          {roomMembers.length}人 · {Math.round(room.totalMinutes / 60)}h
-                          {isJoinedRoom ? <em>入室中</em> : null}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {roomCreateMessage ? (
-                <p className={`room-create-message ${roomCreateState}`}>{roomCreateMessage}</p>
-              ) : null}
-
-              <div className="workspace-room-canvas">
-                {selectedRoom ? (
-                  <>
-                    {(() => {
-                      const isOwnRoom = selectedRoom.createdBy === currentUser.uid;
-                      const isEditingRoom = editingRoomId === selectedRoom.id;
                       return (
-                        <div className="workspace-room-canvas-actions">
-                          {isEditingRoom ? (
-                            <form
-                              className="workspace-room-canvas-edit-form"
-                              onSubmit={handleRoomTitleSave}
+                        <article
+                          key={room.id}
+                          className="workspace-room-card"
+                          role="listitem"
+                          aria-label={`${room.name} — ${members.length}人`}
+                        >
+                          <header className="workspace-room-card-head">
+                            {isEditingThisRoom ? (
+                              <form
+                                className="workspace-room-card-rename"
+                                onSubmit={handleRoomTitleSave}
+                              >
+                                <input
+                                  value={editingRoomName}
+                                  onChange={(event) => setEditingRoomName(event.target.value)}
+                                  maxLength={32}
+                                  aria-label="Roomタイトル"
+                                  autoFocus
+                                />
+                                <div className="workspace-room-card-rename-actions">
+                                  <button type="submit">保存</button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingRoomId("");
+                                      setEditingRoomName("");
+                                    }}
+                                  >
+                                    取消
+                                  </button>
+                                </div>
+                              </form>
+                            ) : (
+                              <>
+                                <h3 className="workspace-room-card-name">{room.name}</h3>
+                                {isOwner ? (
+                                  <span className="workspace-room-card-owner-tag">自分の部屋</span>
+                                ) : null}
+                              </>
+                            )}
+                          </header>
+
+                          <div className="workspace-room-card-avatars">
+                            {visibleAvatars.map((m) => {
+                              const profile = workspaceProfiles[m.userId];
+                              const isMe = m.userId === currentUser.uid;
+                              const color = getSafeCharacterColor(
+                                isMe
+                                  ? playerCharacterColor
+                                  : profile?.characterColor || m.characterColor || m.color,
+                              );
+                              const displayName = isMe ? playerName : profile?.displayName || m.name;
+                              return (
+                                <span
+                                  key={`${m.userId}-${m.joinedAt}`}
+                                  className="workspace-room-card-avatar"
+                                  style={{ background: color }}
+                                  title={displayName}
+                                  aria-label={displayName}
+                                />
+                              );
+                            })}
+                            {extraCount > 0 ? (
+                              <span
+                                className="workspace-room-card-avatar-more"
+                                aria-label={`他に${extraCount}人`}
+                              >
+                                +{extraCount}
+                              </span>
+                            ) : null}
+                            {members.length === 0 ? (
+                              <span className="workspace-room-card-avatars-empty">
+                                まだ誰もいません
+                              </span>
+                            ) : null}
+                          </div>
+
+                          <div className="workspace-room-card-meta">
+                            <span>
+                              {members.length === 0
+                                ? "0人が作業中"
+                                : `${members.length}人が作業中`}
+                            </span>
+                            <span aria-hidden="true">·</span>
+                            <span>{`${hours}時間経過`}</span>
+                          </div>
+
+                          <div className="workspace-room-card-actions">
+                            <button
+                              type="button"
+                              className="workspace-room-card-enter"
+                              onClick={() => handleRoomJoin(room.id)}
                             >
-                              <input
-                                value={editingRoomName}
-                                onChange={(event) => setEditingRoomName(event.target.value)}
-                                maxLength={32}
-                                aria-label="Roomタイトル"
-                              />
-                              <button type="submit">保存</button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setEditingRoomId("");
-                                  setEditingRoomName("");
-                                }}
-                              >
-                                取消
-                              </button>
-                            </form>
-                          ) : (
-                            <>
-                              <button
-                                type="button"
-                                className="workspace-room-canvas-action"
-                                onClick={() => startRoomTitleEdit(selectedRoom)}
-                              >
-                                名前変更
-                              </button>
-                              {isOwnRoom ? (
+                              入室する
+                            </button>
+                            {isOwner && !isEditingThisRoom ? (
+                              <div className="workspace-room-card-owner-actions">
                                 <button
                                   type="button"
-                                  className="workspace-room-canvas-action danger"
-                                  onClick={() => handleRoomDelete(selectedRoom.id)}
+                                  onClick={() => startRoomTitleEdit(room)}
+                                >
+                                  名前変更
+                                </button>
+                                <button
+                                  type="button"
+                                  className="danger"
+                                  onClick={() => handleRoomDelete(room.id)}
                                 >
                                   解体
                                 </button>
-                              ) : null}
-                            </>
-                          )}
-                        </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        </article>
                       );
-                    })()}
-                    <SilentWorkspaceRoom
-                      roomName={selectedRoom.name}
-                      roomDescription={getRoomDescription(selectedRoom)}
-                      onlineCount={roomOnlineCount}
-                      commitLabel={roomCommits.toLocaleString()}
-                      members={workspaceActors}
-                      currentUserId={currentUser.uid}
-                      isJoined={isInSelectedRoom}
-                      currentStayLabel={formatStayTime(currentStayMinutes)}
-                      joinedAtLabel={
-                        currentPresence
-                          ? new Date(currentPresence.joinedAt).toLocaleTimeString("ja-JP", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
-                          : ""
-                      }
-                      taskValue={workspaceTask}
-                      onTaskChange={setWorkspaceTask}
-                      onJoin={() => handleRoomJoin(selectedRoom.id)}
-                      onLeave={handleRoomLeave}
-                      onResetPresence={resetWorkspacePresence}
-                      presetMessages={workspacePresetMessages}
-                      onPresetMessagesChange={setWorkspacePresetMessages}
-                      onPresetMessage={handleWorkspacePresetMessage}
-                      bubbleMessage={workspaceBubble}
-                      isPlayerWalking={isPlayerWalking}
-                      activityItems={roomActivityItems}
-                      onMemberOpen={handleMemberProfileOpen}
-                      onActivityOpen={handleRoomActivityOpen}
-                      lastSessionLabel={
-                        lastRoomSession
-                          ? `+${lastRoomSession.exp} EXP / ${formatStayTime(lastRoomSession.minutes)}を記録`
-                          : ""
-                      }
-                      totalLearnedLabel={`${Math.round(roomTotalMinutes / 60).toLocaleString()}h learned`}
-                      contributionLabel={`${roomContributions.toLocaleString()} contributions today`}
-                      learningItemSuggestions={learningItems
-                        .filter((item) => !item.archived)
-                        .map((item) => ({ id: item.id, name: item.name, color: item.color }))}
-                      recentLearningItemIds={(() => {
-                        const ids: string[] = [];
-                        for (let i = studyLogs.length - 1; i >= 0 && ids.length < 3; i--) {
-                          const lid = studyLogs[i].learningItemId;
-                          if (lid && !ids.includes(lid) && learningItems.some((item) => item.id === lid && !item.archived)) {
-                            ids.push(lid);
-                          }
-                        }
-                        return ids;
-                      })()}
-                      onLearningItemRegister={(presetName) => openLearningEditorForCreate(presetName)}
-                      onOpenRecruitmentModal={handleOpenRecruitmentModal}
-                      activeRecruitmentSummary={(() => {
-                        if (!selectedRoom || !currentUser) return null;
-                        const mine = workspaceRecruitments.find(
-                          (rec) =>
-                            rec.userId === currentUser.uid &&
-                            rec.roomId === selectedRoom.id &&
-                            new Date(rec.expiresAt).getTime() > feedNowTick,
-                        );
-                        if (!mine) return null;
-                        const startAtMs = new Date(mine.startAt).getTime();
-                        const isUpcoming = feedNowTick < startAtMs;
-                        return {
-                          stateLabel: isUpcoming
-                            ? `🗓 ${new Date(mine.startAt).toLocaleTimeString("ja-JP", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}開始予定`
-                            : "🔴 募集中",
-                          joinedCount: mine.joinedUserIds.length,
-                          onCancel: () => handleCancelRecruitment(mine),
-                        };
-                      })()}
-                    />
-                  </>
-                ) : (
-                  <div className="room-empty-detail">
-                    <p className="card-kicker">Silent Workspace</p>
-                    <h3>まずはRoomを作成しましょう。</h3>
-                    <p>上の入力欄から、自分の集中場所を作成できます。</p>
+                    })}
                   </div>
                 )}
-              </div>
-            </div>
-          </section>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.section>
       ) : (
       <motion.div
