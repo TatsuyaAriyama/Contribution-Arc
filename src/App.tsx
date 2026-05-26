@@ -3001,10 +3001,12 @@ function DesktopDownloadCard() {
           </div>
         )}
         <ul>
-          <li>
-            <strong>macOS</strong> — <code>.dmg</code> を開いて <code>Applications</code> にドラッグ → ターミナルで
-            {" "}<code>xattr -cr "/Applications/Contribution Arc.app"</code> を実行 → 通常起動。
-          </li>
+          {detectedOS !== "mac" && (
+            <li>
+              <strong>macOS</strong> — <code>.dmg</code> を開いて <code>Applications</code> にドラッグ → ターミナルで
+              {" "}<code>xattr -cr "/Applications/Contribution Arc.app"</code> を実行 → 通常起動。
+            </li>
+          )}
           <li><strong>Windows</strong> — SmartScreen が出たら「詳細情報 → 実行」をクリック。</li>
           <li><strong>Linux</strong> — .AppImage に実行権限を付与（<code>chmod +x</code>）してダブルクリック。</li>
         </ul>
