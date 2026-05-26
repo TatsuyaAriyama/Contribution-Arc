@@ -1224,8 +1224,8 @@
 .search-close-button {
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--surface);
@@ -8820,6 +8820,16 @@
   }
 }
 
+@media (max-width: 430px) {
+  .workspace-2d-shell:not(.focus-presentation) .workspace-actor .actor-name {
+    max-width: 64px;
+  }
+
+  .workspace-2d-shell:not(.focus-presentation) .workspace-actor .actor-task {
+    max-width: 96px;
+  }
+}
+
 @media (max-width: 720px) {
   .app-shell {
     width: min(100% - 18px, 1180px);
@@ -9346,6 +9356,7 @@
   .settings-modal-backdrop {
     place-items: end center;
     padding: 10px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
   }
 
   .settings-modal,
@@ -9961,8 +9972,8 @@
 
   .premium-dashboard-header .notification-wrap > .notification-button,
   .premium-dashboard-header .user-menu-wrap > .user-menu-button {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
   }
 }
 
@@ -10932,8 +10943,8 @@
   position: relative;
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   border: 1px solid rgba(var(--ink-rgb), 0.08);
   border-radius: 12px;
