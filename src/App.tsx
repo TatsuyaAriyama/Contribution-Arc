@@ -10412,17 +10412,17 @@ function App() {
                 <p className={`room-create-message ${roomCreateState}`}>{roomCreateMessage}</p>
               ) : null}
 
-              <div className="workspace-stage">
+              <div className="workspace-room-canvas">
                 {selectedRoom ? (
                   <>
                     {(() => {
                       const isOwnRoom = selectedRoom.createdBy === currentUser.uid;
                       const isEditingRoom = editingRoomId === selectedRoom.id;
                       return (
-                        <div className="workspace-stage-actions">
+                        <div className="workspace-room-canvas-actions">
                           {isEditingRoom ? (
                             <form
-                              className="workspace-stage-edit-form"
+                              className="workspace-room-canvas-edit-form"
                               onSubmit={handleRoomTitleSave}
                             >
                               <input
@@ -10446,7 +10446,7 @@ function App() {
                             <>
                               <button
                                 type="button"
-                                className="workspace-stage-action"
+                                className="workspace-room-canvas-action"
                                 onClick={() => startRoomTitleEdit(selectedRoom)}
                               >
                                 名前変更
@@ -10454,7 +10454,7 @@ function App() {
                               {isOwnRoom ? (
                                 <button
                                   type="button"
-                                  className="workspace-stage-action danger"
+                                  className="workspace-room-canvas-action danger"
                                   onClick={() => handleRoomDelete(selectedRoom.id)}
                                 >
                                   解体

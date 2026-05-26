@@ -7614,29 +7614,30 @@
   color: var(--cta-fg);
 }
 
-/* ---- Main stage (full-width character map) ---- */
+/* ---- Outer canvas (full-width container around the room) ----
+   NB: a class named `.workspace-stage` already exists deeper inside
+   `SilentWorkspaceRoom` for the absolute-positioned floor that hosts
+   the character sprites — that one is load-bearing for the WASD
+   movement coordinates. Use a different name here to avoid the two
+   selectors colliding (padding/flex on the inner floor breaks the
+   percent-based actor positioning). */
 
-.workspace-stage {
-  position: relative;
+.workspace-room-canvas {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: clamp(12px, 1.8vw, 18px);
-  border-radius: 22px;
-  background:
-    linear-gradient(180deg, rgba(var(--surface-rgb), 0.88), rgba(var(--surface-rgb), 0.96)),
-    var(--surface);
-  border: 1px solid var(--line-soft);
+  /* No padding / background of its own — let the inner
+     `.workspace-stage` (floor) own the visual frame. */
 }
 
-.workspace-stage-actions {
+.workspace-room-canvas-actions {
   display: flex;
   justify-content: flex-end;
   align-items: center;
   gap: 6px;
 }
 
-.workspace-stage-action {
+.workspace-room-canvas-action {
   height: 30px;
   padding: 0 12px;
   border: 1px solid rgba(var(--ink-rgb), 0.1);
@@ -7650,24 +7651,24 @@
   transition: color 0.16s ease, border-color 0.16s ease, background 0.16s ease;
 }
 
-.workspace-stage-action:hover {
+.workspace-room-canvas-action:hover {
   color: var(--ink);
   border-color: rgba(var(--ink-rgb), 0.24);
 }
 
-.workspace-stage-action.danger:hover {
+.workspace-room-canvas-action.danger:hover {
   color: var(--accent-warm);
   border-color: rgba(211, 87, 59, 0.4);
   background: rgba(211, 87, 59, 0.06);
 }
 
-.workspace-stage-edit-form {
+.workspace-room-canvas-edit-form {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
-.workspace-stage-edit-form input {
+.workspace-room-canvas-edit-form input {
   height: 30px;
   min-width: 0;
   padding: 0 10px;
@@ -7680,12 +7681,12 @@
   outline: none;
 }
 
-.workspace-stage-edit-form input:focus {
+.workspace-room-canvas-edit-form input:focus {
   border-color: rgba(31, 111, 74, 0.36);
   box-shadow: 0 0 0 3px rgba(31, 111, 74, 0.12);
 }
 
-.workspace-stage-edit-form button {
+.workspace-room-canvas-edit-form button {
   height: 30px;
   padding: 0 12px;
   border: 1px solid rgba(var(--ink-rgb), 0.1);
@@ -7697,7 +7698,7 @@
   font-weight: 850;
 }
 
-.workspace-stage-edit-form button[type="submit"] {
+.workspace-room-canvas-edit-form button[type="submit"] {
   border-color: transparent;
   background: var(--cta-bg);
   color: var(--cta-fg);
