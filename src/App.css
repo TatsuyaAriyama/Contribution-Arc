@@ -9407,21 +9407,70 @@
 }
 
 @media (max-width: 720px) {
+  /* Modern SNS-style mobile header:
+     - Row 1: hamburger · date/time meta · bell · avatar
+     - Row 2: full-width search pill
+     The .user-session wrapper collapses with display: contents so its
+     children (search / bell / avatar) participate directly in the parent grid. */
   .premium-dashboard-header {
     top: 8px;
-    gap: 10px;
-    padding: 10px;
+    gap: 8px 10px;
+    padding: 10px 12px;
     border-radius: 22px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "nav meta bell avatar"
+      "search search search search";
+    align-items: center;
+  }
+
+  .premium-dashboard-header .mobile-nav-toggle {
+    grid-area: nav;
   }
 
   .premium-dashboard-header .topbar-context {
+    grid-area: meta;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .premium-dashboard-header .topbar-context .topbar-date,
+  .premium-dashboard-header .topbar-context .topbar-time {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .premium-dashboard-header .topbar-context .topbar-today,
+  .premium-dashboard-header .topbar-context .topbar-divider:has(+ .topbar-today) {
     display: none;
   }
 
   .premium-dashboard-header .user-session {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 46px 46px minmax(0, 1fr);
-    gap: 8px;
+    display: contents;
+  }
+
+  .premium-dashboard-header .notification-wrap {
+    grid-area: bell;
+    justify-self: end;
+  }
+
+  .premium-dashboard-header .user-menu-wrap {
+    grid-area: avatar;
+    justify-self: end;
+  }
+
+  .premium-dashboard-header .notification-wrap > .notification-button,
+  .premium-dashboard-header .user-menu-wrap > .user-menu-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    box-shadow: none;
   }
 
   .premium-dashboard-header .workspace-nav-button {
@@ -9433,14 +9482,25 @@
     border-radius: 18px;
   }
 
-  .premium-dashboard-header .user-search-button,
+  .premium-dashboard-header .user-search-button {
+    grid-area: search;
+    min-width: 0;
+    width: 100%;
+    height: 42px;
+    padding: 0 14px;
+    gap: 10px;
+    justify-content: flex-start;
+    border-radius: 14px;
+    box-shadow: none;
+  }
+
   .premium-dashboard-header .connect-button {
     min-width: 0;
     width: 100%;
   }
 
   .notification-panel {
-    right: -54px;
+    right: 0;
   }
 
   .premium-dashboard-header .user-search-button em {
@@ -9458,6 +9518,24 @@
     justify-self: start;
     min-height: 24px;
     margin-top: -2px;
+  }
+
+  /* Tighten the meta chip on the narrowest phones so the bell + avatar
+     don't get squeezed off the row. */
+  .premium-dashboard-header {
+    gap: 6px 8px;
+    padding: 10px;
+  }
+
+  .premium-dashboard-header .topbar-context .topbar-date,
+  .premium-dashboard-header .topbar-context .topbar-time {
+    font-size: 12px;
+  }
+
+  .premium-dashboard-header .notification-wrap > .notification-button,
+  .premium-dashboard-header .user-menu-wrap > .user-menu-button {
+    width: 36px;
+    height: 36px;
   }
 }
 
@@ -11463,16 +11541,9 @@
     border-radius: 20px;
   }
 
-  .topbar-context {
-    display: none;
-  }
-
-  .user-session {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 42px minmax(0, 1fr);
-    width: 100%;
-    gap: 8px;
-  }
+  /* Mobile header layout is driven by the .premium-dashboard-header grid
+     defined above — keep .topbar-context visible and let .user-session
+     collapse via display: contents so its children flow into the parent grid. */
 
   .workspace-nav-button {
     grid-column: 1 / -1;
