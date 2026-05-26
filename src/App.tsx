@@ -2985,9 +2985,13 @@ function DesktopDownloadCard() {
         {detectedOS === "mac" && (
           <div className="download-mac-fix">
             <p className="download-mac-fix-lead">
-              「<strong>“Contribution Arc” は壊れているため開けません</strong>」と表示される場合は、macOS の検疫属性が原因です。
-              <code>Applications</code> に <strong>.app をドラッグした後</strong>、ターミナルで次のコマンドを実行してください。
+              「<strong>"Contribution Arc" は壊れているため開けません</strong>」と表示される場合:
             </p>
+            <ol className="download-mac-fix-steps">
+              <li>ダウンロードした <code>.dmg</code> を開く</li>
+              <li><strong>Contribution Arc.app を <code>Applications</code> フォルダにドラッグして移動</strong></li>
+              <li>ターミナルで次のコマンドを実行</li>
+            </ol>
             <div className="download-cmd" role="group" aria-label="検疫属性を解除するコマンド">
               <code>{macQuarantineCmd}</code>
               <button type="button" className="download-cmd-copy" onClick={copyCmd}>

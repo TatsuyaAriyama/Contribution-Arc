@@ -1837,16 +1837,38 @@
   background: rgba(31, 111, 74, 0.04);
 }
 
-.download-mac-fix-lead,
-.download-mac-fix-foot {
+.download-mac-fix-lead {
   margin: 0;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.6;
+  font-weight: 700;
+}
+
+.download-mac-fix-steps {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
   color: var(--ink);
   font-size: 12px;
   line-height: 1.6;
 }
 
+.download-mac-fix-steps li {
+  list-style-type: decimal;
+}
+
+.download-mac-fix-steps strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+
 .download-mac-fix-foot {
+  margin: 0;
   color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .download-mac-fix-foot a {
