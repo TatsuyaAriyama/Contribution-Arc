@@ -15319,6 +15319,20 @@ body {
   text-overflow: ellipsis;
 }
 
+/* Signed-in Google/GitHub email — surfaced so users can verify the
+   actual account in use. The most common cause of "my PC and phone
+   show different data" is signing into a second Google account on
+   one of the devices without realising; making the email visible
+   lets the user catch this immediately. */
+.user-menu-head .user-menu-email {
+  display: block;
+  margin-top: 2px;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: rgba(var(--ink-rgb), 0.55);
+  letter-spacing: 0;
+}
+
 .user-menu-panel > button {
   display: flex;
   align-items: center;

@@ -1,8 +1,10 @@
 import { initializeApp } from "firebase/app";
 import {
+  browserLocalPersistence,
   getAuth,
   GithubAuthProvider,
   GoogleAuthProvider,
+  setPersistence,
 } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
@@ -22,3 +24,21 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
 export const githubProvider = new GithubAuthProvider();
+
+// Force Google's account picker so the user can verify which account
+// they're signing into — prevents accidentally using a different
+// Google account on a second device (the cause of "PC and phone show
+// different data" reports — same email but the silent re-auth
+// re-used a stale Google session in the mobile browser).
+googleProvider.setCustomParameters({ prompt: "select_account" });
+
+// Pin auth state to browserLocalPersistence (IndexedDB). Firebase
+// defaults to this on web, but iOS Safari's Intelligent Tracking
+// Prevention can quietly downgrade unset persistence to in-memory
+// only — making the user appear logged out (or worse, prompting a
+// re-auth that lands on a different Google account). Setting it
+// explicitly keeps mobile sessions stable.
+void setPersistence(auth, browserLocalPersistence).catch((error) => {
+  console.warn("Auth persistence setup failed; falling back to default.", error);
+});
+
