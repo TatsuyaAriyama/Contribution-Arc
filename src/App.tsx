@@ -89,7 +89,6 @@ import {
 } from "./services/persistentCache";
 import { fetchGithubContributions, type GithubContributions } from "./services/githubContributions";
 import { type AppView, type FriendPreview, type LiveActivity } from "./components/PremiumNavigation";
-import { useTimeOfDay } from "./hooks/useTimeOfDay";
 import { SilentWorkspaceRoom, type RoomActivityItem } from "./components/SilentWorkspaceRoom";
 import { ShareToXModal } from "./components/ShareToXModal";
 import "./App.css";
@@ -3202,16 +3201,6 @@ function App() {
     defaultDesktopNotificationSettings,
   );
   const [currentView, setCurrentViewRaw] = useState<AppView>("home");
-
-  // Ambient "学びの大地" — drives the page-wide gradient via a `data-time`
-  // attribute on <html>. Putting the attribute on the root element (not on
-  // the shell) makes it trivial to drive `body { background: ... }` rules
-  // from a single source of truth.
-  const timeOfDay = useTimeOfDay();
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    document.documentElement.dataset.time = timeOfDay;
-  }, [timeOfDay]);
 
   const setCurrentView = useCallback((next: AppView) => {
     if (typeof document === "undefined") {
