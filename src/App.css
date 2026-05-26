@@ -16330,6 +16330,50 @@ body {
   border-color: var(--ink);
 }
 
+/* ===== Home Screen Split Layout =====
+   On desktop (≥1081px) home splits into two columns:
+   - LEFT  (.home-self-column): Contribution Arc + TODAY + hero-grid — your stuff.
+     Sticky so it stays visible while the feed scrolls; gets its own internal
+     scroll only if its content overflows the viewport.
+   - RIGHT (.home-feed-column): Feed (composer + tabs + posts).
+     Scrolls with the page, mirroring the sidebar/feed pattern the user liked.
+   Below 1081px the columns simply stack in flow (single column). */
+.home-screen-split {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.home-self-column,
+.home-feed-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+@media (min-width: 1081px) {
+  .home-screen-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+
+  .home-self-column {
+    position: sticky;
+    top: 24px;
+    max-height: calc(100svh - 48px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* Drop the section's default bottom margin — the column gap owns spacing now. */
+  .home-feed-column .home-feed-section {
+    margin-bottom: 0;
+  }
+}
+
 /* ===== Home Feed (Phase 1: engineer-Twitter) ===== */
 .home-feed-section {
   display: flex;
