@@ -30,6 +30,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  documentId,
   getDoc,
   getDocs,
   limit,
@@ -72,9 +73,9 @@ import {
   type RecruitmentAuthor,
 } from "./components/feed/WorkspaceRecruitmentFeedCard";
 import {
+  fetchPostRepliesOnce,
   savePostToCloud,
   savePostReplyToCloud,
-  subscribePostRepliesFromCloud,
   subscribePostsFromCloud,
   togglePostLikeInCloud,
   type ContributionPostRecord,
@@ -2880,7 +2881,7 @@ function LoginScreen() {
  */
 function DesktopDownloadCard() {
   const releasesDownload = "https://github.com/TatsuyaAriyama/Contribution-Arc/releases/latest/download";
-  const macIntelHref = `${releasesDownload}/Contribution-Arc-0.0.0-mac-x64.dmg`;
+  const macIntelHref = `${releasesDownload}/Contribution-Arc-0.0.0-mac-x64.zip`;
   const macQuarantineCmd = 'xattr -cr "/Applications/Contribution Arc.app"';
   const [copied, setCopied] = useState(false);
 
@@ -2915,9 +2916,9 @@ function DesktopDownloadCard() {
     {
       id: "mac",
       label: "macOS",
-      meta: "Apple Silicon (.dmg)",
-      size: "≈ 145 MB",
-      href: `${releasesDownload}/Contribution-Arc-0.0.0-mac-arm64.dmg`,
+      meta: "Apple Silicon (.zip)",
+      size: "≈ 140 MB",
+      href: `${releasesDownload}/Contribution-Arc-0.0.0-mac-arm64.zip`,
       download: true,
       icon: (
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -3014,8 +3015,8 @@ function DesktopDownloadCard() {
               「<strong>"Contribution Arc" は壊れているため開けません</strong>」と表示される場合:
             </p>
             <ol className="download-mac-fix-steps">
-              <li>ダウンロードした <code>.dmg</code> を開く</li>
-              <li><strong>Contribution Arc.app を <code>Applications</code> フォルダにドラッグして移動</strong></li>
+              <li>ダウンロードした <code>.zip</code> をダブルクリックして解凍</li>
+              <li><strong>Contribution Arc.app を <code>Applications</code> フォルダに移動</strong></li>
               <li>ターミナルで次のコマンドを実行</li>
             </ol>
             <div className="download-cmd" role="group" aria-label="検疫属性を解除するコマンド">
@@ -3026,14 +3027,14 @@ function DesktopDownloadCard() {
             </div>
             <p className="download-mac-fix-foot">
               実行後、Launchpad や Applications から通常どおり起動できます。
-              Intel Mac の方は <a href={macIntelHref} download>Intel 版 .dmg</a> をご利用ください。
+              Intel Mac の方は <a href={macIntelHref} download>Intel 版 .zip</a> をご利用ください。
             </p>
           </div>
         )}
         <ul>
           {detectedOS !== "mac" && (
             <li>
-              <strong>macOS</strong> — <code>.dmg</code> を開いて <code>Applications</code> にドラッグ → ターミナルで
+              <strong>macOS</strong> — <code>.zip</code> を解凍して <code>Applications</code> に移動 → ターミナルで
               {" "}<code>xattr -cr "/Applications/Contribution Arc.app"</code> を実行 → 通常起動。
             </li>
           )}
@@ -3076,7 +3077,6 @@ function App() {
   const [hoveredArcCell, setHoveredArcCell] = useState<
     { day: ContributionArcDay; left: number; top: number; placement: "above" | "below" } | null
   >(null);
-  const [topbarNow, setTopbarNow] = useState(() => new Date());
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -3108,11 +3108,6 @@ function App() {
       /* localStorage unavailable — just skip persistence */
     }
   }, [uiScale]);
-
-  useEffect(() => {
-    const id = window.setInterval(() => setTopbarNow(new Date()), 30000);
-    return () => window.clearInterval(id);
-  }, []);
 
   useEffect(() => {
     if (!isUserMenuOpen) return;
@@ -3194,6 +3189,7 @@ function App() {
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [customRooms, setCustomRooms] = useState<WorkspaceRoom[]>([]);
   const [isWorkspaceLoaded, setIsWorkspaceLoaded] = useState(false);
+  const [isPageVisible, setIsPageVisible] = useState(!document.hidden);
   const [newRoomName, setNewRoomName] = useState("");
   const [roomCreateState, setRoomCreateState] = useState<RoomCreateState>("idle");
   const [roomCreateMessage, setRoomCreateMessage] = useState("");
@@ -3722,7 +3718,7 @@ function App() {
   }, [currentUser, isWorkspaceLoaded, learningItems.length, studyLogs.length]);
 
   useEffect(() => {
-    if (!currentUser || !isWorkspaceLoaded) {
+    if (!currentUser || !isWorkspaceLoaded || !isPageVisible) {
       return;
     }
     const unsubscribe = subscribeActiveRecruitmentsFromCloud(
@@ -3731,7 +3727,7 @@ function App() {
       (error) => console.info("Workspace recruitments sync skipped.", error),
     );
     return () => unsubscribe();
-  }, [currentUser, isWorkspaceLoaded]);
+  }, [currentUser, isWorkspaceLoaded, isPageVisible]);
 
   useEffect(() => {
     // Tick at 1s when any active recruitment is visible so countdown text
@@ -3944,19 +3940,14 @@ function App() {
     };
   }, [currentUser]);
 
-  // Reply subscription. Mirrors the posts effect — kicks off as soon as we
-  // have a signed-in user, no `isWorkspaceLoaded` gate so it doesn't get
-  // torn down and rebuilt when the workspace finishes loading.
+  // Fetch replies once on sign-in. Realtime sync is not needed here;
+  // optimistic updates keep local state current after the user posts a reply.
   useEffect(() => {
     if (!currentUser) return;
 
-    return subscribePostRepliesFromCloud(
-      db,
-      setPostReplies,
-      (error) => {
-        console.info("Post reply realtime sync skipped.", error);
-      },
-    );
+    void fetchPostRepliesOnce(db, (error) => {
+      console.info("Post reply fetch skipped.", error);
+    }).then(setPostReplies);
   }, [currentUser]);
 
   useEffect(() => {
@@ -4067,9 +4058,9 @@ function App() {
         }
       },
     );
-    const unsubscribeSharedReports = onSnapshot(
-      sharedDailyQuery,
-      (snapshot) => {
+    void getDocs(sharedDailyQuery)
+      .then((snapshot) => {
+        if (!isActive) return;
         const syncedCloudReports = snapshot.docs
           .map((item) => {
             const data = {
@@ -4086,16 +4077,14 @@ function App() {
 
         setSharedDailyReports(syncedCloudReports);
         void putPersistentItems("dailyReports", syncedCloudReports);
-      },
-      (error) => {
-        console.info("Shared daily report realtime sync skipped.", error);
-      },
-    );
+      })
+      .catch((error) => {
+        console.info("Shared daily report fetch skipped.", error);
+      });
 
     return () => {
       isActive = false;
       unsubscribeOwnReports();
-      unsubscribeSharedReports();
     };
   }, [currentUser, isWorkspaceLoaded, userId]);
 
@@ -4360,6 +4349,12 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const handleVisibility = () => setIsPageVisible(!document.hidden);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, []);
+
+  useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
       return;
     }
@@ -4368,7 +4363,7 @@ function App() {
   }, [currentUser, isWorkspaceLoaded, workspaceNow]);
 
   useEffect(() => {
-    if (!currentUser || !isWorkspaceLoaded) {
+    if (!currentUser || !isWorkspaceLoaded || !isPageVisible) {
       return;
     }
 
@@ -4470,7 +4465,7 @@ function App() {
       unsubscribeRooms();
       unsubscribeLegacyRooms();
     };
-  }, [currentUser, isWorkspaceLoaded]);
+  }, [currentUser, isWorkspaceLoaded, isPageVisible]);
 
   useEffect(() => {
     if (!currentUser) {
@@ -4497,20 +4492,25 @@ function App() {
   }, [currentUser, userId]);
 
   useEffect(() => {
-    if (!currentUser || !isWorkspaceLoaded) {
+    if (!currentUser || !isWorkspaceLoaded || !isPageVisible) {
       return;
     }
 
+    const activeMemberIds = customRooms.flatMap((r) => r.activeMembers.map((m) => m.userId));
+    const targetIds = [...new Set([...following, ...activeMemberIds])]
+      .filter((id) => id && id !== currentUser.uid)
+      .slice(0, 30);
+
+    if (targetIds.length === 0) return;
+
     const unsubscribe = onSnapshot(
-      collection(db, "users"),
+      query(collection(db, "users"), where(documentId(), "in", targetIds)),
       (snapshot) => {
         const nextProfiles: Record<string, UserProfile> = {};
-
         snapshot.docs.forEach((item) => {
           nextProfiles[item.id] = normalizeUserProfile(item.id, item.data() as Partial<UserProfile>);
         });
-
-        setWorkspaceProfiles(nextProfiles);
+        setWorkspaceProfiles((prev) => ({ ...prev, ...nextProfiles }));
       },
       (error) => {
         console.info("Workspace profile realtime sync skipped.", error);
@@ -4518,7 +4518,7 @@ function App() {
     );
 
     return () => unsubscribe();
-  }, [currentUser, isWorkspaceLoaded]);
+  }, [currentUser, isWorkspaceLoaded, isPageVisible, following, customRooms]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
@@ -7643,39 +7643,42 @@ function App() {
               {githubContributionArc ? ` · ${githubContributionArc.total} commit` : ""}
             </strong>
             <span>
+              直近13週
+              {" · "}
               {contributionArc.activeDays}日学習
-              {githubContributionArc ? ` · ${githubContributionArc.activeDays}日コミット` : ""}
-              {githubUsername ? ` · @${githubUsername}` : ""}
-              {" · 直近13週"}
+              {githubContributionArc ? ` / ${githubContributionArc.activeDays}日コミット` : ""}
             </span>
           </div>
           <div className="contribution-arc-stats" aria-label="学習サマリ">
-            <div>
-              <small>今週</small>
-              <strong>{formatStudyTimeJa(contributionArc.thisWeekMinutes)}</strong>
-              <span>
-                {contributionArc.lastWeekMinutes > 0
+            <div
+              className="arc-stat"
+              data-tooltip={
+                contributionArc.lastWeekMinutes > 0
                   ? `先週比 ${
                       contributionArc.thisWeekMinutes - contributionArc.lastWeekMinutes >= 0 ? "+" : ""
                     }${formatStudyTimeJa(
                       Math.abs(contributionArc.thisWeekMinutes - contributionArc.lastWeekMinutes),
                     )}`
-                  : "—"}
-              </span>
+                  : "先週の記録はまだありません"
+              }
+            >
+              <small>今週</small>
+              <strong>{formatStudyTimeJa(contributionArc.thisWeekMinutes)}</strong>
             </div>
-            <div>
+            <div className="arc-stat" data-tooltip="連続して記録した最長期間">
               <small>最長連続</small>
               <strong>{contributionArc.longestStreak}日</strong>
-              <span>記録した期間</span>
             </div>
-            <div>
+            <div
+              className="arc-stat"
+              data-tooltip={
+                contributionArc.topMonthMinutes > 0
+                  ? `合計 ${formatStudyTimeJa(contributionArc.topMonthMinutes)}`
+                  : "まだ記録なし"
+              }
+            >
               <small>最も学んだ月</small>
               <strong>{contributionArc.topMonthLabel || "—"}</strong>
-              <span>
-                {contributionArc.topMonthMinutes > 0
-                  ? formatStudyTimeJa(contributionArc.topMonthMinutes)
-                  : "まだ記録なし"}
-              </span>
             </div>
           </div>
         </div>
@@ -7908,9 +7911,9 @@ function App() {
                   return (
                     <li key={item.subject}>
                       <i style={{ background: item.color }} aria-hidden="true" />
-                      <strong>{item.subject}</strong>
-                      <span>{formatStudyTimeJa(item.minutes)}</span>
-                      <small>{pct}%</small>
+                      <strong className="legend-name">{item.subject}</strong>
+                      <span className="legend-pct">{pct}%</span>
+                      <span className="legend-time">{formatStudyTimeJa(item.minutes)}</span>
                     </li>
                   );
                 })}
@@ -8112,15 +8115,17 @@ function App() {
                 <span style={{ width: `${levelState.percent}%` }} />
               </div>
             </div>
-            <div className="player-status-sidebar-metrics">
+            <div className={`player-status-sidebar-metrics${outputExp > 0 ? "" : " is-single"}`}>
               <div>
                 <strong>{effortExp.toLocaleString()}</strong>
                 <span>Effort EXP</span>
               </div>
-              <div>
-                <strong>{outputExp.toLocaleString()}</strong>
-                <span>Output EXP</span>
-              </div>
+              {outputExp > 0 ? (
+                <div>
+                  <strong>{outputExp.toLocaleString()}</strong>
+                  <span>Output EXP</span>
+                </div>
+              ) : null}
             </div>
           </button>
         }
@@ -8161,68 +8166,11 @@ function App() {
           </svg>
         </button>
         <div className="topbar-context">
-          <span className="topbar-date">
-            {topbarNow.getMonth() + 1}/{topbarNow.getDate()}（
-            {["日", "月", "火", "水", "木", "金", "土"][topbarNow.getDay()]}）
-          </span>
-          <span className="topbar-divider" aria-hidden="true">
-            ·
-          </span>
-          <span className="topbar-time">
-            {topbarNow.getHours().toString().padStart(2, "0")}:
-            {topbarNow.getMinutes().toString().padStart(2, "0")}
-          </span>
           {todayStudyMinutes > 0 ? (
-            <>
-              <span className="topbar-divider" aria-hidden="true">
-                ·
-              </span>
-              <span className="topbar-today">
-                今日 {formatStudyTimeJa(todayStudyMinutes)} 学習
-              </span>
-            </>
+            <span className="topbar-today">
+              今日 {formatStudyTimeJa(todayStudyMinutes)} 学習
+            </span>
           ) : null}
-        </div>
-        <div className="topbar-zoom" role="group" aria-label="表示サイズ">
-          <button
-            type="button"
-            className="topbar-zoom-step"
-            onClick={() =>
-              setUiScale((v) =>
-                Math.max(UI_SCALE_MIN, Math.round((v - 0.05) * 100) / 100),
-              )
-            }
-            aria-label="表示を小さくする"
-            disabled={uiScale <= UI_SCALE_MIN + 1e-6}
-          >
-            −
-          </button>
-          <input
-            type="range"
-            className="topbar-zoom-slider"
-            min={UI_SCALE_MIN}
-            max={UI_SCALE_MAX}
-            step={0.05}
-            value={uiScale}
-            onChange={(event) => setUiScale(parseFloat(event.target.value))}
-            aria-label="表示サイズスライダー"
-          />
-          <button
-            type="button"
-            className="topbar-zoom-step"
-            onClick={() =>
-              setUiScale((v) =>
-                Math.min(UI_SCALE_MAX, Math.round((v + 0.05) * 100) / 100),
-              )
-            }
-            aria-label="表示を大きくする"
-            disabled={uiScale >= UI_SCALE_MAX - 1e-6}
-          >
-            ＋
-          </button>
-          <span className="topbar-zoom-value" aria-live="polite">
-            {Math.round(uiScale * 100)}%
-          </span>
         </div>
         <div className="user-session">
           <button
@@ -8244,7 +8192,9 @@ function App() {
               onClick={handleNotificationsToggle}
             >
               <BellIcon />
-              {unreadNotificationCount > 0 ? <span>{unreadNotificationCount}</span> : null}
+              {unreadNotificationCount > 0 ? (
+                <span className="notification-dot" aria-hidden="true" />
+              ) : null}
             </button>
 
             {isNotificationsOpen ? (
@@ -8349,6 +8299,31 @@ function App() {
                     ) : null}
                   </span>
                 </div>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    setCurrentView("profile");
+                  }}
+                >
+                  <svg
+                    className="user-menu-icon"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <circle cx="12" cy="8" r="3.6" fill="none" stroke="currentColor" strokeWidth="1.6" />
+                    <path
+                      d="M4.5 20c1.4-3.6 4.4-5.5 7.5-5.5s6.1 1.9 7.5 5.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <span>プロフィール</span>
+                </button>
                 <button
                   type="button"
                   role="menuitem"
@@ -8860,6 +8835,53 @@ function App() {
                     aria-pressed={theme === "light"}
                   >
                     ライト
+                  </button>
+                </div>
+              </div>
+
+              <div className="settings-zoom-panel" role="group" aria-label="表示サイズ">
+                <div className="settings-zoom-head">
+                  <span className="settings-theme-label">表示サイズ</span>
+                  <span className="settings-zoom-value" aria-live="polite">
+                    {Math.round(uiScale * 100)}%
+                  </span>
+                </div>
+                <div className="settings-zoom-control">
+                  <button
+                    type="button"
+                    className="settings-zoom-step"
+                    onClick={() =>
+                      setUiScale((v) =>
+                        Math.max(UI_SCALE_MIN, Math.round((v - 0.05) * 100) / 100),
+                      )
+                    }
+                    aria-label="表示を小さくする"
+                    disabled={uiScale <= UI_SCALE_MIN + 1e-6}
+                  >
+                    −
+                  </button>
+                  <input
+                    type="range"
+                    className="settings-zoom-slider"
+                    min={UI_SCALE_MIN}
+                    max={UI_SCALE_MAX}
+                    step={0.05}
+                    value={uiScale}
+                    onChange={(event) => setUiScale(parseFloat(event.target.value))}
+                    aria-label="表示サイズスライダー"
+                  />
+                  <button
+                    type="button"
+                    className="settings-zoom-step"
+                    onClick={() =>
+                      setUiScale((v) =>
+                        Math.min(UI_SCALE_MAX, Math.round((v + 0.05) * 100) / 100),
+                      )
+                    }
+                    aria-label="表示を大きくする"
+                    disabled={uiScale >= UI_SCALE_MAX - 1e-6}
+                  >
+                    ＋
                   </button>
                 </div>
               </div>

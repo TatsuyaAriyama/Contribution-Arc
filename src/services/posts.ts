@@ -4,6 +4,7 @@ import {
   collection,
   collectionGroup,
   doc,
+  getDocs,
   increment,
   limit,
   onSnapshot,
@@ -126,34 +127,32 @@ export async function savePostToCloud(db: Firestore, post: ContributionPostRecor
   );
 }
 
-export function subscribePostRepliesFromCloud(
+export async function fetchPostRepliesOnce(
   db: Firestore,
-  onChange: (replies: ContributionReplyRecord[]) => void,
   onError: (error: unknown) => void,
-): Unsubscribe {
+): Promise<ContributionReplyRecord[]> {
   const repliesQuery = query(collectionGroup(db, "replies"), orderBy("createdAt", "desc"), limit(80));
 
-  return onSnapshot(
-    repliesQuery,
-    (snapshot) => {
-      const replies = snapshot.docs.map((item) => {
-        const data = item.data();
-        return {
-          id: item.id,
-          postId: readString(data.postId),
-          userId: readString(data.userId),
-          username: readString(data.username, "Developer"),
-          avatar: readString(data.avatar),
-          characterColor: readString(data.characterColor, "#1f6f4a"),
-          text: readString(data.text),
-          createdAt: readCreatedAt(data.createdAt),
-        };
-      });
-
-      onChange(replies.filter((reply) => reply.postId && reply.userId && reply.text.trim()));
-    },
-    onError,
-  );
+  try {
+    const snapshot = await getDocs(repliesQuery);
+    const replies = snapshot.docs.map((item) => {
+      const data = item.data();
+      return {
+        id: item.id,
+        postId: readString(data.postId),
+        userId: readString(data.userId),
+        username: readString(data.username, "Developer"),
+        avatar: readString(data.avatar),
+        characterColor: readString(data.characterColor, "#1f6f4a"),
+        text: readString(data.text),
+        createdAt: readCreatedAt(data.createdAt),
+      };
+    });
+    return replies.filter((reply) => reply.postId && reply.userId && reply.text.trim());
+  } catch (error) {
+    onError(error);
+    return [];
+  }
 }
 
 export async function savePostReplyToCloud(db: Firestore, reply: ContributionReplyRecord) {
