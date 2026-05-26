@@ -15,10 +15,12 @@ import {
 import {
   createUserWithEmailAndPassword,
   getAdditionalUserInfo,
+  getRedirectResult,
   linkWithPopup,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
   signOut,
   type User,
 } from "firebase/auth";
@@ -2706,11 +2708,35 @@ function LoginScreen() {
     setAuthError(null);
     setIsSubmitting(true);
 
+    // Popups are unreliable on mobile browsers (iOS Safari blocks them
+    // outright; in-app webviews silently close them). Detect a touch /
+    // small-viewport context and use the redirect flow there — the result
+    // is picked up by the getRedirectResult effect on the next page load.
+    const isMobileContext =
+      typeof window !== "undefined" &&
+      (window.matchMedia?.("(max-width: 720px)").matches ||
+        /Mobi|Android|iPhone|iPad/i.test(window.navigator.userAgent));
+
+    const oauthProvider = provider === "google" ? googleProvider : githubProvider;
+
+    if (isMobileContext) {
+      try {
+        // Remember which provider initiated the redirect so the result
+        // handler can do provider-specific bookkeeping (e.g. cache the
+        // GitHub login handle) when the browser comes back.
+        window.sessionStorage.setItem("ca:pending-oauth-provider", provider);
+        await signInWithRedirect(auth, oauthProvider);
+        // signInWithRedirect navigates away — the next line won't run.
+        return;
+      } catch (error) {
+        setAuthError(getAuthErrorDetail(error));
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     try {
-      const result = await signInWithPopup(
-        auth,
-        provider === "google" ? googleProvider : githubProvider,
-      );
+      const result = await signInWithPopup(auth, oauthProvider);
       // GitHub's Firebase provider exposes the OAuth login (handle) only in
       // additionalUserInfo.profile, not in providerData. Cache it per-uid so
       // the contribution heatmap fetcher can target the right user even when
@@ -3294,6 +3320,35 @@ function App() {
       setCurrentUser(user);
       setIsAuthReady(true);
     });
+  }, []);
+
+  // Pick up the result of a redirect-based OAuth sign-in (used on mobile
+  // where `signInWithPopup` is unreliable). Runs once on mount: if the
+  // browser came back from a Google/GitHub redirect, this finalises the
+  // session and performs the same provider-specific bookkeeping that
+  // `handleProviderLogin` does for the popup flow (caching GitHub login).
+  useEffect(() => {
+    getRedirectResult(auth)
+      .then((result) => {
+        if (!result) return;
+        const pendingProvider =
+          window.sessionStorage.getItem("ca:pending-oauth-provider") || "";
+        window.sessionStorage.removeItem("ca:pending-oauth-provider");
+        if (pendingProvider === "github") {
+          const additional = getAdditionalUserInfo(result);
+          const login = (additional?.profile as { login?: string } | null | undefined)?.login;
+          if (login && result.user.uid) {
+            try {
+              window.localStorage.setItem(`ca:gh-login:${result.user.uid}`, login);
+            } catch {
+              /* storage disabled — fall back to displayName/userId */
+            }
+          }
+        }
+      })
+      .catch((error) => {
+        console.error("OAuth redirect result failed.", error);
+      });
   }, []);
 
   useEffect(() => {
@@ -8248,6 +8303,11 @@ function App() {
                   <span>
                     <strong>{playerName}</strong>
                     <small>@{userId || "未設定"}</small>
+                    {currentUser?.email ? (
+                      <small className="user-menu-email" title="サインイン中のアカウント">
+                        {currentUser.email}
+                      </small>
+                    ) : null}
                   </span>
                 </div>
                 <button
