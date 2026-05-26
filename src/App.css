@@ -10599,7 +10599,23 @@
   }
 
   .two-pane-right .home-feed-section {
+    /* Fill the right pane top-to-bottom so the card frame reaches the
+       viewport edge instead of ending mid-screen when there are only a
+       handful of posts. `.two-pane-right` is already a column flex; the
+       section is its sole child here. `min-height: 0` lets the inner list
+       shrink to enable its own overflow scroll below. */
+    flex: 1 1 auto;
+    min-height: 0;
     margin-bottom: 0;
+  }
+
+  .two-pane-right .home-feed-list {
+    /* The list owns the internal scroll so the card's header / composer /
+       filter tabs stay pinned at top while posts scroll inside. */
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 }
 
