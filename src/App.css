@@ -18688,3 +18688,163 @@ select:focus-visible,
   }
 }
 
+/* =================================================================
+   Tutorial hint cards (one-shot first-visit explainer per surface)
+   =================================================================
+   Rendered at the top of each view's content. Lives in-flow, not as a
+   modal — modals interrupt; this lets the user read at their pace,
+   then dismiss with one tap. Subtle highlight so it's discoverable but
+   doesn't compete with primary content.
+   ================================================================= */
+
+.tutorial-hint {
+  position: relative;
+  margin: 0 0 16px;
+  padding: 16px 18px 18px;
+  border: 1px solid rgba(31, 111, 74, 0.18);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(31, 111, 74, 0.08), transparent 8rem),
+    linear-gradient(180deg, rgba(var(--surface-rgb), 0.96), rgba(var(--surface-rgb), 0.92)),
+    var(--surface);
+  box-shadow:
+    0 14px 32px rgba(var(--ink-rgb), 0.06),
+    inset 0 1px 0 rgba(var(--surface-rgb), 0.9);
+}
+
+.tutorial-hint-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.tutorial-hint-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(31, 111, 74, 0.12);
+  color: var(--green, #1f6f4a);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.tutorial-hint-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.tutorial-hint-close:hover {
+  background: rgba(var(--ink-rgb), 0.05);
+  color: var(--ink);
+}
+
+.tutorial-hint-title {
+  margin: 0 0 4px;
+  color: var(--ink-strong, var(--ink));
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: -0.005em;
+}
+
+.tutorial-hint-body {
+  margin: 0;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.55;
+}
+
+.tutorial-hint-bullets {
+  margin: 10px 0 12px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.tutorial-hint-bullets li {
+  position: relative;
+  padding-left: 18px;
+  color: var(--ink);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.tutorial-hint-bullets li::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--green, #1f6f4a);
+  opacity: 0.7;
+}
+
+.tutorial-hint-ok {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--ink-strong, #111827);
+  color: var(--surface, #ffffff);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  touch-action: manipulation;
+  transition: background 0.14s ease, transform 0.12s ease;
+}
+
+.tutorial-hint-ok:hover {
+  background: #000;
+}
+
+.tutorial-hint-ok:active {
+  transform: scale(0.97);
+}
+
+@media (max-width: 720px) {
+  .tutorial-hint {
+    padding: 14px 14px 16px;
+    margin-bottom: 14px;
+    border-radius: 14px;
+  }
+
+  .tutorial-hint-title {
+    font-size: 15px;
+  }
+
+  .tutorial-hint-body,
+  .tutorial-hint-bullets li {
+    font-size: 12.5px;
+  }
+
+  .tutorial-hint-ok {
+    width: 100%;
+    min-height: 44px;
+    font-size: 14px;
+  }
+}
+
