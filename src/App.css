@@ -1827,6 +1827,73 @@
   font-size: 11px;
 }
 
+.download-mac-fix {
+  display: grid;
+  gap: 10px;
+  margin: 10px 0 12px;
+  padding: 12px;
+  border: 1px solid rgba(31, 111, 74, 0.18);
+  border-radius: 10px;
+  background: rgba(31, 111, 74, 0.04);
+}
+
+.download-mac-fix-lead,
+.download-mac-fix-foot {
+  margin: 0;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.download-mac-fix-foot {
+  color: var(--muted);
+}
+
+.download-mac-fix-foot a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.download-cmd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 10px;
+  border: 1px solid rgba(var(--ink-rgb), 0.1);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.download-cmd code {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 12px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.download-cmd-copy {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  border: 1px solid rgba(var(--ink-rgb), 0.12);
+  border-radius: 6px;
+  background: rgba(var(--ink-rgb), 0.04);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.download-cmd-copy:hover {
+  background: rgba(var(--ink-rgb), 0.08);
+  border-color: rgba(var(--ink-rgb), 0.2);
+}
+
 .login-shell.loading-auth {
   grid-template-columns: minmax(0, 520px);
   justify-content: center;

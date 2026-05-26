@@ -2853,8 +2853,10 @@ function LoginScreen() {
  * artifacts to the tagged release automatically.
  */
 function DesktopDownloadCard() {
-  const releasesLatest = "https://github.com/TatsuyaAriyama/Contribution-Arc/releases/latest";
   const releasesDownload = "https://github.com/TatsuyaAriyama/Contribution-Arc/releases/latest/download";
+  const macIntelHref = `${releasesDownload}/Contribution-Arc-0.0.0-mac-x64.dmg`;
+  const macQuarantineCmd = 'xattr -cr "/Applications/Contribution Arc.app"';
+  const [copied, setCopied] = useState(false);
 
   const detectedOS = (() => {
     if (typeof navigator === "undefined") return null;
@@ -2864,6 +2866,16 @@ function DesktopDownloadCard() {
     if (/Linux/.test(ua) && !/Android/.test(ua)) return "linux";
     return null;
   })();
+
+  const copyCmd = async () => {
+    try {
+      await navigator.clipboard.writeText(macQuarantineCmd);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      /* clipboard API unavailable — ignore */
+    }
+  };
 
   const platforms: Array<{
     id: "mac" | "win" | "linux";
@@ -2877,10 +2889,10 @@ function DesktopDownloadCard() {
     {
       id: "mac",
       label: "macOS",
-      meta: "Apple Silicon / Intel",
-      size: "143–154 MB",
-      href: releasesLatest,
-      download: false,
+      meta: "Apple Silicon (.dmg)",
+      size: "≈ 145 MB",
+      href: `${releasesDownload}/Contribution-Arc-0.0.0-mac-arm64.dmg`,
+      download: true,
       icon: (
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M16.365 1.43c0 1.14-.466 2.23-1.21 3.02-.8.84-2.05 1.5-3.15 1.43-.14-1.1.41-2.27 1.16-3.04.86-.86 2.27-1.5 3.2-1.41zm3.5 16.66c-.43.98-.95 1.9-1.55 2.74-.85 1.18-1.55 2-2.07 2.45-.81.71-1.68 1.07-2.6 1.08-.66 0-1.45-.19-2.36-.57-.92-.38-1.76-.57-2.53-.57-.81 0-1.67.19-2.59.57-.92.38-1.66.58-2.21.6-.89.04-1.78-.33-2.67-1.11-.56-.49-1.29-1.34-2.18-2.55-.96-1.3-1.75-2.81-2.37-4.53-.66-1.86-.99-3.66-.99-5.4 0-2 .43-3.72 1.3-5.16.68-1.16 1.59-2.07 2.72-2.74 1.13-.67 2.36-1.01 3.68-1.03.7 0 1.6.22 2.72.65 1.11.43 1.83.65 2.13.65.23 0 1.03-.26 2.4-.77 1.3-.47 2.39-.67 3.29-.59 2.45.2 4.29 1.17 5.51 2.92-2.19 1.33-3.28 3.19-3.25 5.58.02 1.86.7 3.41 2.02 4.64.6.57 1.27 1.01 2.01 1.32-.16.46-.32.91-.5 1.34z" />
@@ -2968,10 +2980,31 @@ function DesktopDownloadCard() {
           );
         })}
       </div>
-      <details className="download-card-note">
+      <details className="download-card-note" open={detectedOS === "mac"}>
         <summary>未署名ビルドの起動方法</summary>
+        {detectedOS === "mac" && (
+          <div className="download-mac-fix">
+            <p className="download-mac-fix-lead">
+              「<strong>“Contribution Arc” は壊れているため開けません</strong>」と表示される場合は、macOS の検疫属性が原因です。
+              <code>Applications</code> に <strong>.app をドラッグした後</strong>、ターミナルで次のコマンドを実行してください。
+            </p>
+            <div className="download-cmd" role="group" aria-label="検疫属性を解除するコマンド">
+              <code>{macQuarantineCmd}</code>
+              <button type="button" className="download-cmd-copy" onClick={copyCmd}>
+                {copied ? "コピーしました" : "コピー"}
+              </button>
+            </div>
+            <p className="download-mac-fix-foot">
+              実行後、Launchpad や Applications から通常どおり起動できます。
+              Intel Mac の方は <a href={macIntelHref} download>Intel 版 .dmg</a> をご利用ください。
+            </p>
+          </div>
+        )}
         <ul>
-          <li><strong>macOS</strong> — .dmg を開き、初回は右クリック →「開く」で起動。</li>
+          <li>
+            <strong>macOS</strong> — <code>.dmg</code> を開いて <code>Applications</code> にドラッグ → ターミナルで
+            {" "}<code>xattr -cr "/Applications/Contribution Arc.app"</code> を実行 → 通常起動。
+          </li>
           <li><strong>Windows</strong> — SmartScreen が出たら「詳細情報 → 実行」をクリック。</li>
           <li><strong>Linux</strong> — .AppImage に実行権限を付与（<code>chmod +x</code>）してダブルクリック。</li>
         </ul>
