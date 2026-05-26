@@ -28,6 +28,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  documentId,
   getDoc,
   getDocs,
   limit,
@@ -70,9 +71,9 @@ import {
   type RecruitmentAuthor,
 } from "./components/feed/WorkspaceRecruitmentFeedCard";
 import {
+  fetchPostRepliesOnce,
   savePostToCloud,
   savePostReplyToCloud,
-  subscribePostRepliesFromCloud,
   subscribePostsFromCloud,
   togglePostLikeInCloud,
   type ContributionPostRecord,
@@ -2854,7 +2855,7 @@ function LoginScreen() {
  */
 function DesktopDownloadCard() {
   const releasesDownload = "https://github.com/TatsuyaAriyama/Contribution-Arc/releases/latest/download";
-  const macIntelHref = `${releasesDownload}/Contribution-Arc-0.0.0-mac-x64.dmg`;
+  const macIntelHref = `${releasesDownload}/Contribution-Arc-0.0.0-mac-x64.zip`;
   const macQuarantineCmd = 'xattr -cr "/Applications/Contribution Arc.app"';
   const [copied, setCopied] = useState(false);
 
@@ -2889,9 +2890,9 @@ function DesktopDownloadCard() {
     {
       id: "mac",
       label: "macOS",
-      meta: "Apple Silicon (.dmg)",
-      size: "≈ 145 MB",
-      href: `${releasesDownload}/Contribution-Arc-0.0.0-mac-arm64.dmg`,
+      meta: "Apple Silicon (.zip)",
+      size: "≈ 140 MB",
+      href: `${releasesDownload}/Contribution-Arc-0.0.0-mac-arm64.zip`,
       download: true,
       icon: (
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -2988,8 +2989,8 @@ function DesktopDownloadCard() {
               「<strong>"Contribution Arc" は壊れているため開けません</strong>」と表示される場合:
             </p>
             <ol className="download-mac-fix-steps">
-              <li>ダウンロードした <code>.dmg</code> を開く</li>
-              <li><strong>Contribution Arc.app を <code>Applications</code> フォルダにドラッグして移動</strong></li>
+              <li>ダウンロードした <code>.zip</code> をダブルクリックして解凍</li>
+              <li><strong>Contribution Arc.app を <code>Applications</code> フォルダに移動</strong></li>
               <li>ターミナルで次のコマンドを実行</li>
             </ol>
             <div className="download-cmd" role="group" aria-label="検疫属性を解除するコマンド">
@@ -3000,14 +3001,14 @@ function DesktopDownloadCard() {
             </div>
             <p className="download-mac-fix-foot">
               実行後、Launchpad や Applications から通常どおり起動できます。
-              Intel Mac の方は <a href={macIntelHref} download>Intel 版 .dmg</a> をご利用ください。
+              Intel Mac の方は <a href={macIntelHref} download>Intel 版 .zip</a> をご利用ください。
             </p>
           </div>
         )}
         <ul>
           {detectedOS !== "mac" && (
             <li>
-              <strong>macOS</strong> — <code>.dmg</code> を開いて <code>Applications</code> にドラッグ → ターミナルで
+              <strong>macOS</strong> — <code>.zip</code> を解凍して <code>Applications</code> に移動 → ターミナルで
               {" "}<code>xattr -cr "/Applications/Contribution Arc.app"</code> を実行 → 通常起動。
             </li>
           )}
@@ -3168,6 +3169,7 @@ function App() {
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [customRooms, setCustomRooms] = useState<WorkspaceRoom[]>([]);
   const [isWorkspaceLoaded, setIsWorkspaceLoaded] = useState(false);
+  const [isPageVisible, setIsPageVisible] = useState(!document.hidden);
   const [newRoomName, setNewRoomName] = useState("");
   const [roomCreateState, setRoomCreateState] = useState<RoomCreateState>("idle");
   const [roomCreateMessage, setRoomCreateMessage] = useState("");
@@ -3667,7 +3669,7 @@ function App() {
   }, [currentUser, isWorkspaceLoaded, learningItems.length, studyLogs.length]);
 
   useEffect(() => {
-    if (!currentUser || !isWorkspaceLoaded) {
+    if (!currentUser || !isWorkspaceLoaded || !isPageVisible) {
       return;
     }
     const unsubscribe = subscribeActiveRecruitmentsFromCloud(
@@ -3676,7 +3678,7 @@ function App() {
       (error) => console.info("Workspace recruitments sync skipped.", error),
     );
     return () => unsubscribe();
-  }, [currentUser, isWorkspaceLoaded]);
+  }, [currentUser, isWorkspaceLoaded, isPageVisible]);
 
   useEffect(() => {
     // Tick at 1s when any active recruitment is visible so countdown text
@@ -3889,19 +3891,14 @@ function App() {
     };
   }, [currentUser]);
 
-  // Reply subscription. Mirrors the posts effect — kicks off as soon as we
-  // have a signed-in user, no `isWorkspaceLoaded` gate so it doesn't get
-  // torn down and rebuilt when the workspace finishes loading.
+  // Fetch replies once on sign-in. Realtime sync is not needed here;
+  // optimistic updates keep local state current after the user posts a reply.
   useEffect(() => {
     if (!currentUser) return;
 
-    return subscribePostRepliesFromCloud(
-      db,
-      setPostReplies,
-      (error) => {
-        console.info("Post reply realtime sync skipped.", error);
-      },
-    );
+    void fetchPostRepliesOnce(db, (error) => {
+      console.info("Post reply fetch skipped.", error);
+    }).then(setPostReplies);
   }, [currentUser]);
 
   useEffect(() => {
@@ -4012,9 +4009,9 @@ function App() {
         }
       },
     );
-    const unsubscribeSharedReports = onSnapshot(
-      sharedDailyQuery,
-      (snapshot) => {
+    void getDocs(sharedDailyQuery)
+      .then((snapshot) => {
+        if (!isActive) return;
         const syncedCloudReports = snapshot.docs
           .map((item) => {
             const data = {
@@ -4031,16 +4028,14 @@ function App() {
 
         setSharedDailyReports(syncedCloudReports);
         void putPersistentItems("dailyReports", syncedCloudReports);
-      },
-      (error) => {
-        console.info("Shared daily report realtime sync skipped.", error);
-      },
-    );
+      })
+      .catch((error) => {
+        console.info("Shared daily report fetch skipped.", error);
+      });
 
     return () => {
       isActive = false;
       unsubscribeOwnReports();
-      unsubscribeSharedReports();
     };
   }, [currentUser, isWorkspaceLoaded, userId]);
 
@@ -4305,6 +4300,12 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const handleVisibility = () => setIsPageVisible(!document.hidden);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, []);
+
+  useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
       return;
     }
@@ -4313,7 +4314,7 @@ function App() {
   }, [currentUser, isWorkspaceLoaded, workspaceNow]);
 
   useEffect(() => {
-    if (!currentUser || !isWorkspaceLoaded) {
+    if (!currentUser || !isWorkspaceLoaded || !isPageVisible) {
       return;
     }
 
@@ -4415,7 +4416,7 @@ function App() {
       unsubscribeRooms();
       unsubscribeLegacyRooms();
     };
-  }, [currentUser, isWorkspaceLoaded]);
+  }, [currentUser, isWorkspaceLoaded, isPageVisible]);
 
   useEffect(() => {
     if (!currentUser) {
@@ -4442,20 +4443,25 @@ function App() {
   }, [currentUser, userId]);
 
   useEffect(() => {
-    if (!currentUser || !isWorkspaceLoaded) {
+    if (!currentUser || !isWorkspaceLoaded || !isPageVisible) {
       return;
     }
 
+    const activeMemberIds = customRooms.flatMap((r) => r.activeMembers.map((m) => m.userId));
+    const targetIds = [...new Set([...following, ...activeMemberIds])]
+      .filter((id) => id && id !== currentUser.uid)
+      .slice(0, 30);
+
+    if (targetIds.length === 0) return;
+
     const unsubscribe = onSnapshot(
-      collection(db, "users"),
+      query(collection(db, "users"), where(documentId(), "in", targetIds)),
       (snapshot) => {
         const nextProfiles: Record<string, UserProfile> = {};
-
         snapshot.docs.forEach((item) => {
           nextProfiles[item.id] = normalizeUserProfile(item.id, item.data() as Partial<UserProfile>);
         });
-
-        setWorkspaceProfiles(nextProfiles);
+        setWorkspaceProfiles((prev) => ({ ...prev, ...nextProfiles }));
       },
       (error) => {
         console.info("Workspace profile realtime sync skipped.", error);
@@ -4463,7 +4469,7 @@ function App() {
     );
 
     return () => unsubscribe();
-  }, [currentUser, isWorkspaceLoaded]);
+  }, [currentUser, isWorkspaceLoaded, isPageVisible, following, customRooms]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
@@ -7588,10 +7594,10 @@ function App() {
               {githubContributionArc ? ` · ${githubContributionArc.total} commit` : ""}
             </strong>
             <span>
+              直近13週
+              {" · "}
               {contributionArc.activeDays}日学習
-              {githubContributionArc ? ` · ${githubContributionArc.activeDays}日コミット` : ""}
-              {githubUsername ? ` · @${githubUsername}` : ""}
-              {" · 直近13週"}
+              {githubContributionArc ? ` / ${githubContributionArc.activeDays}日コミット` : ""}
             </span>
           </div>
           <div className="contribution-arc-stats" aria-label="学習サマリ">
@@ -7853,9 +7859,9 @@ function App() {
                   return (
                     <li key={item.subject}>
                       <i style={{ background: item.color }} aria-hidden="true" />
-                      <strong>{item.subject}</strong>
-                      <span>{formatStudyTimeJa(item.minutes)}</span>
-                      <small>{pct}%</small>
+                      <strong className="legend-name">{item.subject}</strong>
+                      <span className="legend-pct">{pct}%</span>
+                      <span className="legend-time">{formatStudyTimeJa(item.minutes)}</span>
                     </li>
                   );
                 })}
