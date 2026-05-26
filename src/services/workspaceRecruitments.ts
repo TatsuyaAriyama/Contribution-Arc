@@ -3,6 +3,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  limit,
   onSnapshot,
   query,
   serverTimestamp,
@@ -62,9 +63,14 @@ export function subscribeActiveRecruitmentsFromCloud(
   const nowIso = new Date().toISOString();
   // We can't easily do range query across multiple fields with Firestore.
   // Subscribe to all expiring after "now" and filter client-side.
+  // Defensive limit(50): in normal operation we expect at most a handful
+  // of live recruitments — capping prevents a runaway write loop or stale
+  // data from blowing up reads. The timeline only renders the top entries
+  // anyway.
   const recruitmentsQuery = query(
     collection(db, "workspaceRecruitments"),
     where("expiresAt", ">", nowIso),
+    limit(50),
   );
 
   return onSnapshot(
