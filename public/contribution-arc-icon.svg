@@ -1,23 +1,94 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title">
   <title id="title">Contribution Arc</title>
   <defs>
-    <linearGradient id="border" x1="22" y1="134" x2="138" y2="24">
-      <stop offset="0" stop-color="#103D2A"/>
-      <stop offset=".48" stop-color="#1F6F4A"/>
-      <stop offset="1" stop-color="#A7C978"/>
+    <!-- Plate: near-black with a soft top-biased vignette -->
+    <radialGradient id="bg" cx="0.5" cy="0.36" r="0.82">
+      <stop offset="0"   stop-color="#1A1A1A"/>
+      <stop offset="0.55" stop-color="#0A0A0A"/>
+      <stop offset="1"   stop-color="#020202"/>
+    </radialGradient>
+
+    <!-- Frame gradient: deep emerald → sage → highlight -->
+    <linearGradient id="frame" x1="22" y1="138" x2="138" y2="22" gradientUnits="userSpaceOnUse">
+      <stop offset="0"    stop-color="#1F6F4A"/>
+      <stop offset="0.5"  stop-color="#4FA362"/>
+      <stop offset="1"    stop-color="#B6E08A"/>
     </linearGradient>
+
+    <!-- Per-tile gradients: top brighter, bottom darker -->
+    <linearGradient id="t1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1B5A39"/><stop offset="1" stop-color="#0A2C1B"/></linearGradient>
+    <linearGradient id="t2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#206B43"/><stop offset="1" stop-color="#0E3A24"/></linearGradient>
+    <linearGradient id="t3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#27794D"/><stop offset="1" stop-color="#11472C"/></linearGradient>
+    <linearGradient id="t4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#308757"/><stop offset="1" stop-color="#165633"/></linearGradient>
+    <linearGradient id="t5" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3F9A63"/><stop offset="1" stop-color="#1F663F"/></linearGradient>
+    <linearGradient id="t6" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#57B070"/><stop offset="1" stop-color="#2E7848"/></linearGradient>
+    <linearGradient id="t7" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7FC881"/><stop offset="1" stop-color="#478B55"/></linearGradient>
+    <linearGradient id="t8" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#BAE38C"/><stop offset="1" stop-color="#65A363"/></linearGradient>
+
+    <!-- Ambient bloom behind the bright tiles (top-right) -->
+    <radialGradient id="bloom" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0"   stop-color="#B6E08A" stop-opacity="0.32"/>
+      <stop offset="0.55" stop-color="#4FA362" stop-opacity="0.10"/>
+      <stop offset="1"   stop-color="#1F6F4A" stop-opacity="0"/>
+    </radialGradient>
+
+    <clipPath id="plate">
+      <rect width="160" height="160" rx="36"/>
+    </clipPath>
   </defs>
-  <rect x="10" y="10" width="140" height="140" rx="35" fill="#FAFAF8"/>
-  <rect x="13" y="13" width="134" height="134" rx="32" fill="none" stroke="url(#border)" stroke-width="7"/>
-  <rect x="25" y="25" width="110" height="110" rx="27" fill="none" stroke="#1F6F4A" stroke-opacity=".1"/>
-  <g>
-    <rect x="34" y="109" width="10" height="10" rx="2.4" fill="#103D2A"/>
-    <rect x="46" y="105" width="10" height="10" rx="2.4" fill="#155236"/>
-    <rect x="58" y="98" width="10" height="10" rx="2.4" fill="#1A6342"/>
-    <rect x="70" y="88" width="10" height="10" rx="2.4" fill="#1F6F4A"/>
-    <rect x="82" y="76" width="10" height="10" rx="2.4" fill="#2F8050"/>
-    <rect x="94" y="63" width="10" height="10" rx="2.4" fill="#46945B"/>
-    <rect x="106" y="51" width="10" height="10" rx="2.4" fill="#62A966"/>
-    <rect x="118" y="42" width="10" height="10" rx="2.4" fill="#83BB70"/>
+
+  <!-- Black plate -->
+  <rect width="160" height="160" rx="36" fill="url(#bg)"/>
+
+  <g clip-path="url(#plate)">
+    <!-- Ambient bloom behind the brightest tiles -->
+    <ellipse cx="120" cy="48" rx="56" ry="46" fill="url(#bloom)"/>
+
+    <!-- Tile group: 8 squares stepping up in an arc -->
+    <g>
+      <!-- 1 -->
+      <rect x="33" y="110" width="11" height="11" rx="2.6" fill="url(#t1)"/>
+      <rect x="33.6" y="110.5" width="9.8" height="1.1" rx="0.55" fill="#FFFFFF" opacity="0.18"/>
+
+      <!-- 2 -->
+      <rect x="46" y="106" width="11" height="11" rx="2.6" fill="url(#t2)"/>
+      <rect x="46.6" y="106.5" width="9.8" height="1.1" rx="0.55" fill="#FFFFFF" opacity="0.20"/>
+
+      <!-- 3 -->
+      <rect x="59" y="99"  width="11" height="11" rx="2.6" fill="url(#t3)"/>
+      <rect x="59.6" y="99.5"  width="9.8" height="1.1" rx="0.55" fill="#FFFFFF" opacity="0.22"/>
+
+      <!-- 4 -->
+      <rect x="72" y="89"  width="11" height="11" rx="2.6" fill="url(#t4)"/>
+      <rect x="72.6" y="89.5"  width="9.8" height="1.1" rx="0.55" fill="#FFFFFF" opacity="0.24"/>
+
+      <!-- 5 -->
+      <rect x="85" y="77"  width="11" height="11" rx="2.6" fill="url(#t5)"/>
+      <rect x="85.6" y="77.5"  width="9.8" height="1.1" rx="0.55" fill="#FFFFFF" opacity="0.28"/>
+
+      <!-- 6 -->
+      <rect x="98" y="64"  width="11" height="11" rx="2.6" fill="url(#t6)"/>
+      <rect x="98.6" y="64.5"  width="9.8" height="1.1" rx="0.55" fill="#FFFFFF" opacity="0.32"/>
+
+      <!-- 7 -->
+      <rect x="111" y="52" width="11" height="11" rx="2.6" fill="url(#t7)"/>
+      <rect x="111.6" y="52.5" width="9.8" height="1.1" rx="0.55" fill="#FFFFFF" opacity="0.38"/>
+
+      <!-- 8 -->
+      <rect x="124" y="43" width="11" height="11" rx="2.6" fill="url(#t8)"/>
+      <rect x="124.6" y="43.5" width="9.8" height="1.1" rx="0.55" fill="#FFFFFF" opacity="0.46"/>
+    </g>
   </g>
+
+  <!-- Outer frame: thick gradient stroke -->
+  <rect x="13" y="13" width="134" height="134" rx="32" fill="none"
+        stroke="url(#frame)" stroke-width="6.5" stroke-linejoin="round"/>
+
+  <!-- Inner hairline (subtle separation between frame and tiles) -->
+  <rect x="22.5" y="22.5" width="115" height="115" rx="26" fill="none"
+        stroke="#FFFFFF" stroke-opacity="0.05"/>
+
+  <!-- Plate edge highlight: crisp 1px white at 6% -->
+  <rect x="0.5" y="0.5" width="159" height="159" rx="35.5" fill="none"
+        stroke="#FFFFFF" stroke-opacity="0.07"/>
 </svg>

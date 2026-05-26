@@ -2851,7 +2851,9 @@ function LoginScreen() {
  * artifacts to the tagged release automatically.
  */
 function DesktopDownloadCard() {
-  const releasesBase = "https://github.com/TatsuyaAriyama/Contribution-Arc/releases";
+  const releasesLatest = "https://github.com/TatsuyaAriyama/Contribution-Arc/releases/latest";
+  const releasesDownload = "https://github.com/TatsuyaAriyama/Contribution-Arc/releases/latest/download";
+
   return (
     <section className="card download-card" aria-label="デスクトップアプリのダウンロード">
       <p className="card-kicker">Desktop App</p>
@@ -2862,7 +2864,7 @@ function DesktopDownloadCard() {
       <div className="download-grid">
         <a
           className="download-button"
-          href={`${releasesBase}/latest`}
+          href={releasesLatest}
           target="_blank"
           rel="noreferrer"
         >
@@ -2871,18 +2873,16 @@ function DesktopDownloadCard() {
         </a>
         <a
           className="download-button"
-          href={`${releasesBase}/latest`}
-          target="_blank"
-          rel="noreferrer"
+          href={`${releasesDownload}/Contribution-Arc-Setup-0.0.0.exe`}
+          download
         >
           <span className="download-os">Windows</span>
           <span className="download-meta">.exe · 64bit</span>
         </a>
         <a
           className="download-button"
-          href={`${releasesBase}/latest`}
-          target="_blank"
-          rel="noreferrer"
+          href={`${releasesDownload}/Contribution-Arc-0.0.0.AppImage`}
+          download
         >
           <span className="download-os">Linux</span>
           <span className="download-meta">.AppImage</span>
