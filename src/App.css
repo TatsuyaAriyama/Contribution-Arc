@@ -8205,6 +8205,196 @@
   right: 18%;
 }
 
+/* Ghost shape — alternate silhouette: rounded dome head with a
+   wavy hem at the bottom, no legs, two dot eyes. Body color still
+   honors --actor-color so each user's hue carries through. The
+   sprite is rendered via a single ::before pseudo using clip-path
+   so the wavy hem stays crisp at any size. */
+.actor-sprite.shape-ghost {
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+  animation: workspace-ghost-float 3.4s ease-in-out infinite;
+}
+
+.actor-sprite.shape-ghost::before {
+  content: "";
+  position: absolute;
+  inset: -4px -2px 0 -2px;
+  background: var(--actor-color);
+  clip-path: polygon(
+    50% 0%,
+    78% 4%,
+    94% 18%,
+    100% 40%,
+    100% 92%,
+    92% 100%,
+    83% 92%,
+    75% 100%,
+    67% 92%,
+    58% 100%,
+    50% 92%,
+    42% 100%,
+    33% 92%,
+    25% 100%,
+    17% 92%,
+    8% 100%,
+    0% 92%,
+    0% 40%,
+    6% 18%,
+    22% 4%
+  );
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.22));
+}
+
+.actor-sprite.shape-ghost .sprite-body,
+.actor-sprite.shape-ghost .sprite-leg,
+.actor-sprite.shape-ghost .sprite-tail {
+  display: none;
+}
+
+.actor-sprite.shape-ghost .sprite-eye {
+  position: absolute;
+  top: 40%;
+  z-index: 2;
+  width: 16%;
+  height: 18%;
+  border-radius: 50%;
+  background: #0a0e0c;
+}
+
+.actor-sprite.shape-ghost .sprite-eye-left {
+  left: 28%;
+}
+
+.actor-sprite.shape-ghost .sprite-eye-right {
+  right: 28%;
+}
+
+/* When ghost shape is combined with the legacy .is-tsuta tone,
+   the ghost silhouette wins. Hide tsuta's sprout and override its
+   rounded-square body so only the ghost outline is visible. */
+.actor-sprite.shape-ghost.is-tsuta {
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.actor-sprite.shape-ghost.is-tsuta svg.sprite-sprout {
+  display: none;
+}
+
+@keyframes workspace-ghost-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .actor-sprite.shape-ghost {
+    animation: none;
+  }
+}
+
+/* Shape picker (profile + settings) — mirrors the color grid layout
+   but renders a mini silhouette in each swatch instead of a color
+   chip. Sits directly below the color grid in the profile card. */
+.character-shape-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.character-shape-grid button {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 72px;
+  padding: 10px 8px;
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
+  border-radius: 16px;
+  background: rgba(var(--surface-rgb), 0.86);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.character-shape-grid button:hover,
+.character-shape-grid button.active {
+  transform: translateY(-1px);
+  border-color: rgba(31, 111, 74, 0.22);
+  background: var(--surface);
+  box-shadow: 0 16px 34px rgba(var(--ink-rgb), 0.07);
+}
+
+.character-shape-grid button.active {
+  outline: 2px solid rgba(31, 111, 74, 0.18);
+}
+
+.character-shape-grid small {
+  max-width: 100%;
+  overflow: hidden;
+  color: inherit;
+  font-size: 11px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.character-shape-swatch {
+  position: relative;
+  display: block;
+  width: 28px;
+  height: 28px;
+}
+
+.character-shape-swatch.shape-default {
+  border-radius: 8px;
+  background: var(--actor-color, #1f6f4a);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 0 0 1px rgba(var(--ink-rgb), 0.1),
+    0 8px 14px rgba(var(--ink-rgb), 0.08);
+}
+
+.character-shape-swatch.shape-ghost {
+  background: var(--actor-color, #1f6f4a);
+  clip-path: polygon(
+    50% 0%,
+    78% 4%,
+    94% 18%,
+    100% 40%,
+    100% 92%,
+    92% 100%,
+    83% 92%,
+    75% 100%,
+    67% 92%,
+    58% 100%,
+    50% 92%,
+    42% 100%,
+    33% 92%,
+    25% 100%,
+    17% 92%,
+    8% 100%,
+    0% 92%,
+    0% 40%,
+    6% 18%,
+    22% 4%
+  );
+  filter: drop-shadow(0 4px 6px rgba(var(--ink-rgb), 0.15));
+}
+
 .actor-name,
 .actor-task {
   position: relative;
