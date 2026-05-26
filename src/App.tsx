@@ -10161,11 +10161,13 @@ function App() {
         </motion.section>
       ) : (
       <motion.div
-        className="home-screen"
+        className="home-screen home-screen-split"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={SPRING_SNAPPY}
       >
+
+      <div className="home-self-column">
 
       {contributionArcCardSection}
 
@@ -10237,6 +10239,40 @@ function App() {
           );
         })()}
       </AnimatePresence>
+
+      <section className="hero-grid" aria-label="Contribution Arc overview">
+        <div className="overview-stack">
+          <article className="card daily-today-card">
+            <div>
+              <p className="card-kicker">今日の日報</p>
+              <strong>{todayDailyReport?.plan ? "今日やることあり" : "今日やることは未入力"}</strong>
+              <span>{todayDailyReport?.reflection ? "振り返り済み" : "振り返りを記録"}</span>
+            </div>
+            <button type="button" onClick={() => setCurrentView("daily")}>
+              日報を書く
+            </button>
+          </article>
+          <article className="card workspace-summary-card">
+            <div>
+              <p className="card-kicker">Silent Workspace</p>
+              <strong>{selectedRoom?.name || "作業部屋"}</strong>
+              <span>
+                {isInSelectedRoom
+                  ? `入室中 ${currentStayMinutes > 0 ? formatStayTime(currentStayMinutes) : ""}`
+                  : `${roomOnlineCount} online`}
+              </span>
+            </div>
+            <button type="button" onClick={() => setCurrentView("workspace")}>
+              作業部屋へ
+            </button>
+          </article>
+        </div>
+      </section>
+
+      </div>
+
+      <div className="home-feed-column">
+
       {(() => {
         const authorLookup = new Map<string, RecruitmentAuthor>();
         if (currentUser?.uid) {
@@ -10432,35 +10468,7 @@ function App() {
         );
       })()}
 
-      <section className="hero-grid" aria-label="Contribution Arc overview">
-        <div className="overview-stack">
-          <article className="card daily-today-card">
-            <div>
-              <p className="card-kicker">今日の日報</p>
-              <strong>{todayDailyReport?.plan ? "今日やることあり" : "今日やることは未入力"}</strong>
-              <span>{todayDailyReport?.reflection ? "振り返り済み" : "振り返りを記録"}</span>
-            </div>
-            <button type="button" onClick={() => setCurrentView("daily")}>
-              日報を書く
-            </button>
-          </article>
-          <article className="card workspace-summary-card">
-            <div>
-              <p className="card-kicker">Silent Workspace</p>
-              <strong>{selectedRoom?.name || "作業部屋"}</strong>
-              <span>
-                {isInSelectedRoom
-                  ? `入室中 ${currentStayMinutes > 0 ? formatStayTime(currentStayMinutes) : ""}`
-                  : `${roomOnlineCount} online`}
-              </span>
-            </div>
-            <button type="button" onClick={() => setCurrentView("workspace")}>
-              作業部屋へ
-            </button>
-          </article>
-        </div>
-
-      </section>
+      </div>
 
       </motion.div>
       )}
