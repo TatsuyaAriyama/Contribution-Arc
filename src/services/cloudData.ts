@@ -9,8 +9,11 @@ import {
   where,
   writeBatch,
   type Firestore,
+  type QuerySnapshot,
   type Unsubscribe,
 } from "firebase/firestore";
+
+import { guardedOnSnapshot, scheduleDocWrite } from "./firebaseGuard";
 
 export type StudyLogRecord = {
   id: string;
@@ -37,6 +40,7 @@ export type UserProgressRecord = {
   uid: string;
   userId: string;
   displayName: string;
+  email: string;
   avatarUrl: string;
   photoURL: string;
   level: number;
@@ -120,8 +124,12 @@ export function subscribeStudyLogsFromCloud(
 ): Unsubscribe {
   const logsQuery = query(collection(db, "studyLogs"), where("userId", "==", userId));
 
-  return onSnapshot(
-    logsQuery,
+  // Routed through the guard so a transient Firestore error (offline,
+  // rules glitch) reconnects with exponential backoff instead of either
+  // failing silently or hammering the SDK into a tight retry loop.
+  return guardedOnSnapshot<QuerySnapshot>(
+    `studyLogs:${userId}`,
+    (next, err) => onSnapshot(logsQuery, next, err),
     (snapshot) => {
       const logs = snapshot.docs
         .map((item) => {
@@ -142,7 +150,7 @@ export function subscribeStudyLogsFromCloud(
 
       onChange(logs);
     },
-    onError,
+    (error) => onError(error),
   );
 }
 
@@ -203,35 +211,51 @@ export async function saveUserProgressToCloud(db: Firestore, profile: UserProgre
     return;
   }
 
-  await setDoc(
+  const payload = {
+    uid: profile.uid,
+    userId: profile.userId,
+    displayName: profile.displayName,
+    email: profile.email,
+    avatarUrl: profile.avatarUrl,
+    photoURL: profile.photoURL,
+    searchName: profile.displayName.toLowerCase(),
+    level: profile.level,
+    effortExp: profile.effortExp,
+    outputExp: profile.outputExp,
+    currentTitle: profile.currentTitle,
+    currentCharacter: profile.currentCharacter,
+    characterColor: profile.characterColor,
+    streak: profile.streak,
+    determination: profile.determination,
+    following: profile.following,
+    ...(profile.followers && profile.followers.length > 0 ? { followers: profile.followers } : {}),
+    unlockedCharacters: profile.unlockedCharacters,
+    characterExp: profile.characterExp,
+    openedWorkspaceGiftLevels: profile.openedWorkspaceGiftLevels,
+    githubId: profile.githubId,
+    githubUsername: profile.githubUsername,
+    contributionCount: profile.contributionCount,
+    lastSyncedAt: profile.lastSyncedAt,
+  };
+
+  // Build the dedup key from every meaningful field EXCEPT lastSyncedAt
+  // (which is regenerated on every caller invocation and would defeat
+  // dedup). With this in place a useEffect that re-fires 10 times
+  // because of unrelated state churn results in 1 write — not 10.
+  const dedupKey = JSON.stringify({
+    ...payload,
+    lastSyncedAt: undefined,
+  });
+
+  // Routed through scheduleDocWrite: this is called from a useEffect
+  // with ~15 deps (level, exp, name, avatar, …) so it fires on every
+  // study log entry, every avatar tweak, every level-up tick. The
+  // guard coalesces a burst into one write.
+  await scheduleDocWrite(
     doc(db, "users", profile.uid),
-    {
-      uid: profile.uid,
-      userId: profile.userId,
-      displayName: profile.displayName,
-      avatarUrl: profile.avatarUrl,
-      photoURL: profile.photoURL,
-      searchName: profile.displayName.toLowerCase(),
-      level: profile.level,
-      effortExp: profile.effortExp,
-      outputExp: profile.outputExp,
-      currentTitle: profile.currentTitle,
-      currentCharacter: profile.currentCharacter,
-      characterColor: profile.characterColor,
-      streak: profile.streak,
-      determination: profile.determination,
-      following: profile.following,
-      ...(profile.followers && profile.followers.length > 0 ? { followers: profile.followers } : {}),
-      unlockedCharacters: profile.unlockedCharacters,
-      characterExp: profile.characterExp,
-      openedWorkspaceGiftLevels: profile.openedWorkspaceGiftLevels,
-      githubId: profile.githubId,
-      githubUsername: profile.githubUsername,
-      contributionCount: profile.contributionCount,
-      lastSyncedAt: profile.lastSyncedAt,
-      updatedAt: serverTimestamp(),
-    },
+    payload,
     { merge: true },
+    { dedupKey },
   );
 }
 
@@ -240,13 +264,22 @@ export async function saveGithubActivitySummary(db: Firestore, summary: GitHubAc
     return;
   }
 
-  await setDoc(
+  await scheduleDocWrite(
     doc(db, "githubActivities", `${summary.userId}-summary`),
     {
       ...summary,
       type: "summary",
-      updatedAt: serverTimestamp(),
     },
     { merge: true },
+    {
+      // Same idea as user progress: skip lastSyncedAt from the dedup
+      // key so a stable contributionCount doesn't write every run.
+      dedupKey: JSON.stringify({
+        userId: summary.userId,
+        githubId: summary.githubId,
+        githubUsername: summary.githubUsername,
+        contributionCount: summary.contributionCount,
+      }),
+    },
   );
 }

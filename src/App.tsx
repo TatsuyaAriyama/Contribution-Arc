@@ -6127,6 +6127,7 @@ function App() {
       uid: currentUser.uid,
       userId,
       displayName: playerName,
+      email: currentUser.email || "",
       avatarUrl: safeAvatar,
       photoURL: safeAvatar,
       level: levelState.level,
