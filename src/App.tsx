@@ -10340,76 +10340,91 @@ function App() {
             </div>
 
             <div className="workspace-layout">
-              <div className="room-list" aria-label="Workspace rooms">
-                <div className="room-space-list-head">
-                  <p className="card-kicker">Spaces</p>
-                  <span>静かに積み上げる場所を選ぶ</span>
-                </div>
-                <div className="room-create-form">
-                  <label>
-                    <span>Roomを作成</span>
-                    <input
-                      value={newRoomName}
-                      onChange={(event) => {
-                        setNewRoomName(event.target.value);
-                        if (roomCreateState !== "saving") {
-                          setRoomCreateState("idle");
-                          setRoomCreateMessage("");
-                        }
-                      }}
-                      placeholder=""
-                      maxLength={32}
-                      onKeyDown={(event) => {
-                        if (event.nativeEvent.isComposing) {
-                          return;
-                        }
+              {/* Compact room selector — pills along the top so the
+                  character map below gets the full canvas. */}
+              <div className="workspace-room-strip" aria-label="Workspace rooms">
+                <form
+                  className="workspace-room-create"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    handleRoomCreate();
+                  }}
+                >
+                  <input
+                    value={newRoomName}
+                    onChange={(event) => {
+                      setNewRoomName(event.target.value);
+                      if (roomCreateState !== "saving") {
+                        setRoomCreateState("idle");
+                        setRoomCreateMessage("");
+                      }
+                    }}
+                    placeholder="新しい場所"
+                    maxLength={32}
+                    aria-label="Roomを作成"
+                    onKeyDown={(event) => {
+                      if (event.nativeEvent.isComposing) {
+                        return;
+                      }
 
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          handleRoomCreate();
-                        }
-                      }}
-                    />
-                  </label>
-                  <button type="button" onClick={handleRoomCreate}>
-                    作成
-                  </button>
-                </div>
-                {roomCreateMessage ? (
-                  <p className={`room-create-message ${roomCreateState}`}>{roomCreateMessage}</p>
-                ) : null}
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        handleRoomCreate();
+                      }
+                    }}
+                  />
+                  <button type="submit">作成</button>
+                </form>
 
-                {allWorkspaceRooms.map((room) => {
-                  const isOwnRoom = room.createdBy === currentUser.uid;
-                  const isActiveRoom = room.id === selectedRoom?.id;
-                  const roomMembers = room.activeMembers || [];
-                  const isJoinedRoom = roomMembers.some((member) => member.userId === currentUser.uid);
-                  const isEditingRoom = editingRoomId === room.id;
+                <div className="workspace-room-pills" role="tablist" aria-label="作業部屋一覧">
+                  {allWorkspaceRooms.map((room) => {
+                    const isActiveRoom = room.id === selectedRoom?.id;
+                    const roomMembers = room.activeMembers || [];
+                    const isJoinedRoom = roomMembers.some((member) => member.userId === currentUser.uid);
 
-                  return (
-                    <article
-                      key={room.id}
-                      className={["room-card", isActiveRoom ? "active" : "", isJoinedRoom ? "joined" : ""]
-                        .filter(Boolean)
-                        .join(" ")}
-                    >
+                    return (
                       <button
+                        key={room.id}
                         type="button"
-                        className="room-card-main"
+                        role="tab"
+                        aria-selected={isActiveRoom}
+                        className={[
+                          "workspace-room-pill",
+                          isActiveRoom ? "active" : "",
+                          isJoinedRoom ? "joined" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
                         onClick={() => setSelectedRoomId(room.id)}
-                        aria-label={`${room.name}を選択`}
                       >
-                        <span className="room-card-name">{room.name}</span>
-                        <span className="room-card-meta">
+                        <span className="workspace-room-pill-name">{room.name}</span>
+                        <span className="workspace-room-pill-meta">
                           {roomMembers.length}人 · {Math.round(room.totalMinutes / 60)}h
-                          {isJoinedRoom ? <em className="room-card-joined-badge">入室中</em> : null}
+                          {isJoinedRoom ? <em>入室中</em> : null}
                         </span>
                       </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-                      {isActiveRoom ? (
-                        <div className="room-card-footer">
+              {roomCreateMessage ? (
+                <p className={`room-create-message ${roomCreateState}`}>{roomCreateMessage}</p>
+              ) : null}
+
+              <div className="workspace-stage">
+                {selectedRoom ? (
+                  <>
+                    {(() => {
+                      const isOwnRoom = selectedRoom.createdBy === currentUser.uid;
+                      const isEditingRoom = editingRoomId === selectedRoom.id;
+                      return (
+                        <div className="workspace-stage-actions">
                           {isEditingRoom ? (
-                            <form className="room-title-edit-form" onSubmit={handleRoomTitleSave}>
+                            <form
+                              className="workspace-stage-edit-form"
+                              onSubmit={handleRoomTitleSave}
+                            >
                               <input
                                 value={editingRoomName}
                                 onChange={(event) => setEditingRoomName(event.target.value)}
@@ -10429,26 +10444,27 @@ function App() {
                             </form>
                           ) : (
                             <>
-                              <button type="button" className="room-title-edit-button" onClick={() => startRoomTitleEdit(room)}>
+                              <button
+                                type="button"
+                                className="workspace-stage-action"
+                                onClick={() => startRoomTitleEdit(selectedRoom)}
+                              >
                                 名前変更
                               </button>
                               {isOwnRoom ? (
-                                <button type="button" className="room-delete-button" onClick={() => handleRoomDelete(room.id)}>
+                                <button
+                                  type="button"
+                                  className="workspace-stage-action danger"
+                                  onClick={() => handleRoomDelete(selectedRoom.id)}
+                                >
                                   解体
                                 </button>
                               ) : null}
                             </>
                           )}
                         </div>
-                      ) : null}
-                    </article>
-                  );
-                })}
-              </div>
-
-              <div className="room-detail">
-                {selectedRoom ? (
-                  <>
+                      );
+                    })()}
                     <SilentWorkspaceRoom
                       roomName={selectedRoom.name}
                       roomDescription={getRoomDescription(selectedRoom)}
@@ -10529,7 +10545,7 @@ function App() {
                   <div className="room-empty-detail">
                     <p className="card-kicker">Silent Workspace</p>
                     <h3>まずはRoomを作成しましょう。</h3>
-                    <p>左の入力欄から、自分の集中場所を作成できます。</p>
+                    <p>上の入力欄から、自分の集中場所を作成できます。</p>
                   </div>
                 )}
               </div>

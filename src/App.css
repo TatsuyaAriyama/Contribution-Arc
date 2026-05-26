@@ -7453,15 +7453,272 @@
 }
 
 .workspace-2d-card .workspace-layout {
-  grid-template-columns: minmax(210px, 0.25fr) minmax(0, 1fr);
-  align-items: start;
+  /* Override the legacy 2-column grid: rooms strip on top, character
+     stage takes the full width below. */
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.workspace-2d-card .room-detail {
-  padding: clamp(12px, 1.8vw, 16px);
+/* ---- Top room selector strip ---- */
+
+.workspace-room-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(var(--surface-rgb), 0.92), rgba(var(--tint-soft-rgb), 0.22)),
+    var(--surface);
+}
+
+.workspace-room-create {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.workspace-room-create input {
+  width: 160px;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(var(--ink-rgb), 0.1);
+  border-radius: 999px;
+  background: rgba(var(--surface-rgb), 0.92);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  outline: none;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.workspace-room-create input:focus {
+  border-color: rgba(31, 111, 74, 0.36);
+  box-shadow: 0 0 0 3px rgba(31, 111, 74, 0.12);
+}
+
+.workspace-room-create button {
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 850;
+  white-space: nowrap;
+  transition: transform 0.16s ease, background 0.16s ease;
+}
+
+.workspace-room-create button:hover {
+  transform: translateY(-1px);
+  background: var(--green);
+}
+
+.workspace-room-pills {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 2px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+.workspace-room-pills::-webkit-scrollbar {
+  height: 6px;
+}
+
+.workspace-room-pills::-webkit-scrollbar-thumb {
+  background: rgba(var(--ink-rgb), 0.14);
+  border-radius: 999px;
+}
+
+.workspace-room-pill {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
+  border-radius: 999px;
+  background: rgba(var(--surface-rgb), 0.86);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease;
+}
+
+.workspace-room-pill:hover {
+  transform: translateY(-1px);
+  border-color: rgba(31, 111, 74, 0.28);
+}
+
+.workspace-room-pill.joined {
+  border-color: rgba(31, 111, 74, 0.32);
+  background: rgba(31, 111, 74, 0.06);
+}
+
+.workspace-room-pill.active {
+  border-color: rgba(var(--ink-rgb), 0.6);
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+}
+
+.workspace-room-pill.active.joined {
+  background: var(--green);
+  color: #ffffff;
+}
+
+.workspace-room-pill-name {
+  font-weight: 900;
+  letter-spacing: 0.01em;
+}
+
+.workspace-room-pill-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(var(--ink-rgb), 0.6);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.workspace-room-pill.active .workspace-room-pill-meta {
+  color: rgba(var(--cta-fg-rgb), 0.72);
+}
+
+.workspace-room-pill-meta em {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(31, 111, 74, 0.16);
+  color: var(--green);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.workspace-room-pill.active .workspace-room-pill-meta em {
+  background: rgba(var(--cta-fg-rgb), 0.18);
+  color: var(--cta-fg);
+}
+
+/* ---- Main stage (full-width character map) ---- */
+
+.workspace-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: clamp(12px, 1.8vw, 18px);
+  border-radius: 22px;
   background:
     linear-gradient(180deg, rgba(var(--surface-rgb), 0.88), rgba(var(--surface-rgb), 0.96)),
     var(--surface);
+  border: 1px solid var(--line-soft);
+}
+
+.workspace-stage-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+}
+
+.workspace-stage-action {
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid rgba(var(--ink-rgb), 0.1);
+  border-radius: 999px;
+  background: rgba(var(--surface-rgb), 0.86);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.02em;
+  transition: color 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.workspace-stage-action:hover {
+  color: var(--ink);
+  border-color: rgba(var(--ink-rgb), 0.24);
+}
+
+.workspace-stage-action.danger:hover {
+  color: var(--accent-warm);
+  border-color: rgba(211, 87, 59, 0.4);
+  background: rgba(211, 87, 59, 0.06);
+}
+
+.workspace-stage-edit-form {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.workspace-stage-edit-form input {
+  height: 30px;
+  min-width: 0;
+  padding: 0 10px;
+  border: 1px solid rgba(var(--ink-rgb), 0.12);
+  border-radius: 999px;
+  background: rgba(var(--surface-rgb), 0.92);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  outline: none;
+}
+
+.workspace-stage-edit-form input:focus {
+  border-color: rgba(31, 111, 74, 0.36);
+  box-shadow: 0 0 0 3px rgba(31, 111, 74, 0.12);
+}
+
+.workspace-stage-edit-form button {
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid rgba(var(--ink-rgb), 0.1);
+  border-radius: 999px;
+  background: rgba(var(--surface-rgb), 0.86);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.workspace-stage-edit-form button[type="submit"] {
+  border-color: transparent;
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+}
+
+/* Narrow viewports — stack create form above pills so neither shrinks. */
+@media (max-width: 720px) {
+  .workspace-room-strip {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .workspace-room-create {
+    width: 100%;
+  }
+
+  .workspace-room-create input {
+    flex: 1 1 auto;
+    width: auto;
+  }
 }
 
 .workspace-2d-shell {
