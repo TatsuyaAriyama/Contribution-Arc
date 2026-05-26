@@ -89,6 +89,7 @@ import {
 } from "./services/persistentCache";
 import { fetchGithubContributions, type GithubContributions } from "./services/githubContributions";
 import { type AppView, type FriendPreview, type LiveActivity } from "./components/PremiumNavigation";
+import { useTimeOfDay } from "./hooks/useTimeOfDay";
 import { SilentWorkspaceRoom, type RoomActivityItem } from "./components/SilentWorkspaceRoom";
 import { ShareToXModal } from "./components/ShareToXModal";
 import "./App.css";
@@ -3201,6 +3202,17 @@ function App() {
     defaultDesktopNotificationSettings,
   );
   const [currentView, setCurrentViewRaw] = useState<AppView>("home");
+
+  // Ambient "学びの大地" — drives the page-wide gradient via a `data-time`
+  // attribute on <html>. Putting the attribute on the root element (not on
+  // the shell) makes it trivial to drive `body { background: ... }` rules
+  // from a single source of truth.
+  const timeOfDay = useTimeOfDay();
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.dataset.time = timeOfDay;
+  }, [timeOfDay]);
+
   const setCurrentView = useCallback((next: AppView) => {
     if (typeof document === "undefined") {
       setCurrentViewRaw(next);
@@ -4398,7 +4410,16 @@ function App() {
   }, [currentUser, isWorkspaceLoaded, workspaceNow]);
 
   useEffect(() => {
-    if (!currentUser || !isWorkspaceLoaded || !isPageVisible) {
+    // Cost control: the workspaceRooms / legacyWorkspaceRooms collections are
+    // subscribed *without* a where/limit filter — every doc fans out to every
+    // listener. Keeping this live on every screen turned out to dominate
+    // Firestore reads (the 2026-05-26 usage spike), so we only subscribe when
+    // the user is actually looking at the workspace. Other views render from
+    // whatever customRooms / workspaceProfiles snapshot was last in memory,
+    // which is fine — presence freshness only matters inside the workspace
+    // itself. The legacy collection is migrated out as it arrives, so missing
+    // a few seconds of legacy snapshots while on another view is a non-issue.
+    if (!currentUser || !isWorkspaceLoaded || !isPageVisible || currentView !== "workspace") {
       return;
     }
 
@@ -4500,7 +4521,7 @@ function App() {
       unsubscribeRooms();
       unsubscribeLegacyRooms();
     };
-  }, [currentUser, isWorkspaceLoaded, isPageVisible]);
+  }, [currentUser, isWorkspaceLoaded, isPageVisible, currentView]);
 
   useEffect(() => {
     if (!currentUser) {
@@ -8285,7 +8306,6 @@ function App() {
       animate={{ opacity: 1, y: 0 }}
       transition={SPRING_SOFT}
     >
-      <div className="aurora-backdrop" aria-hidden="true" />
       <div ref={spotlightRef} className="cursor-spotlight" aria-hidden="true" />
       {isDesktopApp ? (
         <header className="desktop-app-header" aria-label="Contribution Arc desktop header">
