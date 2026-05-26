@@ -88,7 +88,7 @@ import {
   readPersistentItems,
 } from "./services/persistentCache";
 import { fetchGithubContributions, type GithubContributions } from "./services/githubContributions";
-import { PremiumSidebar, type AppView, type FriendPreview, type LiveActivity } from "./components/PremiumNavigation";
+import { type AppView, type FriendPreview, type LiveActivity } from "./components/PremiumNavigation";
 import { SilentWorkspaceRoom, type RoomActivityItem } from "./components/SilentWorkspaceRoom";
 import { ShareToXModal } from "./components/ShareToXModal";
 import "./App.css";
@@ -3125,6 +3125,35 @@ function App() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [isUserMenuOpen]);
+  // Topbar popovers for Friends and Live Activity. These replace the old
+  // left-rail sidebar panels — the topbar surfaces them as on-demand
+  // popovers so the main canvas can be a clean 50/50 split (left = views,
+  // right = always-visible feed). Outside-click closes them, mirroring the
+  // user-menu / notifications pattern just above.
+  const [isFriendsPopoverOpen, setIsFriendsPopoverOpen] = useState(false);
+  const friendsPopoverRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!isFriendsPopoverOpen) return;
+    const handler = (event: MouseEvent) => {
+      if (friendsPopoverRef.current && !friendsPopoverRef.current.contains(event.target as Node)) {
+        setIsFriendsPopoverOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [isFriendsPopoverOpen]);
+  const [isLivePopoverOpen, setIsLivePopoverOpen] = useState(false);
+  const livePopoverRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!isLivePopoverOpen) return;
+    const handler = (event: MouseEvent) => {
+      if (livePopoverRef.current && !livePopoverRef.current.contains(event.target as Node)) {
+        setIsLivePopoverOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [isLivePopoverOpen]);
   const [customUserName, setCustomUserName] = useState("");
   const [draftUserName, setDraftUserName] = useState("");
   const [userId, setUserId] = useState("");
@@ -3171,7 +3200,7 @@ function App() {
   const [desktopNotificationSettings, setDesktopNotificationSettings] = useState<DesktopNotificationSettings>(
     defaultDesktopNotificationSettings,
   );
-  const [currentView, setCurrentViewRaw] = useState<AppView>("logs");
+  const [currentView, setCurrentViewRaw] = useState<AppView>("home");
   const setCurrentView = useCallback((next: AppView) => {
     if (typeof document === "undefined") {
       setCurrentViewRaw(next);
@@ -8049,6 +8078,206 @@ function App() {
       </section>
   );
 
+  // FEED extracted into a standalone block so it can live in the permanent
+  // right pane of the two-pane shell (always visible regardless of currentView).
+  // The shape mirrors the prior in-home-screen IIFE: build an author lookup,
+  // merge posts + workspace recruitments, optionally filter to following, then
+  // render composer + tabs + list.
+  const feedSection = (() => {
+    const authorLookup = new Map<string, RecruitmentAuthor>();
+    if (currentUser?.uid) {
+      authorLookup.set(currentUser.uid, {
+        userId: currentUser.uid,
+        displayName: playerName,
+        avatar: playerAvatar,
+        characterColor: playerCharacterColor,
+      });
+    }
+    posts.forEach((post) => {
+      if (!authorLookup.has(post.userId)) {
+        authorLookup.set(post.userId, {
+          userId: post.userId,
+          displayName: post.username || "Builder",
+          avatar: post.avatar || undefined,
+          characterColor: post.characterColor || undefined,
+        });
+      }
+    });
+    friends.forEach((friend) => {
+      if (!authorLookup.has(friend.uid)) {
+        authorLookup.set(friend.uid, {
+          userId: friend.uid,
+          displayName: friend.name || "Builder",
+          avatar: friend.avatar || undefined,
+        });
+      }
+    });
+
+    const followingSet = new Set(following);
+    if (currentUser?.uid) {
+      followingSet.add(currentUser.uid);
+    }
+
+    type FeedEntry =
+      | { kind: "post"; id: string; createdAt: string; post: ContributionPostRecord }
+      | { kind: "recruitment"; id: string; createdAt: string; recruitment: WorkspaceRecruitmentRecord };
+
+    const allEntries: FeedEntry[] = [
+      ...posts.map((post) => ({ kind: "post" as const, id: post.id, createdAt: post.createdAt, post })),
+      ...workspaceRecruitments.map((recruitment) => ({
+        kind: "recruitment" as const,
+        id: recruitment.id,
+        createdAt: recruitment.createdAt,
+        recruitment,
+      })),
+    ];
+
+    const filtered =
+      timelineFilter === "following"
+        ? allEntries.filter((entry) =>
+            followingSet.has(entry.kind === "post" ? entry.post.userId : entry.recruitment.userId),
+          )
+        : allEntries;
+
+    const sorted = filtered.sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+
+    return (
+      <section className="home-feed-section" aria-label="フィード">
+        <header className="home-feed-head">
+          <div>
+            <p className="card-kicker">Feed</p>
+            <h2>みんなと学びを共有・作業仲間を募集</h2>
+          </div>
+          <span>{sorted.length.toLocaleString()} 件</span>
+        </header>
+
+        {onboardingStep === "firstPost" ? (
+          <div className="onboarding-firstpost-banner" role="status" aria-live="polite">
+            <div className="onboarding-firstpost-copy">
+              <p className="card-kicker">チュートリアル · 最後のステップ</p>
+              <h3>「初めまして！」と投稿してみよう</h3>
+              <p>
+                下のフォームに <strong>初めまして！</strong> と入力して、最初の投稿を送信しましょう。投稿が完了するとチュートリアルは終わりです。
+              </p>
+            </div>
+            <span className="onboarding-firstpost-arrow" aria-hidden="true">↓</span>
+          </div>
+        ) : null}
+
+        <section
+          className={`home-feed-composer is-living${
+            onboardingStep === "firstPost" ? " is-onboarding-highlight" : ""
+          }`}
+          aria-label="投稿を作成"
+        >
+          <form className="log-composer" onSubmit={handlePostSubmit}>
+            <ProfileCharacterPreview color={playerCharacterColor} variant="simple" />
+            <div>
+              <textarea
+                value={postDraft}
+                onChange={(event) => {
+                  setPostDraft(event.target.value);
+                  setPostError("");
+                }}
+                placeholder={
+                  onboardingStep === "firstPost"
+                    ? "初めまして！ と入力してみよう"
+                    : "What are you building tonight?"
+                }
+                maxLength={280}
+                rows={1}
+              />
+              <div className="log-composer-footer">
+                <div className="log-compose-shortcuts">
+                  <button type="button" onClick={useRoomPresenceAsPost}>
+                    Roomから作成
+                  </button>
+                  <button type="button" onClick={useLatestStudyLogAsPost}>
+                    学習ログから作成
+                  </button>
+                </div>
+                <CharCountRing value={postDraft.length} max={280} />
+                <button type="submit" disabled={isPosting || !postDraft.trim()}>
+                  {isPosting ? "Posting" : "投稿"}
+                </button>
+              </div>
+              {postError ? <p className="log-post-error">{postError}</p> : null}
+            </div>
+          </form>
+        </section>
+
+        <div className="timeline-filter-tabs" role="tablist" aria-label="フィードの表示範囲">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={timelineFilter === "following"}
+            className={`timeline-filter-tab${timelineFilter === "following" ? " is-active" : ""}`}
+            onClick={() => setTimelineFilter("following")}
+          >
+            Following
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={timelineFilter === "all"}
+            className={`timeline-filter-tab${timelineFilter === "all" ? " is-active" : ""}`}
+            onClick={() => setTimelineFilter("all")}
+          >
+            All
+          </button>
+        </div>
+
+        <div className="home-feed-list">
+          {sorted.length > 0 ? (
+            sorted.map((entry) =>
+              entry.kind === "post" ? (
+                <Fragment key={`post-${entry.id}`}>{postCard(entry.post)}</Fragment>
+              ) : (
+                <WorkspaceRecruitmentFeedCard
+                  key={`recruitment-${entry.id}`}
+                  recruitment={entry.recruitment}
+                  author={authorLookup.get(entry.recruitment.userId) || null}
+                  now={feedNowTick}
+                  currentUserId={currentUser?.uid || ""}
+                  onJoin={(rec) => {
+                    handleJoinRecruitment(rec);
+                    const nowMs = Date.now();
+                    const startAtMs = new Date(rec.startAt).getTime();
+                    if (nowMs >= startAtMs) {
+                      setSelectedRoomId(rec.roomId);
+                      setCurrentView("workspace");
+                    }
+                  }}
+                  onCancel={handleCancelRecruitment}
+                  onAuthorOpen={(author) => {
+                    const friend = friends.find((f) => f.uid === author.userId);
+                    if (friend) handleFriendOpen(friend);
+                  }}
+                />
+              ),
+            )
+          ) : (
+            <article className="log-empty-card">
+              <p className="card-kicker">{timelineFilter === "following" ? "Following" : "Quiet Progress"}</p>
+              <strong>
+                {timelineFilter === "following"
+                  ? "フォロー中の投稿はまだありません。"
+                  : "まだ投稿はありません。"}
+              </strong>
+              <span>
+                {timelineFilter === "following"
+                  ? "気になるエンジニアをフォローすると、ここに学びと作業部屋の募集が流れます。"
+                  : "今日作っているもの、学んだこと、作業部屋の募集が静かに流れます。"}
+              </span>
+            </article>
+          )}
+        </div>
+      </section>
+    );
+  })();
+
   return (
     <motion.main
       className={isDesktopApp ? "app-shell premium-shell desktop-shell" : "app-shell premium-shell"}
@@ -8104,73 +8333,6 @@ function App() {
         </div>
       ) : null}
 
-      <PremiumSidebar
-        currentView={currentView}
-        logo={<ContributionArcLogo />}
-        playerStatus={
-          <button
-            type="button"
-            className="player-status-sidebar"
-            onClick={() => {
-              setProfileMember(null);
-              setProfileUser(null);
-              setCurrentView("profile");
-              setIsMobileNavOpen(false);
-            }}
-            aria-label="プロフィール画面を開く"
-          >
-            <div className="player-status-sidebar-head">
-              <span className="player-status-sidebar-avatar">
-                {playerAvatar ? <img src={playerAvatar} alt="" /> : playerInitial}
-              </span>
-              <div>
-                <strong>{playerName}</strong>
-                <span>Lv.{levelState.level}</span>
-              </div>
-            </div>
-            <div className="player-status-sidebar-exp">
-              <div className="player-status-sidebar-exp-meta">
-                <span>Next Level</span>
-                <strong>
-                  {levelState.currentExp.toLocaleString()} / {levelState.neededExp.toLocaleString()}
-                </strong>
-              </div>
-              <div className="player-status-sidebar-exp-track" aria-hidden="true">
-                <span style={{ width: `${levelState.percent}%` }} />
-              </div>
-            </div>
-            <div className={`player-status-sidebar-metrics${outputExp > 0 ? "" : " is-single"}`}>
-              <div>
-                <strong>{effortExp.toLocaleString()}</strong>
-                <span>Effort EXP</span>
-              </div>
-              {outputExp > 0 ? (
-                <div>
-                  <strong>{outputExp.toLocaleString()}</strong>
-                  <span>Output EXP</span>
-                </div>
-              ) : null}
-            </div>
-          </button>
-        }
-        friends={sidebarFriends}
-        liveActivities={liveActivities}
-        onViewChange={setCurrentView}
-        onFriendOpen={handleFriendOpen}
-        onActivityOpen={handleLiveActivityOpen}
-        isMobileOpen={isMobileNavOpen}
-        onMobileClose={() => setIsMobileNavOpen(false)}
-      />
-
-      {isMobileNavOpen ? (
-        <button
-          type="button"
-          className="mobile-nav-backdrop"
-          aria-label="メニューを閉じる"
-          onClick={() => setIsMobileNavOpen(false)}
-        />
-      ) : null}
-
       <div className="app-main-panel">
       <motion.header
         className="site-header premium-dashboard-header"
@@ -8180,15 +8342,47 @@ function App() {
       >
         <button
           type="button"
-          className="mobile-nav-toggle"
-          aria-label="メニューを開く"
-          aria-expanded={isMobileNavOpen}
-          onClick={() => setIsMobileNavOpen(true)}
+          className="topbar-brand"
+          onClick={() => setCurrentView("home")}
+          aria-label="ホームへ"
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M4 7h16M4 12h16M4 17h16" />
-          </svg>
+          <span className="topbar-brand-mark" aria-hidden="true">
+            <ContributionArcLogo />
+          </span>
+          <strong>Contribution Arc</strong>
         </button>
+
+        <nav className="topbar-nav" aria-label="Main navigation">
+          <button
+            type="button"
+            className={currentView === "home" ? "is-active" : ""}
+            onClick={() => setCurrentView("home")}
+          >
+            ホーム
+          </button>
+          <button
+            type="button"
+            className={currentView === "daily" ? "is-active" : ""}
+            onClick={() => setCurrentView("daily")}
+          >
+            日報
+          </button>
+          <button
+            type="button"
+            className={currentView === "learning" ? "is-active" : ""}
+            onClick={() => setCurrentView("learning")}
+          >
+            記録する
+          </button>
+          <button
+            type="button"
+            className={currentView === "workspace" ? "is-active" : ""}
+            onClick={() => setCurrentView("workspace")}
+          >
+            作業部屋
+          </button>
+        </nav>
+
         <div className="topbar-context">
           {todayStudyMinutes > 0 ? (
             <span className="topbar-today">
@@ -8196,7 +8390,147 @@ function App() {
             </span>
           ) : null}
         </div>
+
         <div className="user-session">
+          <div className="topbar-popover-wrap" ref={friendsPopoverRef}>
+            <button
+              type="button"
+              className={`topbar-icon-button${isFriendsPopoverOpen ? " is-open" : ""}`}
+              aria-label={`Friends${sidebarFriends.length > 0 ? ` (${sidebarFriends.length})` : ""}`}
+              aria-expanded={isFriendsPopoverOpen}
+              onClick={() => {
+                setIsFriendsPopoverOpen((prev) => !prev);
+                setIsLivePopoverOpen(false);
+              }}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <circle cx="9" cy="8" r="3.4" fill="none" stroke="currentColor" strokeWidth="1.6" />
+                <circle cx="16.5" cy="9" r="2.6" fill="none" stroke="currentColor" strokeWidth="1.4" />
+                <path
+                  d="M3 19c1-3 3.4-4.6 6-4.6s5 1.6 6 4.6"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M14.6 19c.8-2.4 2.5-3.6 4.4-3.6s3.6 1.2 4.4 3.6"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                />
+              </svg>
+              {sidebarFriends.length > 0 ? (
+                <span className="topbar-icon-badge">{sidebarFriends.length}</span>
+              ) : null}
+            </button>
+            {isFriendsPopoverOpen ? (
+              <section className="topbar-popover topbar-popover-friends" aria-label="Friends">
+                <div className="topbar-popover-head">
+                  <p className="card-kicker">Friends</p>
+                  {sidebarFriends.length > 0 ? <span>{sidebarFriends.length}/20</span> : null}
+                </div>
+                <div className="topbar-popover-list">
+                  {sidebarFriends.length > 0 ? (
+                    sidebarFriends.slice(0, 8).map((friend) => (
+                      <button
+                        type="button"
+                        key={friend.uid}
+                        className="topbar-popover-row"
+                        onClick={() => {
+                          handleFriendOpen(friend);
+                          setIsFriendsPopoverOpen(false);
+                        }}
+                      >
+                        <span className="topbar-popover-avatar">
+                          {friend.avatar ? <img src={friend.avatar} alt="" /> : friend.name.slice(0, 1).toUpperCase()}
+                          <i className={`topbar-popover-dot ${friend.status}`} />
+                        </span>
+                        <span>
+                          <strong>{friend.name}</strong>
+                          <small>{friend.activity}</small>
+                        </span>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="topbar-popover-empty">
+                      <p>フレンドを招待して、一緒に学びを積み上げよう</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCurrentView("profile");
+                          setIsFriendsPopoverOpen(false);
+                        }}
+                      >
+                        フレンドを招待する
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </section>
+            ) : null}
+          </div>
+
+          <div className="topbar-popover-wrap" ref={livePopoverRef}>
+            <button
+              type="button"
+              className={`topbar-icon-button${isLivePopoverOpen ? " is-open" : ""}`}
+              aria-label={`Live Activity${liveActivities.length > 0 ? ` (${liveActivities.length})` : ""}`}
+              aria-expanded={isLivePopoverOpen}
+              onClick={() => {
+                setIsLivePopoverOpen((prev) => !prev);
+                setIsFriendsPopoverOpen(false);
+              }}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path
+                  d="M4 12h3l2-6 4 12 2-6h5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              {liveActivities.length > 0 ? (
+                <span className="topbar-icon-badge">{liveActivities.length}</span>
+              ) : null}
+            </button>
+            {isLivePopoverOpen ? (
+              <section className="topbar-popover topbar-popover-live" aria-label="Live Activity">
+                <div className="topbar-popover-head">
+                  <p className="card-kicker">Live Activity</p>
+                </div>
+                <div className="topbar-popover-list">
+                  {liveActivities.length > 0 ? (
+                    liveActivities.map((activity) => (
+                      <button
+                        type="button"
+                        key={activity.id}
+                        className="topbar-popover-row"
+                        onClick={() => {
+                          handleLiveActivityOpen(activity);
+                          setIsLivePopoverOpen(false);
+                        }}
+                      >
+                        <span className="topbar-popover-avatar">
+                          {activity.avatar ? <img src={activity.avatar} alt="" /> : activity.userName.slice(0, 1).toUpperCase()}
+                          <i className={`topbar-popover-dot ${activity.status}`} />
+                        </span>
+                        <span>
+                          <strong>{activity.text}</strong>
+                          <small>{activity.meta}</small>
+                        </span>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="topbar-popover-empty-text">今は静かです。誰かの記録が始まるとここに流れます。</p>
+                  )}
+                </div>
+              </section>
+            ) : null}
+          </div>
           <button
             type="button"
             className="user-search-button"
@@ -9144,6 +9478,9 @@ function App() {
           </section>
         </div>
       ) : null}
+
+      <div className="two-pane-shell">
+      <div className="two-pane-left">
 
       {currentView === "daily" ? (
         <motion.section
@@ -10161,13 +10498,11 @@ function App() {
         </motion.section>
       ) : (
       <motion.div
-        className="home-screen home-screen-split"
+        className="home-screen"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={SPRING_SNAPPY}
       >
-
-      <div className="home-self-column">
 
       {contributionArcCardSection}
 
@@ -10269,209 +10604,16 @@ function App() {
         </div>
       </section>
 
-      </div>
-
-      <div className="home-feed-column">
-
-      {(() => {
-        const authorLookup = new Map<string, RecruitmentAuthor>();
-        if (currentUser?.uid) {
-          authorLookup.set(currentUser.uid, {
-            userId: currentUser.uid,
-            displayName: playerName,
-            avatar: playerAvatar,
-            characterColor: playerCharacterColor,
-          });
-        }
-        posts.forEach((post) => {
-          if (!authorLookup.has(post.userId)) {
-            authorLookup.set(post.userId, {
-              userId: post.userId,
-              displayName: post.username || "Builder",
-              avatar: post.avatar || undefined,
-              characterColor: post.characterColor || undefined,
-            });
-          }
-        });
-        friends.forEach((friend) => {
-          if (!authorLookup.has(friend.uid)) {
-            authorLookup.set(friend.uid, {
-              userId: friend.uid,
-              displayName: friend.name || "Builder",
-              avatar: friend.avatar || undefined,
-            });
-          }
-        });
-
-        const followingSet = new Set(following);
-        if (currentUser?.uid) {
-          followingSet.add(currentUser.uid);
-        }
-
-        type FeedEntry =
-          | { kind: "post"; id: string; createdAt: string; post: ContributionPostRecord }
-          | { kind: "recruitment"; id: string; createdAt: string; recruitment: WorkspaceRecruitmentRecord };
-
-        const allEntries: FeedEntry[] = [
-          ...posts.map((post) => ({ kind: "post" as const, id: post.id, createdAt: post.createdAt, post })),
-          ...workspaceRecruitments.map((recruitment) => ({
-            kind: "recruitment" as const,
-            id: recruitment.id,
-            createdAt: recruitment.createdAt,
-            recruitment,
-          })),
-        ];
-
-        const filtered =
-          timelineFilter === "following"
-            ? allEntries.filter((entry) =>
-                followingSet.has(entry.kind === "post" ? entry.post.userId : entry.recruitment.userId),
-              )
-            : allEntries;
-
-        const sorted = filtered.sort(
-          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-        );
-
-        return (
-          <section className="home-feed-section" aria-label="フィード">
-            <header className="home-feed-head">
-              <div>
-                <p className="card-kicker">Feed</p>
-                <h2>みんなと学びを共有・作業仲間を募集</h2>
-              </div>
-              <span>{sorted.length.toLocaleString()} 件</span>
-            </header>
-
-            {onboardingStep === "firstPost" ? (
-              <div className="onboarding-firstpost-banner" role="status" aria-live="polite">
-                <div className="onboarding-firstpost-copy">
-                  <p className="card-kicker">チュートリアル · 最後のステップ</p>
-                  <h3>「初めまして！」と投稿してみよう</h3>
-                  <p>
-                    下のフォームに <strong>初めまして！</strong> と入力して、最初の投稿を送信しましょう。投稿が完了するとチュートリアルは終わりです。
-                  </p>
-                </div>
-                <span className="onboarding-firstpost-arrow" aria-hidden="true">↓</span>
-              </div>
-            ) : null}
-
-            <section
-              className={`home-feed-composer is-living${
-                onboardingStep === "firstPost" ? " is-onboarding-highlight" : ""
-              }`}
-              aria-label="投稿を作成"
-            >
-              <form className="log-composer" onSubmit={handlePostSubmit}>
-                <ProfileCharacterPreview color={playerCharacterColor} variant="simple" />
-                <div>
-                  <textarea
-                    value={postDraft}
-                    onChange={(event) => {
-                      setPostDraft(event.target.value);
-                      setPostError("");
-                    }}
-                    placeholder={
-                      onboardingStep === "firstPost"
-                        ? "初めまして！ と入力してみよう"
-                        : "What are you building tonight?"
-                    }
-                    maxLength={280}
-                    rows={1}
-                  />
-                  <div className="log-composer-footer">
-                    <div className="log-compose-shortcuts">
-                      <button type="button" onClick={useRoomPresenceAsPost}>
-                        Roomから作成
-                      </button>
-                      <button type="button" onClick={useLatestStudyLogAsPost}>
-                        学習ログから作成
-                      </button>
-                    </div>
-                    <CharCountRing value={postDraft.length} max={280} />
-                    <button type="submit" disabled={isPosting || !postDraft.trim()}>
-                      {isPosting ? "Posting" : "投稿"}
-                    </button>
-                  </div>
-                  {postError ? <p className="log-post-error">{postError}</p> : null}
-                </div>
-              </form>
-            </section>
-
-            <div className="timeline-filter-tabs" role="tablist" aria-label="フィードの表示範囲">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={timelineFilter === "following"}
-                className={`timeline-filter-tab${timelineFilter === "following" ? " is-active" : ""}`}
-                onClick={() => setTimelineFilter("following")}
-              >
-                Following
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={timelineFilter === "all"}
-                className={`timeline-filter-tab${timelineFilter === "all" ? " is-active" : ""}`}
-                onClick={() => setTimelineFilter("all")}
-              >
-                All
-              </button>
-            </div>
-
-            <div className="home-feed-list">
-              {sorted.length > 0 ? (
-                sorted.map((entry) =>
-                  entry.kind === "post" ? (
-                    <Fragment key={`post-${entry.id}`}>{postCard(entry.post)}</Fragment>
-                  ) : (
-                    <WorkspaceRecruitmentFeedCard
-                      key={`recruitment-${entry.id}`}
-                      recruitment={entry.recruitment}
-                      author={authorLookup.get(entry.recruitment.userId) || null}
-                      now={feedNowTick}
-                      currentUserId={currentUser?.uid || ""}
-                      onJoin={(rec) => {
-                        handleJoinRecruitment(rec);
-                        const nowMs = Date.now();
-                        const startAtMs = new Date(rec.startAt).getTime();
-                        if (nowMs >= startAtMs) {
-                          setSelectedRoomId(rec.roomId);
-                          setCurrentView("workspace");
-                        }
-                      }}
-                      onCancel={handleCancelRecruitment}
-                      onAuthorOpen={(author) => {
-                        const friend = friends.find((f) => f.uid === author.userId);
-                        if (friend) handleFriendOpen(friend);
-                      }}
-                    />
-                  ),
-                )
-              ) : (
-                <article className="log-empty-card">
-                  <p className="card-kicker">{timelineFilter === "following" ? "Following" : "Quiet Progress"}</p>
-                  <strong>
-                    {timelineFilter === "following"
-                      ? "フォロー中の投稿はまだありません。"
-                      : "まだ投稿はありません。"}
-                  </strong>
-                  <span>
-                    {timelineFilter === "following"
-                      ? "気になるエンジニアをフォローすると、ここに学びと作業部屋の募集が流れます。"
-                      : "今日作っているもの、学んだこと、作業部屋の募集が静かに流れます。"}
-                  </span>
-                </article>
-              )}
-            </div>
-          </section>
-        );
-      })()}
-
-      </div>
-
       </motion.div>
       )}
+
+      </div>
+
+      <aside className="two-pane-right" aria-label="フィード">
+        {feedSection}
+      </aside>
+
+      </div>
       </div>
     </motion.main>
   );

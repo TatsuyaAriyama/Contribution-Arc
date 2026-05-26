@@ -10315,11 +10315,15 @@
   }
 }
 
-/* Premium service shell */
+/* Premium service shell — single full-width column. The old 260px left
+   sidebar (PremiumSidebar) was retired in favor of a topbar nav + popovers,
+   so the shell now hands the entire width to .app-main-panel, which in
+   turn splits into a 50/50 two-pane layout (.two-pane-shell) below the
+   sticky topbar. */
 .premium-shell {
   width: min(1560px, calc(100% - 48px));
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 24px;
   padding: 24px 0 42px;
 }
@@ -10549,6 +10553,390 @@
 
 .app-main-panel {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ===== Two-pane shell =====
+   Sits below the sticky topbar inside .app-main-panel. On desktop the
+   window splits cleanly in half: left = the currently selected view
+   (home/daily/learning/workspace/profile), right = the permanent feed.
+   The right column is sticky and scrolls internally so the timeline is
+   always on screen regardless of how the left view is scrolled.
+   Below 1080px it collapses into a single column (left view on top, feed
+   below) since horizontally splitting at narrow widths makes both panes
+   feel cramped. */
+.two-pane-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.two-pane-left,
+.two-pane-right {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+@media (min-width: 1081px) {
+  .two-pane-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+
+  .two-pane-right {
+    position: sticky;
+    top: 92px;
+    max-height: calc(100svh - 108px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .two-pane-right .home-feed-section {
+    margin-bottom: 0;
+  }
+}
+
+/* ===== Topbar: brand + nav + popovers =====
+   The topbar now hosts everything that used to live in the left sidebar:
+   the brand mark, primary nav (4 buttons), and on-demand popovers for
+   Friends and Live Activity. Search / Notifications / User menu remain
+   at the far right. Layout strategy: flex with brand fixed-left, nav
+   centered-ish, popovers + user-session pinned right; gap absorbs slack. */
+.topbar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 6px 6px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.topbar-brand:hover {
+  background: rgba(var(--ink-rgb), 0.04);
+}
+
+.topbar-brand-mark {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(var(--ink-rgb), 0.04);
+}
+
+.topbar-brand-mark svg {
+  width: 22px;
+  height: 22px;
+}
+
+.topbar-brand strong {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+
+.topbar-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  background: rgba(var(--ink-rgb), 0.04);
+  flex-shrink: 0;
+}
+
+.topbar-nav button {
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: color 0.16s ease, background 0.16s ease;
+}
+
+.topbar-nav button:hover {
+  color: var(--ink);
+  background: rgba(var(--ink-rgb), 0.04);
+}
+
+.topbar-nav button.is-active {
+  color: var(--ink-strong);
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(var(--ink-rgb), 0.06);
+}
+
+/* Friends + Live Activity popover triggers — circular icon buttons that
+   sit between the topbar context and the search/notifications cluster. */
+.topbar-popover-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.topbar-icon-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
+  border-radius: 12px;
+  background: rgba(var(--surface-rgb), 0.7);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+
+.topbar-icon-button:hover {
+  background: var(--surface);
+  border-color: rgba(var(--ink-rgb), 0.16);
+}
+
+.topbar-icon-button.is-open {
+  background: var(--surface);
+  border-color: rgba(var(--ink-rgb), 0.2);
+}
+
+.topbar-icon-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+.topbar-icon-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--green);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.topbar-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 80;
+  width: min(340px, 86vw);
+  max-height: 460px;
+  padding: 14px;
+  border: 1px solid rgba(var(--ink-rgb), 0.1);
+  border-radius: 18px;
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.topbar-popover-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.topbar-popover-head span {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.topbar-popover-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.topbar-popover-row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.topbar-popover-row:hover {
+  background: rgba(var(--ink-rgb), 0.04);
+}
+
+.topbar-popover-row > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.topbar-popover-row strong {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-popover-row small {
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-popover-avatar {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(var(--ink-rgb), 0.06);
+  color: var(--ink-strong);
+  font-size: 13px;
+  font-weight: 700;
+  overflow: visible;
+}
+
+.topbar-popover-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.topbar-popover-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 2px solid var(--surface-elevated);
+  background: var(--muted);
+}
+
+.topbar-popover-dot.online {
+  background: var(--green);
+}
+
+.topbar-popover-dot.recent {
+  background: var(--rare);
+}
+
+.topbar-popover-dot.away {
+  background: #f59e0b;
+}
+
+.topbar-popover-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 8px;
+  text-align: center;
+}
+
+.topbar-popover-empty p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.topbar-popover-empty button {
+  align-self: center;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.topbar-popover-empty-text {
+  margin: 8px 4px;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* Premium dashboard header: rebalance the flex distribution so brand + nav
+   anchor left, context floats in the middle, popovers + user-session pin
+   right. The original layout was tuned for [hamburger | context | user]; we
+   now have many more cluster groups. */
+.premium-dashboard-header {
+  gap: 12px;
+  flex-wrap: nowrap;
+}
+
+.premium-dashboard-header .topbar-context {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.premium-dashboard-header .user-session {
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+@media (max-width: 1080px) {
+  .topbar-brand strong {
+    display: none;
+  }
+
+  .premium-dashboard-header .topbar-context {
+    display: none;
+  }
+}
+
+@media (max-width: 780px) {
+  .topbar-nav {
+    gap: 0;
+    padding: 2px;
+  }
+
+  .topbar-nav button {
+    padding: 7px 9px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 560px) {
+  .premium-dashboard-header .user-search-button strong,
+  .premium-dashboard-header .user-search-button em {
+    display: none;
+  }
 }
 
 /* Mobile navigation drawer trigger + backdrop. Both are hidden on
@@ -16328,50 +16716,6 @@ body {
 .subject-ghost-hint:hover {
   color: var(--ink);
   border-color: var(--ink);
-}
-
-/* ===== Home Screen Split Layout =====
-   On desktop (≥1081px) home splits into two columns:
-   - LEFT  (.home-self-column): Contribution Arc + TODAY + hero-grid — your stuff.
-     Sticky so it stays visible while the feed scrolls; gets its own internal
-     scroll only if its content overflows the viewport.
-   - RIGHT (.home-feed-column): Feed (composer + tabs + posts).
-     Scrolls with the page, mirroring the sidebar/feed pattern the user liked.
-   Below 1081px the columns simply stack in flow (single column). */
-.home-screen-split {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.home-self-column,
-.home-feed-column {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 0;
-}
-
-@media (min-width: 1081px) {
-  .home-screen-split {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 24px;
-    align-items: start;
-  }
-
-  .home-self-column {
-    position: sticky;
-    top: 24px;
-    max-height: calc(100svh - 48px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
-
-  /* Drop the section's default bottom margin — the column gap owns spacing now. */
-  .home-feed-column .home-feed-section {
-    margin-bottom: 0;
-  }
 }
 
 /* ===== Home Feed (Phase 1: engineer-Twitter) ===== */
