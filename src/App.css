@@ -211,45 +211,22 @@
     0 18px 38px rgba(var(--ink-rgb), 0.12);
 }
 
-.notification-button.has-unread {
-  border-color: rgba(246, 196, 83, 0.62);
-  background:
-    radial-gradient(circle at 50% 22%, rgba(255, 244, 190, 0.98), transparent 1.35rem),
-    linear-gradient(180deg, rgba(255, 232, 121, 0.95), rgba(245, 179, 45, 0.82));
-  color: #4a3100;
-  box-shadow:
-    0 0 0 4px rgba(246, 196, 83, 0.14),
-    0 0 30px rgba(246, 196, 83, 0.48),
-    0 18px 42px rgba(180, 116, 22, 0.22);
-}
-
-.notification-button.has-unread .bell-icon {
-  animation: notification-bell-ring 1.8s ease-in-out infinite;
-}
-
 .bell-icon {
   width: 25px;
   height: 25px;
   display: block;
 }
 
-.notification-button > span {
+.notification-button .notification-dot {
   position: absolute;
-  top: -5px;
-  right: -5px;
-  display: grid;
-  place-items: center;
-  min-width: 19px;
-  height: 19px;
-  padding: 0 5px;
-  border: 2px solid #ffffff;
+  top: 6px;
+  right: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 999px;
-  background: #f59e0b;
-  color: #ffffff;
-  font-size: 10px;
-  font-weight: 950;
-  line-height: 1;
-  box-shadow: 0 10px 18px rgba(180, 116, 22, 0.22);
+  background: #ef4444;
+  border: 2px solid var(--surface);
+  pointer-events: none;
 }
 
 .notification-panel {
@@ -9377,15 +9354,7 @@
 }
 
 .premium-dashboard-header .notification-button.has-unread {
-  border-color: rgba(246, 196, 83, 0.68);
-  background:
-    radial-gradient(circle at 50% 22%, rgba(255, 247, 205, 0.98), transparent 1.35rem),
-    linear-gradient(180deg, rgba(255, 232, 121, 0.95), rgba(245, 179, 45, 0.84));
-  color: #4a3100;
-  box-shadow:
-    0 0 0 4px rgba(246, 196, 83, 0.14),
-    0 0 32px rgba(246, 196, 83, 0.52),
-    0 18px 46px rgba(180, 116, 22, 0.23);
+  /* Unread state is signalled by the small red dot only — no chrome tint. */
 }
 
 .premium-dashboard-header .settings-button:hover {
@@ -9826,6 +9795,51 @@
   font-size: 11px;
   font-weight: 720;
   line-height: 1.55;
+}
+
+.friend-empty-state {
+  display: grid;
+  gap: 10px;
+  padding: 14px 12px 12px;
+  border-radius: 14px;
+  background: rgba(var(--ink-rgb), 0.03);
+  text-align: center;
+}
+
+.friend-empty-text {
+  margin: 0;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.55;
+  letter-spacing: 0;
+}
+
+.friend-empty-cta {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  cursor: pointer;
+  transition: transform 0.18s ease, background 0.18s ease, opacity 0.18s ease;
+}
+
+.friend-empty-cta:hover {
+  transform: translateY(-1px);
+  opacity: 0.92;
+}
+
+.friend-empty-cta:active {
+  transform: translateY(0);
 }
 
 .user-result-card {
@@ -14489,6 +14503,41 @@
   color: var(--muted);
 }
 
+.arc-stat {
+  position: relative;
+}
+
+.arc-stat[data-tooltip] {
+  cursor: help;
+}
+
+.arc-stat[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  padding: 6px 10px;
+  background: var(--ink);
+  color: rgba(var(--cta-fg-rgb), 0.96);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  border-radius: 8px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity 0.16s ease, transform 0.16s ease;
+  z-index: 30;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+}
+
+.arc-stat[data-tooltip]:hover::after,
+.arc-stat[data-tooltip]:focus-within::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .contribution-arc-legend {
   display: flex;
   align-items: center;
@@ -17117,16 +17166,16 @@ select:focus-visible,
 
 .player-status-sidebar-exp-track {
   position: relative;
-  height: 6px;
+  height: 4px;
   border-radius: 999px;
-  background: rgba(var(--ink-rgb), 0.08);
+  background: rgba(var(--ink-rgb), 0.06);
   overflow: hidden;
 }
 
 .player-status-sidebar-exp-track > span {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, var(--green), #4fa362);
+  background: rgba(var(--ink-rgb), 0.32);
   border-radius: inherit;
   transition: width 0.4s ease;
 }
@@ -17135,6 +17184,10 @@ select:focus-visible,
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+}
+
+.player-status-sidebar-metrics.is-single {
+  grid-template-columns: 1fr;
 }
 
 .player-status-sidebar-metrics > div {

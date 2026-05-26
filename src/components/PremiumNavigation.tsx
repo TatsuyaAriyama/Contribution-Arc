@@ -116,7 +116,7 @@ export function PremiumSidebar({
       <section className="friend-sidebar-panel" aria-label="Friends">
         <div className="friend-sidebar-head">
           <p className="card-kicker">Friends</p>
-          <span>{friends.length}/20</span>
+          {friends.length > 0 ? <span>{friends.length}/20</span> : null}
         </div>
 
         <div className="friend-sidebar-list">
@@ -147,11 +147,20 @@ export function PremiumSidebar({
               </article>
             ))
           ) : (
-            <p className="friend-empty">
-              まだフレンドはいません。
-              <br />
-              プロフィールから申請できます。
-            </p>
+            <div className="friend-empty-state">
+              <p className="friend-empty-text">
+                フレンドを招待して、
+                <br />
+                一緒に学びを積み上げよう
+              </p>
+              <button
+                type="button"
+                className="friend-empty-cta"
+                onClick={() => handleNavigate(() => onViewChange("profile"))}
+              >
+                フレンドを招待する
+              </button>
+            </div>
           )}
         </div>
       </section>

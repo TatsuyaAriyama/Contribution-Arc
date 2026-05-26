@@ -7595,32 +7595,35 @@ function App() {
             </span>
           </div>
           <div className="contribution-arc-stats" aria-label="学習サマリ">
-            <div>
-              <small>今週</small>
-              <strong>{formatStudyTimeJa(contributionArc.thisWeekMinutes)}</strong>
-              <span>
-                {contributionArc.lastWeekMinutes > 0
+            <div
+              className="arc-stat"
+              data-tooltip={
+                contributionArc.lastWeekMinutes > 0
                   ? `先週比 ${
                       contributionArc.thisWeekMinutes - contributionArc.lastWeekMinutes >= 0 ? "+" : ""
                     }${formatStudyTimeJa(
                       Math.abs(contributionArc.thisWeekMinutes - contributionArc.lastWeekMinutes),
                     )}`
-                  : "—"}
-              </span>
+                  : "先週の記録はまだありません"
+              }
+            >
+              <small>今週</small>
+              <strong>{formatStudyTimeJa(contributionArc.thisWeekMinutes)}</strong>
             </div>
-            <div>
+            <div className="arc-stat" data-tooltip="連続して記録した最長期間">
               <small>最長連続</small>
               <strong>{contributionArc.longestStreak}日</strong>
-              <span>記録した期間</span>
             </div>
-            <div>
+            <div
+              className="arc-stat"
+              data-tooltip={
+                contributionArc.topMonthMinutes > 0
+                  ? `合計 ${formatStudyTimeJa(contributionArc.topMonthMinutes)}`
+                  : "まだ記録なし"
+              }
+            >
               <small>最も学んだ月</small>
               <strong>{contributionArc.topMonthLabel || "—"}</strong>
-              <span>
-                {contributionArc.topMonthMinutes > 0
-                  ? formatStudyTimeJa(contributionArc.topMonthMinutes)
-                  : "まだ記録なし"}
-              </span>
             </div>
           </div>
         </div>
@@ -8057,15 +8060,17 @@ function App() {
                 <span style={{ width: `${levelState.percent}%` }} />
               </div>
             </div>
-            <div className="player-status-sidebar-metrics">
+            <div className={`player-status-sidebar-metrics${outputExp > 0 ? "" : " is-single"}`}>
               <div>
                 <strong>{effortExp.toLocaleString()}</strong>
                 <span>Effort EXP</span>
               </div>
-              <div>
-                <strong>{outputExp.toLocaleString()}</strong>
-                <span>Output EXP</span>
-              </div>
+              {outputExp > 0 ? (
+                <div>
+                  <strong>{outputExp.toLocaleString()}</strong>
+                  <span>Output EXP</span>
+                </div>
+              ) : null}
             </div>
           </button>
         }
