@@ -17097,11 +17097,8 @@ body {
    and rendered above body but below #root content.
    ============================================================ */
 
-/* The old `.aurora-backdrop` (drifting green/violet/orange radial gradients
-   in the corners) was replaced by `.ambient-backdrop`, which is driven by
-   [data-time="..."] on the shell root. The aurora rules below used to live
-   here. See the "Sticky flat header" section earlier in this file for the
-   new gradient palettes. */
+/* The old `.aurora-backdrop` (drifting corner gradients) was removed —
+   light mode is now plain white, dark mode stays pure black. */
 
 [data-theme="dark"] .cursor-spotlight {
   display: none;
@@ -17904,83 +17901,3 @@ select:focus-visible,
   opacity: 0.85;
 }
 
-/* --- 3. Time-of-day "学びの大地" background ------------------
-   `body` already paints the page background; we just swap it
-   based on data-time on <html>. The 2s transition lives on the
-   body rule (extended in index.css), so the cross-fade is
-   automatic when the hook reports a new bucket.
-
-   Each palette keeps a subtle corner radial-gradient + a vertical
-   linear-gradient that mirrors the sky at that hour. Cards stay
-   on their own surface, so legibility doesn't depend on the
-   ambient color. */
-/* `:has(.app-shell.premium-shell)` scopes the palette to the
-   authenticated app. The login screen is mounted as `.login-shell`
-   instead, so it keeps the default body background and stays
-   readable even at night. */
-[data-time="morning"] body:has(.app-shell.premium-shell) {
-  background:
-    radial-gradient(circle at 8% 0%, rgba(255, 195, 110, 0.10), transparent 28rem),
-    linear-gradient(180deg, #fdf6e3 0%, #f3eedf 45%, #ecf2eb 100%);
-}
-
-[data-time="day"] body:has(.app-shell.premium-shell) {
-  background:
-    radial-gradient(circle at 96% 8%, rgba(31, 111, 74, 0.06), transparent 26rem),
-    linear-gradient(180deg, #f7f6f0 0%, #eef3ec 50%, #e6ede2 100%);
-}
-
-[data-time="evening"] body:has(.app-shell.premium-shell) {
-  background:
-    radial-gradient(circle at 10% 18%, rgba(220, 110, 80, 0.10), transparent 28rem),
-    linear-gradient(180deg, #f4e8dc 0%, #ecd9d8 55%, #e3d3df 100%);
-}
-
-[data-time="night"] body:has(.app-shell.premium-shell) {
-  background:
-    radial-gradient(circle at 70% 8%, rgba(110, 150, 220, 0.10), transparent 30rem),
-    linear-gradient(180deg, #2a3140 0%, #1a1f2e 55%, #0f1320 100%);
-}
-
-/* Subtle decorative overlays look fine at morning/day/evening
-   but the dark grid lines + green dot pattern over a near-navy
-   night sky come out as muddy noise. Fade them out at night so
-   the sky reads clean. (Scoped to authenticated only — same as
-   the gradients above.) */
-[data-time="night"] body:has(.app-shell.premium-shell)::before {
-  opacity: 0;
-}
-
-[data-time="night"] body:has(.app-shell.premium-shell)::after {
-  opacity: 0.35;
-}
-
-/* Night mode also tweaks the header chrome so the title bar
-   doesn't glow white against the dark sky. */
-[data-time="night"] .premium-dashboard-header {
-  background: rgba(32, 36, 48, 0.72);
-  border-bottom-color: rgba(255, 255, 255, 0.06);
-}
-
-[data-time="night"] .topbar-nav {
-  background: rgba(255, 255, 255, 0.06);
-}
-
-[data-time="night"] .topbar-nav button {
-  color: rgba(232, 236, 244, 0.7);
-}
-
-[data-time="night"] .topbar-nav button:hover {
-  color: #f3f3f3;
-  background: rgba(255, 255, 255, 0.07);
-}
-
-[data-time="night"] .topbar-nav button.is-active {
-  background: rgba(255, 255, 255, 0.12);
-  color: #c8e0d3;
-}
-
-[data-time="night"] .topbar-nav button.is-active::after {
-  background: #7ec99e;
-  opacity: 0.9;
-}
