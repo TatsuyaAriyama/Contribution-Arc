@@ -3304,6 +3304,14 @@ function App() {
   const graphSvgRef = useRef<SVGSVGElement | null>(null);
   const isApplyingRemoteRoomsRef = useRef(false);
   const lastSyncedWorkspaceRoomsRef = useRef("");
+  // Cost control: the user-progress effect has ~15 deps, several of which are
+  // arrays (following, openedWorkspaceGiftLevels) whose *reference* flips on
+  // every Firestore snapshot even when contents are identical. Without dedup
+  // we burn 2 writes (users/{uid} + githubActivities/{uid}-summary) per tick.
+  // These refs hold a JSON signature of the last successful write so we can
+  // short-circuit identical follow-ups. Cleared implicitly on full reload.
+  const lastSyncedUserProgressRef = useRef("");
+  const lastSyncedGithubActivityRef = useRef("");
   const pendingWorkspaceRoomsRef = useRef<Map<string, WorkspaceRoom>>(new Map());
   const cleanedLegacyWorkspaceRoomsRef = useRef<Set<string>>(new Set());
   const remoteWorkspaceRoomsRef = useRef<{ rooms: WorkspaceRoom[]; legacyRooms: WorkspaceRoom[] }>({
@@ -4547,16 +4555,29 @@ function App() {
     return () => window.removeEventListener("storage", handleStorage);
   }, [currentUser, userId]);
 
+  // Cost control: customRooms gets a *new array reference* every 30s (the
+  // workspaceNow tick → cleanWorkspacePresenceForUser → setCustomRooms),
+  // even when no member actually joined/left. If the effect below depended
+  // directly on `customRooms`, it would tear down + recreate the users
+  // onSnapshot every 30s — each re-subscribe pulls 30 full user docs.
+  // Reduce to a stable string key so we only re-subscribe when the set of
+  // target IDs actually changes.
+  const workspaceProfileTargetIdsKey = useMemo(() => {
+    if (!currentUser) return "";
+    const activeMemberIds = customRooms.flatMap((r) => r.activeMembers.map((m) => m.userId));
+    return [...new Set([...following, ...activeMemberIds])]
+      .filter((id) => id && id !== currentUser.uid)
+      .slice(0, 30)
+      .sort()
+      .join(",");
+  }, [currentUser, following, customRooms]);
+
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded || !isPageVisible) {
       return;
     }
 
-    const activeMemberIds = customRooms.flatMap((r) => r.activeMembers.map((m) => m.userId));
-    const targetIds = [...new Set([...following, ...activeMemberIds])]
-      .filter((id) => id && id !== currentUser.uid)
-      .slice(0, 30);
-
+    const targetIds = workspaceProfileTargetIdsKey ? workspaceProfileTargetIdsKey.split(",") : [];
     if (targetIds.length === 0) return;
 
     const unsubscribe = onSnapshot(
@@ -4574,7 +4595,7 @@ function App() {
     );
 
     return () => unsubscribe();
-  }, [currentUser, isWorkspaceLoaded, isPageVisible, following, customRooms]);
+  }, [currentUser, isWorkspaceLoaded, isPageVisible, workspaceProfileTargetIdsKey]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
@@ -6063,10 +6084,13 @@ function App() {
       return;
     }
 
-    const lastSyncedAt = new Date().toISOString();
     const safeAvatar = getSerializableAvatar(playerAvatar || currentUser.photoURL || "");
 
-    void saveUserProgressToCloud(db, {
+    // Build the payload first, then dedupe via JSON signature. lastSyncedAt
+    // is intentionally NOT part of the signature — otherwise every render
+    // would generate a new timestamp and defeat the dedup. The timestamp is
+    // only generated *if* we actually need to write.
+    const userProgressPayload = {
       uid: currentUser.uid,
       userId,
       displayName: playerName,
@@ -6081,28 +6105,47 @@ function App() {
       characterColor: playerCharacterColor,
       streak: studyStreak,
       determination,
-      following,
-      followers: [],
+      following: [...following].sort(),
+      followers: [] as string[],
       unlockedCharacters: [characterOptions[0].id],
       characterExp: effortExp,
-      openedWorkspaceGiftLevels,
+      openedWorkspaceGiftLevels: [...openedWorkspaceGiftLevels].sort(),
       githubId,
       githubUsername,
       contributionCount: outputStats.contributions,
-      lastSyncedAt,
-    }).catch((error) => {
-      console.info("User progress cloud sync skipped.", error);
-    });
+    };
+    const userProgressSignature = JSON.stringify(userProgressPayload);
 
-    void saveGithubActivitySummary(db, {
+    if (lastSyncedUserProgressRef.current !== userProgressSignature) {
+      lastSyncedUserProgressRef.current = userProgressSignature;
+      void saveUserProgressToCloud(db, {
+        ...userProgressPayload,
+        lastSyncedAt: new Date().toISOString(),
+      }).catch((error) => {
+        console.info("User progress cloud sync skipped.", error);
+        // Reset on failure so the next render retries.
+        lastSyncedUserProgressRef.current = "";
+      });
+    }
+
+    const githubActivityPayload = {
       userId: currentUser.uid,
       githubId,
       githubUsername,
       contributionCount: outputStats.contributions,
-      lastSyncedAt,
-    }).catch((error) => {
-      console.info("GitHub activity cloud sync skipped.", error);
-    });
+    };
+    const githubActivitySignature = JSON.stringify(githubActivityPayload);
+
+    if (lastSyncedGithubActivityRef.current !== githubActivitySignature) {
+      lastSyncedGithubActivityRef.current = githubActivitySignature;
+      void saveGithubActivitySummary(db, {
+        ...githubActivityPayload,
+        lastSyncedAt: new Date().toISOString(),
+      }).catch((error) => {
+        console.info("GitHub activity cloud sync skipped.", error);
+        lastSyncedGithubActivityRef.current = "";
+      });
+    }
   }, [
     currentTitle,
     currentUser,
