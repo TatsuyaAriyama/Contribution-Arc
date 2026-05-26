@@ -3089,8 +3089,12 @@ function App() {
   // range so we never end up with an unreadably small or huge UI.
   const UI_SCALE_MIN = 0.8;
   const UI_SCALE_MAX = 1.15;
+  // Default 0.85: at 100% the cards feel too zoomed-in on typical laptop
+  // viewports. Existing users with a stored preference keep their value;
+  // only first-time users hit this default.
+  const UI_SCALE_DEFAULT = 0.85;
   const [uiScale, setUiScale] = useState<number>(() => {
-    if (typeof window === "undefined") return 1;
+    if (typeof window === "undefined") return UI_SCALE_DEFAULT;
     try {
       const stored = window.localStorage.getItem("ca:ui-scale");
       const parsed = stored ? parseFloat(stored) : NaN;
@@ -3100,7 +3104,7 @@ function App() {
     } catch {
       /* localStorage unavailable — fall through to default */
     }
-    return 1;
+    return UI_SCALE_DEFAULT;
   });
 
   useEffect(() => {

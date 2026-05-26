@@ -10593,7 +10593,12 @@
   .two-pane-right {
     position: sticky;
     top: 92px;
-    max-height: calc(100svh - 108px);
+    /* Fixed `height` (not `max-height`) so the pane reserves the full
+       available viewport even when content is short. With `max-height`
+       the pane would shrink to its content, leaving the inner card's
+       `flex: 1` nothing to grow into and producing the "card cut off
+       mid-screen" look. */
+    height: calc(100svh - 108px);
     overflow-y: auto;
     overscroll-behavior: contain;
   }
