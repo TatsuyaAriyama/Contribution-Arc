@@ -8301,22 +8301,47 @@
   }
 }
 
-/* Shape picker (profile + settings) — mirrors the color grid layout
-   but renders a mini silhouette in each swatch instead of a color
-   chip. Sits directly below the color grid in the profile card. */
-.character-shape-grid {
+/* Customize sections — group label + grid so シルエット / カラー
+   read as separate sub-controls inside the character card. */
+.character-customize-section {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.character-customize-section-label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.character-customize-section.compact {
   gap: 8px;
 }
 
-.character-shape-grid button {
+.character-customize-section.compact .character-customize-section-label {
+  font-size: 10px;
+}
+
+/* Shape picker (profile + settings) — only two options today, so
+   each tile stretches to fill its row and uses a horizontal layout
+   (swatch + label) for easier reading. */
+.character-shape-grid {
   display: grid;
-  justify-items: center;
-  gap: 7px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.character-shape-grid button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
   min-width: 0;
-  min-height: 72px;
-  padding: 10px 8px;
+  min-height: 64px;
+  padding: 12px 16px;
   border: 1px solid rgba(var(--ink-rgb), 0.08);
   border-radius: 16px;
   background: rgba(var(--surface-rgb), 0.86);
@@ -8342,21 +8367,38 @@
   outline: 2px solid rgba(31, 111, 74, 0.18);
 }
 
+.character-shape-grid.compact button {
+  min-height: 56px;
+  padding: 10px 14px;
+  gap: 10px;
+  border-radius: 14px;
+}
+
 .character-shape-grid small {
   max-width: 100%;
   overflow: hidden;
   color: inherit;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 850;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.character-shape-grid.compact small {
+  font-size: 12px;
+}
+
 .character-shape-swatch {
   position: relative;
   display: block;
+  flex: 0 0 auto;
   width: 28px;
   height: 28px;
+}
+
+.character-shape-grid.compact .character-shape-swatch {
+  width: 24px;
+  height: 24px;
 }
 
 .character-shape-swatch.shape-default {

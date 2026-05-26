@@ -426,7 +426,7 @@ const studyColorOptions = [
    - implementing `.actor-sprite.shape-<value>` styles in App.css */
 const characterShapeOptions: { value: CharacterShape; name: string }[] = [
   { value: "default", name: "人型" },
-  { value: "ghost", name: "おばけ" },
+  { value: "ghost", name: "ゴースト" },
 ];
 
 const characterColorOptions = [
@@ -9345,7 +9345,7 @@ function App() {
 
               <div className="settings-character-color-panel">
                 <div className="settings-character-color-head">
-                  <span>分身カラー</span>
+                  <span>分身キャラクター</span>
                   <ProfileCharacterPreview
                     color={playerCharacterColor}
                     variant="simple"
@@ -9353,39 +9353,45 @@ function App() {
                   />
                 </div>
 
-                <div className="character-color-grid compact" aria-label="分身カラー">
-                  {characterColorOptions.map((color) => (
-                    <button
-                      type="button"
-                      key={color.value}
-                      className={playerCharacterColor === color.value ? "active" : ""}
-                      onClick={() => setPlayerCharacterColor(color.value)}
-                      title={color.name}
-                      aria-label={`${color.name}を選択`}
-                    >
-                      <span style={{ background: color.value }} />
-                      <small>{color.name}</small>
-                    </button>
-                  ))}
+                <div className="character-customize-section compact">
+                  <p className="character-customize-section-label">シルエット</p>
+                  <div className="character-shape-grid compact" aria-label="キャラクターの形">
+                    {characterShapeOptions.map((option) => (
+                      <button
+                        type="button"
+                        key={option.value}
+                        className={playerCharacterShape === option.value ? "active" : ""}
+                        onClick={() => setPlayerCharacterShape(option.value)}
+                        title={option.name}
+                        aria-label={`${option.name}を選択`}
+                      >
+                        <span
+                          className={`character-shape-swatch shape-${option.value}`}
+                          style={{ "--actor-color": playerCharacterColor } as CSSProperties}
+                        />
+                        <small>{option.name}</small>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                <div className="character-shape-grid compact" aria-label="キャラクターの形">
-                  {characterShapeOptions.map((option) => (
-                    <button
-                      type="button"
-                      key={option.value}
-                      className={playerCharacterShape === option.value ? "active" : ""}
-                      onClick={() => setPlayerCharacterShape(option.value)}
-                      title={option.name}
-                      aria-label={`${option.name}を選択`}
-                    >
-                      <span
-                        className={`character-shape-swatch shape-${option.value}`}
-                        style={{ "--actor-color": playerCharacterColor } as CSSProperties}
-                      />
-                      <small>{option.name}</small>
-                    </button>
-                  ))}
+                <div className="character-customize-section compact">
+                  <p className="character-customize-section-label">カラー</p>
+                  <div className="character-color-grid compact" aria-label="分身カラー">
+                    {characterColorOptions.map((color) => (
+                      <button
+                        type="button"
+                        key={color.value}
+                        className={playerCharacterColor === color.value ? "active" : ""}
+                        onClick={() => setPlayerCharacterColor(color.value)}
+                        title={color.name}
+                        aria-label={`${color.name}を選択`}
+                      >
+                        <span style={{ background: color.value }} />
+                        <small>{color.name}</small>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -10489,8 +10495,8 @@ function App() {
                   <article className="card character-color-card">
                     <div className="character-color-head">
                       <div>
-                        <p className="card-kicker">分身カラー</p>
-                        <h3>キャラクターの色と形を選択</h3>
+                        <p className="card-kicker">分身キャラクター</p>
+                        <h3>形とカラーをカスタマイズ</h3>
                       </div>
                       <ProfileCharacterPreview
                         color={playerCharacterColor}
@@ -10499,39 +10505,45 @@ function App() {
                       />
                     </div>
 
-                    <div className="character-color-grid" aria-label="分身カラー">
-                      {characterColorOptions.map((color) => (
-                        <button
-                          type="button"
-                          key={color.value}
-                          className={playerCharacterColor === color.value ? "active" : ""}
-                          onClick={() => setPlayerCharacterColor(color.value)}
-                          title={color.name}
-                          aria-label={`${color.name}を選択`}
-                        >
-                          <span style={{ background: color.value }} />
-                          <small>{color.name}</small>
-                        </button>
-                      ))}
+                    <div className="character-customize-section">
+                      <p className="character-customize-section-label">シルエット</p>
+                      <div className="character-shape-grid" aria-label="キャラクターの形">
+                        {characterShapeOptions.map((option) => (
+                          <button
+                            type="button"
+                            key={option.value}
+                            className={playerCharacterShape === option.value ? "active" : ""}
+                            onClick={() => setPlayerCharacterShape(option.value)}
+                            title={option.name}
+                            aria-label={`${option.name}を選択`}
+                          >
+                            <span
+                              className={`character-shape-swatch shape-${option.value}`}
+                              style={{ "--actor-color": playerCharacterColor } as CSSProperties}
+                            />
+                            <small>{option.name}</small>
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
-                    <div className="character-shape-grid" aria-label="キャラクターの形">
-                      {characterShapeOptions.map((option) => (
-                        <button
-                          type="button"
-                          key={option.value}
-                          className={playerCharacterShape === option.value ? "active" : ""}
-                          onClick={() => setPlayerCharacterShape(option.value)}
-                          title={option.name}
-                          aria-label={`${option.name}を選択`}
-                        >
-                          <span
-                            className={`character-shape-swatch shape-${option.value}`}
-                            style={{ "--actor-color": playerCharacterColor } as CSSProperties}
-                          />
-                          <small>{option.name}</small>
-                        </button>
-                      ))}
+                    <div className="character-customize-section">
+                      <p className="character-customize-section-label">カラー</p>
+                      <div className="character-color-grid" aria-label="分身カラー">
+                        {characterColorOptions.map((color) => (
+                          <button
+                            type="button"
+                            key={color.value}
+                            className={playerCharacterColor === color.value ? "active" : ""}
+                            onClick={() => setPlayerCharacterColor(color.value)}
+                            title={color.name}
+                            aria-label={`${color.name}を選択`}
+                          >
+                            <span style={{ background: color.value }} />
+                            <small>{color.name}</small>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </article>
 
