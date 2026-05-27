@@ -20822,6 +20822,67 @@ a[role="button"],
   max-width: 38ch;
 }
 
+/* Daily feed-post bonus block sits inside the shop header card.
+   Surfaces *how* to earn Arc inside the app so users know the
+   currency isn't only purchasable. Progress bar fills toward the
+   500-Arc lifetime cap. */
+.shop-feed-bonus {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 12px 14px;
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
+  border-radius: 12px;
+  background: linear-gradient(
+    180deg,
+    rgba(31, 111, 74, 0.06) 0%,
+    rgba(var(--surface-rgb), 0.6) 100%
+  );
+}
+
+.shop-feed-bonus-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.shop-feed-bonus-head strong {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.shop-feed-bonus-amount {
+  font-size: 12px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--green);
+}
+
+.shop-feed-bonus-copy {
+  margin: 0;
+  color: rgba(var(--ink-rgb), 0.7);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.shop-feed-bonus-bar {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(var(--ink-rgb), 0.08);
+  overflow: hidden;
+}
+
+.shop-feed-bonus-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--green), var(--green-hover));
+  transition: width 280ms ease;
+}
+
 .shop-balance {
   display: flex;
   flex-direction: column;
