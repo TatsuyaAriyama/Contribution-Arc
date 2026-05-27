@@ -8799,80 +8799,71 @@
    sits behind via ::after to give a subtle premium aura that picks up
    the actor's color. Eyes are smaller ovals with a pinpoint highlight
    so they read as "alive" rather than two dots. */
+/* Ghost — friendly white spectre with a tilted top hat, kawaii face,
+   and small arm nubs. Inspired by the user-provided reference: round
+   white body with a 3-lobe flowing hem, two dot eyes, a small wavy
+   mouth, and a dark brown silk hat tipped to the right. The body is
+   white so the silhouette reads as a classic ghost; the user's
+   --actor-color sits behind as a soft glowing aura so each player is
+   still distinguishable in a crowded room.
+
+   Compositing:
+     ::after  → blurred actor-color aura, sits behind everything
+     ::before → solid white body (clip-path wavy hem) with shading
+     .sprite-eye-*           → two black dot eyes
+     .sprite-ghost-mouth     → SVG `〜` shape mouth
+     .sprite-ghost-arm-*     → small white side nubs
+     .sprite-ghost-hat       → brown silk top hat (crown + brim + band)
+
+   Motion: a combined bob-and-roll loop on .actor-sprite.shape-ghost
+   itself replaces the old separate float/sway pair. Vertical bob plus
+   a ±3° rotation makes the whole sprite feel airborne instead of
+   stuck to a single point. */
 .actor-sprite.shape-ghost {
   border-radius: 0;
   background: transparent;
   box-shadow: none;
   overflow: visible;
-  animation: workspace-ghost-float 4.2s cubic-bezier(0.42, 0, 0.58, 1) infinite;
+  animation: workspace-ghost-float 4.2s ease-in-out infinite;
 }
 
-/* Soft outer aura — a blurred, color-tinted copy of the silhouette
-   sitting behind the crisp body. Picks up --actor-color so each user's
-   hue radiates softly around them. */
 .actor-sprite.shape-ghost::after {
   content: "";
   position: absolute;
   z-index: 0;
-  inset: -12px -7px -4px -7px;
+  inset: -14px -10px -6px -10px;
   background: var(--actor-color);
   opacity: 0.32;
-  filter: blur(10px);
+  filter: blur(14px);
   pointer-events: none;
-  clip-path: polygon(
-    50% 0%,
-    62% 1%, 74% 3.5%, 84% 8.5%, 91% 16%, 96% 26%, 99% 38%, 100% 50%,
-    100% 78%,
-    97% 86%, 92% 92%, 86% 96%, 80% 98%,
-    74% 95%, 70% 90%, 65% 88%,
-    60% 90%, 55% 95%, 50% 98%, 45% 95%, 40% 90%,
-    35% 88%, 30% 90%, 26% 95%, 20% 98%,
-    14% 96%, 8% 92%, 3% 86%, 0% 78%,
-    0% 50%, 1% 38%, 4% 26%, 9% 16%, 16% 8.5%, 26% 3.5%, 38% 1%
-  );
+  border-radius: 50% 50% 45% 45%;
 }
 
 .actor-sprite.shape-ghost::before {
   content: "";
   position: absolute;
   z-index: 1;
-  inset: -6px -3px -2px -3px;
+  inset: -4px -3px -2px -3px;
   background:
-    /* Top dome highlight — soft bloom near the head */
+    /* Subtle top sheen so the body reads volumetric, not flat */
     radial-gradient(
-      ellipse 64% 36% at 50% 18%,
-      rgba(255, 255, 255, 0.34) 0%,
-      rgba(255, 255, 255, 0) 64%
-    ),
-    /* Interior bottom shading — sits the body on its hem */
-    radial-gradient(
-      ellipse 90% 30% at 50% 96%,
-      rgba(0, 0, 0, 0.22) 0%,
-      rgba(0, 0, 0, 0) 68%
-    ),
-    /* Subtle vertical sheen so the body reads with depth */
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.18) 0%,
-      rgba(255, 255, 255, 0) 30%,
-      rgba(0, 0, 0, 0) 68%,
-      rgba(0, 0, 0, 0.16) 100%
-    ),
-    var(--actor-color);
+      ellipse 60% 32% at 50% 22%,
+      rgba(255, 255, 255, 1) 0%,
+      rgba(248, 250, 252, 1) 60%,
+      rgba(232, 238, 244, 1) 100%
+    );
   clip-path: polygon(
     50% 0%,
     62% 1%, 74% 3.5%, 84% 8.5%, 91% 16%, 96% 26%, 99% 38%, 100% 50%,
-    100% 78%,
-    97% 86%, 92% 92%, 86% 96%, 80% 98%,
-    74% 95%, 70% 90%, 65% 88%,
-    60% 90%, 55% 95%, 50% 98%, 45% 95%, 40% 90%,
-    35% 88%, 30% 90%, 26% 95%, 20% 98%,
-    14% 96%, 8% 92%, 3% 86%, 0% 78%,
+    100% 76%,
+    96% 86%, 88% 95%, 78% 100%,
+    70% 92%, 62% 98%, 50% 90%, 38% 98%, 30% 92%,
+    22% 100%, 12% 95%, 4% 86%, 0% 76%,
     0% 50%, 1% 38%, 4% 26%, 9% 16%, 16% 8.5%, 26% 3.5%, 38% 1%
   );
   filter:
-    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.22))
-    drop-shadow(0 10px 18px rgba(0, 0, 0, 0.2));
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.6))
+    drop-shadow(0 8px 14px rgba(0, 0, 0, 0.18));
 }
 
 .actor-sprite.shape-ghost .sprite-body,
@@ -8881,24 +8872,17 @@
   display: none;
 }
 
-/* Smaller, slightly oval eyes with a pinpoint catchlight. Reads as
-   refined and "alive" instead of two solid dots. */
+/* Cute round dot eyes — no catchlight, no oval. Matches the chibi
+   reference image. */
 .actor-sprite.shape-ghost .sprite-eye {
   position: absolute;
-  top: 42%;
-  z-index: 3;
-  width: 11%;
-  height: 14%;
+  top: 44%;
+  z-index: 4;
+  width: 9%;
+  height: 12%;
   border-radius: 50%;
-  background:
-    radial-gradient(
-      circle at 28% 28%,
-      rgba(255, 255, 255, 0.95) 0%,
-      rgba(255, 255, 255, 0.85) 14%,
-      rgba(255, 255, 255, 0) 22%
-    ),
-    #0a0e0c;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  background: #1a1a1a;
+  box-shadow: none;
 }
 
 .actor-sprite.shape-ghost .sprite-eye-left {
@@ -8907,6 +8891,92 @@
 
 .actor-sprite.shape-ghost .sprite-eye-right {
   right: 30%;
+}
+
+/* Wavy `〜` mouth rendered as an inline SVG so the curves stay crisp
+   at any scale. Centered below the eyes. */
+.actor-sprite.shape-ghost .sprite-ghost-mouth {
+  position: absolute;
+  z-index: 4;
+  top: 60%;
+  left: 50%;
+  width: 36%;
+  height: 12%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  overflow: visible;
+}
+
+/* Side arm nubs — small white rounded stubs poking out the body.
+   Slightly offset downward so they sit at "waist" level relative to
+   the face. Tilted outward to read as little hands. */
+.actor-sprite.shape-ghost .sprite-ghost-arm {
+  position: absolute;
+  z-index: 2;
+  top: 58%;
+  width: 10px;
+  height: 9px;
+  border-radius: 60% 60% 60% 60% / 50% 50% 80% 80%;
+  background: #fff;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.12));
+}
+
+.actor-sprite.shape-ghost .sprite-ghost-arm-left {
+  left: -7px;
+  transform: rotate(-28deg);
+}
+
+.actor-sprite.shape-ghost .sprite-ghost-arm-right {
+  right: -7px;
+  transform: rotate(28deg);
+}
+
+/* Tilted silk top hat — three stacked elements (crown + brim + band)
+   give it a real silhouette with a visible side. Sits on the right
+   side of the head and rocks slightly through the float animation. */
+.actor-sprite.shape-ghost .sprite-ghost-hat {
+  position: absolute;
+  z-index: 5;
+  top: -16px;
+  right: 1px;
+  width: 22px;
+  height: 22px;
+  transform: rotate(18deg);
+  transform-origin: 50% 100%;
+  pointer-events: none;
+}
+
+.actor-sprite.shape-ghost .sprite-ghost-hat-crown {
+  position: absolute;
+  top: 0;
+  left: 4px;
+  width: 14px;
+  height: 16px;
+  border-radius: 3px 3px 1px 1px;
+  background: linear-gradient(180deg, #5b3924 0%, #432516 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset -2px 0 0 rgba(0, 0, 0, 0.25);
+}
+
+.actor-sprite.shape-ghost .sprite-ghost-hat-brim {
+  position: absolute;
+  top: 14px;
+  left: 0;
+  width: 22px;
+  height: 4px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #4a2a18 0%, #2f1a0e 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.actor-sprite.shape-ghost .sprite-ghost-hat-band {
+  position: absolute;
+  top: 11px;
+  left: 4px;
+  width: 14px;
+  height: 2.5px;
+  background: #2a160c;
 }
 
 /* When ghost shape is combined with the legacy .is-tsuta tone,
@@ -8922,35 +8992,19 @@
   display: none;
 }
 
+/* Combined bob + roll. The vertical lift sells the airborne feel;
+   the ±3° roll keeps the sprite from looking pinned. Whole-sprite
+   transform means the hat / arms / mouth all rock together, like
+   the figure is one floating object instead of separately animated
+   parts. */
 @keyframes workspace-ghost-float {
   0%,
   100% {
-    transform: translateY(0);
+    transform: translateY(0) rotate(-2.5deg);
   }
   50% {
-    transform: translateY(-3px);
+    transform: translateY(-6px) rotate(2.5deg);
   }
-}
-
-/* Occasional "alive" gestures while studying — the body leans
-   slowly to the side once per ~22s cycle (most of the cycle is
-   the baseline pose), and the eyes blink + glance sideways once
-   per ~18s cycle. Both animations pause when the actor is on
-   break, since a resting ghost shouldn't be looking around.
-   nth-child delays stagger multiple ghosts so a roomful never
-   blinks in unison — that would feel uncanny. */
-
-.workspace-actor:not(.is-resting) .actor-sprite.shape-ghost::before {
-  animation: workspace-ghost-sway 22s ease-in-out infinite;
-  transform-origin: 50% 78%;
-}
-
-.workspace-actor:not(.is-resting):nth-child(3n) .actor-sprite.shape-ghost::before {
-  animation-delay: -7s;
-}
-
-.workspace-actor:not(.is-resting):nth-child(3n + 1) .actor-sprite.shape-ghost::before {
-  animation-delay: -14s;
 }
 
 .workspace-actor:not(.is-resting) .actor-sprite.shape-ghost .sprite-eye {
@@ -8964,23 +9018,6 @@
 
 .workspace-actor:not(.is-resting):nth-child(3n + 1) .actor-sprite.shape-ghost .sprite-eye {
   animation-delay: -6s;
-}
-
-@keyframes workspace-ghost-sway {
-  0%,
-  82%,
-  100% {
-    transform: rotate(0deg);
-  }
-  87% {
-    transform: rotate(-5deg);
-  }
-  91% {
-    transform: rotate(5deg);
-  }
-  95% {
-    transform: rotate(-2deg);
-  }
 }
 
 @keyframes workspace-ghost-eye-life {
@@ -9009,7 +9046,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .actor-sprite.shape-ghost,
-  .workspace-actor:not(.is-resting) .actor-sprite.shape-ghost::before,
   .workspace-actor:not(.is-resting) .actor-sprite.shape-ghost .sprite-eye {
     animation: none;
   }
