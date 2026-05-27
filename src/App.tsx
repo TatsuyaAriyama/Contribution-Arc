@@ -230,8 +230,11 @@ type RoomUserStatus = "working" | "deep-work" | "on-break";
 
 /* Sprite silhouette. Defaults to the original humanoid shape;
    "ghost" is the floating soul shape (body only, wavy hem,
-   gentle vertical bob). New shapes can be added here. */
-type CharacterShape = "default" | "ghost";
+   gentle vertical bob); "owl" is the night-owl companion
+   (round head with ear tufts, big amber eyes, beak; ground-hops
+   instead of walks; ambient ~270° head turn). New shapes can be
+   added here. */
+type CharacterShape = "default" | "ghost" | "owl";
 
 type RoomUser = {
   id: string;
@@ -427,6 +430,7 @@ const studyColorOptions = [
 const characterShapeOptions: { value: CharacterShape; name: string }[] = [
   { value: "default", name: "人型" },
   { value: "ghost", name: "ゴースト" },
+  { value: "owl", name: "フクロウ" },
 ];
 
 const characterColorOptions = [
@@ -1165,7 +1169,7 @@ function getSafeCharacterColor(color: string | undefined): string {
 /* Allow-list guard for character shape. Anything outside the known
    set (including legacy `undefined` from older profile docs) falls
    back to "default" — the original humanoid silhouette. */
-const CHARACTER_SHAPES: readonly CharacterShape[] = ["default", "ghost"];
+const CHARACTER_SHAPES: readonly CharacterShape[] = ["default", "ghost", "owl"];
 function getSafeCharacterShape(shape: unknown): CharacterShape {
   return typeof shape === "string" && (CHARACTER_SHAPES as readonly string[]).includes(shape)
     ? (shape as CharacterShape)
@@ -1759,16 +1763,33 @@ function ProfileCharacterPreview({
   shape?: CharacterShape;
 }) {
   const isGhost = shape === "ghost";
+  const isOwl = shape === "owl";
+  const isCustomShape = isGhost || isOwl;
   return (
     <div
       className={`profile-character-preview${variant === "simple" ? " is-simple" : ""}${
         isGhost ? " is-ghost" : ""
-      }`}
+      }${isOwl ? " is-owl" : ""}`}
       style={{ "--actor-color": color || characterColorOptions[0].value } as CSSProperties}
       aria-hidden="true"
     >
-      <span className={`actor-sprite deep shape-${shape} ${isGhost ? "" : "is-tsuta"}`}>
-        {isGhost ? (
+      <span className={`actor-sprite deep shape-${shape} ${isCustomShape ? "" : "is-tsuta"}`}>
+        {isOwl ? (
+          <>
+            <span className="sprite-head">
+              <span className="sprite-tuft sprite-tuft-left" />
+              <span className="sprite-tuft sprite-tuft-right" />
+              <span className="sprite-owl-eye sprite-owl-eye-left" />
+              <span className="sprite-owl-eye sprite-owl-eye-right" />
+              <span className="sprite-beak" />
+            </span>
+            <span className="sprite-body" />
+            <span className="sprite-wing sprite-wing-left" />
+            <span className="sprite-wing sprite-wing-right" />
+            <span className="sprite-leg sprite-leg-left" />
+            <span className="sprite-leg sprite-leg-right" />
+          </>
+        ) : isGhost ? (
           <>
             <span className="sprite-body" />
             <span className="sprite-eye sprite-eye-left" />

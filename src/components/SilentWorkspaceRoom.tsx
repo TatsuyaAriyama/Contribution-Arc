@@ -12,7 +12,7 @@ export type RoomActivityItem = {
 
 type RoomActorStatus = "working" | "deep-work" | "on-break";
 
-export type CharacterShape = "default" | "ghost";
+export type CharacterShape = "default" | "ghost" | "owl";
 
 export type RoomActor = {
   id: string;
@@ -357,6 +357,22 @@ export function SilentWorkspaceRoom({
                   <span className="sprite-eye sprite-eye-left" />
                   <span className="sprite-eye sprite-eye-right" />
                   <span className="sprite-tail" />
+                  {/* Owl-only parts. Rendered only when the owl shape
+                      is active so the head-turn animation has a target
+                      to drive without affecting other silhouettes. */}
+                  {member.characterShape === "owl" ? (
+                    <>
+                      <span className="sprite-head">
+                        <span className="sprite-tuft sprite-tuft-left" />
+                        <span className="sprite-tuft sprite-tuft-right" />
+                        <span className="sprite-owl-eye sprite-owl-eye-left" />
+                        <span className="sprite-owl-eye sprite-owl-eye-right" />
+                        <span className="sprite-beak" />
+                      </span>
+                      <span className="sprite-wing sprite-wing-left" />
+                      <span className="sprite-wing sprite-wing-right" />
+                    </>
+                  ) : null}
                 </span>
                 <span className="actor-name">{member.name}</span>
                 <span className="actor-task">
