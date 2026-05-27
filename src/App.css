@@ -2927,16 +2927,25 @@
 }
 
 /* "Now" panel — the focused live-activity strip that replaces the
-   5-tile grid (Room / Working on / Stay / Today / Connection).
-   One row: task on top, room + stay duration on the bottom line. */
+   5-tile grid. Left column: task + room/stay context. Right column:
+   today's EXP, kept because the room-exit EXP moment is one of the
+   small celebratory beats worth preserving. */
 .member-profile-now {
-  display: grid;
-  gap: 8px;
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
   padding: 14px 16px;
   border: 1px solid rgba(var(--ink-rgb), 0.08);
   border-radius: 18px;
   background: rgba(var(--surface-rgb), 0.72);
   box-shadow: inset 0 1px 0 rgba(var(--surface-rgb), 0.84);
+}
+
+.member-profile-now-main {
+  display: grid;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .member-profile-now-label {
@@ -2982,6 +2991,56 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* EXP pill — soft green chip on the right side of the now panel.
+   Tabular numerals so the rolling count stays steady, a faint
+   green tint so it reads as positive without dominating. */
+.member-profile-now-exp {
+  display: grid;
+  align-content: center;
+  justify-items: end;
+  gap: 4px;
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(31, 111, 74, 0.08);
+  box-shadow: inset 0 1px 0 rgba(var(--surface-rgb), 0.6);
+}
+
+.member-profile-now-exp-label {
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.member-profile-now-exp strong {
+  color: #1f6f4a;
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .member-profile-now-exp {
+  background: rgba(74, 222, 128, 0.1);
+}
+
+[data-theme="dark"] .member-profile-now-exp strong {
+  color: #6ee7a1;
+}
+
+@media (max-width: 480px) {
+  .member-profile-now {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .member-profile-now-exp {
+    justify-items: start;
+  }
 }
 
 .profile-resolve-panel {

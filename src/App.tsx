@@ -7837,17 +7837,23 @@ function App() {
         </div>
 
         <section className="member-profile-now" aria-label="いまの活動">
-          <span className="member-profile-now-label">いま</span>
-          <div className="member-profile-now-body">
-            <strong>
-              <i style={{ background: member.color }} />
-              {member.building}
-            </strong>
-            <small>
-              {memberRoom?.name || "Silent Workspace"}
-              {" · 滞在 "}
-              {formatStayTime(elapsedMinutes)}
-            </small>
+          <div className="member-profile-now-main">
+            <span className="member-profile-now-label">いま</span>
+            <div className="member-profile-now-body">
+              <strong>
+                <i style={{ background: member.color }} />
+                {member.building}
+              </strong>
+              <small>
+                {memberRoom?.name || "Silent Workspace"}
+                {" · 滞在 "}
+                {formatStayTime(elapsedMinutes)}
+              </small>
+            </div>
+          </div>
+          <div className="member-profile-now-exp" aria-label="今日獲得したEXP">
+            <span className="member-profile-now-exp-label">今日</span>
+            <strong>+{getRoomSessionExp(elapsedMinutes)} EXP</strong>
           </div>
         </section>
 
