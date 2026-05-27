@@ -9732,7 +9732,15 @@ function App() {
                           <span
                             className={`character-shape-swatch shape-${option.value}`}
                             style={{ "--actor-color": playerCharacterColor } as CSSProperties}
-                          />
+                          >
+                            {option.value === "owl" ? (
+                              <>
+                                <span className="swatch-owl-beak" />
+                                <span className="swatch-owl-foot swatch-owl-foot-left" />
+                                <span className="swatch-owl-foot swatch-owl-foot-right" />
+                              </>
+                            ) : null}
+                          </span>
                           {isLocked ? (
                             <span className="character-shape-lock" aria-hidden="true">
                               🔒
@@ -10986,7 +10994,15 @@ function App() {
                               <span
                                 className={`character-shape-swatch shape-${option.value}`}
                                 style={{ "--actor-color": playerCharacterColor } as CSSProperties}
-                              />
+                              >
+                                {option.value === "owl" ? (
+                                  <>
+                                    <span className="swatch-owl-beak" />
+                                    <span className="swatch-owl-foot swatch-owl-foot-left" />
+                                    <span className="swatch-owl-foot swatch-owl-foot-right" />
+                                  </>
+                                ) : null}
+                              </span>
                               {isLocked ? (
                                 <span className="character-shape-lock" aria-hidden="true">
                                   🔒
