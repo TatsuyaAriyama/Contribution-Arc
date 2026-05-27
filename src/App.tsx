@@ -509,6 +509,7 @@ const legacyWorkspaceRoomsCollectionName = "workspaceRooms";
 const betaWorkspaceRoomId = "beta-room";
 const legacyDeepWorkStudioRoomId = "deep-work-studio";
 const minaUserId = "npc-mina";
+const nishimiyaUserId = "npc-nishimiya";
 const maxWorkspacePresenceMinutes = 12 * 60;
 const onboardingMessage = "ようこそContribution Arcへ";
 const workspacePresenceResetVersion = "2026-05-20-clear-stuck-presence";
@@ -2158,6 +2159,36 @@ function createMinaMember(joinedAt: Date, nowMs: number, status: RoomUserStatus)
   });
 }
 
+function createNishimiyaMember(joinedAt: Date, nowMs: number, status: RoomUserStatus): WorkspaceMember {
+  const joinedAtMs = joinedAt.getTime();
+  const activeMinutes = Math.max(0, Math.floor((nowMs - joinedAtMs) / 60000));
+  const isOnBreak = status === "on-break";
+  // Slightly different cycle lengths from Mina so the two NPCs don't pulse
+  // their break states in sync — keeps the room feeling human-paced.
+  const activeStartedAt = new Date(nowMs - Math.max(1, activeMinutes % 42) * 60000).toISOString();
+  const breakStartedAt = isOnBreak ? new Date(nowMs - Math.max(1, activeMinutes % 9) * 60000).toISOString() : "";
+
+  return createWorkspaceMember({
+    id: nishimiyaUserId,
+    userId: nishimiyaUserId,
+    name: "Nishimiya",
+    avatar: "",
+    // Bright yellow-green (黄緑). Not part of the palette dropdown, but
+    // sprite colors are free-form hex per member.
+    characterColor: "#9ccc65",
+    x: 38,
+    y: 64,
+    currentTask: "コードを書く",
+    color: "#9ccc65",
+    joinedAt: joinedAt.toISOString(),
+    activeStartedAt,
+    accumulatedActiveMinutes: isOnBreak ? Math.max(0, activeMinutes - (activeMinutes % 9)) : 0,
+    breakStartedAt,
+    status,
+    tone: "green",
+  });
+}
+
 function getScheduledMinaMember(nowMs: number): WorkspaceMember | null {
   const now = new Date(nowMs);
   const hour = now.getHours();
@@ -2193,10 +2224,50 @@ function getScheduledMinaMember(nowMs: number): WorkspaceMember | null {
   return null;
 }
 
+function getScheduledNishimiyaMember(nowMs: number): WorkspaceMember | null {
+  const now = new Date(nowMs);
+  const hour = now.getHours();
+
+  // Slightly later wake window than Mina (Mina is 07-24) so the two NPCs
+  // overlap but aren't always co-present.
+  if (hour < 9 || hour >= 26) {
+    return null;
+  }
+
+  const dayStart = new Date(now);
+  dayStart.setHours(9, 0, 0, 0);
+  const dayEnd = new Date(now);
+  dayEnd.setHours(24, 0, 0, 0);
+
+  const dateKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+  const random = seededRandom(getStableHash(`nishimiya-room-${dateKey}`));
+  let cursor = dayStart.getTime() + Math.floor(random() * 95) * 60000;
+
+  while (cursor < dayEnd.getTime()) {
+    // Slightly shorter focus blocks than Mina so Nishimiya breaks more often.
+    const durationMinutes = 55 + Math.floor(random() * 80);
+    const sessionEnd = cursor + durationMinutes * 60000;
+
+    if (nowMs >= cursor && nowMs < sessionEnd) {
+      const elapsedMinutes = Math.floor((nowMs - cursor) / 60000);
+      const cycleMinutes = elapsedMinutes % 50;
+      const status: RoomUserStatus = cycleMinutes >= 38 && cycleMinutes < 47 ? "on-break" : "working";
+      return createNishimiyaMember(new Date(cursor), nowMs, status);
+    }
+
+    const breakMinutes = 25 + Math.floor(random() * 110);
+    cursor = sessionEnd + breakMinutes * 60000;
+  }
+
+  return null;
+}
+
 function isScheduledWorkspaceNpc(member: Pick<WorkspaceMember, "userId" | "id" | "name">) {
   return (
     member.userId === minaUserId ||
     member.id === minaUserId ||
+    member.userId === nishimiyaUserId ||
+    member.id === nishimiyaUserId ||
     member.userId === "npc-deta" ||
     member.id === "npc-deta" ||
     member.userId === "npc-ari" ||
@@ -2236,21 +2307,60 @@ function getScheduledMinaRoomId(rooms: WorkspaceRoom[], nowMs: number) {
   return sortedRooms[roomIndex]?.id || "";
 }
 
-function applyScheduledWorkspacePresence(room: WorkspaceRoom, nowMs: number, scheduledRoomId: string): WorkspaceRoom {
+function getScheduledNishimiyaRoomId(rooms: WorkspaceRoom[], nowMs: number) {
+  const nishimiyaMember = getScheduledNishimiyaMember(nowMs);
+  if (!nishimiyaMember) {
+    return "";
+  }
+
+  const candidateRooms = rooms.filter((room) => !isLegacyWorkspaceRoom(room));
+  if (candidateRooms.length === 0) {
+    return "";
+  }
+
+  const sortedRooms = [...candidateRooms].sort((a, b) => a.id.localeCompare(b.id));
+  const now = new Date(nowMs);
+  // Same 90-minute rotation cadence as Mina, but a different seed string
+  // so Nishimiya often picks a different room — and a shifted minute
+  // floor so the rotation boundaries don't align exactly with Mina's.
+  const roomRotationKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${Math.floor(
+    (now.getHours() * 60 + now.getMinutes() + 45) / 90,
+  )}`;
+  const roomIndex = getStableHash(`nishimiya-room-choice-${roomRotationKey}`) % sortedRooms.length;
+  return sortedRooms[roomIndex]?.id || "";
+}
+
+function applyScheduledWorkspacePresence(
+  room: WorkspaceRoom,
+  nowMs: number,
+  scheduledMinaRoomId: string,
+  scheduledNishimiyaRoomId: string,
+): WorkspaceRoom {
   const activeMembers = Array.isArray(room.activeMembers) ? room.activeMembers : [];
   const nextActiveMembers = activeMembers.filter((member) => member && !isScheduledWorkspaceNpc(member));
 
-  if (!scheduledRoomId || room.id !== scheduledRoomId) {
+  const isMinaRoom = scheduledMinaRoomId && room.id === scheduledMinaRoomId;
+  const isNishimiyaRoom = scheduledNishimiyaRoomId && room.id === scheduledNishimiyaRoomId;
+
+  if (!isMinaRoom && !isNishimiyaRoom) {
     return nextActiveMembers.length === activeMembers.length
       ? room
       : normalizeWorkspaceRoom({ ...room, activeMembers: nextActiveMembers });
   }
 
-  const minaMember = getScheduledMinaMember(nowMs);
+  const injected = [...nextActiveMembers];
+  if (isMinaRoom) {
+    const minaMember = getScheduledMinaMember(nowMs);
+    if (minaMember) injected.unshift(minaMember);
+  }
+  if (isNishimiyaRoom) {
+    const nishimiyaMember = getScheduledNishimiyaMember(nowMs);
+    if (nishimiyaMember) injected.unshift(nishimiyaMember);
+  }
 
   return {
     ...room,
-    activeMembers: minaMember ? [minaMember, ...nextActiveMembers] : nextActiveMembers,
+    activeMembers: injected,
   };
 }
 
@@ -5341,8 +5451,11 @@ function App() {
     .map(normalizeWorkspaceRoom)
     .filter((room) => !isLegacyWorkspaceRoom(room));
   const scheduledMinaRoomId = getScheduledMinaRoomId(baseWorkspaceRooms, workspaceNow);
+  const scheduledNishimiyaRoomId = getScheduledNishimiyaRoomId(baseWorkspaceRooms, workspaceNow);
   const allWorkspaceRooms = baseWorkspaceRooms.map((room) =>
-    normalizeWorkspaceRoom(applyScheduledWorkspacePresence(room, workspaceNow, scheduledMinaRoomId)),
+    normalizeWorkspaceRoom(
+      applyScheduledWorkspacePresence(room, workspaceNow, scheduledMinaRoomId, scheduledNishimiyaRoomId),
+    ),
   );
   const selectedRoom = allWorkspaceRooms.find((room) => room.id === selectedRoomId) || allWorkspaceRooms[0];
   const currentBuilding = workspaceTask.trim() || studySubject.trim() || "Deep work";
