@@ -21101,6 +21101,64 @@ a[role="button"],
   background: rgba(var(--ink-rgb), 0.1);
 }
 
+.arc-pack-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 16px;
+  text-align: center;
+  position: relative;
+}
+
+.arc-pack-amount {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 22px;
+  letter-spacing: 0.5px;
+}
+
+.arc-pack-amount strong {
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.arc-pack-amount-unit {
+  font-size: 12px;
+  opacity: 0.6;
+  letter-spacing: 0.08em;
+}
+
+.arc-pack-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(var(--ink-rgb), 0.06);
+  color: rgba(var(--ink-rgb), 0.7);
+}
+
+.arc-pack-status {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.arc-pack-status-error {
+  background: rgba(180, 70, 70, 0.08);
+  color: #b04646;
+}
+
+.arc-pack-status-success {
+  background: rgba(70, 140, 90, 0.08);
+  color: #2f7a4a;
+}
+
 .shop-product-owned {
   display: inline-flex;
   align-items: center;

@@ -35,5 +35,25 @@ contextBridge.exposeInMainWorld(
 
       return ipcRenderer.invoke("contribution-arc:notify", { title, body });
     },
+    iap: Object.freeze({
+      canMakePayments: () =>
+        ipcRenderer.invoke("contribution-arc:iap-can-make-payments"),
+      getProducts: (productIds) =>
+        ipcRenderer.invoke("contribution-arc:iap-get-products", productIds),
+      purchase: (productId) =>
+        ipcRenderer.invoke("contribution-arc:iap-purchase", productId),
+      finalize: (transactionDate) =>
+        ipcRenderer.invoke("contribution-arc:iap-finalize", transactionDate),
+      onTransaction: (callback) => {
+        if (typeof callback !== "function") {
+          return () => {};
+        }
+        const listener = (_event, payload) => callback(payload);
+        ipcRenderer.on("contribution-arc:iap-transaction", listener);
+        return () => {
+          ipcRenderer.removeListener("contribution-arc:iap-transaction", listener);
+        };
+      },
+    }),
   }),
 );

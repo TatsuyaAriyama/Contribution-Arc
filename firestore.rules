@@ -248,6 +248,14 @@ service cloud.firestore {
         && resource.data.userId == request.auth.uid;
     }
 
+    // IAP レシート検証で書き込まれる重複防止レコード。
+    // クライアントからの読み書きは一切禁止し、Cloud Functions
+    // (admin SDK) のみがアクセスできる。admin SDK はルールを
+    // バイパスするので、明示的に deny しておくのが安全。
+    match /processedTransactions/{transactionId} {
+      allow read, write: if false;
+    }
+
     match /friendRequests/{requestId} {
       allow read: if signedIn()
         && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);

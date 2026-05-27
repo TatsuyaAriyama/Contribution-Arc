@@ -54,6 +54,7 @@
       "output": "release",
       "buildResources": "build"
     },
+    "afterPack": "build/afterPack.cjs",
     "mac": {
       "category": "public.app-category.productivity",
       "icon": "assets/icon.icns",
@@ -80,13 +81,16 @@
       "category": "public.app-category.productivity",
       "icon": "assets/icon.icns",
       "type": "distribution",
-      "identity": "3rd Party Mac Developer Application: Tatsuya Ariyama (SZ343VGXTL)",
+      "identity": "ariyama tatsuya (SZ343VGXTL)",
       "entitlements": "build/entitlements.mas.plist",
       "entitlementsInherit": "build/entitlements.mas.inherit.plist",
       "entitlementsLoginHelper": "build/entitlements.mas.loginhelper.plist",
       "provisioningProfile": "build/ContributionArc.provisionprofile",
       "hardenedRuntime": false,
       "gatekeeperAssess": false,
+      "extendInfo": {
+        "ITSAppUsesNonExemptEncryption": false
+      },
       "artifactName": "Contribution-Arc-${version}-mas-${arch}.${ext}"
     },
     "win": {

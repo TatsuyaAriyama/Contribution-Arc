@@ -89,6 +89,7 @@ import {
 import { fetchGithubContributions, type GithubContributions } from "./services/githubContributions";
 import { type AppView, type FriendPreview, type LiveActivity } from "./components/PremiumNavigation";
 import { SilentWorkspaceRoom, type RoomActivityItem } from "./components/SilentWorkspaceRoom";
+import { ArcPurchasePanel } from "./components/ArcPurchasePanel";
 import { ShareToXModal } from "./components/ShareToXModal";
 import { TutorialHint } from "./components/TutorialHint";
 import { ToastHost } from "./components/ToastHost";
@@ -108,6 +109,34 @@ declare global {
       };
       onOpenSettings?: (callback: () => void) => () => void;
       notify?: (payload: { title: string; body: string }) => Promise<boolean>;
+      iap?: {
+        canMakePayments: () => Promise<boolean>;
+        getProducts: (productIds: string[]) => Promise<
+          Array<{
+            productIdentifier: string;
+            localizedTitle: string;
+            localizedDescription: string;
+            formattedPrice: string;
+            price: number;
+            currencyCode: string | null;
+          }>
+        >;
+        purchase: (productId: string) => Promise<{
+          ok: boolean;
+          reason: string | null;
+        }>;
+        finalize: (transactionDate: string) => Promise<boolean>;
+        onTransaction: (
+          callback: (payload: {
+            kind: "completed" | "failed";
+            productId: string | null;
+            transactionIdentifier?: string | null;
+            transactionDate?: string | null;
+            receiptBase64?: string | null;
+            errorMessage?: string;
+          }) => void,
+        ) => () => void;
+      };
     };
   }
 }
@@ -494,6 +523,42 @@ const shapeShopCatalog: ShapeShopItem[] = [
     tagline: "Night owl",
     description: "丸い頭に大きな琥珀の眼。深夜にひとり手を動かす時間のお供に。",
     price: 500,
+  },
+];
+
+// IAP の Arc パック。Product ID は App Store Connect 側と
+// functions/src/arcPacks.ts と完全一致させる必要がある。
+type ArcPack = {
+  productId: string;
+  arcAmount: number;
+  fallbackPrice: string;
+  badge: string | null;
+};
+
+const ARC_PACK_CATALOG: ArcPack[] = [
+  {
+    productId: "com.ariyamatatsuya.contributionarc.arc_pack_small",
+    arcAmount: 100,
+    fallbackPrice: "¥160",
+    badge: null,
+  },
+  {
+    productId: "com.ariyamatatsuya.contributionarc.arc_pack_medium",
+    arcAmount: 600,
+    fallbackPrice: "¥860",
+    badge: "10%お得",
+  },
+  {
+    productId: "com.ariyamatatsuya.contributionarc.arc_pack_large",
+    arcAmount: 1500,
+    fallbackPrice: "¥1,800",
+    badge: "20%お得",
+  },
+  {
+    productId: "com.ariyamatatsuya.contributionarc.arc_pack_xlarge",
+    arcAmount: 4000,
+    fallbackPrice: "¥4,400",
+    badge: "30%お得",
   },
 ];
 
@@ -11411,14 +11476,6 @@ function App() {
                   <span className="shop-coin-icon" aria-hidden="true">◆</span>
                   {coins.toLocaleString()}
                 </strong>
-                <button
-                  type="button"
-                  className="shop-balance-topup"
-                  disabled
-                  title="近日公開"
-                >
-                  Arc を購入（近日公開）
-                </button>
               </div>
             </div>
 
@@ -11455,6 +11512,11 @@ function App() {
               </div>
             </div>
           </section>
+
+          <ArcPurchasePanel
+            catalog={ARC_PACK_CATALOG}
+            onPurchaseGranted={(amount) => setCoins((prev) => prev + amount)}
+          />
 
           <section className="shop-section" aria-label="シルエット">
             <header className="shop-section-head">
