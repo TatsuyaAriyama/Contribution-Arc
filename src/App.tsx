@@ -241,7 +241,7 @@ type RoomUserStatus = "working" | "deep-work" | "on-break";
    (round head with ear tufts, big amber eyes, beak; ground-hops
    instead of walks; ambient ~270° head turn). New shapes can be
    added here. */
-type CharacterShape = "default" | "ghost" | "owl" | "cactus";
+type CharacterShape = "default" | "ghost" | "owl";
 
 type RoomUser = {
   id: string;
@@ -458,7 +458,6 @@ const characterShapeOptions: { value: CharacterShape; name: string }[] = [
   { value: "default", name: "人型" },
   { value: "ghost", name: "ゴースト" },
   { value: "owl", name: "フクロウ" },
-  { value: "cactus", name: "サボテン" },
 ];
 
 // Shop catalog. "default" is intentionally not listed — every account
@@ -485,13 +484,6 @@ const shapeShopCatalog: ShapeShopItem[] = [
     name: "フクロウ",
     tagline: "Night owl",
     description: "丸い頭に大きな琥珀の眼。深夜にひとり手を動かす時間のお供に。",
-    price: 500,
-  },
-  {
-    shape: "cactus",
-    name: "サボテン",
-    tagline: "Quiet grower",
-    description: "ほぼ動かず、ただ静かに育つ。長く続けた人の作業部屋に、いつの間にか根を下ろす。",
     price: 500,
   },
 ];
@@ -9757,13 +9749,6 @@ function App() {
                                 <span className="swatch-owl-foot swatch-owl-foot-right" />
                               </>
                             ) : null}
-                            {option.value === "cactus" ? (
-                              <>
-                                <span className="swatch-cactus-arm swatch-cactus-arm-left" />
-                                <span className="swatch-cactus-arm swatch-cactus-arm-right" />
-                                <span className="swatch-cactus-flower" />
-                              </>
-                            ) : null}
                           </span>
                           {isLocked ? (
                             <span className="character-shape-lock" aria-hidden="true">
@@ -11024,13 +11009,6 @@ function App() {
                                     <span className="swatch-owl-beak" />
                                     <span className="swatch-owl-foot swatch-owl-foot-left" />
                                     <span className="swatch-owl-foot swatch-owl-foot-right" />
-                                  </>
-                                ) : null}
-                                {option.value === "cactus" ? (
-                                  <>
-                                    <span className="swatch-cactus-arm swatch-cactus-arm-left" />
-                                    <span className="swatch-cactus-arm swatch-cactus-arm-right" />
-                                    <span className="swatch-cactus-flower" />
                                   </>
                                 ) : null}
                               </span>
