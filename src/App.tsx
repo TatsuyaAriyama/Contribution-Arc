@@ -92,6 +92,7 @@ import { SilentWorkspaceRoom, type RoomActivityItem } from "./components/SilentW
 import { ShareToXModal } from "./components/ShareToXModal";
 import { TutorialHint } from "./components/TutorialHint";
 import { ToastHost } from "./components/ToastHost";
+import { IOSInstallHint } from "./components/IOSInstallHint";
 import { resetAllTutorials } from "./services/tutorial";
 import { showToast } from "./services/toast";
 import "./App.css";
@@ -11700,6 +11701,7 @@ function App() {
           positioning + high z-index makes it the topmost UI surface,
           including on top of the mobile bottom nav. */}
       <ToastHost />
+      <IOSInstallHint />
     </motion.main>
     </MotionConfig>
   );
