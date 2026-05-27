@@ -8682,8 +8682,85 @@
   }
 }
 
+/* Occasional "alive" gestures while studying — the body leans
+   slowly to the side once per ~22s cycle (most of the cycle is
+   the baseline pose), and the eyes blink + glance sideways once
+   per ~18s cycle. Both animations pause when the actor is on
+   break, since a resting ghost shouldn't be looking around.
+   nth-child delays stagger multiple ghosts so a roomful never
+   blinks in unison — that would feel uncanny. */
+
+.workspace-actor:not(.is-resting) .actor-sprite.shape-ghost::before {
+  animation: workspace-ghost-sway 22s ease-in-out infinite;
+  transform-origin: 50% 78%;
+}
+
+.workspace-actor:not(.is-resting):nth-child(3n) .actor-sprite.shape-ghost::before {
+  animation-delay: -7s;
+}
+
+.workspace-actor:not(.is-resting):nth-child(3n + 1) .actor-sprite.shape-ghost::before {
+  animation-delay: -14s;
+}
+
+.workspace-actor:not(.is-resting) .actor-sprite.shape-ghost .sprite-eye {
+  animation: workspace-ghost-eye-life 18s ease-in-out infinite;
+  transform-origin: 50% 50%;
+}
+
+.workspace-actor:not(.is-resting):nth-child(2n) .actor-sprite.shape-ghost .sprite-eye {
+  animation-delay: -9s;
+}
+
+.workspace-actor:not(.is-resting):nth-child(3n + 1) .actor-sprite.shape-ghost .sprite-eye {
+  animation-delay: -6s;
+}
+
+@keyframes workspace-ghost-sway {
+  0%,
+  82%,
+  100% {
+    transform: rotate(0deg);
+  }
+  87% {
+    transform: rotate(-5deg);
+  }
+  91% {
+    transform: rotate(5deg);
+  }
+  95% {
+    transform: rotate(-2deg);
+  }
+}
+
+@keyframes workspace-ghost-eye-life {
+  /* Baseline pose holds for most of the cycle */
+  0%,
+  28%,
+  35%,
+  60%,
+  78%,
+  100% {
+    transform: scaleY(1) translateX(0);
+  }
+  /* Quick blink around 30% */
+  30%,
+  32% {
+    transform: scaleY(0.1) translateX(0);
+  }
+  /* Glance left then right around 65-75% */
+  65% {
+    transform: scaleY(1) translateX(-2px);
+  }
+  72% {
+    transform: scaleY(1) translateX(2px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .actor-sprite.shape-ghost {
+  .actor-sprite.shape-ghost,
+  .workspace-actor:not(.is-resting) .actor-sprite.shape-ghost::before,
+  .workspace-actor:not(.is-resting) .actor-sprite.shape-ghost .sprite-eye {
     animation: none;
   }
 }
