@@ -20173,3 +20173,332 @@ a[role="button"],
   }
 }
 
+/* =============================================================
+   Shop screen — character silhouette marketplace.
+   Calm Linear-style layout: hero card with coin balance, then
+   product grid. Avoids loud "store" chrome (no flame badges,
+   no discount stickers) to stay aligned with the rest of the
+   app's minimal aesthetic.
+   ============================================================= */
+
+.shop-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 16px 20px 32px;
+  width: 100%;
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.shop-card {
+  padding: 22px 24px;
+}
+
+.shop-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.shop-card-head h2 {
+  margin: 4px 0 6px;
+  font-size: clamp(22px, 2.4vw, 28px);
+  letter-spacing: -0.01em;
+}
+
+.shop-card-lede {
+  margin: 0;
+  color: rgba(var(--ink-rgb), 0.62);
+  font-size: 14px;
+  line-height: 1.55;
+  max-width: 38ch;
+}
+
+.shop-balance {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 12px 16px;
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
+  border-radius: 14px;
+  background: rgba(var(--surface-rgb), 0.7);
+  min-width: 220px;
+}
+
+.shop-balance-label {
+  color: rgba(var(--ink-rgb), 0.55);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.shop-balance-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 22px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.shop-coin-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f3c969, #c79030);
+  color: #5a3c00;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 900;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.shop-balance-topup {
+  padding: 6px 12px;
+  border: 1px dashed rgba(var(--ink-rgb), 0.18);
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(var(--ink-rgb), 0.5);
+  font: inherit;
+  font-size: 12px;
+  cursor: not-allowed;
+}
+
+.shop-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.shop-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 4px;
+}
+
+.shop-section-head h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.005em;
+}
+
+.shop-section-head span {
+  color: rgba(var(--ink-rgb), 0.55);
+  font-size: 12px;
+}
+
+.shop-product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.shop-product-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
+  border-radius: 18px;
+  background: var(--surface);
+  transition:
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.22s ease;
+}
+
+.shop-product-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(31, 111, 74, 0.22);
+  box-shadow: 0 18px 38px rgba(var(--ink-rgb), 0.08);
+}
+
+.shop-product-card.is-owned {
+  border-color: rgba(31, 111, 74, 0.28);
+  background: linear-gradient(180deg, rgba(31, 111, 74, 0.04), var(--surface));
+}
+
+.shop-product-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(var(--ink-rgb), 0.03);
+}
+
+.shop-product-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 90px;
+}
+
+.shop-product-tagline {
+  margin: 0;
+  color: rgba(var(--ink-rgb), 0.5);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.shop-product-name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.005em;
+}
+
+.shop-product-description {
+  margin: 0;
+  color: rgba(var(--ink-rgb), 0.6);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.shop-product-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(var(--ink-rgb), 0.06);
+}
+
+.shop-product-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.shop-product-buy,
+.shop-product-equip {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--green, #1f6f4a);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    transform 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.shop-product-buy:hover:not(:disabled),
+.shop-product-equip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(31, 111, 74, 0.25);
+}
+
+.shop-product-buy:active:not(:disabled),
+.shop-product-equip:active {
+  transform: scale(0.96);
+  transition-duration: 0.08s;
+}
+
+.shop-product-buy:disabled {
+  background: rgba(var(--ink-rgb), 0.1);
+  color: rgba(var(--ink-rgb), 0.4);
+  cursor: not-allowed;
+}
+
+.shop-product-equip {
+  background: rgba(var(--ink-rgb), 0.06);
+  color: var(--ink);
+}
+
+.shop-product-equip:hover {
+  background: rgba(var(--ink-rgb), 0.1);
+}
+
+.shop-product-owned {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(31, 111, 74, 0.12);
+  color: var(--green, #1f6f4a);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.shop-product-equipped {
+  font-size: 12px;
+  color: rgba(var(--ink-rgb), 0.55);
+  font-weight: 700;
+}
+
+/* Locked shape pickers in settings — overlay a soft veil and a lock
+   icon, keep the click target alive so it can shuttle the user to
+   the shop. Avoid graying out so the silhouette stays recognizable. */
+.character-shape-grid button.is-locked {
+  position: relative;
+  opacity: 0.78;
+}
+
+.character-shape-grid button.is-locked:hover {
+  opacity: 1;
+}
+
+.character-shape-grid button.is-locked .character-shape-swatch {
+  filter: grayscale(0.35);
+}
+
+.character-shape-lock {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 11px;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+@media (max-width: 560px) {
+  .shop-screen {
+    padding: 12px 14px 24px;
+  }
+
+  .shop-card-head {
+    flex-direction: column;
+  }
+
+  .shop-balance {
+    align-items: flex-start;
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shop-product-card,
+  .shop-product-buy,
+  .shop-product-equip {
+    transition: none !important;
+  }
+}
+

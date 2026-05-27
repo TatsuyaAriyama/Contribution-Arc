@@ -190,6 +190,12 @@ type UserProfile = {
      backward compatibility — undefined means the original
      "body + 2 legs" shape. */
   characterShape?: CharacterShape;
+  /* Character silhouettes the user owns. Defaults to ["default"]
+     for new accounts; ghost/owl are unlocked via the in-app shop. */
+  ownedCharacterShapes?: CharacterShape[];
+  /* In-app currency balance. Spent in the shop to unlock character
+     shapes; future revisions allow purchasing coins with real money. */
+  coins?: number;
   level?: number;
   effortExp?: number;
   outputExp?: number;
@@ -431,6 +437,34 @@ const characterShapeOptions: { value: CharacterShape; name: string }[] = [
   { value: "default", name: "人型" },
   { value: "ghost", name: "ゴースト" },
   { value: "owl", name: "フクロウ" },
+];
+
+// Shop catalog. "default" is intentionally not listed — every account
+// owns it from signup. Prices are in coins; coins are seeded for the
+// admin account and (eventually) purchasable with real money.
+type ShapeShopItem = {
+  shape: Exclude<CharacterShape, "default">;
+  name: string;
+  tagline: string;
+  description: string;
+  price: number;
+};
+
+const shapeShopCatalog: ShapeShopItem[] = [
+  {
+    shape: "ghost",
+    name: "ゴースト",
+    tagline: "Soul shape",
+    description: "脚のない魂のシルエット。作業部屋の片隅でふわりと漂う、もう一人のあなた。",
+    price: 500,
+  },
+  {
+    shape: "owl",
+    name: "フクロウ",
+    tagline: "Night owl",
+    description: "丸い頭に大きな琥珀の眼。深夜にひとり手を動かす時間のお供に。",
+    price: 500,
+  },
 ];
 
 const characterColorOptions = [
@@ -1140,6 +1174,12 @@ function normalizeUserProfile(uid: string, data: Partial<UserProfile>): UserProf
     determination: data.determination || "",
     characterColor: getSafeCharacterColor(data.characterColor),
     characterShape: getSafeCharacterShape(data.characterShape),
+    ownedCharacterShapes: Array.isArray(data.ownedCharacterShapes)
+      ? (data.ownedCharacterShapes
+          .map((shape) => getSafeCharacterShape(shape))
+          .filter((shape, index, arr) => arr.indexOf(shape) === index) as CharacterShape[])
+      : ["default"],
+    coins: typeof data.coins === "number" && Number.isFinite(data.coins) ? Math.max(0, Math.floor(data.coins)) : 0,
     level: data.level || 1,
     effortExp: data.effortExp || 0,
     outputExp: data.outputExp || 0,
@@ -3292,6 +3332,8 @@ function App() {
   const [playerAvatar, setPlayerAvatar] = useState("");
   const [playerCharacterColor, setPlayerCharacterColor] = useState(characterColorOptions[0].value);
   const [playerCharacterShape, setPlayerCharacterShape] = useState<CharacterShape>("default");
+  const [ownedCharacterShapes, setOwnedCharacterShapes] = useState<CharacterShape[]>(["default"]);
+  const [coins, setCoins] = useState<number>(0);
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [customRooms, setCustomRooms] = useState<WorkspaceRoom[]>([]);
   const [isWorkspaceLoaded, setIsWorkspaceLoaded] = useState(false);
@@ -3667,9 +3709,24 @@ function App() {
         setDraftDetermination(profile.determination || savedDetermination || "");
         setPlayerAvatar(profile.photoURL || savedAvatar || currentUser.photoURL || "");
         setPlayerCharacterColor(profile.characterColor || savedCharacterColor || characterColorOptions[0].value);
-        setPlayerCharacterShape(
-          getSafeCharacterShape(profile.characterShape || savedCharacterShape || "default"),
-        );
+        // Shape ownership migration. ADMIN_EMAIL gets every silhouette plus
+        // a generous coin grant (used to seed test purchases). Everyone
+        // else has their owned set narrowed to whatever they legitimately
+        // possess — only "default" by default, since pre-monetization
+        // users could freely pick ghost/owl from settings. If they were
+        // mid-wearing a non-owned shape, snap them back to "default".
+        const ADMIN_EMAIL = "ari.initx@gmail.com";
+        const isAdmin = (currentUser.email || "").toLowerCase() === ADMIN_EMAIL;
+        const loadedOwned = profile.ownedCharacterShapes || ["default"];
+        const resolvedOwned: CharacterShape[] = isAdmin
+          ? [...CHARACTER_SHAPES]
+          : Array.from(new Set<CharacterShape>(["default", ...loadedOwned.filter((shape) => shape === "default")]));
+        const loadedShape = getSafeCharacterShape(profile.characterShape || savedCharacterShape || "default");
+        const safeShape: CharacterShape = resolvedOwned.includes(loadedShape) ? loadedShape : "default";
+        const grantedCoins = isAdmin ? Math.max(profile.coins || 0, 10000) : profile.coins || 0;
+        setOwnedCharacterShapes(resolvedOwned);
+        setCoins(grantedCoins);
+        setPlayerCharacterShape(safeShape);
         setOpenedWorkspaceGiftLevels((levels) =>
           Array.from(new Set([...levels, ...(profile.openedWorkspaceGiftLevels || [])])).sort(
             (first, second) => first - second,
@@ -6270,6 +6327,8 @@ function App() {
       currentCharacter: characterOptions[0].id,
       characterColor: playerCharacterColor,
       characterShape: playerCharacterShape,
+      ownedCharacterShapes: [...ownedCharacterShapes].sort(),
+      coins,
       streak: studyStreak,
       determination,
       following: [...following].sort(),
@@ -6330,6 +6389,8 @@ function App() {
     playerName,
     studyStreak,
     userId,
+    coins,
+    ownedCharacterShapes,
   ]);
 
   if (window.location.pathname === githubCallbackPath) {
@@ -6475,6 +6536,8 @@ function App() {
                 determination,
                 characterColor: playerCharacterColor,
                 characterShape: playerCharacterShape,
+                ownedCharacterShapes: [...ownedCharacterShapes].sort(),
+                coins,
                 searchName: nextDisplayName.toLowerCase(),
                 following: currentProfile.following,
                 followers: currentProfile.followers,
@@ -8939,7 +9002,7 @@ function App() {
                   role="menuitem"
                   onClick={() => {
                     setIsUserMenuOpen(false);
-                    console.log("shop clicked");
+                    setCurrentView("shop");
                   }}
                 >
                   <GiftIcon />
@@ -9423,22 +9486,43 @@ function App() {
                 <div className="character-customize-section compact">
                   <p className="character-customize-section-label">シルエット</p>
                   <div className="character-shape-grid compact" aria-label="キャラクターの形">
-                    {characterShapeOptions.map((option) => (
-                      <button
-                        type="button"
-                        key={option.value}
-                        className={playerCharacterShape === option.value ? "active" : ""}
-                        onClick={() => setPlayerCharacterShape(option.value)}
-                        title={option.name}
-                        aria-label={`${option.name}を選択`}
-                      >
-                        <span
-                          className={`character-shape-swatch shape-${option.value}`}
-                          style={{ "--actor-color": playerCharacterColor } as CSSProperties}
-                        />
-                        <small>{option.name}</small>
-                      </button>
-                    ))}
+                    {characterShapeOptions.map((option) => {
+                      const isLocked = !ownedCharacterShapes.includes(option.value);
+                      return (
+                        <button
+                          type="button"
+                          key={option.value}
+                          className={`${playerCharacterShape === option.value ? "active " : ""}${
+                            isLocked ? "is-locked" : ""
+                          }`}
+                          onClick={() => {
+                            if (isLocked) {
+                              setIsSettingsOpen(false);
+                              setCurrentView("shop");
+                            } else {
+                              setPlayerCharacterShape(option.value);
+                            }
+                          }}
+                          title={isLocked ? `${option.name}（ショップで購入）` : option.name}
+                          aria-label={
+                            isLocked
+                              ? `${option.name}はショップで購入できます`
+                              : `${option.name}を選択`
+                          }
+                        >
+                          <span
+                            className={`character-shape-swatch shape-${option.value}`}
+                            style={{ "--actor-color": playerCharacterColor } as CSSProperties}
+                          />
+                          {isLocked ? (
+                            <span className="character-shape-lock" aria-hidden="true">
+                              🔒
+                            </span>
+                          ) : null}
+                          <small>{option.name}</small>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -10575,22 +10659,42 @@ function App() {
                     <div className="character-customize-section">
                       <p className="character-customize-section-label">シルエット</p>
                       <div className="character-shape-grid" aria-label="キャラクターの形">
-                        {characterShapeOptions.map((option) => (
-                          <button
-                            type="button"
-                            key={option.value}
-                            className={playerCharacterShape === option.value ? "active" : ""}
-                            onClick={() => setPlayerCharacterShape(option.value)}
-                            title={option.name}
-                            aria-label={`${option.name}を選択`}
-                          >
-                            <span
-                              className={`character-shape-swatch shape-${option.value}`}
-                              style={{ "--actor-color": playerCharacterColor } as CSSProperties}
-                            />
-                            <small>{option.name}</small>
-                          </button>
-                        ))}
+                        {characterShapeOptions.map((option) => {
+                          const isLocked = !ownedCharacterShapes.includes(option.value);
+                          return (
+                            <button
+                              type="button"
+                              key={option.value}
+                              className={`${playerCharacterShape === option.value ? "active " : ""}${
+                                isLocked ? "is-locked" : ""
+                              }`}
+                              onClick={() => {
+                                if (isLocked) {
+                                  setCurrentView("shop");
+                                } else {
+                                  setPlayerCharacterShape(option.value);
+                                }
+                              }}
+                              title={isLocked ? `${option.name}（ショップで購入）` : option.name}
+                              aria-label={
+                                isLocked
+                                  ? `${option.name}はショップで購入できます`
+                                  : `${option.name}を選択`
+                              }
+                            >
+                              <span
+                                className={`character-shape-swatch shape-${option.value}`}
+                                style={{ "--actor-color": playerCharacterColor } as CSSProperties}
+                              />
+                              {isLocked ? (
+                                <span className="character-shape-lock" aria-hidden="true">
+                                  🔒
+                                </span>
+                              ) : null}
+                              <small>{option.name}</small>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 
@@ -10885,6 +10989,124 @@ function App() {
                   </div>
                 )}
               </div>
+            </div>
+          </section>
+        </motion.section>
+      ) : currentView === "shop" ? (
+        <motion.section
+          className="shop-screen"
+          aria-label="ショップ"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={SPRING_SNAPPY}
+        >
+          <div className="profile-topbar">
+            <button type="button" onClick={() => setCurrentView("home")}>
+              ← Home
+            </button>
+          </div>
+
+          <section className="card shop-card" aria-label="ショップヘッダー">
+            <div className="shop-card-head">
+              <div>
+                <p className="card-kicker">Shop</p>
+                <h2>キャラクターをカスタマイズ</h2>
+                <p className="shop-card-lede">
+                  シルエットや姿を変えて、自分だけの分身に。所持コインで購入できます。
+                </p>
+              </div>
+              <div className="shop-balance" aria-label="所持コイン">
+                <span className="shop-balance-label">所持コイン</span>
+                <strong className="shop-balance-value">
+                  <span className="shop-coin-icon" aria-hidden="true">●</span>
+                  {coins.toLocaleString()}
+                </strong>
+                <button
+                  type="button"
+                  className="shop-balance-topup"
+                  disabled
+                  title="近日公開"
+                >
+                  コインを購入（近日公開）
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section className="shop-section" aria-label="シルエット">
+            <header className="shop-section-head">
+              <h3>シルエット</h3>
+              <span>分身の姿を変える</span>
+            </header>
+            <div className="shop-product-grid">
+              {shapeShopCatalog.map((item) => {
+                const isOwned = ownedCharacterShapes.includes(item.shape);
+                const canAfford = coins >= item.price;
+                const isEquipped = playerCharacterShape === item.shape;
+                return (
+                  <article
+                    key={item.shape}
+                    className={`shop-product-card${isOwned ? " is-owned" : ""}`}
+                  >
+                    <div className="shop-product-preview">
+                      <ProfileCharacterPreview
+                        color={playerCharacterColor}
+                        variant="simple"
+                        shape={item.shape}
+                      />
+                    </div>
+                    <div className="shop-product-body">
+                      <p className="shop-product-tagline">{item.tagline}</p>
+                      <h4 className="shop-product-name">{item.name}</h4>
+                      <p className="shop-product-description">{item.description}</p>
+                    </div>
+                    <div className="shop-product-footer">
+                      {isOwned ? (
+                        <>
+                          <span className="shop-product-owned">所持済み</span>
+                          {isEquipped ? (
+                            <span className="shop-product-equipped">使用中</span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="shop-product-equip"
+                              onClick={() => setPlayerCharacterShape(item.shape)}
+                            >
+                              着用する
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <span className="shop-product-price">
+                            <span className="shop-coin-icon" aria-hidden="true">●</span>
+                            {item.price.toLocaleString()}
+                          </span>
+                          <button
+                            type="button"
+                            className="shop-product-buy"
+                            disabled={!canAfford}
+                            onClick={() => {
+                              if (!canAfford) return;
+                              const ok = window.confirm(
+                                `${item.name} を ${item.price.toLocaleString()} コインで購入しますか？`,
+                              );
+                              if (!ok) return;
+                              setCoins((value) => Math.max(0, value - item.price));
+                              setOwnedCharacterShapes((current) =>
+                                current.includes(item.shape) ? current : [...current, item.shape],
+                              );
+                              setPlayerCharacterShape(item.shape);
+                            }}
+                          >
+                            {canAfford ? "購入する" : "コイン不足"}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           </section>
         </motion.section>
