@@ -2,7 +2,7 @@
   "name": "github-contribution-rpg",
   "productName": "Contribution Arc",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "A quiet developer workspace for Contribution Arc.",
   "author": "Contribution Arc",
   "type": "module",
@@ -14,7 +14,8 @@
     "generate-pwa-icons": "node scripts/generate-pwa-icons.mjs",
     "electron": "npm run electron:dev",
     "electron:dev": "concurrently -k -n VITE,ELECTRON -c green,blue \"vite --host localhost --port 5173 --strictPort\" \"wait-on http://localhost:5173/Contribution-Arc/ && cross-env VITE_DEV_SERVER_URL=http://localhost:5173/Contribution-Arc/ electron electron/main.mjs\"",
-    "electron:build": "cross-env ELECTRON_BUILD=true npm run build && electron-builder --mac",
+    "electron:build": "cross-env ELECTRON_BUILD=true npm run build && electron-builder --mac zip",
+    "electron:build:mas": "cross-env ELECTRON_BUILD=true npm run build && electron-builder --mac mas",
     "electron:build:win": "cross-env ELECTRON_BUILD=true npm run build && electron-builder --win"
   },
   "dependencies": {
@@ -40,7 +41,7 @@
     "wait-on": "^9.0.10"
   },
   "build": {
-    "appId": "com.contributionarc.desktop",
+    "appId": "com.ariyamatatsuya.contributionarc",
     "productName": "Contribution Arc",
     "copyright": "Copyright © 2026 Contribution Arc",
     "asar": true,
@@ -50,7 +51,8 @@
       "package.json"
     ],
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "build"
     },
     "mac": {
       "category": "public.app-category.productivity",
@@ -63,9 +65,29 @@
             "x64",
             "arm64"
           ]
+        },
+        {
+          "target": "mas",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "artifactName": "Contribution-Arc-${version}-mac-${arch}.${ext}"
+    },
+    "mas": {
+      "category": "public.app-category.productivity",
+      "icon": "assets/icon.icns",
+      "type": "distribution",
+      "identity": "3rd Party Mac Developer Application: Tatsuya Ariyama (SZ343VGXTL)",
+      "entitlements": "build/entitlements.mas.plist",
+      "entitlementsInherit": "build/entitlements.mas.inherit.plist",
+      "entitlementsLoginHelper": "build/entitlements.mas.loginhelper.plist",
+      "provisioningProfile": "build/ContributionArc.provisionprofile",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "artifactName": "Contribution-Arc-${version}-mas-${arch}.${ext}"
     },
     "win": {
       "icon": "build/icons/icon.ico",

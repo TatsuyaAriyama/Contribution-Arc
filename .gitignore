@@ -9,3 +9,10 @@ release
 .env
 .env.*
 !.env.example
+
+# Mac App Store signing assets — these are tied to the Apple Developer
+# account and must never be committed. Place them locally under build/
+# before running `npm run electron:build:mas`.
+build/*.provisionprofile
+*.p12
+*.cer
