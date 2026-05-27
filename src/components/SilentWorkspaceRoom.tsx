@@ -14,6 +14,15 @@ type RoomActorStatus = "working" | "deep-work" | "on-break";
 
 export type CharacterShape = "default" | "ghost" | "owl" | "cactus";
 
+export type PresetLogEntry = {
+  id: string;
+  userId: string;
+  name: string;
+  message: string;
+  color?: string;
+  at: number;
+};
+
 export type RoomActor = {
   id: string;
   userId: string;
@@ -71,6 +80,10 @@ type SilentWorkspaceRoomProps = {
   onPresetMessagesChange: (messages: string[]) => void;
   onPresetMessage: (message: string) => void;
   bubbleMessage: string;
+  /* Recent-bubble log surfaced next to the stage. Lets the user catch
+     up on what was said even after the per-actor bubbles have faded.
+     Newest entry first; the parent caps the list (~12). */
+  presetLog?: PresetLogEntry[];
   isPlayerWalking: boolean;
   activityItems: RoomActivityItem[];
   onMemberOpen: (member: RoomActor) => void;
@@ -84,6 +97,17 @@ type SilentWorkspaceRoomProps = {
   onOpenRecruitmentModal?: () => void;
   activeRecruitmentSummary?: ActiveRecruitmentSummary | null;
 };
+
+function formatChatLogTime(atMs: number) {
+  const diffSec = Math.max(0, Math.floor((Date.now() - atMs) / 1000));
+  if (diffSec < 5) return "今";
+  if (diffSec < 60) return `${diffSec}秒前`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}分前`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}時間前`;
+  return `${Math.floor(diffHr / 24)}日前`;
+}
 
 function getActorStayLabel(member: RoomActor) {
   if (member.status === "on-break") {
@@ -127,6 +151,7 @@ export function SilentWorkspaceRoom({
   onPresetMessagesChange,
   onPresetMessage,
   bubbleMessage,
+  presetLog = [],
   isPlayerWalking,
   activityItems,
   onMemberOpen,
@@ -322,6 +347,37 @@ export function SilentWorkspaceRoom({
                   </button>
                 ) : null}
               </div>
+            </aside>
+          ) : null}
+
+          {/* Recent-message log. Floats in the top-right corner of the
+              stage as a glassy semi-transparent panel so the room
+              canvas and avatars remain visible behind it. Hidden when
+              the log is empty so the room reads as a quiet space until
+              someone speaks. */}
+          {presetLog.length > 0 ? (
+            <aside className="workspace-chat-log" aria-label="ルームの発言ログ">
+              <p className="workspace-chat-log-title">最近の発言</p>
+              <ul>
+                {presetLog.map((entry) => (
+                  <li key={entry.id}>
+                    <span
+                      className="workspace-chat-log-dot"
+                      style={{ background: entry.color || "var(--ink)" }}
+                      aria-hidden="true"
+                    />
+                    <div className="workspace-chat-log-body">
+                      <div className="workspace-chat-log-head">
+                        <strong>{entry.name}</strong>
+                        <span className="workspace-chat-log-time">
+                          {formatChatLogTime(entry.at)}
+                        </span>
+                      </div>
+                      <p>{entry.message}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </aside>
           ) : null}
 

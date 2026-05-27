@@ -273,6 +273,19 @@ type WorkspaceMember = RoomUser & {
   tone: "deep" | "green" | "soft" | "blue";
 };
 
+/* Single entry in the workspace chat log surfaced alongside the
+   immersive stage. The log is purely a derived client-side cache of
+   the bubble field already synced through the room document — it
+   doesn't introduce a new Firestore collection. */
+type PresetLogEntry = {
+  id: string;
+  userId: string;
+  name: string;
+  message: string;
+  color?: string;
+  at: number;
+};
+
 type WorkspaceSession = {
   roomId: string;
   userId: string;
@@ -3564,6 +3577,14 @@ function App() {
   const [playerPosition, setPlayerPosition] = useState({ x: 18, y: 72 });
   const [isPlayerWalking, setIsPlayerWalking] = useState(false);
   const [workspaceBubble, setWorkspaceBubble] = useState("");
+  /* Rolling chat log of recently-sent preset messages. The per-actor
+     bubble above each avatar still fades after a few seconds; this
+     log keeps the last dozen messages around so you can catch up on
+     what was said while you were focused. Entries are appended as
+     soon as a member's synced `bubble` field flips to a value newer
+     than what we've already logged for that user. */
+  const [presetLog, setPresetLog] = useState<PresetLogEntry[]>([]);
+  const lastLoggedBubbleAtRef = useRef<Map<string, number>>(new Map());
   const [workspacePresetMessages, setWorkspacePresetMessages] = useState(defaultWorkspacePresetMessages);
   const [openedWorkspaceGiftLevels, setOpenedWorkspaceGiftLevels] = useState<number[]>([]);
   const [posts, setPosts] = useState<ContributionPostRecord[]>([]);
@@ -5057,6 +5078,62 @@ function App() {
     const timeoutId = window.setTimeout(() => setWorkspaceBubble(""), 3600);
     return () => window.clearTimeout(timeoutId);
   }, [workspaceBubble]);
+
+  // Reset the chat log when the user switches rooms — the old room's
+  // conversation isn't useful context for the new one, and the
+  // per-user "last logged at" timestamps would otherwise prevent
+  // bubbles in the new room from being captured if they happened to
+  // share a userId with the previous room.
+  useEffect(() => {
+    setPresetLog([]);
+    lastLoggedBubbleAtRef.current = new Map();
+  }, [selectedRoomId]);
+
+  // Watch the selected room's member array for newly-arrived bubbles.
+  // Every preset send already writes `bubble` + `bubbleAt` onto the
+  // member's room entry (see handleWorkspacePresetMessage) and that
+  // change rides the existing Firestore room sync — so by the time
+  // this effect runs the data is already here. We just need to
+  // recognise each new bubble once and append it to the log.
+  useEffect(() => {
+    if (!selectedRoomId) return;
+    const room = customRooms.find((item) => item.id === selectedRoomId);
+    if (!room || !Array.isArray(room.activeMembers)) return;
+    const now = Date.now();
+    const additions: PresetLogEntry[] = [];
+    for (const member of room.activeMembers) {
+      if (!member.bubble || !member.bubbleAt) continue;
+      const at = new Date(member.bubbleAt).getTime();
+      if (!Number.isFinite(at)) continue;
+      const lastAt = lastLoggedBubbleAtRef.current.get(member.userId) || 0;
+      if (at <= lastAt) continue;
+      // Always advance the high-water mark so we don't reconsider the
+      // same bubble next tick — even if we end up discarding it as
+      // stale below.
+      lastLoggedBubbleAtRef.current.set(member.userId, at);
+      // Skip bubbles older than 30s. This protects the log from being
+      // spammed with historical bubbles when the user first joins a
+      // room (every member's last bubble would otherwise replay) and
+      // from replaying old data when the tab wakes from background.
+      if (now - at > 30_000) continue;
+      additions.push({
+        id: `${member.userId}-${at}`,
+        userId: member.userId,
+        name: member.name || "Developer",
+        message: member.bubble,
+        color: member.characterColor || (member as { color?: string }).color,
+        at,
+      });
+    }
+    if (additions.length === 0) return;
+    setPresetLog((log) => {
+      const seen = new Set(log.map((entry) => entry.id));
+      const fresh = additions.filter((entry) => !seen.has(entry.id));
+      if (fresh.length === 0) return log;
+      // Newest first, oldest dropped past 12.
+      return [...fresh.reverse(), ...log].slice(0, 12);
+    });
+  }, [customRooms, selectedRoomId]);
 
   // Membership gate as a single boolean — flips only when the user
   // actually enters or leaves a room, not on every Firestore tick. The
@@ -11329,6 +11406,7 @@ function App() {
                       onPresetMessagesChange={setWorkspacePresetMessages}
                       onPresetMessage={handleWorkspacePresetMessage}
                       bubbleMessage={workspaceBubble}
+                      presetLog={presetLog}
                       isPlayerWalking={isPlayerWalking}
                       activityItems={roomActivityItems}
                       onMemberOpen={handleMemberProfileOpen}
