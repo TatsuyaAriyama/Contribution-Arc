@@ -10184,10 +10184,15 @@
   }
 
   /* Mobile: keep the PC 2D scene, just scale it down so the canvas,
-     floor grid, desks, and actors all stay visible and clickable. */
+     floor grid, desks, and actors all stay visible and clickable.
+     The stage is the focal element of the workspace — it deserves the
+     bulk of the vertical space. The chrome above (heading, room
+     pills, canvas actions) has been trimmed via the
+     mobile-workspace-redesign rules below so the stage can stretch
+     to ~70vh without pushing actions off-screen. */
   .workspace-2d-shell:not(.focus-presentation) .workspace-stage {
-    height: clamp(360px, 56vh, 460px);
-    min-height: 360px;
+    height: clamp(440px, 70vh, 640px);
+    min-height: 440px;
     border-radius: 18px;
   }
 
@@ -21197,6 +21202,248 @@ a[role="button"],
   .shop-product-buy,
   .shop-product-equip {
     transition: none !important;
+  }
+}
+
+/* =================================================================
+   Portrait-phone workspace redesign.
+
+   Before this block: the portrait layout stacked
+     1. site header
+     2. ← Home pill
+     3. "Silent Workspace" heading + lede + "quiet presence" pill
+     4. New-room form (input + button)
+     5. Horizontal room pill row (~80px tall)
+     6. 名前変更 / 解体 button row (~40px tall)
+     7. The 2D stage (clamp 360-460)
+     8. 定型文 toggle (right-aligned chip)
+
+   …so by the time the user could actually see the canvas they had
+   scrolled past ~300px of chrome and the in-stage overlay (top-left
+   card with task input + recruit + leave + 休憩) was eating 25% of
+   the small canvas all by itself. This block restructures the same
+   markup for one-thumb phone use, modelled after how Discord voice
+   channels, Among Us, and Slack huddles handle the same trade-off:
+   make the stage dominant, keep ONE compact toolbar pill, and bury
+   secondary actions behind a single ⋯ toggle.
+
+   None of the existing desktop rules are touched — everything below
+   only fires at ≤720px viewport width. */
+@media (max-width: 720px) {
+  /* Step 1: kill the lede card. The kicker + description + 'quiet
+     presence' pill are one-time onboarding context; on a 6-inch
+     screen they just push the canvas off-screen on every visit. */
+  .workspace-screen .silent-workspace .workspace-heading {
+    display: none;
+  }
+
+  /* Step 2: compact the room creation + pill row. The "新しい場所"
+     input + 作成 button collapse to a smaller inline form; pills get
+     tighter padding + smaller meta text so the row fits in ~58px
+     instead of ~92px. Horizontal scroll still works for many rooms. */
+  .workspace-screen .workspace-room-strip {
+    gap: 8px;
+  }
+  .workspace-screen .workspace-room-create input {
+    min-height: 36px;
+    font-size: 13.5px;
+  }
+  .workspace-screen .workspace-room-create button {
+    min-height: 36px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+  .workspace-screen .workspace-room-pill {
+    padding: 7px 11px;
+    gap: 2px;
+  }
+  .workspace-screen .workspace-room-pill-name {
+    font-size: 13px;
+  }
+  .workspace-screen .workspace-room-pill-meta {
+    font-size: 10.5px;
+  }
+
+  /* Step 3: hide the 名前変更 / 解体 row. Both actions now live
+     inside the in-stage overlay (see Step 4). The :not(:has(form))
+     guard keeps the row visible while the rename form is open so
+     the user has somewhere to type the new name. Modern Safari
+     supports :has(); browsers that don't will still see the buttons,
+     which is the current behavior — no regression. */
+  .workspace-screen .workspace-room-canvas-actions:not(:has(form)) {
+    display: none;
+  }
+
+  /* Step 4: collapse the in-stage room overlay. On phones it
+     repositions from a top-left card to a full-width top bar that
+     starts collapsed (room name + meta + ⋯) and expands to show
+     the task input + room actions when the user taps ⋯. This
+     eliminates the single biggest source of canvas occlusion. */
+  .workspace-screen .workspace-room-overlay {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .workspace-screen .workspace-room-overlay-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .workspace-screen .workspace-room-overlay-head-text {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .workspace-screen .workspace-room-overlay-head-text .workspace-room-overlay-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Collapsed: hide the actionable rows but KEEP the recruitment
+     indicator — it's a status the user needs to see at a glance even
+     when not interacting with the overlay. */
+  .workspace-screen .workspace-room-overlay.is-collapsed .workspace-room-overlay-task,
+  .workspace-screen .workspace-room-overlay.is-collapsed .workspace-room-overlay-actions,
+  .workspace-screen .workspace-room-overlay.is-collapsed .workspace-room-overlay-admin {
+    display: none;
+  }
+
+  /* When expanded, drop a subtle separator so the overlay reads as a
+     stacked card (head + body) rather than one big slab. */
+  .workspace-screen .workspace-room-overlay.is-expanded {
+    background: rgba(var(--surface-rgb), 0.96);
+    box-shadow:
+      0 6px 22px rgba(15, 23, 42, 0.12),
+      0 1px 0 rgba(var(--ink-rgb), 0.06);
+  }
+
+  .workspace-screen .workspace-room-overlay.is-expanded .workspace-room-overlay-task,
+  .workspace-screen .workspace-room-overlay.is-expanded .workspace-room-overlay-actions {
+    animation: workspace-room-overlay-expand 180ms ease-out;
+  }
+
+  @keyframes workspace-room-overlay-expand {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Step 5: the overlay-toggle button. Right-aligned, small, taps
+     to expand/collapse. Hidden on desktop via the rule outside this
+     media query (display: none below the closing brace). */
+  .workspace-room-overlay-toggle {
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid rgba(var(--ink-rgb), 0.1);
+    border-radius: 50%;
+    background: rgba(var(--surface-rgb), 0.92);
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .workspace-room-overlay-toggle:hover {
+    background: var(--surface);
+    border-color: rgba(var(--ink-rgb), 0.18);
+  }
+
+  /* Owner admin sub-actions inside the expanded overlay. Visible only
+     on mobile (the desktop layout already exposes these via the
+     workspace-room-canvas-actions row above the stage). */
+  .workspace-room-overlay-admin {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(var(--ink-rgb), 0.08);
+  }
+
+  .workspace-room-overlay-admin-button {
+    flex: 1 1 auto;
+    min-height: 36px;
+    padding: 0 12px;
+    border: 1px solid rgba(var(--ink-rgb), 0.12);
+    border-radius: 10px;
+    background: rgba(var(--surface-rgb), 0.9);
+    color: var(--ink);
+    cursor: pointer;
+    font-size: 12.5px;
+    font-weight: 800;
+  }
+
+  .workspace-room-overlay-admin-button.is-danger {
+    color: #c4322c;
+    border-color: rgba(196, 50, 44, 0.24);
+  }
+
+  .workspace-room-overlay-admin-button:hover {
+    background: var(--surface);
+  }
+
+  /* Step 6: bottom preset toggle stretches across the row instead of
+     hugging the right edge. Thumb-friendly hit area + clearer that
+     this is the primary chat-trigger. */
+  .workspace-screen .preset-message-panel {
+    justify-items: stretch;
+  }
+
+  .workspace-screen .preset-toggle-row {
+    display: flex;
+    width: 100%;
+  }
+
+  .workspace-screen .preset-chat-toggle {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: 46px;
+    font-size: 13px;
+  }
+
+  /* Step 7: pull the home → / workspace label and the immersive card
+     padding tighter so we recover another ~10px before the stage. */
+  .workspace-screen .silent-workspace.workspace-2d-card {
+    padding: 10px 10px 12px;
+  }
+
+  .workspace-screen .workspace-2d-main {
+    padding: 8px;
+    gap: 8px;
+  }
+}
+
+/* Desktop hides the mobile-only toggle. Outside the media query so
+   it always applies on wider viewports regardless of source order. */
+@media (min-width: 721px) {
+  .workspace-room-overlay-toggle,
+  .workspace-room-overlay-admin {
+    display: none;
+  }
+
+  /* Desktop always shows the full overlay regardless of the
+     collapse/expand state set in React. */
+  .workspace-room-overlay.is-collapsed .workspace-room-overlay-task,
+  .workspace-room-overlay.is-collapsed .workspace-room-overlay-actions,
+  .workspace-room-overlay.is-collapsed .workspace-room-overlay-recruitment {
+    display: revert;
   }
 }
 
