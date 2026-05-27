@@ -4879,7 +4879,7 @@ function App() {
     // exactly to the integrated position. React re-rendering App.tsx
     // 60 times a second is fine in practice because the workspace view
     // doesn't render that much, and the responsiveness win is large.
-    const SPEED_PERCENT_PER_SEC = 30;
+    const SPEED_PERCENT_PER_SEC = 22;
     let frameId = 0;
     let lastTimestamp: number | null = null;
     const tick = (timestamp: number) => {
