@@ -1294,6 +1294,7 @@ function workspaceMemberToProfile(member: WorkspaceMember): UserProfile {
     followers: [],
     determination: member.status === "on-break" ? "少し休憩中です。" : `${member.building}を積み上げています。`,
     characterColor: getSafeCharacterColor(member.characterColor || member.color),
+    characterShape: member.characterShape,
   };
 }
 
@@ -7798,21 +7799,56 @@ function App() {
     const isFriend = friends.some((friend) => friend.uid === memberProfile.uid) || Boolean(acceptedRequest);
     const hasPendingRequest = Boolean(pendingOutgoingRequest || pendingIncomingRequest);
 
+    const connectionLabel = isFriend
+      ? "つながっています"
+      : pendingIncomingRequest
+        ? "申請が届いています"
+        : pendingOutgoingRequest
+          ? "承認待ち"
+          : "未接続";
+    const connectionState = isFriend
+      ? "is-friend"
+      : hasPendingRequest
+        ? "is-pending"
+        : "is-stranger";
+
     return (
       <article className="card member-profile-card workspace-member-profile-card">
-        <div className="member-profile-hero">
-          <ProfileCharacterPreview color={memberProfile.characterColor} />
-          <div>
-            <p className="card-kicker">Profile</p>
+        <header className="member-profile-hero">
+          <ProfileCharacterPreview
+            color={memberProfile.characterColor}
+            variant="simple"
+            shape={memberProfile.characterShape}
+          />
+          <div className="member-profile-identity">
             <h2>{member.name}</h2>
             <small>@{memberProfile.userId}</small>
+            <span className={`member-profile-status-chip ${connectionState}`}>
+              <i />
+              {connectionLabel}
+            </span>
           </div>
-        </div>
+        </header>
 
         <div className="profile-resolve-panel">
           <span>決意</span>
           <p>{profileResolveText(memberProfile)}</p>
         </div>
+
+        <section className="member-profile-now" aria-label="いまの活動">
+          <span className="member-profile-now-label">いま</span>
+          <div className="member-profile-now-body">
+            <strong>
+              <i style={{ background: member.color }} />
+              {member.building}
+            </strong>
+            <small>
+              {memberRoom?.name || "Silent Workspace"}
+              {" · 滞在 "}
+              {formatStayTime(elapsedMinutes)}
+            </small>
+          </div>
+        </section>
 
         <div className="friend-profile-actions member-profile-actions">
           <button
@@ -7827,47 +7863,9 @@ function App() {
               承認する
             </button>
           ) : null}
-          <span>
-            {isFriend
-              ? "つながっています"
-              : pendingIncomingRequest
-                ? "相手から申請が届いています"
-                : pendingOutgoingRequest
-                  ? "相手の承認待ちです"
-                  : "静かに作業仲間へ追加"}
-          </span>
         </div>
 
         {friendMessage ? <p className="friend-message">{friendMessage}</p> : null}
-
-        <div className="member-profile-grid">
-          <div>
-            <span>Room</span>
-            <strong>{memberRoom?.name || "Silent Workspace"}</strong>
-          </div>
-          <div>
-            <span>Working on</span>
-            <strong>
-              <i style={{ background: member.color }} />
-              {member.building}
-            </strong>
-          </div>
-          <div>
-            <span>Stay</span>
-            <strong>{formatStayTime(elapsedMinutes)}</strong>
-          </div>
-          <div>
-            <span>Today</span>
-            <strong>+{getRoomSessionExp(elapsedMinutes)} EXP</strong>
-          </div>
-          <div>
-            <span>Connection</span>
-            <strong>
-              <i style={{ background: isFriend ? "#1f6f4a" : hasPendingRequest ? "#c8a95b" : "#d4d4d8" }} />
-              {isFriend ? "Friends" : hasPendingRequest ? "Pending" : "Not connected"}
-            </strong>
-          </div>
-        </div>
         {recentLogsCard(member.userId)}
       </article>
     );
@@ -7887,16 +7885,36 @@ function App() {
     const hasPendingRequest = Boolean(pendingOutgoingRequest || pendingIncomingRequest);
     const githubUrl = getFriendGithubUrl(profile.userId);
 
+    const connectionLabel = isFriend
+      ? "つながっています"
+      : pendingIncomingRequest
+        ? "申請が届いています"
+        : pendingOutgoingRequest
+          ? "承認待ち"
+          : "未接続";
+    const connectionState = isFriend
+      ? "is-friend"
+      : hasPendingRequest
+        ? "is-pending"
+        : "is-stranger";
+
     return (
       <article className="card member-profile-card friend-profile-card">
-        <div className="member-profile-hero">
-          <ProfileCharacterPreview color={profile.characterColor} />
-          <div>
-            <p className="card-kicker">Friend Profile</p>
+        <header className="member-profile-hero">
+          <ProfileCharacterPreview
+            color={profile.characterColor}
+            variant="simple"
+            shape={profile.characterShape}
+          />
+          <div className="member-profile-identity">
             <h2>{profile.displayName}</h2>
             <small>@{profile.userId}</small>
+            <span className={`member-profile-status-chip ${connectionState}`}>
+              <i />
+              {connectionLabel}
+            </span>
           </div>
-        </div>
+        </header>
 
         <div className="profile-resolve-panel">
           <span>決意</span>
@@ -7920,20 +7938,6 @@ function App() {
         </div>
 
         {friendMessage ? <p className="friend-message">{friendMessage}</p> : null}
-
-        <div className="member-profile-grid">
-          <div>
-            <span>Status</span>
-            <strong>
-              <i style={{ background: isFriend ? "#1f6f4a" : hasPendingRequest ? "#c8a95b" : "#d4d4d8" }} />
-              {isFriend ? "Friends" : hasPendingRequest ? "Pending" : "Not connected"}
-            </strong>
-          </div>
-          <div>
-            <span>Community</span>
-            <strong>静かな積み上げ</strong>
-          </div>
-        </div>
         {recentLogsCard(profile.uid)}
       </article>
     );

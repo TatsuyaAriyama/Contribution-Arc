@@ -2835,7 +2835,7 @@
 .member-profile-hero {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
 }
 
 .member-profile-hero .presence-avatar {
@@ -2845,20 +2845,143 @@
   font-size: 18px;
 }
 
+.member-profile-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 .member-profile-hero h2 {
-  margin: 8px 0 0;
+  margin: 0;
   color: var(--ink);
-  font-size: clamp(34px, 5vw, 58px);
-  line-height: 0.95;
-  letter-spacing: 0;
+  font-size: clamp(22px, 3.4vw, 30px);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .member-profile-hero small {
   display: block;
-  margin-top: 6px;
   color: var(--muted);
-  font-size: 13px;
-  font-weight: 760;
+  font-size: 12.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Inline connection status chip — replaces the standalone Connection
+   tile that used to live in the stats grid. Three states:
+   is-friend (green), is-pending (amber), is-stranger (neutral). */
+.member-profile-status-chip {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(var(--ink-rgb), 0.05);
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.member-profile-status-chip i {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #d4d4d8;
+}
+
+.member-profile-status-chip.is-friend {
+  background: rgba(31, 111, 74, 0.08);
+  color: #1f6f4a;
+}
+.member-profile-status-chip.is-friend i {
+  background: #1f6f4a;
+}
+
+.member-profile-status-chip.is-pending {
+  background: rgba(200, 169, 91, 0.14);
+  color: #9c7b22;
+}
+.member-profile-status-chip.is-pending i {
+  background: #c8a95b;
+}
+
+[data-theme="dark"] .member-profile-status-chip.is-friend {
+  background: rgba(74, 222, 128, 0.12);
+  color: #6ee7a1;
+}
+[data-theme="dark"] .member-profile-status-chip.is-pending {
+  background: rgba(200, 169, 91, 0.18);
+  color: #e8c878;
+}
+
+/* "Now" panel — the focused live-activity strip that replaces the
+   5-tile grid (Room / Working on / Stay / Today / Connection).
+   One row: task on top, room + stay duration on the bottom line. */
+.member-profile-now {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
+  border-radius: 18px;
+  background: rgba(var(--surface-rgb), 0.72);
+  box-shadow: inset 0 1px 0 rgba(var(--surface-rgb), 0.84);
+}
+
+.member-profile-now-label {
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.member-profile-now-body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.member-profile-now-body strong {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--ink);
+  font-size: 15.5px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.member-profile-now-body strong i {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px rgba(var(--ink-rgb), 0.08);
+}
+
+.member-profile-now-body small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .profile-resolve-panel {
@@ -11210,19 +11333,10 @@
   gap: 9px;
 }
 
+/* No surrounding panel — the trailing caption was removed in the
+   redesign, so the buttons sit flush in a simple action row. */
 .member-profile-actions {
   align-items: center;
-  padding: 12px;
-  border: 1px solid rgba(31, 111, 74, 0.1);
-  border-radius: 18px;
-  background: rgba(var(--surface-rgb), 0.72);
-  box-shadow: 0 16px 36px rgba(var(--ink-rgb), 0.06);
-}
-
-.member-profile-actions span {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 820;
 }
 
 .friend-profile-actions button,
