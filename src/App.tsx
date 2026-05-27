@@ -256,6 +256,13 @@ type RoomUser = {
   activeStartedAt?: string;
   accumulatedActiveMinutes?: number;
   breakStartedAt?: string;
+  /* Preset/chat bubble that floats above the avatar. Written through
+     the same room-sync path as the rest of the member fields, so other
+     clients in the same room see it appear and disappear in real time.
+     `bubbleAt` is an ISO timestamp; remote viewers ignore bubbles older
+     than ~4s as a safety net for orphaned writes. */
+  bubble?: string;
+  bubbleAt?: string;
 };
 
 type WorkspaceMember = RoomUser & {
@@ -7426,6 +7433,12 @@ function App() {
                         breakStartedAt: isStartingBreak ? nowIso : nextStatus === "on-break" ? member.breakStartedAt || nowIso : "",
                         x: playerPosition.x,
                         y: playerPosition.y,
+                        // Broadcast the bubble through the room document so
+                        // other clients in the same room see it pop in real
+                        // time. A matching clear-write below makes it fade
+                        // out remotely too.
+                        bubble: message,
+                        bubbleAt: nowIso,
                       };
                     })()
                   : member,
@@ -7436,6 +7449,41 @@ function App() {
         return nextRoom;
       }),
     );
+
+    // After the bubble's lifetime, write an empty bubble back so the
+    // value clears from Firestore — without this the last preset would
+    // stay attached to the member forever and reappear for anyone who
+    // joined the room (or refreshed) before the bubble was overwritten.
+    // The matched-tuple guard (bubble === message && bubbleAt === nowIso)
+    // makes sure a *newer* preset sent within 3.6s isn't blown away.
+    const roomIdForClear = selectedRoom.id;
+    window.setTimeout(() => {
+      setCustomRooms((rooms) =>
+        rooms.map((room) => {
+          const normalizedRoom = normalizeWorkspaceRoom(room);
+          if (normalizedRoom.id !== roomIdForClear) return normalizedRoom;
+          let changed = false;
+          const nextMembers = normalizedRoom.activeMembers.map((member) => {
+            if (
+              member.userId === currentUser.uid &&
+              member.bubble === message &&
+              member.bubbleAt === nowIso
+            ) {
+              changed = true;
+              return { ...member, bubble: "", bubbleAt: "" };
+            }
+            return member;
+          });
+          if (!changed) return normalizedRoom;
+          const nextRoom = normalizeWorkspaceRoom({
+            ...normalizedRoom,
+            activeMembers: nextMembers,
+          });
+          pendingWorkspaceRoomsRef.current.set(nextRoom.id, nextRoom);
+          return nextRoom;
+        }),
+      );
+    }, 3600);
   };
 
   const handleRoomCreate = () => {

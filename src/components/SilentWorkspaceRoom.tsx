@@ -32,6 +32,11 @@ export type RoomActor = {
   breakStartedAt?: string;
   color: string;
   tone: "deep" | "green" | "soft" | "blue";
+  /* Preset/chat bubble synced through the room document. Rendered for
+     other members when fresh; the originator's bubble is driven by the
+     local `bubbleMessage` prop instead (zero-latency feedback). */
+  bubble?: string;
+  bubbleAt?: string;
 };
 
 export type LearningItemSuggestion = {
@@ -355,7 +360,25 @@ export function SilentWorkspaceRoom({
                 onClick={() => onMemberOpen(member)}
                 aria-label={`${member.name} ${member.currentTask}`}
               >
-                {isCurrentUser && bubbleMessage ? <span className="workspace-bubble">{bubbleMessage}</span> : null}
+                {(() => {
+                  // Bubble priority: the local user always sees their own
+                  // bubble from the (zero-latency) `bubbleMessage` prop —
+                  // it would arrive a beat later if we waited for the
+                  // Firestore round-trip. For every other actor, render the
+                  // synced `member.bubble` when fresh (TTL safety drops
+                  // anything older than ~4s in case the originator's
+                  // clear-write never lands).
+                  if (isCurrentUser) {
+                    return bubbleMessage ? (
+                      <span className="workspace-bubble">{bubbleMessage}</span>
+                    ) : null;
+                  }
+                  if (!member.bubble || !member.bubbleAt) return null;
+                  const bubbleMs = new Date(member.bubbleAt).getTime();
+                  if (!Number.isFinite(bubbleMs)) return null;
+                  if (Date.now() - bubbleMs > 4000) return null;
+                  return <span className="workspace-bubble">{member.bubble}</span>;
+                })()}
                 {member.status === "on-break" ? <span className="actor-rest-mark" aria-hidden="true">Zz</span> : null}
                 <span className="actor-shadow" />
                 <span
