@@ -11386,6 +11386,9 @@ function App() {
                       onPresetMessage={handleWorkspacePresetMessage}
                       bubbleMessage={workspaceBubble}
                       presetLog={presetLog}
+                      onRoomRename={() => startRoomTitleEdit(selectedRoom)}
+                      onRoomDelete={() => handleRoomDelete(selectedRoom.id)}
+                      canDeleteRoom={selectedRoom.createdBy === currentUser.uid}
                       isPlayerWalking={isPlayerWalking}
                       activityItems={roomActivityItems}
                       onMemberOpen={handleMemberProfileOpen}

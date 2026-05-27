@@ -96,6 +96,13 @@ type SilentWorkspaceRoomProps = {
   onLearningItemRegister?: (presetName: string) => void;
   onOpenRecruitmentModal?: () => void;
   activeRecruitmentSummary?: ActiveRecruitmentSummary | null;
+  /* Mobile overlay menu actions. The parent owns the rename form +
+     delete confirmation; this component just surfaces the buttons
+     inside the in-stage overlay so mobile users have a single
+     place to manage the room. */
+  onRoomRename?: () => void;
+  onRoomDelete?: () => void;
+  canDeleteRoom?: boolean;
 };
 
 function formatChatLogTime(atMs: number) {
@@ -163,10 +170,18 @@ export function SilentWorkspaceRoom({
   onLearningItemRegister,
   onOpenRecruitmentModal,
   activeRecruitmentSummary = null,
+  onRoomRename,
+  onRoomDelete,
+  canDeleteRoom = false,
 }: SilentWorkspaceRoomProps) {
   const isFocusPresentation = presentation === "focus";
   const [isPresetEditorOpen, setIsPresetEditorOpen] = useState(false);
   const [isPresetTrayOpen, setIsPresetTrayOpen] = useState(false);
+  // Mobile-only expand toggle for the in-stage room overlay. Desktop
+  // CSS ignores this and always shows the full overlay; on phones the
+  // overlay starts collapsed to a single-line pill (room name + meta)
+  // and expands to show the task input + actions when ⋯ is tapped.
+  const [isOverlayExpanded, setIsOverlayExpanded] = useState(false);
   // Forces a re-render every 500ms while any actor has a fresh bubble
   // — the render-time TTL on `member.bubble` otherwise relies on some
   // other prop change to take effect, which means a bubble could
@@ -286,12 +301,29 @@ export function SilentWorkspaceRoom({
           <div className="workspace-floor-grid" aria-hidden="true" />
 
           {!isFocusPresentation ? (
-            <aside className="workspace-room-overlay" aria-label="ルーム情報">
+            <aside
+              className={`workspace-room-overlay ${isOverlayExpanded ? "is-expanded" : "is-collapsed"}`}
+              aria-label="ルーム情報"
+            >
               <div className="workspace-room-overlay-head">
-                <strong className="workspace-room-overlay-name">{roomName}</strong>
-                <span className="workspace-room-overlay-meta">
-                  {isJoined ? `${joinedAtLabel}〜 ${currentStayLabel}` : "未入室"}
-                </span>
+                <div className="workspace-room-overlay-head-text">
+                  <strong className="workspace-room-overlay-name">{roomName}</strong>
+                  <span className="workspace-room-overlay-meta">
+                    {isJoined ? `${joinedAtLabel}〜 ${currentStayLabel}` : "未入室"}
+                  </span>
+                </div>
+                {/* Mobile-only expand/collapse toggle. Hidden on
+                    desktop via CSS so the full overlay always shows
+                    on wider viewports. */}
+                <button
+                  type="button"
+                  className="workspace-room-overlay-toggle"
+                  onClick={() => setIsOverlayExpanded((prev) => !prev)}
+                  aria-expanded={isOverlayExpanded}
+                  aria-label={isOverlayExpanded ? "ルームメニューを閉じる" : "ルームメニューを開く"}
+                >
+                  {isOverlayExpanded ? "×" : "⋯"}
+                </button>
               </div>
 
               {activeRecruitmentSummary ? (
@@ -367,6 +399,42 @@ export function SilentWorkspaceRoom({
                   </button>
                 ) : null}
               </div>
+
+              {/* Owner / admin sub-actions. Surfaced inside the overlay
+                  so the mobile layout has a single place for room
+                  management — the parent's `.workspace-room-canvas-
+                  actions` row is hidden at phone widths. The buttons
+                  call back into the parent which owns the rename form
+                  and delete confirmation. Rename is offered to anyone;
+                  delete is gated on canDeleteRoom. */}
+              {onRoomRename || onRoomDelete ? (
+                <div className="workspace-room-overlay-admin">
+                  {onRoomRename ? (
+                    <button
+                      type="button"
+                      className="workspace-room-overlay-admin-button"
+                      onClick={() => {
+                        setIsOverlayExpanded(false);
+                        onRoomRename();
+                      }}
+                    >
+                      名前変更
+                    </button>
+                  ) : null}
+                  {onRoomDelete && canDeleteRoom ? (
+                    <button
+                      type="button"
+                      className="workspace-room-overlay-admin-button is-danger"
+                      onClick={() => {
+                        setIsOverlayExpanded(false);
+                        onRoomDelete();
+                      }}
+                    >
+                      解体
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
             </aside>
           ) : null}
 
