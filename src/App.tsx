@@ -2536,15 +2536,58 @@ function getSerializedWorkspaceRoomText(room: WorkspaceRoom) {
   return JSON.stringify(serializeWorkspaceRoom(room));
 }
 
-async function saveWorkspaceRoomToCloud(room: WorkspaceRoom) {
-  await setDoc(
-    doc(db, workspaceRoomsCollectionName, room.id),
-    {
-      ...serializeWorkspaceRoom(room),
+async function saveWorkspaceRoomToCloud(room: WorkspaceRoom, currentUserUid?: string) {
+  const ref = doc(db, workspaceRoomsCollectionName, room.id);
+
+  // Without the transaction below, every room write would replace the
+  // entire `activeMembers` array with the writer's local snapshot.
+  // Firestore's merge: true doesn't deep-merge arrays — it overwrites
+  // them as a single value. That meant if user A edited their own
+  // color or shape, user A's stale local copy of user B (e.g. before
+  // user B picked the owl silhouette) would get rewritten back over
+  // user B's fresh data on the server. The visible symptom: any
+  // character edit on one account silently reset every other account
+  // in the same room to the default humanoid.
+  //
+  // The fix: read the remote `activeMembers`, splice in just the
+  // current user's local entry, leave every other member exactly as
+  // the server has them, then write back. Room-level metadata (name,
+  // owner, etc.) still comes from the local payload because those
+  // fields are owned by the writer.
+  if (!currentUserUid) {
+    await setDoc(
+      ref,
+      {
+        ...serializeWorkspaceRoom(room),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true },
+    );
+    return;
+  }
+
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(ref);
+    const remoteRoom = snap.exists()
+      ? normalizeWorkspaceRoom({
+          ...((snap.data() as Partial<WorkspaceRoom>) || {}),
+          id: room.id,
+        })
+      : null;
+
+    const localMembers = room.activeMembers || [];
+    const localSelf = localMembers.find((member) => member.userId === currentUserUid);
+    const remoteMembers = remoteRoom?.activeMembers || [];
+    const otherMembers = remoteMembers.filter((member) => member.userId !== currentUserUid);
+    const mergedMembers = localSelf ? [...otherMembers, localSelf] : otherMembers;
+
+    const payload = {
+      ...serializeWorkspaceRoom({ ...room, activeMembers: mergedMembers }),
       updatedAt: serverTimestamp(),
-    },
-    { merge: true },
-  );
+    };
+
+    transaction.set(ref, payload, { merge: true });
+  });
 }
 
 function getSubjectSummary(logs: StudyLog[]) {
@@ -4613,7 +4656,7 @@ function App() {
 
     lastSyncedWorkspaceRoomsRef.current = serializedRoomText;
     serializedRooms.forEach((room) => {
-      void saveWorkspaceRoomToCloud(room).catch((error) => {
+      void saveWorkspaceRoomToCloud(room, currentUser.uid).catch((error) => {
         console.info("Workspace room cloud sync skipped.", error);
       });
     });
@@ -7650,7 +7693,7 @@ function App() {
 
     pendingWorkspaceRoomsRef.current.set(room.id, room);
     setCustomRooms((rooms) => (rooms.some((item) => item.id === room.id) ? rooms : [...rooms, room].map(normalizeWorkspaceRoom)));
-    void saveWorkspaceRoomToCloud(room)
+    void saveWorkspaceRoomToCloud(room, currentUser.uid)
       .then(() => {
         pendingWorkspaceRoomsRef.current.delete(room.id);
       })

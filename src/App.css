@@ -8692,41 +8692,6 @@
   object-fit: cover;
 }
 
-/* Default (humanoid) shape — gives the base box a layered, slightly
-   cylindrical look so it reads as a small character instead of a flat
-   colored tile. Three stacked gradients sit on top of --actor-color:
-   a top dome highlight, a right-side cheek shadow, and a bottom inner
-   shadow that grounds the figure. A double drop-shadow underneath
-   gives the impression that the sprite is *standing on* the room
-   floor rather than floating. */
-.actor-sprite.shape-default {
-  border-radius: 12px;
-  background:
-    radial-gradient(
-      ellipse 70% 38% at 50% 18%,
-      rgba(255, 255, 255, 0.34) 0%,
-      rgba(255, 255, 255, 0) 70%
-    ),
-    linear-gradient(
-      105deg,
-      rgba(255, 255, 255, 0.1) 0%,
-      rgba(0, 0, 0, 0) 45%,
-      rgba(0, 0, 0, 0.16) 100%
-    ),
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.06) 0%,
-      rgba(0, 0, 0, 0) 50%,
-      rgba(0, 0, 0, 0.2) 100%
-    ),
-    var(--actor-color);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.32),
-    inset 0 -3px 6px rgba(0, 0, 0, 0.22),
-    0 1px 2px rgba(0, 0, 0, 0.12),
-    0 8px 16px rgba(0, 0, 0, 0.2);
-}
-
 .sprite-head {
   position: absolute;
   top: -8px;
@@ -8750,43 +8715,6 @@
   background: rgba(var(--surface-rgb), 0.22);
 }
 
-/* For the humanoid, the inner sprite-body becomes a subtle face plate
-   (slightly brighter ellipse in the upper portion) instead of the
-   geometric inner square it was before. Combined with the dot eyes
-   below this gives the figure a readable face without making the
-   whole sprite busy. */
-.actor-sprite.shape-default .sprite-body {
-  inset: 7px 8px 14px;
-  border-radius: 10px 10px 7px 7px;
-  background:
-    radial-gradient(
-      ellipse 80% 60% at 50% 32%,
-      rgba(255, 255, 255, 0.22) 0%,
-      rgba(255, 255, 255, 0.06) 55%,
-      rgba(255, 255, 255, 0) 100%
-    );
-}
-
-/* Dot eyes for the humanoid. Sit in the upper third where the face
-   plate is brightest, so they read as eyes rather than blemishes. */
-.actor-sprite.shape-default .sprite-eye {
-  position: absolute;
-  top: 32%;
-  z-index: 3;
-  width: 12%;
-  height: 14%;
-  border-radius: 50%;
-  background: #14181a;
-}
-
-.actor-sprite.shape-default .sprite-eye-left {
-  left: 26%;
-}
-
-.actor-sprite.shape-default .sprite-eye-right {
-  right: 26%;
-}
-
 .sprite-leg {
   position: absolute;
   bottom: -9px;
@@ -8794,21 +8722,6 @@
   height: 16px;
   border-radius: 999px;
   background: #09110e;
-  /* Anchor leg-swing rotation at the hip (top of the leg) so the
-     animation reads as a pendulum swing instead of spinning around
-     the leg's centre. */
-  transform-origin: 50% 0%;
-}
-
-.actor-sprite.shape-default .sprite-leg {
-  width: 9px;
-  height: 13px;
-  bottom: -7px;
-  border-radius: 5px 5px 7px 7px;
-  background: linear-gradient(180deg, #232a2f 0%, #0a0f12 100%);
-  box-shadow:
-    0 2px 3px rgba(0, 0, 0, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .sprite-leg-left {
@@ -8820,15 +8733,15 @@
 }
 
 .workspace-actor.is-walking .actor-sprite {
-  animation: workspace-walk-body 0.5s ease-in-out infinite;
+  animation: workspace-walk-body 0.42s ease-in-out infinite;
 }
 
 .workspace-actor.is-walking .sprite-leg-left {
-  animation: workspace-walk-left 0.5s ease-in-out infinite;
+  animation: workspace-walk-left 0.42s ease-in-out infinite;
 }
 
 .workspace-actor.is-walking .sprite-leg-right {
-  animation: workspace-walk-right 0.5s ease-in-out infinite;
+  animation: workspace-walk-right 0.42s ease-in-out infinite;
 }
 
 /* Tsuta — initial character. Rounded square body, two dot eyes,
@@ -10020,62 +9933,33 @@
   }
 }
 
-/* Walk cycle — paired body + leg animations on a 0.5s loop. The body
-   bobs vertically and rocks slightly side-to-side to mimic the shift
-   of weight between feet; the legs swing as pendulums from the hip
-   (transform-origin: 50% 0%) plus a tiny vertical lift on the forward
-   half so the foot reads as 'stepping' instead of dragging. Left and
-   right legs are out-of-phase by half a cycle so one is always
-   forward while the other is back. */
 @keyframes workspace-walk-body {
   0%,
   100% {
-    transform: translateY(0) rotate(-1.5deg);
-  }
-  25% {
-    transform: translateY(-2.5px) rotate(0deg);
+    transform: translateY(0);
   }
   50% {
-    transform: translateY(0) rotate(1.5deg);
-  }
-  75% {
-    transform: translateY(-2.5px) rotate(0deg);
+    transform: translateY(-3px);
   }
 }
 
 @keyframes workspace-walk-left {
-  0% {
-    transform: translateY(0) rotate(14deg);
-  }
-  25% {
-    transform: translateY(-3px) rotate(0deg);
+  0%,
+  100% {
+    transform: translateY(0);
   }
   50% {
-    transform: translateY(0) rotate(-14deg);
-  }
-  75% {
-    transform: translateY(0) rotate(-8deg);
-  }
-  100% {
-    transform: translateY(0) rotate(14deg);
+    transform: translateY(4px);
   }
 }
 
 @keyframes workspace-walk-right {
-  0% {
-    transform: translateY(0) rotate(-14deg);
-  }
-  25% {
-    transform: translateY(0) rotate(-8deg);
+  0%,
+  100% {
+    transform: translateY(4px);
   }
   50% {
-    transform: translateY(0) rotate(14deg);
-  }
-  75% {
-    transform: translateY(-3px) rotate(0deg);
-  }
-  100% {
-    transform: translateY(0) rotate(-14deg);
+    transform: translateY(0);
   }
 }
 
