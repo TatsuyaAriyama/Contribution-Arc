@@ -215,117 +215,98 @@ export function SilentWorkspaceRoom({
     );
   }
 
+  // Room-info overlay shown inside the immersive stage (top-left).
+  // Replaces the previous .workspace-session-panel card that floated
+  // above the stage and visually competed with the room canvas. Kept
+  // small on purpose: title + stay meta + a compact task input + the
+  // recruit / leave actions. Datalist autocomplete still covers
+  // learning-item suggestions; the ghost hint surfaces when the typed
+  // text doesn't match an existing item.
+  const trimmedTask = taskValue.trim();
+  const matchedLearningItem = learningItemSuggestions.find(
+    (item) => item.name.toLowerCase() === trimmedTask.toLowerCase(),
+  );
+  const showGhostHint =
+    trimmedTask.length > 0 && !matchedLearningItem && Boolean(onLearningItemRegister);
+
   return (
     <div className={`workspace-2d-shell ${isFocusPresentation ? "focus-presentation" : ""}`}>
       <div className="workspace-2d-main">
-        {!isFocusPresentation ? (
-          <div className="workspace-session-panel">
-            <div className="workspace-session-header">
-              <div className="workspace-session-title">
-                <strong>{roomName}</strong>
-                <span className="workspace-session-status">
-                  {isJoined
-                    ? `入室中 · ${joinedAtLabel} から ${currentStayLabel}`
-                    : "未入室"}
+        <div className="workspace-stage" aria-label="Silent workspace">
+          <div className="workspace-floor-grid" aria-hidden="true" />
+
+          {!isFocusPresentation ? (
+            <aside className="workspace-room-overlay" aria-label="ルーム情報">
+              <div className="workspace-room-overlay-head">
+                <strong className="workspace-room-overlay-name">{roomName}</strong>
+                <span className="workspace-room-overlay-meta">
+                  {isJoined ? `${joinedAtLabel}〜 ${currentStayLabel}` : "未入室"}
                 </span>
               </div>
-              <div className="workspace-session-actions">
+
+              {activeRecruitmentSummary ? (
+                <div className="workspace-room-overlay-recruitment" role="status">
+                  <span>{activeRecruitmentSummary.stateLabel}</span>
+                  <span className="workspace-room-overlay-recruitment-count">
+                    {activeRecruitmentSummary.joinedCount}人
+                  </span>
+                  <button
+                    type="button"
+                    onClick={activeRecruitmentSummary.onCancel}
+                    aria-label="募集を取り消す"
+                  >
+                    取消
+                  </button>
+                </div>
+              ) : null}
+
+              <div className="workspace-room-overlay-task">
+                <input
+                  value={taskValue}
+                  onChange={handleTaskChange}
+                  placeholder="今やってること"
+                  maxLength={48}
+                  list="workspace-learning-items-datalist"
+                  aria-label="今やってること"
+                />
+                <datalist id="workspace-learning-items-datalist">
+                  {learningItemSuggestions.map((item) => (
+                    <option key={item.id} value={item.name} />
+                  ))}
+                </datalist>
+                {showGhostHint ? (
+                  <button
+                    type="button"
+                    className="workspace-room-overlay-ghost-hint"
+                    onClick={() => onLearningItemRegister?.(trimmedTask)}
+                  >
+                    + 「{trimmedTask}」を記録に追加
+                  </button>
+                ) : null}
+              </div>
+
+              <div className="workspace-room-overlay-actions">
                 {onOpenRecruitmentModal && isJoined && !activeRecruitmentSummary ? (
                   <button
                     type="button"
-                    className="room-recruit-button"
+                    className="workspace-room-overlay-recruit"
                     onClick={onOpenRecruitmentModal}
                   >
-                    📣 募集する
+                    📣 募集
                   </button>
                 ) : null}
                 {isJoined ? (
-                  <button type="button" className="room-leave-button" onClick={onLeave}>
-                    退出する
+                  <button
+                    type="button"
+                    className="workspace-room-overlay-leave"
+                    onClick={onLeave}
+                  >
+                    退出
                   </button>
-                ) : (
-                  <button type="button" className="room-join-button" onClick={onJoin}>
-                    入室する
-                  </button>
-                )}
+                ) : null}
               </div>
-            </div>
-
-            {activeRecruitmentSummary ? (
-              <div className="workspace-active-recruitment" role="status">
-                <span className="workspace-active-recruitment-state">{activeRecruitmentSummary.stateLabel}</span>
-                <span className="workspace-active-recruitment-count">
-                  {activeRecruitmentSummary.joinedCount}人参加中
-                </span>
-                <button
-                  type="button"
-                  className="workspace-active-recruitment-cancel"
-                  onClick={activeRecruitmentSummary.onCancel}
-                >
-                  取り消す
-                </button>
-              </div>
-            ) : null}
-
-            <label className="workspace-task-field">
-              <span>今やってること</span>
-              {(() => {
-                const trimmed = taskValue.trim();
-                const matchedItem = learningItemSuggestions.find(
-                  (item) => item.name.toLowerCase() === trimmed.toLowerCase(),
-                );
-                const showGhostHint = trimmed.length > 0 && !matchedItem && Boolean(onLearningItemRegister);
-                const recentChips = recentLearningItemIds
-                  .map((id) => learningItemSuggestions.find((item) => item.id === id))
-                  .filter((item): item is LearningItemSuggestion => Boolean(item))
-                  .slice(0, 3);
-                return (
-                  <>
-                    {recentChips.length > 0 ? (
-                      <div className="study-subject-chips" aria-label="最近使った学習対象">
-                        {recentChips.map((item) => (
-                          <button
-                            type="button"
-                            key={item.id}
-                            className={matchedItem?.id === item.id ? "active" : ""}
-                            onClick={() => onTaskChange(item.name)}
-                            style={{ "--chip-color": item.color } as CSSProperties}
-                          >
-                            {item.name}
-                          </button>
-                        ))}
-                      </div>
-                    ) : null}
-                    <input
-                      value={taskValue}
-                      onChange={handleTaskChange}
-                      placeholder="作業内容を入力"
-                      maxLength={48}
-                      list="workspace-learning-items-datalist"
-                    />
-                    <datalist id="workspace-learning-items-datalist">
-                      {learningItemSuggestions.map((item) => (
-                        <option key={item.id} value={item.name} />
-                      ))}
-                    </datalist>
-                    {showGhostHint ? (
-                      <button
-                        type="button"
-                        className="subject-ghost-hint"
-                        onClick={() => onLearningItemRegister?.(trimmed)}
-                      >
-                        + 「{trimmed}」を記録に追加
-                      </button>
-                    ) : null}
-                  </>
-                );
-              })()}
-            </label>
-          </div>
-        ) : null}
-
-        <div className="workspace-stage" aria-label="Silent workspace">
-          <div className="workspace-floor-grid" aria-hidden="true" />
+            </aside>
+          ) : null}
 
           {members.map((member) => {
             const isCurrentUser = member.userId === currentUserId;

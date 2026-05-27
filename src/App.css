@@ -7962,6 +7962,172 @@
   }
 }
 
+/* Small room-info overlay shown inside the immersive stage (top-left).
+   Replaces the previous .workspace-session-panel that sat above the
+   stage as a separate card. Kept compact: room title + stay meta +
+   one task input + a tight action row, so it occupies just a corner
+   of the stage and lets the characters remain the focal point. */
+.workspace-room-overlay {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 4;
+  display: grid;
+  gap: 6px;
+  width: min(264px, calc(100% - 28px));
+  padding: 10px 12px;
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
+  border-radius: 14px;
+  background: rgba(var(--surface-rgb), 0.92);
+  box-shadow: 0 6px 22px rgba(15, 23, 42, 0.07);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-size: 12px;
+}
+
+.workspace-room-overlay-head {
+  display: grid;
+  gap: 2px;
+}
+
+.workspace-room-overlay-name {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.workspace-room-overlay-meta {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.workspace-room-overlay-recruitment {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(var(--ink-rgb), 0.05);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.workspace-room-overlay-recruitment-count {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.workspace-room-overlay-recruitment button {
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.workspace-room-overlay-recruitment button:hover {
+  background: rgba(var(--ink-rgb), 0.06);
+  color: var(--ink);
+}
+
+.workspace-room-overlay-task {
+  display: grid;
+  gap: 4px;
+}
+
+.workspace-room-overlay-task input {
+  width: 100%;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(var(--ink-rgb), 0.1);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.workspace-room-overlay-task input:focus {
+  outline: none;
+  border-color: rgba(31, 111, 74, 0.5);
+  box-shadow: 0 0 0 3px rgba(31, 111, 74, 0.12);
+}
+
+.workspace-room-overlay-ghost-hint {
+  justify-self: start;
+  padding: 3px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(31, 111, 74, 0.1);
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.workspace-room-overlay-ghost-hint:hover {
+  background: rgba(31, 111, 74, 0.18);
+}
+
+.workspace-room-overlay-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.workspace-room-overlay-recruit,
+.workspace-room-overlay-leave {
+  flex: 1;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(var(--ink-rgb), 0.1);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.workspace-room-overlay-recruit:hover {
+  background: rgba(var(--ink-rgb), 0.05);
+}
+
+.workspace-room-overlay-leave {
+  border-color: transparent;
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+}
+
+.workspace-room-overlay-leave:hover {
+  filter: brightness(1.05);
+}
+
+[data-theme="dark"] .workspace-room-overlay {
+  background: rgba(22, 24, 28, 0.88);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+@media (max-width: 540px) {
+  .workspace-room-overlay {
+    top: 10px;
+    left: 10px;
+    width: calc(100% - 20px);
+    padding: 9px 10px;
+    gap: 5px;
+  }
+}
+
 .workspace-2d-main,
 .workspace-activity-panel {
   min-width: 0;
