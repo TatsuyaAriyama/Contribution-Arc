@@ -3413,6 +3413,23 @@
 .log-composer-footer button[type="submit"]:hover {
   background: #0f172a;
   color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px -6px rgba(15, 23, 42, 0.35);
+}
+
+.log-composer-footer button[type="submit"] {
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.log-composer-footer button[type="submit"]:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+  box-shadow: 0 2px 6px -4px rgba(15, 23, 42, 0.25);
 }
 
 .log-composer-footer button:disabled {
@@ -3665,6 +3682,11 @@
   color: #f43f5e;
 }
 
+.log-like-button:active .log-like-icon {
+  transform: scale(0.9);
+  transition: transform 0.08s ease;
+}
+
 .log-like-button.liked {
   color: #f43f5e;
 }
@@ -3776,6 +3798,11 @@
 .log-reply-toggle:hover {
   background: rgba(var(--ink-rgb), 0.06);
   color: var(--ink);
+}
+
+.log-reply-toggle:active {
+  transform: scale(0.95);
+  transition: transform 0.08s ease, background 0.08s ease, color 0.08s ease;
 }
 
 .log-reply-toggle.is-open {
@@ -11352,6 +11379,11 @@
   background: rgba(var(--ink-rgb), 0.04);
 }
 
+.topbar-nav button:active {
+  transform: scale(0.96);
+  transition: transform 0.08s ease, color 0.08s ease, background 0.08s ease;
+}
+
 .topbar-nav button.is-active {
   color: var(--ink-strong);
   background: var(--surface);
@@ -11377,12 +11409,30 @@
   background: rgba(var(--surface-rgb), 0.7);
   color: var(--ink);
   cursor: pointer;
-  transition: background 0.16s ease, border-color 0.16s ease;
+  transform: translateY(0);
+  box-shadow: 0 1px 0 rgba(var(--ink-rgb), 0.02);
+  transition:
+    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.16s ease,
+    border-color 0.16s ease;
 }
 
 .topbar-icon-button:hover {
   background: var(--surface);
   border-color: rgba(var(--ink-rgb), 0.16);
+  transform: translateY(-1px);
+  box-shadow:
+    0 1px 2px rgba(var(--ink-rgb), 0.04),
+    0 6px 14px -6px rgba(var(--ink-rgb), 0.12);
+}
+
+.topbar-icon-button:active {
+  transform: translateY(0) scale(0.96);
+  transition:
+    transform 0.08s ease,
+    box-shadow 0.08s ease;
+  box-shadow: 0 1px 0 rgba(var(--ink-rgb), 0.02);
 }
 
 .topbar-icon-button.is-open {
@@ -11753,6 +11803,11 @@
   background: rgba(var(--surface-rgb), 0.74);
   color: var(--ink);
   box-shadow: 0 12px 28px rgba(var(--ink-rgb), 0.04);
+}
+
+.side-nav button:active {
+  transform: translateX(2px) scale(0.985);
+  transition: transform 0.08s ease, background 0.08s ease;
 }
 
 .side-nav button.active span {
@@ -15931,11 +15986,18 @@
   border: none;
   padding: 0;
   cursor: pointer;
-  transition: transform 0.12s ease, outline-color 0.12s ease;
+  box-shadow: 0 0 0 rgba(31, 111, 74, 0);
+  transition:
+    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    outline-color 0.12s ease;
 }
 
 .contribution-arc-cell:hover {
-  transform: scale(1.35);
+  transform: scale(1.4);
+  box-shadow:
+    0 4px 10px rgba(31, 111, 74, 0.22),
+    0 0 0 1px rgba(var(--surface-rgb), 0.6);
 }
 
 .contribution-arc-cell.empty {
