@@ -12,7 +12,7 @@ export type RoomActivityItem = {
 
 type RoomActorStatus = "working" | "deep-work" | "on-break";
 
-export type CharacterShape = "default" | "ghost" | "owl";
+export type CharacterShape = "default" | "ghost" | "owl" | "cactus";
 
 export type RoomActor = {
   id: string;
@@ -435,6 +435,23 @@ export function SilentWorkspaceRoom({
                           strokeLinejoin="round"
                         />
                       </svg>
+                    </>
+                  ) : null}
+                  {/* Cactus extras — two asymmetric side arms, a small
+                      crown flower, and a pair of tiny eyes. Rendered
+                      only for the cactus shape so other silhouettes
+                      stay clean. The trunk itself is drawn with CSS
+                      on the parent .actor-sprite.shape-cactus. */}
+                  {member.characterShape === "cactus" ? (
+                    <>
+                      <span className="sprite-cactus-arm sprite-cactus-arm-left" aria-hidden="true" />
+                      <span className="sprite-cactus-arm sprite-cactus-arm-right" aria-hidden="true" />
+                      <span className="sprite-cactus-flower" aria-hidden="true">
+                        <span className="sprite-cactus-flower-core" />
+                      </span>
+                      <span className="sprite-cactus-eye sprite-cactus-eye-left" aria-hidden="true" />
+                      <span className="sprite-cactus-eye sprite-cactus-eye-right" aria-hidden="true" />
+                      <span className="sprite-cactus-cheek" aria-hidden="true" />
                     </>
                   ) : null}
                 </span>

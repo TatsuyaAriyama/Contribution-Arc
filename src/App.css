@@ -9287,6 +9287,218 @@
   }
 }
 
+/* ───────────────────────────────────────────────────────────────────
+   Cactus shape — "ほぼ動かず、ただ静かに育つ" の象徴。
+   ─────────────────────────────────────────────────────────────────
+   設計思想:
+   - 縦長の幹（trunk）+ 左右非対称の小さなアーム + 頂上の花。
+   - 既存3キャラ（人型・ゴースト・フクロウ）に対し「植物カテゴリ」
+     を加える。動物・流体ではない第4の系統。
+   - 動きは 5.4s 周期の極小バウンス（呼吸）。歩かない・走らない。
+   - 幹のシルエットは ::before で clip-path を効かせ、子要素
+     （アーム・花）が clip されないよう分離。
+   - 親には overflow: visible を維持してアーム/花が外に出られる。 */
+.actor-sprite.shape-cactus {
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+  animation: workspace-cactus-breathe 5.4s ease-in-out infinite;
+}
+
+.actor-sprite.shape-cactus::before {
+  content: "";
+  position: absolute;
+  inset: -4px -2px -2px -2px;
+  background:
+    radial-gradient(
+      ellipse 56% 24% at 50% 14%,
+      rgba(255, 255, 255, 0.26) 0%,
+      rgba(255, 255, 255, 0) 62%
+    ),
+    radial-gradient(
+      ellipse 80% 18% at 50% 92%,
+      rgba(0, 0, 0, 0.2) 0%,
+      rgba(0, 0, 0, 0) 64%
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent 6px,
+      rgba(255, 255, 255, 0.08) 6px,
+      rgba(255, 255, 255, 0.08) 7px,
+      transparent 7px,
+      transparent 14px
+    ),
+    var(--actor-color);
+  clip-path: polygon(
+    36% 0%, 50% -2%, 64% 0%,
+    74% 4%, 80% 12%, 82% 24%, 82% 80%,
+    78% 90%, 70% 96%, 60% 100%,
+    40% 100%, 30% 96%, 22% 90%, 18% 80%,
+    18% 24%, 20% 12%, 26% 4%
+  );
+  filter:
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.16))
+    drop-shadow(0 6px 10px rgba(0, 0, 0, 0.16));
+  z-index: 0;
+}
+
+.actor-sprite.shape-cactus .sprite-body,
+.actor-sprite.shape-cactus .sprite-leg,
+.actor-sprite.shape-cactus .sprite-tail,
+.actor-sprite.shape-cactus .sprite-eye {
+  display: none;
+}
+
+.actor-sprite.shape-cactus .sprite-cactus-arm {
+  position: absolute;
+  width: 9px;
+  height: 14px;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent 3px,
+      rgba(255, 255, 255, 0.07) 3px,
+      rgba(255, 255, 255, 0.07) 4px
+    ),
+    var(--actor-color);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 2px 4px rgba(0, 0, 0, 0.12);
+  z-index: 1;
+}
+
+.actor-sprite.shape-cactus .sprite-cactus-arm-left {
+  left: -5px;
+  top: 46%;
+  transform: rotate(-18deg);
+}
+
+.actor-sprite.shape-cactus .sprite-cactus-arm-right {
+  right: -5px;
+  top: 26%;
+  transform: rotate(18deg);
+}
+
+.actor-sprite.shape-cactus .sprite-cactus-flower {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  transform: translateX(-50%);
+  z-index: 3;
+  animation: workspace-cactus-bloom 11s ease-in-out infinite;
+}
+
+.actor-sprite.shape-cactus .sprite-cactus-flower::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 24%, #f4a5b8 0 30%, transparent 32%),
+    radial-gradient(circle at 76% 50%, #f4a5b8 0 30%, transparent 32%),
+    radial-gradient(circle at 50% 76%, #f4a5b8 0 30%, transparent 32%),
+    radial-gradient(circle at 24% 50%, #f4a5b8 0 30%, transparent 32%);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+}
+
+.actor-sprite.shape-cactus .sprite-cactus-flower-core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #f5d061;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 4px rgba(245, 208, 97, 0.6);
+}
+
+.actor-sprite.shape-cactus .sprite-cactus-eye {
+  position: absolute;
+  top: 44%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.92) 0 28%, transparent 32%),
+    #0a0e0c;
+  z-index: 2;
+}
+
+.actor-sprite.shape-cactus .sprite-cactus-eye-left {
+  left: 32%;
+}
+
+.actor-sprite.shape-cactus .sprite-cactus-eye-right {
+  right: 32%;
+}
+
+.actor-sprite.shape-cactus .sprite-cactus-cheek {
+  position: absolute;
+  top: 56%;
+  left: 50%;
+  width: 5px;
+  height: 1.5px;
+  background: rgba(244, 165, 184, 0.55);
+  border-radius: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.workspace-actor.is-walking .actor-sprite.shape-cactus {
+  animation: workspace-cactus-breathe 5.4s ease-in-out infinite;
+}
+
+.workspace-actor.is-walking .actor-sprite.shape-cactus .sprite-leg-left,
+.workspace-actor.is-walking .actor-sprite.shape-cactus .sprite-leg-right {
+  animation: none;
+}
+
+.workspace-actor.is-resting .actor-sprite.shape-cactus {
+  animation: workspace-cactus-breathe 5.4s ease-in-out infinite;
+}
+
+@keyframes workspace-cactus-breathe {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-0.6px);
+  }
+}
+
+@keyframes workspace-cactus-bloom {
+  0%,
+  44%,
+  100% {
+    transform: translateX(-50%) scale(1);
+    opacity: 0.95;
+  }
+  50% {
+    transform: translateX(-50%) scale(1.08);
+    opacity: 1;
+  }
+  56% {
+    transform: translateX(-50%) scale(1);
+    opacity: 0.95;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .actor-sprite.shape-cactus,
+  .actor-sprite.shape-cactus .sprite-cactus-flower,
+  .workspace-actor.is-walking .actor-sprite.shape-cactus,
+  .workspace-actor.is-resting .actor-sprite.shape-cactus {
+    animation: none;
+  }
+}
+
 /* Customize sections — group label + grid so シルエット / カラー
    read as separate sub-controls inside the character card. */
 .character-customize-section {
@@ -9494,6 +9706,91 @@
 
 .swatch-owl-foot-right {
   right: 22%;
+}
+
+/* ─── Cactus picker swatch ─────────────────────────────────────────
+   Mirrors the in-stage cactus: tall pill trunk + side arms + crown
+   flower. The trunk is drawn on ::before so the child arms / flower
+   sit outside the clip-path and read as protrusions. Stays static
+   (no breath animation) since picker previews shouldn't move. */
+.character-shape-swatch.shape-cactus {
+  position: relative;
+  background: transparent;
+  overflow: visible;
+}
+
+.character-shape-swatch.shape-cactus::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      ellipse 56% 22% at 50% 14%,
+      rgba(255, 255, 255, 0.24) 0%,
+      rgba(255, 255, 255, 0) 60%
+    ),
+    radial-gradient(
+      ellipse 80% 18% at 50% 92%,
+      rgba(0, 0, 0, 0.18) 0%,
+      rgba(0, 0, 0, 0) 64%
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent 5px,
+      rgba(255, 255, 255, 0.07) 5px,
+      rgba(255, 255, 255, 0.07) 6px,
+      transparent 6px,
+      transparent 12px
+    ),
+    var(--actor-color, #1f6f4a);
+  clip-path: polygon(
+    36% 0%, 50% -2%, 64% 0%,
+    74% 4%, 80% 12%, 82% 24%, 82% 80%,
+    78% 90%, 70% 96%, 60% 100%,
+    40% 100%, 30% 96%, 22% 90%, 18% 80%,
+    18% 24%, 20% 12%, 26% 4%
+  );
+  filter: drop-shadow(0 3px 5px rgba(var(--ink-rgb), 0.18));
+}
+
+.character-shape-swatch.shape-cactus .swatch-cactus-arm {
+  position: absolute;
+  width: 16%;
+  height: 24%;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  background: var(--actor-color, #1f6f4a);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  z-index: 1;
+}
+
+.character-shape-swatch.shape-cactus .swatch-cactus-arm-left {
+  left: 2%;
+  top: 46%;
+  transform: rotate(-18deg);
+}
+
+.character-shape-swatch.shape-cactus .swatch-cactus-arm-right {
+  right: 2%;
+  top: 26%;
+  transform: rotate(18deg);
+}
+
+.character-shape-swatch.shape-cactus .swatch-cactus-flower {
+  position: absolute;
+  top: -10%;
+  left: 50%;
+  width: 26%;
+  height: 26%;
+  transform: translateX(-50%);
+  background:
+    radial-gradient(circle at 50% 50%, #f5d061 0 22%, transparent 26%),
+    radial-gradient(circle at 50% 22%, #f4a5b8 0 24%, transparent 28%),
+    radial-gradient(circle at 78% 50%, #f4a5b8 0 24%, transparent 28%),
+    radial-gradient(circle at 50% 78%, #f4a5b8 0 24%, transparent 28%),
+    radial-gradient(circle at 22% 50%, #f4a5b8 0 24%, transparent 28%);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+  z-index: 2;
 }
 
 .actor-name,
@@ -12426,6 +12723,41 @@
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
+}
+
+/* Shop icon — primary monetization entrypoint. Keeps the calm
+   topbar visual language but adds a soft amber accent so the eye
+   catches on it among the other line icons. The coin balance
+   sits as a small pill in the bottom-right corner. */
+.topbar-shop-button {
+  color: var(--ink);
+}
+
+.topbar-shop-button:hover {
+  color: #c79030;
+  border-color: rgba(199, 144, 48, 0.35);
+  box-shadow: 0 8px 18px rgba(199, 144, 48, 0.18);
+}
+
+.topbar-shop-coins {
+  position: absolute;
+  bottom: -5px;
+  right: -6px;
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f3c969, #c79030);
+  color: #4a2f00;
+  font-size: 10px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .topbar-popover {

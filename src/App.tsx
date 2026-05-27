@@ -241,7 +241,7 @@ type RoomUserStatus = "working" | "deep-work" | "on-break";
    (round head with ear tufts, big amber eyes, beak; ground-hops
    instead of walks; ambient ~270° head turn). New shapes can be
    added here. */
-type CharacterShape = "default" | "ghost" | "owl";
+type CharacterShape = "default" | "ghost" | "owl" | "cactus";
 
 type RoomUser = {
   id: string;
@@ -445,6 +445,7 @@ const characterShapeOptions: { value: CharacterShape; name: string }[] = [
   { value: "default", name: "人型" },
   { value: "ghost", name: "ゴースト" },
   { value: "owl", name: "フクロウ" },
+  { value: "cactus", name: "サボテン" },
 ];
 
 // Shop catalog. "default" is intentionally not listed — every account
@@ -471,6 +472,13 @@ const shapeShopCatalog: ShapeShopItem[] = [
     name: "フクロウ",
     tagline: "Night owl",
     description: "丸い頭に大きな琥珀の眼。深夜にひとり手を動かす時間のお供に。",
+    price: 500,
+  },
+  {
+    shape: "cactus",
+    name: "サボテン",
+    tagline: "Quiet grower",
+    description: "ほぼ動かず、ただ静かに育つ。長く続けた人の作業部屋に、いつの間にか根を下ろす。",
     price: 500,
   },
 ];
@@ -8970,6 +8978,39 @@ function App() {
         </div>
 
         <div className="user-session">
+          <button
+            type="button"
+            className="topbar-icon-button topbar-shop-button"
+            aria-label={`ショップ${coins > 0 ? ` (${coins.toLocaleString()} コイン)` : ""}`}
+            onClick={() => {
+              setCurrentView("shop");
+              setIsFriendsPopoverOpen(false);
+              setIsLivePopoverOpen(false);
+            }}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path
+                d="M5 8h14l-1.1 11.2a1.6 1.6 0 0 1-1.6 1.5H7.7a1.6 1.6 0 0 1-1.6-1.5L5 8z"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M9 8V6.4a3 3 0 0 1 6 0V8"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+            </svg>
+            {coins > 0 ? (
+              <span className="topbar-shop-coins" aria-hidden="true">
+                {coins.toLocaleString()}
+              </span>
+            ) : null}
+          </button>
+
           <div className="topbar-popover-wrap" ref={friendsPopoverRef}>
             <button
               type="button"
@@ -9259,17 +9300,6 @@ function App() {
                     />
                   </svg>
                   <span>プロフィール</span>
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setIsUserMenuOpen(false);
-                    setCurrentView("shop");
-                  }}
-                >
-                  <GiftIcon />
-                  <span>ショップ</span>
                 </button>
                 <button
                   type="button"
@@ -9782,6 +9812,13 @@ function App() {
                                 <span className="swatch-owl-beak" />
                                 <span className="swatch-owl-foot swatch-owl-foot-left" />
                                 <span className="swatch-owl-foot swatch-owl-foot-right" />
+                              </>
+                            ) : null}
+                            {option.value === "cactus" ? (
+                              <>
+                                <span className="swatch-cactus-arm swatch-cactus-arm-left" />
+                                <span className="swatch-cactus-arm swatch-cactus-arm-right" />
+                                <span className="swatch-cactus-flower" />
                               </>
                             ) : null}
                           </span>
@@ -11373,13 +11410,13 @@ function App() {
                 <p className="card-kicker">Shop</p>
                 <h2>キャラクターをカスタマイズ</h2>
                 <p className="shop-card-lede">
-                  シルエットや姿を変えて、自分だけの分身に。所持コインで購入できます。
+                  シルエットや姿を変えて、自分だけの分身に。所持している Arc で購入できます。
                 </p>
               </div>
-              <div className="shop-balance" aria-label="所持コイン">
-                <span className="shop-balance-label">所持コイン</span>
+              <div className="shop-balance" aria-label="所持 Arc">
+                <span className="shop-balance-label">所持 Arc</span>
                 <strong className="shop-balance-value">
-                  <span className="shop-coin-icon" aria-hidden="true">●</span>
+                  <span className="shop-coin-icon" aria-hidden="true">◆</span>
                   {coins.toLocaleString()}
                 </strong>
                 <button
@@ -11388,7 +11425,7 @@ function App() {
                   disabled
                   title="近日公開"
                 >
-                  コインを購入（近日公開）
+                  Arc を購入（近日公開）
                 </button>
               </div>
             </div>
@@ -11440,7 +11477,7 @@ function App() {
                       ) : (
                         <>
                           <span className="shop-product-price">
-                            <span className="shop-coin-icon" aria-hidden="true">●</span>
+                            <span className="shop-coin-icon" aria-hidden="true">◆</span>
                             {item.price.toLocaleString()}
                           </span>
                           <button
@@ -11450,7 +11487,7 @@ function App() {
                             onClick={() => {
                               if (!canAfford) return;
                               const ok = window.confirm(
-                                `${item.name} を ${item.price.toLocaleString()} コインで購入しますか？`,
+                                `${item.name} を ${item.price.toLocaleString()} Arc で購入しますか？`,
                               );
                               if (!ok) return;
                               setCoins((value) => Math.max(0, value - item.price));
@@ -11460,7 +11497,7 @@ function App() {
                               setPlayerCharacterShape(item.shape);
                             }}
                           >
-                            {canAfford ? "購入する" : "コイン不足"}
+                            {canAfford ? "購入する" : "Arc 不足"}
                           </button>
                         </>
                       )}
