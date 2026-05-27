@@ -614,9 +614,19 @@
   z-index: 100;
   display: grid;
   place-items: center;
-  padding: 20px;
+  /* Pull padding away from notch / home indicator so modals never sit
+     under the dynamic island or the bottom curve. */
+  padding: max(20px, env(safe-area-inset-top))
+    max(20px, env(safe-area-inset-right))
+    max(20px, env(safe-area-inset-bottom))
+    max(20px, env(safe-area-inset-left));
   background: rgba(var(--ink-rgb), 0.18);
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  /* Containing the scroll inside the modal prevents the underlying
+     page from bouncing when the modal hits its scroll edge — the iOS
+     'rubber band' that gives away a non-native sheet. */
+  overscroll-behavior: contain;
 }
 
 .settings-modal {
@@ -20547,6 +20557,110 @@ button,
 a[role="button"],
 [role="button"] {
   touch-action: manipulation;
+  /* Long-pressing a button on iOS Safari otherwise pops up the share /
+     copy-link context menu, which has no purpose inside an installed
+     app and steals the gesture from the actual onClick. Suppressing
+     the callout makes presses feel native. */
+  -webkit-touch-callout: none;
+}
+
+/* Chrome (titles, kickers, navigation chips, in-room actor labels) is
+   not meant to be selected by the user — accidental text selection on
+   a swipe makes it feel webby, not native. Body content (post text,
+   composer fields, etc.) keeps the default user-select inheritance. */
+.card-kicker,
+.actor-name,
+.actor-task,
+.workspace-bubble,
+.user-menu-button,
+[role="tab"],
+[role="menuitem"] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Block iOS Safari long-press image/sprite preview on the workspace
+   actors so the room canvas can't be hijacked into an image picker. */
+.actor-sprite,
+.actor-sprite *,
+.workspace-actor,
+.actor-shadow {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+}
+
+/* iPhone Safari "Add to Home Screen" hint. Bottom sheet that floats
+   above the mobile nav, respects the home-indicator safe area, and
+   uses an iOS-native glass blur. Mounted by IOSInstallHint.tsx, which
+   guards visibility (Safari-only, not standalone, cooldown). */
+.ios-install-hint {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  z-index: 220;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 14px 14px 16px;
+  border-radius: 18px;
+  background: rgba(var(--surface-rgb), 0.92);
+  backdrop-filter: blur(22px) saturate(1.08);
+  -webkit-backdrop-filter: blur(22px) saturate(1.08);
+  box-shadow:
+    0 10px 32px rgba(0, 0, 0, 0.18),
+    0 1px 0 rgba(var(--ink-rgb), 0.06) inset;
+  color: var(--ink);
+  animation: ios-install-hint-in 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.ios-install-hint-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.ios-install-hint-body strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--ink-strong);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.ios-install-hint-body p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.ios-install-hint-dismiss {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(var(--ink-rgb), 0.06);
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ios-install-hint-dismiss:hover {
+  background: rgba(var(--ink-rgb), 0.1);
+}
+
+@keyframes ios-install-hint-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* iOS Safari auto-zooms on focus when an input's computed font-size is
