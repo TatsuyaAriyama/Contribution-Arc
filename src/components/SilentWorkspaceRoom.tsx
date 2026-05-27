@@ -408,6 +408,35 @@ export function SilentWorkspaceRoom({
                       <span className="sprite-wing sprite-wing-right" />
                     </>
                   ) : null}
+                  {/* Ghost extras (hat + arm nubs + wavy mouth) — only
+                      rendered for the ghost shape so they don't sit
+                      invisibly inside every other sprite. */}
+                  {member.characterShape === "ghost" ? (
+                    <>
+                      <span className="sprite-ghost-hat" aria-hidden="true">
+                        <span className="sprite-ghost-hat-crown" />
+                        <span className="sprite-ghost-hat-brim" />
+                        <span className="sprite-ghost-hat-band" />
+                      </span>
+                      <span className="sprite-ghost-arm sprite-ghost-arm-left" />
+                      <span className="sprite-ghost-arm sprite-ghost-arm-right" />
+                      <svg
+                        className="sprite-ghost-mouth"
+                        viewBox="0 0 24 8"
+                        aria-hidden="true"
+                        focusable="false"
+                      >
+                        <path
+                          d="M2 4 Q 6 0.5 10 4 T 18 4 L 22 4"
+                          stroke="#3b2218"
+                          strokeWidth="1.6"
+                          fill="none"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </>
+                  ) : null}
                 </span>
                 <span className="actor-name">{member.name}</span>
                 <span className="actor-task">
