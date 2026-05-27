@@ -152,6 +152,69 @@ export function SilentWorkspaceRoom({
     );
   };
 
+  // Pre-join "lobby" view. The previous layout rendered the immersive
+  // stage even before the user joined, which left the workspace-session
+  // overlay floating over the stage with the "入室する" button awkwardly
+  // overlapping. Replace it with a focused entry card: room name,
+  // member peek (avatar stack), task input, and a single prominent CTA.
+  if (!isJoined && !isFocusPresentation) {
+    const previewMembers = members.slice(0, 5);
+    const extraMembers = Math.max(0, members.length - previewMembers.length);
+    return (
+      <div className="workspace-2d-shell is-preview">
+        <article className="workspace-room-preview">
+          <header className="room-preview-header">
+            <p className="room-preview-kicker">作業部屋</p>
+            <h3 className="room-preview-title">{roomName}</h3>
+          </header>
+
+          <div className="room-preview-members" aria-label="作業中のメンバー">
+            {previewMembers.length > 0 ? (
+              <div className="room-preview-avatar-stack">
+                {previewMembers.map((member) => (
+                  <span
+                    key={member.userId}
+                    className="room-preview-avatar"
+                    style={{ "--actor-color": member.characterColor || member.color } as CSSProperties}
+                    title={member.name}
+                  >
+                    {member.avatar ? (
+                      <img src={member.avatar} alt="" />
+                    ) : (
+                      <span>{(member.name?.charAt(0) || "?").toUpperCase()}</span>
+                    )}
+                  </span>
+                ))}
+                {extraMembers > 0 ? (
+                  <span className="room-preview-avatar room-preview-avatar-more">
+                    +{extraMembers}
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+            <span className="room-preview-count">
+              {members.length > 0 ? `${members.length}人が作業中` : "まだ誰もいません"}
+            </span>
+          </div>
+
+          <label className="room-preview-task-field">
+            <span>今やってること</span>
+            <input
+              value={taskValue}
+              onChange={handleTaskChange}
+              placeholder="作業内容を入力"
+              maxLength={48}
+            />
+          </label>
+
+          <button type="button" className="room-preview-join" onClick={onJoin}>
+            入室する
+          </button>
+        </article>
+      </div>
+    );
+  }
+
   return (
     <div className={`workspace-2d-shell ${isFocusPresentation ? "focus-presentation" : ""}`}>
       <div className="workspace-2d-main">
