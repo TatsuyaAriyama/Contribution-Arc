@@ -8878,12 +8878,28 @@ function App() {
           >
             ホーム
           </button>
+          {/* 作業部屋を「ホームの直後」=動線上で必ず通る位置に移動。
+              在室者がいるときは小さなドットとカウントを添えて、
+              「今、誰かが居る」気配を静かに伝える（煽らない）。 */}
           <button
             type="button"
-            className={currentView === "daily" ? "is-active" : ""}
-            onClick={() => setCurrentView("daily")}
+            className={`workspace-tab${currentView === "workspace" ? " is-active" : ""}${
+              activeMembers.length > 0 ? " has-presence" : ""
+            }`}
+            onClick={() => setCurrentView("workspace")}
           >
-            日報
+            {activeMembers.length > 0 ? (
+              <span className="topbar-presence-dot" aria-hidden="true" />
+            ) : null}
+            <span className="workspace-tab-label">作業部屋</span>
+            {activeMembers.length > 0 ? (
+              <span
+                className="topbar-presence-count"
+                aria-label={`現在 ${activeMembers.length} 人が作業中`}
+              >
+                · {activeMembers.length}
+              </span>
+            ) : null}
           </button>
           <button
             type="button"
@@ -8894,10 +8910,10 @@ function App() {
           </button>
           <button
             type="button"
-            className={currentView === "workspace" ? "is-active" : ""}
-            onClick={() => setCurrentView("workspace")}
+            className={currentView === "daily" ? "is-active" : ""}
+            onClick={() => setCurrentView("daily")}
           >
-            作業部屋
+            日報
           </button>
         </nav>
 
@@ -11501,18 +11517,59 @@ function App() {
               日報を書く
             </button>
           </article>
-          <article className="card workspace-summary-card">
+          {/* Workspace summary card — 在室者が居るときは「気配アバター」を
+              チラ見せして、自然に作業部屋へ誘導。煽らないために最大4人、
+              低彩度の小さな円のみ。誰も居ない時はその領域ごと消す。 */}
+          <article
+            className={`card workspace-summary-card${
+              activeMembers.length > 0 ? " has-live-presence" : ""
+            }`}
+          >
             <div>
               <p className="card-kicker">Silent Workspace</p>
               <strong>{selectedRoom?.name || "作業部屋"}</strong>
               <span>
                 {isInSelectedRoom
                   ? `入室中 ${currentStayMinutes > 0 ? formatStayTime(currentStayMinutes) : ""}`
-                  : `${roomOnlineCount} online`}
+                  : activeMembers.length > 0
+                    ? `今 ${activeMembers.length} 人が作業中`
+                    : "今は静かです"}
               </span>
             </div>
+            {activeMembers.length > 0 && !isInSelectedRoom ? (
+              <div
+                className="workspace-summary-presence"
+                aria-hidden="true"
+                title={`${activeMembers.length} 人が作業中`}
+              >
+                {activeMembers.slice(0, 4).map((member, index) => (
+                  <span
+                    className="workspace-summary-presence-avatar"
+                    key={`${member.userId}-${index}`}
+                    style={{
+                      backgroundColor: member.color || "var(--ink-soft)",
+                    }}
+                  >
+                    {member.avatar ? (
+                      <img src={member.avatar} alt="" />
+                    ) : (
+                      <span>{(member.name || "?").slice(0, 1)}</span>
+                    )}
+                  </span>
+                ))}
+                {activeMembers.length > 4 ? (
+                  <span className="workspace-summary-presence-more">
+                    +{activeMembers.length - 4}
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
             <button type="button" onClick={() => setCurrentView("workspace")}>
-              作業部屋へ
+              {isInSelectedRoom
+                ? "作業部屋へ戻る"
+                : activeMembers.length > 0
+                  ? "見てみる"
+                  : "作業部屋へ"}
             </button>
           </article>
         </div>
@@ -11553,16 +11610,37 @@ function App() {
             </svg>
             <span>ホーム</span>
           </button>
+          {/* 作業部屋を中央CTAの隣（左）に配置。親指の自然な到達位置に
+              置くことで、入室への摩擦を下げる。在室者ドット + 数字も
+              添えて、気配を伝える（煽り表示にならないよう極小サイズ）。*/}
           <button
             type="button"
-            className={currentView === "logs" ? "is-active" : ""}
-            onClick={() => setCurrentView("logs")}
-            aria-label="みんなの記録"
+            className={`workspace-tab${currentView === "workspace" ? " is-active" : ""}${
+              activeMembers.length > 0 ? " has-presence" : ""
+            }`}
+            onClick={() => setCurrentView("workspace")}
+            aria-label={
+              activeMembers.length > 0
+                ? `作業部屋 — 現在 ${activeMembers.length} 人が作業中`
+                : "作業部屋"
+            }
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M4 7h16M4 12h16M4 17h10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              <rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+              <path d="M4 10h16" fill="none" stroke="currentColor" strokeWidth="1.6" />
             </svg>
-            <span>記録</span>
+            {activeMembers.length > 0 ? (
+              <span className="mobile-tab-presence-dot" aria-hidden="true" />
+            ) : null}
+            <span>
+              作業部屋
+              {activeMembers.length > 0 ? (
+                <span className="mobile-tab-presence-count" aria-hidden="true">
+                  {" "}
+                  · {activeMembers.length}
+                </span>
+              ) : null}
+            </span>
           </button>
           <button
             type="button"
@@ -11577,15 +11655,14 @@ function App() {
           </button>
           <button
             type="button"
-            className={currentView === "workspace" ? "is-active" : ""}
-            onClick={() => setCurrentView("workspace")}
-            aria-label="作業部屋"
+            className={currentView === "logs" ? "is-active" : ""}
+            onClick={() => setCurrentView("logs")}
+            aria-label="みんなの記録"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-              <path d="M4 10h16" fill="none" stroke="currentColor" strokeWidth="1.6" />
+              <path d="M4 7h16M4 12h16M4 17h10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
             </svg>
-            <span>作業部屋</span>
+            <span>記録</span>
           </button>
           <button
             type="button"

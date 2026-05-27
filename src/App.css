@@ -12270,6 +12270,143 @@
   box-shadow: 0 1px 2px rgba(var(--ink-rgb), 0.06);
 }
 
+/* ─── Workspace tab presence indicator ─────────────────────────────
+   When someone is in any workspace room, the 作業部屋 tab gets a
+   subtle "気配" — a small breathing dot + a tabular count. Designed
+   to be ambient, not pushy: 6px dot, very low-saturation green, slow
+   2.4s breath. The count is a tiny tabular figure in muted ink so
+   it reads as data, not as a notification badge. */
+.topbar-nav .workspace-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.topbar-nav .workspace-tab .topbar-presence-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4caf85;
+  box-shadow: 0 0 0 0 rgba(76, 175, 133, 0.45);
+  animation: workspace-presence-breathe 2.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.topbar-nav .workspace-tab .topbar-presence-count {
+  font-size: 11.5px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: rgba(var(--ink-rgb), 0.42);
+  letter-spacing: 0.02em;
+}
+
+.topbar-nav .workspace-tab.is-active .topbar-presence-count {
+  color: rgba(var(--ink-rgb), 0.55);
+}
+
+@keyframes workspace-presence-breathe {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 133, 0.4);
+    opacity: 0.85;
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(76, 175, 133, 0);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar-nav .workspace-tab .topbar-presence-dot {
+    animation: none;
+  }
+}
+
+/* Mobile bottom-nav presence variant. The bottom nav uses a stacked
+   icon + label layout, so the dot sits as a small badge near the
+   top-right of the icon, while the count rides inline with the label.
+   Both stay subtle — the goal is "気配" not "通知 badge". */
+.mobile-bottom-nav .workspace-tab {
+  position: relative;
+}
+
+.mobile-bottom-nav .workspace-tab .mobile-tab-presence-dot {
+  position: absolute;
+  top: 4px;
+  right: calc(50% - 18px);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4caf85;
+  box-shadow: 0 0 0 0 rgba(76, 175, 133, 0.45);
+  animation: workspace-presence-breathe 2.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.mobile-bottom-nav .workspace-tab .mobile-tab-presence-count {
+  font-variant-numeric: tabular-nums;
+  color: rgba(var(--ink-rgb), 0.5);
+  font-weight: 500;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-bottom-nav .workspace-tab .mobile-tab-presence-dot {
+    animation: none;
+  }
+}
+
+/* Workspace summary card on Home — when someone is in a room, fan out
+   up to 4 tiny avatar circles next to the headline so the user can
+   feel that something is happening without us shouting it. The card
+   gets a very subtle accent border to softly elevate it from the
+   sibling cards (today's report, learning, etc). */
+.workspace-summary-card.has-live-presence {
+  border-color: rgba(76, 175, 133, 0.22);
+  box-shadow:
+    0 1px 2px rgba(var(--ink-rgb), 0.04),
+    0 0 0 1px rgba(76, 175, 133, 0.08) inset;
+}
+
+.workspace-summary-presence {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  margin: 4px 0 0;
+}
+
+.workspace-summary-presence-avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  margin-left: -6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.workspace-summary-presence-avatar:first-child {
+  margin-left: 0;
+}
+
+.workspace-summary-presence-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.workspace-summary-presence-more {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(var(--ink-rgb), 0.5);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Friends + Live Activity popover triggers — circular icon buttons that
    sit between the topbar context and the search/notifications cluster. */
 .topbar-popover-wrap {
