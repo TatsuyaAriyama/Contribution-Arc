@@ -354,7 +354,7 @@ export function SilentWorkspaceRoom({
                     className="workspace-room-overlay-recruit"
                     onClick={onOpenRecruitmentModal}
                   >
-                    📣 募集
+                    募集
                   </button>
                 ) : null}
                 {isJoined ? (
