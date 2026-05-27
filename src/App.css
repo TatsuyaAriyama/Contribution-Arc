@@ -8193,6 +8193,138 @@
   font-size: 12px;
 }
 
+/* Recent-message log floating in the top-right of the workspace
+   stage. Deliberately translucent so the room floor / actors keep
+   reading behind it — the user's brief was 'characters and bg visible
+   through the panel, messages still readable'. Hover bumps the opacity
+   a notch so glancing at the log is comfortable; otherwise it sits
+   light enough to disappear when you're focused on the room. */
+.workspace-chat-log {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 4;
+  width: min(248px, calc(100% - 28px));
+  max-height: min(60%, 340px);
+  padding: 10px;
+  border: 1px solid rgba(var(--ink-rgb), 0.06);
+  border-radius: 14px;
+  background: rgba(var(--surface-rgb), 0.42);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(14px) saturate(1.1);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  transition: background-color 200ms ease, border-color 200ms ease;
+}
+
+.workspace-chat-log:hover {
+  background: rgba(var(--surface-rgb), 0.72);
+  border-color: rgba(var(--ink-rgb), 0.1);
+}
+
+.workspace-chat-log-title {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.workspace-chat-log ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.workspace-chat-log li {
+  display: flex;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(var(--surface-rgb), 0.55);
+  animation: workspace-chat-log-in 220ms ease-out;
+}
+
+.workspace-chat-log-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(var(--ink-rgb), 0.06);
+}
+
+.workspace-chat-log-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.workspace-chat-log-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.workspace-chat-log-head strong {
+  overflow: hidden;
+  color: var(--ink-strong);
+  font-size: 11.5px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-chat-log-time {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.workspace-chat-log-body p {
+  margin: 2px 0 0;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+@keyframes workspace-chat-log-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 720px) {
+  .workspace-chat-log {
+    top: 8px;
+    right: 8px;
+    width: min(170px, calc(100% - 16px));
+    max-height: 40%;
+    padding: 8px;
+  }
+  .workspace-chat-log-body p {
+    font-size: 11.5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-chat-log li {
+    animation: none;
+  }
+}
+
 .workspace-room-overlay-head {
   display: grid;
   gap: 2px;
