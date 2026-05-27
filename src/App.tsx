@@ -44,7 +44,7 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import { auth, db, githubProvider, googleProvider } from "./firebase";
 import {
   deleteStudyLogFromCloud,
@@ -8532,6 +8532,7 @@ function App() {
   })();
 
   return (
+    <MotionConfig reducedMotion="user">
     <motion.main
       className={isDesktopApp ? "app-shell premium-shell desktop-shell" : "app-shell premium-shell"}
       initial={{ opacity: 0, y: 12 }}
@@ -11089,6 +11090,7 @@ function App() {
           including on top of the mobile bottom nav. */}
       <ToastHost />
     </motion.main>
+    </MotionConfig>
   );
 }
 
