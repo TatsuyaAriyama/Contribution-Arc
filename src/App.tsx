@@ -11201,6 +11201,13 @@ function App() {
                                     <span className="swatch-owl-foot swatch-owl-foot-right" />
                                   </>
                                 ) : null}
+                                {option.value === "cactus" ? (
+                                  <>
+                                    <span className="swatch-cactus-arm swatch-cactus-arm-left" />
+                                    <span className="swatch-cactus-arm swatch-cactus-arm-right" />
+                                    <span className="swatch-cactus-flower" />
+                                  </>
+                                ) : null}
                               </span>
                               {isLocked ? (
                                 <span className="character-shape-lock" aria-hidden="true">

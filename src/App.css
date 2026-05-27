@@ -2461,6 +2461,13 @@
   gap: 16px;
 }
 
+/* Character customize is the user's main self-expression surface. Hoist
+   it above the dense study-log card so the picker isn't buried below a
+   long scroll. */
+.profile-panel-stack .character-color-card {
+  order: -1;
+}
+
 .character-color-card {
   display: grid;
   gap: 16px;
@@ -9420,16 +9427,15 @@
 }
 
 /* ───────────────────────────────────────────────────────────────────
-   Cactus shape — "ほぼ動かず、ただ静かに育つ" の象徴。
+   Cactus shape — "Cactus Monolith"
    ─────────────────────────────────────────────────────────────────
-   設計思想:
-   - 縦長の幹（trunk）+ 左右非対称の小さなアーム + 頂上の花。
-   - 既存3キャラ（人型・ゴースト・フクロウ）に対し「植物カテゴリ」
-     を加える。動物・流体ではない第4の系統。
-   - 動きは 5.4s 周期の極小バウンス（呼吸）。歩かない・走らない。
-   - 幹のシルエットは ::before で clip-path を効かせ、子要素
-     （アーム・花）が clip されないよう分離。
-   - 親には overflow: visible を維持してアーム/花が外に出られる。 */
+   方針:
+   - 砂漠の中の彫られた石柱／金属モノリスとして再解釈。
+   - 有機的な丸み・桃色の花/頬は捨て、台形に近いシャープなシルエット
+     と深い縦溝で「無機質」を出す。
+   - 頂部の花は細いアンテナ + 発光クリスタルに置換。
+   - 目は薄いシアン発光の横スリット。頬は隠す。
+   - 動きは極小: 5.4s呼吸 + 4.2sスリット微脈動のみ。 */
 .actor-sprite.shape-cactus {
   border-radius: 0;
   background: transparent;
@@ -9441,38 +9447,60 @@
 .actor-sprite.shape-cactus::before {
   content: "";
   position: absolute;
-  inset: -4px -2px -2px -2px;
+  inset: -5px -1px -2px -1px;
   background:
-    radial-gradient(
-      ellipse 56% 24% at 50% 14%,
-      rgba(255, 255, 255, 0.26) 0%,
-      rgba(255, 255, 255, 0) 62%
+    /* 上端のメタルハイライト */
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.32) 0%,
+      rgba(255, 255, 255, 0) 14%
     ),
-    radial-gradient(
-      ellipse 80% 18% at 50% 92%,
-      rgba(0, 0, 0, 0.2) 0%,
-      rgba(0, 0, 0, 0) 64%
+    /* 中央水平シマー（磨かれた表面） */
+    linear-gradient(
+      180deg,
+      transparent 38%,
+      rgba(255, 255, 255, 0.14) 48%,
+      rgba(255, 255, 255, 0.14) 50%,
+      transparent 60%
     ),
+    /* 下部の沈んだ影 */
+    linear-gradient(
+      180deg,
+      transparent 70%,
+      rgba(0, 0, 0, 0.28) 100%
+    ),
+    /* 深い縦溝（カービング） */
     repeating-linear-gradient(
       90deg,
       transparent 0,
+      transparent 4px,
+      rgba(0, 0, 0, 0.28) 4px,
+      rgba(0, 0, 0, 0.28) 5px,
+      transparent 5px,
+      transparent 9px
+    ),
+    /* 微細な縦リブハイライト */
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent 4px,
+      rgba(255, 255, 255, 0.06) 5px,
+      rgba(255, 255, 255, 0.06) 6px,
       transparent 6px,
-      rgba(255, 255, 255, 0.08) 6px,
-      rgba(255, 255, 255, 0.08) 7px,
-      transparent 7px,
-      transparent 14px
+      transparent 9px
     ),
     var(--actor-color);
+  /* シャープな台形 — 上が狭く、下が広い石柱 */
   clip-path: polygon(
-    36% 0%, 50% -2%, 64% 0%,
-    74% 4%, 80% 12%, 82% 24%, 82% 80%,
-    78% 90%, 70% 96%, 60% 100%,
-    40% 100%, 30% 96%, 22% 90%, 18% 80%,
-    18% 24%, 20% 12%, 26% 4%
+    32% 0%, 68% 0%,
+    72% 6%, 76% 16%,
+    78% 86%, 82% 96%,
+    18% 96%, 22% 86%,
+    24% 16%, 28% 6%
   );
   filter:
-    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.16))
-    drop-shadow(0 6px 10px rgba(0, 0, 0, 0.16));
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.2))
+    drop-shadow(0 8px 12px rgba(0, 0, 0, 0.28));
   z-index: 0;
 }
 
@@ -9483,103 +9511,115 @@
   display: none;
 }
 
+/* アーム = 鋭い角型ブロック（モノリスから突き出た補強材） */
 .actor-sprite.shape-cactus .sprite-cactus-arm {
   position: absolute;
-  width: 9px;
-  height: 14px;
-  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  width: 6px;
+  height: 10px;
+  border-radius: 1px;
   background:
-    repeating-linear-gradient(
-      90deg,
-      transparent 0,
-      transparent 3px,
-      rgba(255, 255, 255, 0.07) 3px,
-      rgba(255, 255, 255, 0.07) 4px
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.22) 0%,
+      rgba(255, 255, 255, 0) 30%
+    ),
+    linear-gradient(
+      180deg,
+      transparent 60%,
+      rgba(0, 0, 0, 0.3) 100%
     ),
     var(--actor-color);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 2px 4px rgba(0, 0, 0, 0.12);
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 2px 4px rgba(0, 0, 0, 0.22);
   z-index: 1;
 }
 
 .actor-sprite.shape-cactus .sprite-cactus-arm-left {
-  left: -5px;
-  top: 46%;
-  transform: rotate(-18deg);
+  left: -3px;
+  top: 50%;
+  transform: rotate(-8deg);
 }
 
 .actor-sprite.shape-cactus .sprite-cactus-arm-right {
-  right: -5px;
-  top: 26%;
-  transform: rotate(18deg);
+  right: -3px;
+  top: 32%;
+  transform: rotate(8deg);
 }
 
+/* 花の代わりに「アンテナ + 発光クリスタル」 */
 .actor-sprite.shape-cactus .sprite-cactus-flower {
   position: absolute;
-  top: -8px;
+  top: -11px;
   left: 50%;
-  width: 12px;
-  height: 12px;
+  width: 2px;
+  height: 9px;
   transform: translateX(-50%);
+  background: linear-gradient(
+    180deg,
+    rgba(220, 230, 235, 0.95) 0%,
+    rgba(120, 130, 140, 0.7) 100%
+  );
   z-index: 3;
-  animation: workspace-cactus-bloom 11s ease-in-out infinite;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
 }
 
 .actor-sprite.shape-cactus .sprite-cactus-flower::before {
   content: "";
   position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 50% 24%, #f4a5b8 0 30%, transparent 32%),
-    radial-gradient(circle at 76% 50%, #f4a5b8 0 30%, transparent 32%),
-    radial-gradient(circle at 50% 76%, #f4a5b8 0 30%, transparent 32%),
-    radial-gradient(circle at 24% 50%, #f4a5b8 0 30%, transparent 32%);
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+  top: -5px;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  background: linear-gradient(
+    135deg,
+    rgba(180, 240, 255, 1) 0%,
+    rgba(80, 180, 220, 0.95) 100%
+  );
+  /* 菱形のクリスタル */
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  transform: translateX(-50%);
+  box-shadow:
+    0 0 4px rgba(120, 220, 255, 0.7),
+    0 0 8px rgba(120, 220, 255, 0.35);
+  animation: workspace-cactus-beacon 4.2s ease-in-out infinite;
 }
 
 .actor-sprite.shape-cactus .sprite-cactus-flower-core {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: #f5d061;
-  transform: translate(-50%, -50%);
-  box-shadow: 0 0 4px rgba(245, 208, 97, 0.6);
+  display: none;
 }
 
+/* 目 = 細い横スリット、シアン発光 */
 .actor-sprite.shape-cactus .sprite-cactus-eye {
   position: absolute;
-  top: 44%;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.92) 0 28%, transparent 32%),
-    #0a0e0c;
+  top: 46%;
+  width: 5px;
+  height: 1.5px;
+  border-radius: 0.5px;
+  background: linear-gradient(
+    90deg,
+    rgba(120, 220, 255, 0.4) 0%,
+    rgba(180, 240, 255, 1) 50%,
+    rgba(120, 220, 255, 0.4) 100%
+  );
+  box-shadow:
+    0 0 3px rgba(120, 220, 255, 0.7),
+    0 0 6px rgba(120, 220, 255, 0.3);
   z-index: 2;
+  animation: workspace-cactus-eye-pulse 4.2s ease-in-out infinite;
 }
 
 .actor-sprite.shape-cactus .sprite-cactus-eye-left {
-  left: 32%;
+  left: 28%;
 }
 
 .actor-sprite.shape-cactus .sprite-cactus-eye-right {
-  right: 32%;
+  right: 28%;
 }
 
+/* 頬 = 無機質方針につき非表示 */
 .actor-sprite.shape-cactus .sprite-cactus-cheek {
-  position: absolute;
-  top: 56%;
-  left: 50%;
-  width: 5px;
-  height: 1.5px;
-  background: rgba(244, 165, 184, 0.55);
-  border-radius: 50%;
-  transform: translateX(-50%);
-  z-index: 2;
+  display: none;
 }
 
 .workspace-actor.is-walking .actor-sprite.shape-cactus {
@@ -9601,30 +9641,38 @@
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-0.6px);
+    transform: translateY(-0.4px);
   }
 }
 
-@keyframes workspace-cactus-bloom {
+@keyframes workspace-cactus-beacon {
   0%,
-  44%,
   100% {
-    transform: translateX(-50%) scale(1);
-    opacity: 0.95;
+    box-shadow:
+      0 0 4px rgba(120, 220, 255, 0.7),
+      0 0 8px rgba(120, 220, 255, 0.35);
   }
   50% {
-    transform: translateX(-50%) scale(1.08);
-    opacity: 1;
+    box-shadow:
+      0 0 6px rgba(120, 220, 255, 0.95),
+      0 0 14px rgba(120, 220, 255, 0.55);
   }
-  56% {
-    transform: translateX(-50%) scale(1);
-    opacity: 0.95;
+}
+
+@keyframes workspace-cactus-eye-pulse {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 1;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .actor-sprite.shape-cactus,
-  .actor-sprite.shape-cactus .sprite-cactus-flower,
+  .actor-sprite.shape-cactus .sprite-cactus-flower::before,
+  .actor-sprite.shape-cactus .sprite-cactus-eye,
   .workspace-actor.is-walking .actor-sprite.shape-cactus,
   .workspace-actor.is-resting .actor-sprite.shape-cactus {
     animation: none;
@@ -9693,8 +9741,16 @@
   box-shadow: 0 16px 34px rgba(var(--ink-rgb), 0.07);
 }
 
+/* Active = clearly selected. Stronger accent ring + tinted background so
+   the chosen shape reads at a glance, especially on mobile where the
+   user might not notice a 0.18-opacity outline. */
 .character-shape-grid button.active {
-  outline: 2px solid rgba(31, 111, 74, 0.18);
+  border-color: rgba(31, 111, 74, 0.55);
+  background: rgba(31, 111, 74, 0.08);
+  box-shadow:
+    0 0 0 2px rgba(31, 111, 74, 0.45),
+    0 18px 36px rgba(var(--ink-rgb), 0.09);
+  outline: none;
 }
 
 .character-shape-grid.compact button {
@@ -9840,11 +9896,9 @@
   right: 22%;
 }
 
-/* ─── Cactus picker swatch ─────────────────────────────────────────
-   Mirrors the in-stage cactus: tall pill trunk + side arms + crown
-   flower. The trunk is drawn on ::before so the child arms / flower
-   sit outside the clip-path and read as protrusions. Stays static
-   (no breath animation) since picker previews shouldn't move. */
+/* ─── Cactus picker swatch — Monolith preview ──────────────────────
+   In-stageと同じ無機質シルエット。台形の石柱 + サイドのブロック
+   アーム + 頂部の発光クリスタル。静止 (picker previewなので)。 */
 .character-shape-swatch.shape-cactus {
   position: relative;
   background: transparent;
@@ -9856,73 +9910,106 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(
-      ellipse 56% 22% at 50% 14%,
-      rgba(255, 255, 255, 0.24) 0%,
-      rgba(255, 255, 255, 0) 60%
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.3) 0%,
+      rgba(255, 255, 255, 0) 14%
     ),
-    radial-gradient(
-      ellipse 80% 18% at 50% 92%,
-      rgba(0, 0, 0, 0.18) 0%,
-      rgba(0, 0, 0, 0) 64%
+    linear-gradient(
+      180deg,
+      transparent 38%,
+      rgba(255, 255, 255, 0.12) 48%,
+      rgba(255, 255, 255, 0.12) 50%,
+      transparent 60%
+    ),
+    linear-gradient(
+      180deg,
+      transparent 70%,
+      rgba(0, 0, 0, 0.26) 100%
     ),
     repeating-linear-gradient(
       90deg,
       transparent 0,
+      transparent 4px,
+      rgba(0, 0, 0, 0.26) 4px,
+      rgba(0, 0, 0, 0.26) 5px,
       transparent 5px,
-      rgba(255, 255, 255, 0.07) 5px,
-      rgba(255, 255, 255, 0.07) 6px,
-      transparent 6px,
-      transparent 12px
+      transparent 9px
     ),
     var(--actor-color, #1f6f4a);
   clip-path: polygon(
-    36% 0%, 50% -2%, 64% 0%,
-    74% 4%, 80% 12%, 82% 24%, 82% 80%,
-    78% 90%, 70% 96%, 60% 100%,
-    40% 100%, 30% 96%, 22% 90%, 18% 80%,
-    18% 24%, 20% 12%, 26% 4%
+    32% 0%, 68% 0%,
+    72% 6%, 76% 16%,
+    78% 86%, 82% 96%,
+    18% 96%, 22% 86%,
+    24% 16%, 28% 6%
   );
-  filter: drop-shadow(0 3px 5px rgba(var(--ink-rgb), 0.18));
+  filter: drop-shadow(0 3px 6px rgba(var(--ink-rgb), 0.24));
 }
 
 .character-shape-swatch.shape-cactus .swatch-cactus-arm {
   position: absolute;
-  width: 16%;
-  height: 24%;
-  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-  background: var(--actor-color, #1f6f4a);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  width: 10%;
+  height: 18%;
+  border-radius: 1px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.2) 0%,
+      rgba(255, 255, 255, 0) 30%
+    ),
+    var(--actor-color, #1f6f4a);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 1px 2px rgba(0, 0, 0, 0.18);
   z-index: 1;
 }
 
 .character-shape-swatch.shape-cactus .swatch-cactus-arm-left {
-  left: 2%;
-  top: 46%;
-  transform: rotate(-18deg);
+  left: 8%;
+  top: 50%;
+  transform: rotate(-8deg);
 }
 
 .character-shape-swatch.shape-cactus .swatch-cactus-arm-right {
-  right: 2%;
-  top: 26%;
-  transform: rotate(18deg);
+  right: 8%;
+  top: 32%;
+  transform: rotate(8deg);
 }
 
+/* 頂部 = アンテナの細い縦線 + 菱形のシアンクリスタル */
 .character-shape-swatch.shape-cactus .swatch-cactus-flower {
   position: absolute;
   top: -10%;
   left: 50%;
-  width: 26%;
-  height: 26%;
+  width: 4%;
+  height: 14%;
   transform: translateX(-50%);
-  background:
-    radial-gradient(circle at 50% 50%, #f5d061 0 22%, transparent 26%),
-    radial-gradient(circle at 50% 22%, #f4a5b8 0 24%, transparent 28%),
-    radial-gradient(circle at 78% 50%, #f4a5b8 0 24%, transparent 28%),
-    radial-gradient(circle at 50% 78%, #f4a5b8 0 24%, transparent 28%),
-    radial-gradient(circle at 22% 50%, #f4a5b8 0 24%, transparent 28%);
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+  background: linear-gradient(
+    180deg,
+    rgba(220, 230, 235, 0.95) 0%,
+    rgba(120, 130, 140, 0.7) 100%
+  );
   z-index: 2;
+}
+
+.character-shape-swatch.shape-cactus .swatch-cactus-flower::before {
+  content: "";
+  position: absolute;
+  top: -120%;
+  left: 50%;
+  width: 280%;
+  height: 120%;
+  background: linear-gradient(
+    135deg,
+    rgba(180, 240, 255, 1) 0%,
+    rgba(80, 180, 220, 0.95) 100%
+  );
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  transform: translateX(-50%);
+  box-shadow:
+    0 0 4px rgba(120, 220, 255, 0.7),
+    0 0 8px rgba(120, 220, 255, 0.35);
 }
 
 .actor-name,
