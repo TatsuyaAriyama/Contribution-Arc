@@ -19,19 +19,19 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.3.0",
     "firebase": "^12.13.0",
-    "framer-motion": "^12.39.0",
+    "framer-motion": "^12.40.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "tailwindcss": "^4.3.0"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
-    "@types/react": "^19.2.7",
+    "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
-    "electron": "^42.2.0",
+    "electron": "^42.3.0",
     "electron-builder": "^26.8.1",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
@@ -57,7 +57,10 @@
       "target": [
         {
           "target": "zip",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "artifactName": "Contribution-Arc-${version}-mac-${arch}.${ext}"
