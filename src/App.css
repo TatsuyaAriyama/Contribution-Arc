@@ -8207,6 +8207,7 @@
   gap: 6px;
 }
 
+.workspace-room-overlay-break,
 .workspace-room-overlay-recruit,
 .workspace-room-overlay-leave {
   flex: 1;
@@ -8222,8 +8223,19 @@
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
+.workspace-room-overlay-break:hover,
 .workspace-room-overlay-recruit:hover {
   background: rgba(var(--ink-rgb), 0.05);
+}
+
+.workspace-room-overlay-break.is-active {
+  background: rgba(31, 111, 74, 0.14);
+  border-color: rgba(31, 111, 74, 0.32);
+  color: var(--green);
+}
+
+.workspace-room-overlay-break.is-active:hover {
+  background: rgba(31, 111, 74, 0.2);
 }
 
 .workspace-room-overlay-leave {

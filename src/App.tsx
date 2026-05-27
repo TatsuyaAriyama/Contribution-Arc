@@ -6269,6 +6269,7 @@ function App() {
       currentTitle,
       currentCharacter: characterOptions[0].id,
       characterColor: playerCharacterColor,
+      characterShape: playerCharacterShape,
       streak: studyStreak,
       determination,
       following: [...following].sort(),

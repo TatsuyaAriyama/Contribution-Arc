@@ -286,6 +286,18 @@ export function SilentWorkspaceRoom({
               </div>
 
               <div className="workspace-room-overlay-actions">
+                {isJoined ? (
+                  <button
+                    type="button"
+                    className={`workspace-room-overlay-break ${isCurrentUserOnBreak ? "is-active" : ""}`}
+                    onClick={() =>
+                      onPresetMessage(isCurrentUserOnBreak ? "集中します" : "休憩します")
+                    }
+                    aria-pressed={isCurrentUserOnBreak}
+                  >
+                    {isCurrentUserOnBreak ? "休憩終了" : "休憩"}
+                  </button>
+                ) : null}
                 {onOpenRecruitmentModal && isJoined && !activeRecruitmentSummary ? (
                   <button
                     type="button"
@@ -386,15 +398,10 @@ export function SilentWorkspaceRoom({
 
         <div className={`preset-message-panel ${isPresetTrayOpen ? "is-open" : ""}`}>
           <div className="preset-toggle-row">
-            {isJoined ? (
-              <button
-                type="button"
-                className="preset-break-toggle preset-break-toggle-standalone"
-                onClick={() => onPresetMessage(isCurrentUserOnBreak ? "集中します" : "休憩します")}
-              >
-                {isCurrentUserOnBreak ? "休憩終了" : "休憩"}
-              </button>
-            ) : null}
+            {/* 休憩 toggle was moved into the in-stage room overlay
+                (top-left) where it sits next to the other room actions.
+                Keeping the preset-message panel for the chat-toggle and
+                preset bar only. */}
             <button
               type="button"
               className="preset-chat-toggle"
