@@ -814,6 +814,188 @@
   background: var(--surface-warm);
 }
 
+/* Organization (tenant) settings card — sits alongside theme /
+   character panels in the profile settings modal. Surfaces the
+   current org membership + actions, or a create-form for solo
+   users. The visual weight matches the surrounding panels so the
+   B2B feature doesn't feel bolted-on. */
+.settings-org-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 18px;
+  background: var(--surface-warm);
+}
+
+.settings-org-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.settings-org-role {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(31, 111, 74, 0.12);
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.settings-org-current {
+  display: grid;
+  gap: 8px;
+}
+
+.settings-org-current strong {
+  color: var(--ink-strong);
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.settings-org-copy {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.settings-org-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.settings-org-invite,
+.settings-org-leave {
+  flex: 1 1 auto;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.settings-org-invite {
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+  border-color: var(--cta-bg);
+}
+
+.settings-org-invite:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+.settings-org-leave {
+  color: #c4322c;
+  border-color: rgba(196, 50, 44, 0.24);
+}
+
+.settings-org-leave:hover:not(:disabled) {
+  background: rgba(196, 50, 44, 0.06);
+}
+
+.settings-org-invite:disabled,
+.settings-org-leave:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.settings-org-create {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-org-create-row {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-org-create-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.settings-org-create-row button {
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.settings-org-create-row button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.settings-org-error {
+  margin: 0;
+  color: #c4322c;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+/* Visibility toggle inside the new-room creation form. Two pill
+   buttons; only shown when the user is in an org. */
+.workspace-room-create-visibility {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--bg);
+}
+
+.workspace-room-create-visibility button {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.workspace-room-create-visibility button.is-active {
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+}
+
+/* Small lock indicator on org-only room pills. */
+.workspace-room-pill-org {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 11px;
+  vertical-align: 1px;
+}
+
 .settings-theme-label {
   color: var(--muted);
   font-size: 12px;

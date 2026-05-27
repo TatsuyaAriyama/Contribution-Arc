@@ -47,7 +47,12 @@ import {
 import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import { auth, db, githubProvider, googleProvider } from "./firebase";
 import {
+  acceptOrganizationInvite,
+  createOrganization,
+  createOrganizationInvite,
   deleteStudyLogFromCloud,
+  leaveOrganization,
+  loadOrganization,
   migrateStudyLogsToCloud,
   saveGithubActivitySummary,
   saveStudyLogToCloud,
@@ -226,6 +231,15 @@ type UserProfile = {
   /* In-app currency balance. Spent in the shop to unlock character
      shapes; future revisions allow purchasing coins with real money. */
   coins?: number;
+  /* B2B organization membership. `organizationId` is the only field
+     the security rules care about — the name/role fields are
+     denormalized snapshots used for navigation chrome so we don't have
+     to re-fetch the org doc on every render. `organizationRole`
+     defaults to "member" for invitees; "owner" is set on the user that
+     created the org. */
+  organizationId?: string;
+  organizationName?: string;
+  organizationRole?: OrganizationRole;
   /* Last YYYY-MM-DD (local timezone) on which the user earned the
      daily "post to feed" Arc bonus. Used to gate the reward so the
      50-Arc payout fires exactly once per calendar day. */
@@ -356,7 +370,30 @@ type WorkspaceRoom = {
   createdBy: string;
   activeMembers: WorkspaceMember[];
   history: WorkspaceSessionHistory[];
+  /* Visibility gating. "public" rooms are visible to every signed-in
+     user — the existing behavior, and the implicit default for legacy
+     documents that pre-date the org tenant. "org" rooms only appear
+     in the workspace list for members of `ownerOrgId`. The Firestore
+     read rule still permits any signed-in user to fetch the document,
+     so this is a client-side privacy gate, not a hard access control;
+     stronger gating will require a Cloud Function or a per-org
+     members-list rule in a later phase. */
+  visibility?: "public" | "org";
+  ownerOrgId?: string;
 };
+
+/* Organization (tenant). Created by an owner; members join via an
+   invite link. Rooms tagged `visibility: "org"` only surface in the
+   workspace list for that org's members. */
+type Organization = {
+  id: string;
+  name: string;
+  ownerUid: string;
+  createdAt: string;
+};
+
+type OrganizationRole = "owner" | "admin" | "member";
+
 
 type OnboardingStep = "idle" | "welcome" | "settings" | "firstPost";
 
@@ -1281,6 +1318,12 @@ function normalizeUserProfile(uid: string, data: Partial<UserProfile>): UserProf
       typeof data.feedRewardArcEarned === "number" && Number.isFinite(data.feedRewardArcEarned)
         ? Math.max(0, Math.floor(data.feedRewardArcEarned))
         : 0,
+    organizationId: typeof data.organizationId === "string" && data.organizationId ? data.organizationId : undefined,
+    organizationName: typeof data.organizationName === "string" ? data.organizationName : undefined,
+    organizationRole:
+      data.organizationRole === "owner" || data.organizationRole === "admin" || data.organizationRole === "member"
+        ? data.organizationRole
+        : undefined,
     level: data.level || 1,
     effortExp: data.effortExp || 0,
     outputExp: data.outputExp || 0,
@@ -2617,6 +2660,11 @@ function serializeWorkspaceRoom(room: WorkspaceRoom): WorkspaceRoom {
       avatar: getSerializableAvatar(member.avatar),
     })),
     history: normalizedRoom.history || [],
+    // Carry the new visibility flags through the cloud write. Optional
+    // so legacy rooms that lack them stay implicit-public; explicit
+    // "public" is fine too.
+    ...(normalizedRoom.visibility ? { visibility: normalizedRoom.visibility } : {}),
+    ...(normalizedRoom.ownerOrgId ? { ownerOrgId: normalizedRoom.ownerOrgId } : {}),
   };
 }
 
@@ -3342,6 +3390,7 @@ function App() {
     }
   }, [uiScale]);
 
+
   useEffect(() => {
     if (!isUserMenuOpen) return;
     const handler = (event: MouseEvent) => {
@@ -3461,11 +3510,29 @@ function App() {
      reward — exactly what the user asked for. */
   const [lastFeedRewardDate, setLastFeedRewardDate] = useState<string>("");
   const [feedRewardArcEarned, setFeedRewardArcEarned] = useState<number>(0);
+  // Organization (tenant) state. `currentOrganization` mirrors the
+  // joined org doc; the user's role + denormalized name sit on the
+  // user profile but we cache the live doc here for use in settings.
+  const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null);
+  const [orgError, setOrgError] = useState<string>("");
+  const [orgInviteToken, setOrgInviteToken] = useState<string>("");
+  const [isOrgWorking, setIsOrgWorking] = useState<boolean>(false);
+  const [newOrgName, setNewOrgName] = useState<string>("");
+  // Records the token we've already attempted to auto-claim so a
+  // re-render after the successful accept doesn't fire the call a
+  // second time.
+  const autoJoinAttemptedRef = useRef<string>("");
+
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [customRooms, setCustomRooms] = useState<WorkspaceRoom[]>([]);
   const [isWorkspaceLoaded, setIsWorkspaceLoaded] = useState(false);
   const [isPageVisible, setIsPageVisible] = useState(!document.hidden);
   const [newRoomName, setNewRoomName] = useState("");
+  /* Visibility picker for the new-room form. Defaults to public so
+     the existing UX (anyone can find your room) is unchanged for solo
+     users; org members get the "組織のみ" option which scopes the
+     room to their tenant. */
+  const [newRoomVisibility, setNewRoomVisibility] = useState<"public" | "org">("public");
   const [roomCreateState, setRoomCreateState] = useState<RoomCreateState>("idle");
   const [roomCreateMessage, setRoomCreateMessage] = useState("");
   const [editingRoomId, setEditingRoomId] = useState("");
@@ -3566,6 +3633,58 @@ function App() {
   const lastNotificationSoundAtRef = useRef(0);
   const notificationBootedRef = useRef(false);
   const notificationStartedAtRef = useRef(Date.now());
+
+  /* Capture a ?join-org=<token> URL parameter on the very first
+     render. Stash it in state so it survives any sign-in redirect on
+     a fresh session; the auto-accept effect below claims it once the
+     user is authenticated. */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const url = new URL(window.location.href);
+      const token = url.searchParams.get("join-org");
+      if (token) setOrgInviteToken(token);
+    } catch {
+      /* ignore malformed URLs */
+    }
+  }, []);
+
+  /* Auto-accept the captured invite token once the user is signed in.
+     Inlined (rather than calling handleAcceptOrgInvite) so the effect
+     doesn't get tangled in stale-closure issues with the handler.
+     The autoJoinAttemptedRef makes the call idempotent so a re-render
+     after a successful accept doesn't fire it again. */
+  useEffect(() => {
+    if (!orgInviteToken || !currentUser) return;
+    if (autoJoinAttemptedRef.current === orgInviteToken) return;
+    autoJoinAttemptedRef.current = orgInviteToken;
+    const token = orgInviteToken;
+    void acceptOrganizationInvite(db, token, currentUser.uid)
+      .then((org) => {
+        setCurrentOrganization(org);
+        setOrgInviteToken("");
+        showToast(`「${org.name}」に参加しました`, { kind: "success" });
+        try {
+          const url = new URL(window.location.href);
+          url.searchParams.delete("join-org");
+          window.history.replaceState({}, "", url.toString());
+        } catch {
+          /* ignore */
+        }
+      })
+      .catch((error) => {
+        const code = (error as Error)?.message || "";
+        const message =
+          code === "INVITE_NOT_FOUND"
+            ? "招待リンクが見つかりません。"
+            : code === "INVITE_EXPIRED"
+              ? "招待リンクの有効期限が切れています。"
+              : code === "INVITE_EXHAUSTED"
+                ? "この招待リンクは上限まで使用されています。"
+                : "組織への参加に失敗しました。";
+        setOrgError(message);
+      });
+  }, [orgInviteToken, currentUser]);
 
   useEffect(() => {
     return onAuthStateChanged(auth, (user) => {
@@ -3863,6 +3982,20 @@ function App() {
         setCoins(grantedCoins);
         setLastFeedRewardDate(profile.lastFeedRewardDate || "");
         setFeedRewardArcEarned(profile.feedRewardArcEarned || 0);
+        // Hydrate the live org doc if the profile says we're a member.
+        // Failure is non-fatal — the user still has the denormalized
+        // org name from their profile and can retry from settings.
+        if (profile.organizationId) {
+          void loadOrganization(db, profile.organizationId)
+            .then((org) => {
+              if (org) setCurrentOrganization(org);
+            })
+            .catch(() => {
+              /* tolerate offline; settings can refresh later */
+            });
+        } else {
+          setCurrentOrganization(null);
+        }
         setPlayerCharacterShape(safeShape);
         setOpenedWorkspaceGiftLevels((levels) =>
           Array.from(new Set([...levels, ...(profile.openedWorkspaceGiftLevels || [])])).sort(
@@ -5527,11 +5660,22 @@ function App() {
     .filter((room) => !isLegacyWorkspaceRoom(room));
   const scheduledMinaRoomId = getScheduledMinaRoomId(baseWorkspaceRooms, workspaceNow);
   const scheduledNishimiyaRoomId = getScheduledNishimiyaRoomId(baseWorkspaceRooms, workspaceNow);
-  const allWorkspaceRooms = baseWorkspaceRooms.map((room) =>
-    normalizeWorkspaceRoom(
-      applyScheduledWorkspacePresence(room, workspaceNow, scheduledMinaRoomId, scheduledNishimiyaRoomId),
-    ),
-  );
+  const allWorkspaceRooms = baseWorkspaceRooms
+    .map((room) =>
+      normalizeWorkspaceRoom(
+        applyScheduledWorkspacePresence(room, workspaceNow, scheduledMinaRoomId, scheduledNishimiyaRoomId),
+      ),
+    )
+    /* Org-private rooms only surface for members of their owning org.
+       Public rooms (the implicit default) stay visible to everyone.
+       Room owners always see their own rooms regardless of visibility,
+       so they can return to manage them even after leaving the org. */
+    .filter((room) => {
+      if (room.visibility !== "org") return true;
+      if (room.createdBy === currentUser?.uid) return true;
+      if (currentOrganization && room.ownerOrgId === currentOrganization.id) return true;
+      return false;
+    });
   const selectedRoom = allWorkspaceRooms.find((room) => room.id === selectedRoomId) || allWorkspaceRooms[0];
   const currentBuilding = workspaceTask.trim() || studySubject.trim() || "Deep work";
   /* YYYY-MM-DD for the user's local day. Re-computed every render so
@@ -6614,6 +6758,19 @@ function App() {
       githubId,
       githubUsername,
       contributionCount: outputStats.contributions,
+      // Mirror the current org membership into the periodic progress
+      // write so the user doc converges to one consistent shape even
+      // if the user just joined/left via the dedicated helpers.
+      ...(currentOrganization
+        ? {
+            organizationId: currentOrganization.id,
+            organizationName: currentOrganization.name,
+            organizationRole:
+              currentOrganization.ownerUid === currentUser.uid
+                ? ("owner" as const)
+                : ("member" as const),
+          }
+        : {}),
     };
     const userProgressSignature = JSON.stringify(userProgressPayload);
 
@@ -6668,6 +6825,7 @@ function App() {
     ownedCharacterShapes,
     lastFeedRewardDate,
     feedRewardArcEarned,
+    currentOrganization,
   ]);
 
   if (window.location.pathname === githubCallbackPath) {
@@ -7736,6 +7894,83 @@ function App() {
     }, 3600);
   };
 
+  // Organization handlers — used by the settings panel.
+  const handleCreateOrganization = async () => {
+    if (!currentUser || isOrgWorking) return;
+    const name = newOrgName.trim();
+    if (!name) {
+      setOrgError("組織名を入力してください。");
+      return;
+    }
+    setIsOrgWorking(true);
+    setOrgError("");
+    try {
+      const org = await createOrganization(db, currentUser.uid, name);
+      setCurrentOrganization(org);
+      setNewOrgName("");
+      showToast(`組織「${org.name}」を作成しました`, { kind: "success" });
+    } catch (error) {
+      console.warn("Create org failed", error);
+      setOrgError("組織を作成できませんでした。時間をおいて再度お試しください。");
+    } finally {
+      setIsOrgWorking(false);
+    }
+  };
+
+  const handleCreateOrgInvite = async () => {
+    if (!currentUser || !currentOrganization || isOrgWorking) return;
+    setIsOrgWorking(true);
+    setOrgError("");
+    try {
+      const token = await createOrganizationInvite(
+        db,
+        currentOrganization.id,
+        currentOrganization.name,
+        currentUser.uid,
+        { ttlDays: 14 },
+      );
+      const baseUrl = `${window.location.origin}${window.location.pathname.replace(/\/$/, "")}`;
+      const url = `${baseUrl}/?join-org=${token}`;
+      try {
+        await navigator.clipboard.writeText(url);
+        showToast("招待リンクをコピーしました（14日有効）", { kind: "success" });
+      } catch {
+        // Clipboard may be blocked on some Safari versions; surface
+        // the URL so the user can copy it manually.
+        window.prompt("招待リンク（コピーしてください）", url);
+      }
+    } catch (error) {
+      console.warn("Create org invite failed", error);
+      setOrgError("招待リンクを発行できませんでした。");
+    } finally {
+      setIsOrgWorking(false);
+    }
+  };
+
+  const handleLeaveOrganization = async () => {
+    if (!currentUser || !currentOrganization || isOrgWorking) return;
+    if (currentOrganization.ownerUid === currentUser.uid) {
+      setOrgError("オーナーは退出できません。先に他のメンバーへオーナーを譲渡してください。");
+      return;
+    }
+    const confirmed = window.confirm(
+      `「${currentOrganization.name}」から退出します。組織限定のルームは見えなくなります。`,
+    );
+    if (!confirmed) return;
+    setIsOrgWorking(true);
+    setOrgError("");
+    try {
+      await leaveOrganization(db, currentUser.uid);
+      setCurrentOrganization(null);
+      showToast("組織から退出しました", { kind: "success" });
+    } catch (error) {
+      console.warn("Leave org failed", error);
+      setOrgError("退出に失敗しました。再度お試しください。");
+    } finally {
+      setIsOrgWorking(false);
+    }
+  };
+
   const handleRoomCreate = () => {
     if (!currentUser) {
       return;
@@ -7748,6 +7983,8 @@ function App() {
       return;
     }
 
+    const resolvedVisibility: "public" | "org" =
+      newRoomVisibility === "org" && currentOrganization ? "org" : "public";
     const room = normalizeWorkspaceRoom({
       id: createWorkspaceRoomId(),
       name: roomName,
@@ -7760,6 +7997,10 @@ function App() {
       createdBy: currentUser.uid,
       activeMembers: [],
       history: [],
+      visibility: resolvedVisibility,
+      ...(resolvedVisibility === "org" && currentOrganization
+        ? { ownerOrgId: currentOrganization.id }
+        : {}),
     });
 
     pendingWorkspaceRoomsRef.current.set(room.id, room);
@@ -9910,6 +10151,79 @@ function App() {
                 </div>
               </div>
 
+              {/* Organization (tenant) management. New in the B2B
+                  pivot — gives users a way to create or leave an
+                  organization and generate an invite link. Solo
+                  users see only the "組織を作成" form; org members
+                  see the org name + role + invite button + leave. */}
+              {!isOnboardingSettings ? (
+                <div className="settings-org-panel" role="group" aria-label="組織">
+                  <div className="settings-org-head">
+                    <span>組織</span>
+                    {currentOrganization ? (
+                      <span className="settings-org-role">
+                        {currentOrganization.ownerUid === currentUser?.uid ? "オーナー" : "メンバー"}
+                      </span>
+                    ) : null}
+                  </div>
+                  {currentOrganization ? (
+                    <div className="settings-org-current">
+                      <strong>{currentOrganization.name}</strong>
+                      <p className="settings-org-copy">
+                        組織限定のルームを作って、社内・チーム内だけで一緒に作業できます。
+                      </p>
+                      <div className="settings-org-actions">
+                        <button
+                          type="button"
+                          className="settings-org-invite"
+                          onClick={handleCreateOrgInvite}
+                          disabled={isOrgWorking}
+                        >
+                          招待リンクをコピー
+                        </button>
+                        {currentOrganization.ownerUid !== currentUser?.uid ? (
+                          <button
+                            type="button"
+                            className="settings-org-leave"
+                            onClick={handleLeaveOrganization}
+                            disabled={isOrgWorking}
+                          >
+                            退出
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="settings-org-create">
+                      <p className="settings-org-copy">
+                        会社やチームで使う場合は、組織を作って招待リンクで仲間を招きます。
+                        組織限定のルームで他社や他チームから見えない作業空間が作れます。
+                      </p>
+                      <div className="settings-org-create-row">
+                        <input
+                          value={newOrgName}
+                          onChange={(event) => {
+                            setNewOrgName(event.target.value);
+                            if (orgError) setOrgError("");
+                          }}
+                          placeholder="例: Acme Inc."
+                          maxLength={64}
+                          aria-label="組織名"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleCreateOrganization}
+                          disabled={isOrgWorking}
+                        >
+                          作成
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {orgError ? <p className="settings-org-error">{orgError}</p> : null}
+                </div>
+              ) : null}
+
               <div className="settings-theme-panel" role="group" aria-label="テーマ">
                 <span className="settings-theme-label">テーマ</span>
                 <div className="settings-theme-toggle">
@@ -11267,6 +11581,35 @@ function App() {
                       }
                     }}
                   />
+                  {/* Visibility picker — only shown when the user
+                      belongs to an organization. Solo users see no
+                      extra control and rooms default to public. */}
+                  {currentOrganization ? (
+                    <div
+                      className="workspace-room-create-visibility"
+                      role="radiogroup"
+                      aria-label="公開範囲"
+                    >
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={newRoomVisibility === "public"}
+                        className={newRoomVisibility === "public" ? "is-active" : ""}
+                        onClick={() => setNewRoomVisibility("public")}
+                      >
+                        公開
+                      </button>
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={newRoomVisibility === "org"}
+                        className={newRoomVisibility === "org" ? "is-active" : ""}
+                        onClick={() => setNewRoomVisibility("org")}
+                      >
+                        {currentOrganization.name}のみ
+                      </button>
+                    </div>
+                  ) : null}
                   <button type="submit">作成</button>
                 </form>
 
@@ -11291,7 +11634,18 @@ function App() {
                           .join(" ")}
                         onClick={() => setSelectedRoomId(room.id)}
                       >
-                        <span className="workspace-room-pill-name">{room.name}</span>
+                        <span className="workspace-room-pill-name">
+                          {room.name}
+                          {room.visibility === "org" ? (
+                            <span
+                              className="workspace-room-pill-org"
+                              aria-label="組織限定"
+                              title="組織限定ルーム"
+                            >
+                              🔒
+                            </span>
+                          ) : null}
+                        </span>
                         <span className="workspace-room-pill-meta">
                           {roomMembers.length}人 · {Math.round(room.totalMinutes / 60)}h
                           {isJoinedRoom ? <em>入室中</em> : null}

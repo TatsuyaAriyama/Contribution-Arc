@@ -256,6 +256,56 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // B2B 組織テナント。Phase 1 MVP では「作成者 == オーナー」のみ
+    // 更新可能とし、メンバー一覧は users コレクションの
+    // organizationId フィールドを query して再構成する。SCIM /
+    // メンバー管理 / 役割変更などは後のフェーズで Cloud Functions
+    // 経由に切り出す前提。
+    match /organizations/{orgId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 80;
+      allow update: if signedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == resource.data.ownerUid;
+      // 削除はオーナーのみ。Phase 1 MVP では UI から呼んでいないが
+      // 将来の管理画面のために許可しておく。
+      allow delete: if signedIn()
+        && resource.data.ownerUid == request.auth.uid;
+    }
+
+    // 招待トークン。ドキュメント ID 自体がランダム UUID の "secret"
+    // なので、推測困難。誰でも read できるのは、招待リンクを踏んだ
+    // ユーザーが accept フローで自分のドキュメントを読めるように
+    // するため。書き込みは作成者のみ、もしくは「自分の uid を
+    // usedBy に追加する」更新のみ許可。
+    match /organizationInvites/{token} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.invitedBy == request.auth.uid
+        && request.resource.data.orgId is string
+        && request.resource.data.orgName is string
+        && request.resource.data.expiresAt is string
+        && request.resource.data.maxUses is number
+        && request.resource.data.usedBy is list;
+      // 招待を消費する更新: 自分の uid を usedBy に 1 件だけ追加。
+      // それ以外のフィールドは変更不可。`hasOnly(["usedBy"])` で
+      // 他フィールドの書き換えを禁止し、配列の差分は ±1、追加した
+      // 要素は自分の uid 限定、で固める。
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(["usedBy"])
+        && request.resource.data.usedBy is list
+        && request.resource.data.usedBy.size() == resource.data.usedBy.size() + 1
+        && request.auth.uid in request.resource.data.usedBy
+        && !(request.auth.uid in resource.data.usedBy);
+      // 招待の削除はオーナー（招待発行者）のみ。
+      allow delete: if signedIn()
+        && resource.data.invitedBy == request.auth.uid;
+    }
+
     match /friendRequests/{requestId} {
       allow read: if signedIn()
         && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
