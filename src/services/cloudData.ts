@@ -2,8 +2,10 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   onSnapshot,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   where,
@@ -65,6 +67,11 @@ export type UserProgressRecord = {
   githubUsername: string;
   contributionCount: number;
   lastSyncedAt: string;
+  // Org tenant denormalization. Optional because solo accounts have
+  // no organization; undefined for everyone until they create/join one.
+  organizationId?: string;
+  organizationName?: string;
+  organizationRole?: "owner" | "admin" | "member";
 };
 
 export type GitHubActivitySummary = {
@@ -246,6 +253,12 @@ export async function saveUserProgressToCloud(db: Firestore, profile: UserProgre
     githubUsername: profile.githubUsername,
     contributionCount: profile.contributionCount,
     lastSyncedAt: profile.lastSyncedAt,
+    // Only write the org fields when the user is actually attached to
+    // one — undefined values would shadow the real ones for a moment
+    // during the merge write.
+    ...(profile.organizationId ? { organizationId: profile.organizationId } : {}),
+    ...(profile.organizationName ? { organizationName: profile.organizationName } : {}),
+    ...(profile.organizationRole ? { organizationRole: profile.organizationRole } : {}),
   };
 
   // Build the dedup key from every meaningful field EXCEPT lastSyncedAt
@@ -292,4 +305,177 @@ export async function saveGithubActivitySummary(db: Firestore, summary: GitHubAc
       }),
     },
   );
+}
+
+// =================================================================
+// Organization tenant — Phase 1 MVP.
+//
+// The org concept is the foundation for the B2B layer: SSO, admin
+// dashboards, audit logs, and seat-based billing all key off
+// `organizationId` on the user profile. This file only ships the
+// data plumbing — the UI lives in App.tsx. The matching Firestore
+// rules live in firestore.rules under `organizations/` and
+// `organizationInvites/`.
+// =================================================================
+
+export type OrganizationRecord = {
+  id: string;
+  name: string;
+  ownerUid: string;
+  createdAt: string;
+};
+
+export type OrganizationInviteRecord = {
+  orgId: string;
+  orgName: string;
+  invitedBy: string;
+  createdAt: string;
+  expiresAt: string;
+  maxUses: number;
+  usedBy: string[];
+};
+
+export async function createOrganization(
+  db: Firestore,
+  ownerUid: string,
+  name: string,
+): Promise<OrganizationRecord> {
+  const id = crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  const record: OrganizationRecord = {
+    id,
+    name: name.trim(),
+    ownerUid,
+    createdAt,
+  };
+
+  // Two writes are kept separate (not in a transaction) so the rule
+  // checks don't have to bridge collections — the org write proves
+  // ownerUid == self, the user write proves the orgId is the one we
+  // just created. If the second write fails the user can retry
+  // joining via the org id; the org doc itself is durable.
+  await setDoc(doc(db, "organizations", id), {
+    ...record,
+    updatedAt: serverTimestamp(),
+  });
+  await setDoc(
+    doc(db, "users", ownerUid),
+    {
+      organizationId: id,
+      organizationName: record.name,
+      organizationRole: "owner",
+    },
+    { merge: true },
+  );
+
+  return record;
+}
+
+export async function loadOrganization(
+  db: Firestore,
+  orgId: string,
+): Promise<OrganizationRecord | null> {
+  const snapshot = await getDoc(doc(db, "organizations", orgId));
+  if (!snapshot.exists()) return null;
+  const data = snapshot.data() as Partial<OrganizationRecord>;
+  if (!data.id || !data.name || !data.ownerUid) return null;
+  return {
+    id: data.id,
+    name: data.name,
+    ownerUid: data.ownerUid,
+    createdAt: data.createdAt || new Date().toISOString(),
+  };
+}
+
+export async function leaveOrganization(db: Firestore, uid: string) {
+  // Owners can't simply walk away — they'd orphan the org. Caller is
+  // responsible for blocking the action; this function just clears
+  // the user-side fields. (Future: a Cloud Function will transfer
+  // ownership when an owner leaves; for now we forbid in the UI.)
+  await setDoc(
+    doc(db, "users", uid),
+    {
+      organizationId: null,
+      organizationName: null,
+      organizationRole: null,
+    },
+    { merge: true },
+  );
+}
+
+export async function createOrganizationInvite(
+  db: Firestore,
+  orgId: string,
+  orgName: string,
+  invitedBy: string,
+  options: { ttlDays?: number; maxUses?: number } = {},
+): Promise<string> {
+  const token = crypto.randomUUID();
+  const now = new Date();
+  const ttlDays = options.ttlDays ?? 14;
+  const expiresAt = new Date(now.getTime() + ttlDays * 24 * 60 * 60 * 1000);
+  const record: OrganizationInviteRecord = {
+    orgId,
+    orgName,
+    invitedBy,
+    createdAt: now.toISOString(),
+    expiresAt: expiresAt.toISOString(),
+    maxUses: options.maxUses ?? 0,
+    usedBy: [],
+  };
+  await setDoc(doc(db, "organizationInvites", token), record);
+  return token;
+}
+
+export async function acceptOrganizationInvite(
+  db: Firestore,
+  token: string,
+  uid: string,
+): Promise<OrganizationRecord> {
+  // Transaction: read invite + org, validate, append uid to usedBy,
+  // update user's organizationId. Keeps the maxUses cap honest under
+  // concurrent claims.
+  return runTransaction(db, async (transaction) => {
+    const inviteRef = doc(db, "organizationInvites", token);
+    const inviteSnap = await transaction.get(inviteRef);
+    if (!inviteSnap.exists()) {
+      throw new Error("INVITE_NOT_FOUND");
+    }
+    const invite = inviteSnap.data() as OrganizationInviteRecord;
+    const now = new Date();
+    if (new Date(invite.expiresAt).getTime() < now.getTime()) {
+      throw new Error("INVITE_EXPIRED");
+    }
+    const usedBy = Array.isArray(invite.usedBy) ? invite.usedBy : [];
+    if (invite.maxUses > 0 && usedBy.length >= invite.maxUses) {
+      throw new Error("INVITE_EXHAUSTED");
+    }
+
+    const orgRef = doc(db, "organizations", invite.orgId);
+    const orgSnap = await transaction.get(orgRef);
+    if (!orgSnap.exists()) {
+      throw new Error("ORG_NOT_FOUND");
+    }
+    const orgData = orgSnap.data() as OrganizationRecord;
+
+    const userRef = doc(db, "users", uid);
+    const nextUsedBy = usedBy.includes(uid) ? usedBy : [...usedBy, uid];
+    transaction.update(inviteRef, { usedBy: nextUsedBy });
+    transaction.set(
+      userRef,
+      {
+        organizationId: invite.orgId,
+        organizationName: invite.orgName,
+        organizationRole: "member",
+      },
+      { merge: true },
+    );
+
+    return {
+      id: orgData.id || invite.orgId,
+      name: orgData.name || invite.orgName,
+      ownerUid: orgData.ownerUid,
+      createdAt: orgData.createdAt || new Date().toISOString(),
+    };
+  });
 }
