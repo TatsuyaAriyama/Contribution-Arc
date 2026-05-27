@@ -9099,7 +9099,7 @@ function App() {
           <button
             type="button"
             className="topbar-icon-button topbar-shop-button"
-            aria-label={`ショップ${coins > 0 ? ` (${coins.toLocaleString()} コイン)` : ""}`}
+            aria-label={`ショップ${coins > 0 ? ` (${coins.toLocaleString()} Arc)` : ""}`}
             onClick={() => {
               setCurrentView("shop");
               setIsFriendsPopoverOpen(false);
