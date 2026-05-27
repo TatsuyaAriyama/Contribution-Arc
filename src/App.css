@@ -8042,16 +8042,12 @@
   transform: translate(-50%, -50%);
 }
 
-/* The walk loop updates `playerPosition` at ~30fps (33ms cadence) to
-   keep the React render budget reasonable. A short linear transition
-   on left/top interpolates between those ticks so the avatar reads as
-   smoothly moving rather than ticking 30 times per second. Slightly
-   longer than one tick (70ms vs 33ms) so the eye never catches the
-   step. Only applied while walking — releasing keys snaps cleanly to
-   the final position without a drifting tail. */
-.workspace-actor.is-walking {
-  transition: left 70ms linear, top 70ms linear;
-}
+/* No CSS transition on `left`/`top` while walking — the walk loop
+   integrates Δt every rAF frame, so each repaint already holds the
+   exact integrated position. Adding a transition on top of that just
+   trails the avatar behind the actual key state and reads as input
+   lag on press. (The previous 70ms linear interpolation was needed
+   when the loop was throttled to 30fps; that throttle is gone.) */
 
 .workspace-actor.is-npc {
   animation: workspace-npc-idle 4.8s ease-in-out infinite;
@@ -18706,7 +18702,14 @@ select:focus-visible,
    composite-animate `left` / `top` when `will-change` hints them)
    plus a translateZ to force a GPU layer for the actor itself. The
    walking leg cadence is tightened from 0.42s → 0.36s for a
-   slightly more responsive gait without going cartoonish. */
+   slightly more responsive gait without going cartoonish.
+
+   Note on transition: a base 0.55s ease applies to `left`/`top` so
+   state-driven moves (seat snap, room entry, reset) read as smooth
+   glides. That ease is REMOVED while `.is-walking` is active —
+   keyboard input updates position every rAF frame, and a 0.55s
+   transition on top of that would trail the avatar behind the keys
+   by half a second. Snap-on-walk, glide-on-snap. */
 .workspace-actor {
   transition:
     left 0.55s cubic-bezier(0.22, 0.61, 0.36, 1),
@@ -18714,6 +18717,10 @@ select:focus-visible,
   will-change: left, top, transform;
   transform: translate3d(-50%, -50%, 0);
   backface-visibility: hidden;
+}
+
+.workspace-actor.is-walking {
+  transition: none;
 }
 
 .workspace-actor.is-walking .actor-sprite {

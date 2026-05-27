@@ -3337,6 +3337,11 @@ function App() {
   const [knowledgePositions, setKnowledgePositions] = useState<Record<string, { x: number; y: number }>>({});
   const [draggingKnowledgeId, setDraggingKnowledgeId] = useState("");
   const pressedWorkspaceKeysRef = useRef<Set<string>>(new Set());
+  // Walk-state ref mirrors `isPlayerWalking` so the walk loop can read
+  // the current value without a stale-closure capture, and so keydown
+  // can flip the class in the same frame the key was pressed instead
+  // of waiting for the next rAF tick to notice the change.
+  const isPlayerWalkingRef = useRef(false);
   const syncedRoomPositionRef = useRef<string | null>(null);
   const graphSvgRef = useRef<SVGSVGElement | null>(null);
   const isApplyingRemoteRoomsRef = useRef(false);
@@ -4732,6 +4737,7 @@ function App() {
     const member = selectedLocalRoom?.activeMembers.find((item) => item.userId === currentUser.uid);
     if (!member) {
       pressedWorkspaceKeysRef.current.clear();
+      isPlayerWalkingRef.current = false;
       setIsPlayerWalking(false);
       syncedRoomPositionRef.current = null;
       return;
@@ -4762,27 +4768,47 @@ function App() {
     return () => window.clearTimeout(timeoutId);
   }, [workspaceBubble]);
 
+  // Membership gate as a single boolean — flips only when the user
+  // actually enters or leaves a room, not on every Firestore tick. The
+  // previous walk effect listed `customRooms` in its deps, so each
+  // member-position snapshot from any other user in the room tore down
+  // the keyboard listeners and cleared `pressedWorkspaceKeysRef`. That
+  // meant the avatar would briefly stop responding to held keys every
+  // time anyone moved. Now the listener stays mounted the whole session.
+  const canMoveInRoom = useMemo(() => {
+    if (!currentUser) {
+      return false;
+    }
+    const room = customRooms.find((r) => r.id === selectedRoomId);
+    if (!room) {
+      return false;
+    }
+    return normalizeWorkspaceRoom(room).activeMembers.some(
+      (member) => member.userId === currentUser.uid,
+    );
+  }, [currentUser, customRooms, selectedRoomId]);
+
   useEffect(() => {
-    if (!currentUser || (currentView !== "workspace" && currentView !== "home")) {
+    if (!currentUser || (currentView !== "workspace" && currentView !== "home") || !canMoveInRoom) {
       pressedWorkspaceKeysRef.current.clear();
+      isPlayerWalkingRef.current = false;
       setIsPlayerWalking(false);
       return;
     }
 
-    const selectedLocalRoom = customRooms.map(normalizeWorkspaceRoom).find((room) => room.id === selectedRoomId);
-    const canMove = Boolean(selectedLocalRoom?.activeMembers.some((member) => member.userId === currentUser.uid));
-    if (!canMove) {
-      pressedWorkspaceKeysRef.current.clear();
-      setIsPlayerWalking(false);
-      return;
-    }
-
+    // Don't treat plain buttons as typing targets — every workspace actor
+    // is a <button>, so the old check made the avatar unresponsive any
+    // time focus landed on another actor or any nearby control. The only
+    // real "user is typing here" surfaces are real inputs and
+    // contenteditable regions.
     const isTypingTarget = (target: EventTarget | null) => {
       if (!(target instanceof HTMLElement)) {
         return false;
       }
-
-      return ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName);
+      if (target.isContentEditable) {
+        return true;
+      }
+      return ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -4792,7 +4818,21 @@ function App() {
       }
 
       event.preventDefault();
+      // Skip auto-repeat work — the Set already has this key, the walk
+      // loop is already running, and flipping the walking flag again
+      // would be a redundant React render.
+      if (pressedWorkspaceKeysRef.current.has(key)) {
+        return;
+      }
       pressedWorkspaceKeysRef.current.add(key);
+      // Flip walking class immediately. Previously this only happened on
+      // the next rAF tick, which combined with the throttled tick cadence
+      // and the CSS transition produced ~100ms of visible input lag. Now
+      // the class is on the element by the time the next paint runs.
+      if (!isPlayerWalkingRef.current) {
+        isPlayerWalkingRef.current = true;
+        setIsPlayerWalking(true);
+      }
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
@@ -4805,57 +4845,48 @@ function App() {
       pressedWorkspaceKeysRef.current.delete(key);
     };
 
-    // Walk loop. Two problems with the previous implementation:
-    //   1. `setIsPlayerWalking(isMoving)` + `setPlayerPosition(...)` ran
-    //      on every single rAF tick (~60fps). App.tsx is a ~10k-line
-    //      monolith, so paying for a full re-render 60 times a second
-    //      was the actual jank — the avatar appeared to stutter.
-    //   2. The per-frame Δ was a fixed `0.42%`, so any frame that got
-    //      delayed (GC, layout, etc.) effectively teleported the avatar
-    //      a variable distance the next tick.
-    // Fix: throttle state updates to ~30fps, only flip the walking flag
-    // on actual transitions, and scale movement by real elapsed time so
-    // speed stays constant regardless of frame pacing. The CSS rule
-    // `.workspace-actor.is-walking { transition: left/top 70ms linear }`
-    // bridges the 33ms state cadence into visually-smooth motion.
-    const TARGET_TICK_MS = 1000 / 30;
-    const SPEED_PERCENT_PER_SEC = 25;
+    // Walk loop. The previous implementation throttled state updates to
+    // ~30fps and relied on a 70ms CSS transition on `left`/`top` to make
+    // the motion read as smooth. That combination — first-tick skip
+    // (~16ms) + throttle wait (up to 33ms) + transition catch-up (~70ms)
+    // — added up to roughly 100ms of latency between pressing a key and
+    // seeing the avatar actually start moving. Users felt it as a
+    // "stutter on press".
+    //
+    // The new loop integrates Δt every frame (60fps when the browser
+    // can hit it) and the CSS transition is gone, so each frame snaps
+    // exactly to the integrated position. React re-rendering App.tsx
+    // 60 times a second is fine in practice because the workspace view
+    // doesn't render that much, and the responsiveness win is large.
+    const SPEED_PERCENT_PER_SEC = 30;
     let frameId = 0;
-    let lastUpdateAt = 0;
-    let lastWalking: boolean | null = null;
+    let lastTimestamp: number | null = null;
     const tick = (timestamp: number) => {
       const keys = pressedWorkspaceKeysRef.current;
       const dx = (keys.has("d") || keys.has("arrowright") ? 1 : 0) - (keys.has("a") || keys.has("arrowleft") ? 1 : 0);
       const dy = (keys.has("s") || keys.has("arrowdown") ? 1 : 0) - (keys.has("w") || keys.has("arrowup") ? 1 : 0);
       const isMoving = dx !== 0 || dy !== 0;
 
-      if (lastWalking !== isMoving) {
-        setIsPlayerWalking(isMoving);
-        lastWalking = isMoving;
-      }
-
       if (!isMoving) {
-        lastUpdateAt = 0;
+        if (isPlayerWalkingRef.current) {
+          isPlayerWalkingRef.current = false;
+          setIsPlayerWalking(false);
+        }
+        lastTimestamp = null;
         frameId = window.requestAnimationFrame(tick);
         return;
       }
 
-      if (lastUpdateAt === 0) {
-        // First active tick after a key was pressed — record the
-        // timestamp and wait one frame so the next iteration has a
-        // valid Δt to integrate against.
-        lastUpdateAt = timestamp;
-        frameId = window.requestAnimationFrame(tick);
-        return;
-      }
+      // Seed lastTimestamp on the first active frame so the integration
+      // starts with a real Δt next frame — but DON'T skip the position
+      // update; even a 1ms initial step is enough to register as "the
+      // avatar moved" so the press feels instant.
+      const previous = lastTimestamp ?? timestamp;
+      lastTimestamp = timestamp;
 
-      const elapsed = timestamp - lastUpdateAt;
-      if (elapsed < TARGET_TICK_MS) {
-        frameId = window.requestAnimationFrame(tick);
-        return;
-      }
-
-      lastUpdateAt = timestamp;
+      // Clamp huge gaps (tab unfocus, debugger pause, etc.) so we don't
+      // teleport across the room on resume.
+      const elapsed = Math.min(timestamp - previous, 64);
       const length = Math.hypot(dx, dy) || 1;
       const seconds = elapsed / 1000;
       setPlayerPosition((position) => ({
@@ -4875,9 +4906,10 @@ function App() {
       window.removeEventListener("keyup", handleKeyUp);
       window.cancelAnimationFrame(frameId);
       pressedWorkspaceKeysRef.current.clear();
+      isPlayerWalkingRef.current = false;
       setIsPlayerWalking(false);
     };
-  }, [currentUser, currentView, customRooms, selectedRoomId]);
+  }, [currentUser, currentView, canMoveInRoom]);
 
   const studyKnowledgeGraph = useMemo(() => buildStudyKnowledgeGraph(studyLogs), [studyLogs]);
 
@@ -6984,6 +7016,7 @@ function App() {
 
   const resetWorkspacePresence = () => {
     pressedWorkspaceKeysRef.current.clear();
+    isPlayerWalkingRef.current = false;
     setIsPlayerWalking(false);
     setPendingJoinRoomId(null);
     setLastRoomSession(null);
@@ -7035,6 +7068,7 @@ function App() {
     setPendingJoinRoomId(null);
     setPlayerPosition(seatPosition);
     pressedWorkspaceKeysRef.current.clear();
+    isPlayerWalkingRef.current = false;
     setIsPlayerWalking(false);
     setCustomRooms((rooms) => {
       const normalizedRooms = rooms.map(normalizeWorkspaceRoom).filter((room) => !isLegacyWorkspaceRoom(room));
