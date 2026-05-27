@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type ChangeEvent } from "react";
+import { useEffect, useState, type CSSProperties, type ChangeEvent } from "react";
 
 export type RoomActivityItem = {
   id: string;
@@ -167,6 +167,26 @@ export function SilentWorkspaceRoom({
   const isFocusPresentation = presentation === "focus";
   const [isPresetEditorOpen, setIsPresetEditorOpen] = useState(false);
   const [isPresetTrayOpen, setIsPresetTrayOpen] = useState(false);
+  // Forces a re-render every 500ms while any actor has a fresh bubble
+  // — the render-time TTL on `member.bubble` otherwise relies on some
+  // other prop change to take effect, which means a bubble could
+  // linger past its natural lifespan in an otherwise idle room (e.g.
+  // the sender disconnected mid-message and nobody is moving). The
+  // tick only runs while there's actually something to retire, so an
+  // empty room doesn't pay the cost.
+  const [bubbleTick, setBubbleTick] = useState(0);
+  void bubbleTick;
+  useEffect(() => {
+    const now = Date.now();
+    const hasActiveBubble = members.some((member) => {
+      if (!member.bubble || !member.bubbleAt) return false;
+      const ms = new Date(member.bubbleAt).getTime();
+      return Number.isFinite(ms) && now - ms < 7000;
+    });
+    if (!hasActiveBubble) return;
+    const id = window.setInterval(() => setBubbleTick((t) => t + 1), 500);
+    return () => window.clearInterval(id);
+  }, [members]);
   const presetSlots = [...presetMessages, "", "", "", "", "", ""].slice(0, 6);
   const visiblePresetMessages = presetSlots.map((message) => message.trim()).filter(Boolean);
   const currentMember = members.find((member) => member.userId === currentUserId);
@@ -422,8 +442,13 @@ export function SilentWorkspaceRoom({
                   // it would arrive a beat later if we waited for the
                   // Firestore round-trip. For every other actor, render the
                   // synced `member.bubble` when fresh (TTL safety drops
-                  // anything older than ~4s in case the originator's
-                  // clear-write never lands).
+                  // anything older than ~6s in case the originator's
+                  // clear-write never lands. The TTL is intentionally
+                  // wider than the 3.6s clear-write schedule so a
+                  // slow round-trip never drops the bubble before it
+                  // had a chance to render — the clear-write itself
+                  // is what normally retires the bubble on remote
+                  // clients).
                   if (isCurrentUser) {
                     return bubbleMessage ? (
                       <span className="workspace-bubble">{bubbleMessage}</span>
@@ -432,7 +457,7 @@ export function SilentWorkspaceRoom({
                   if (!member.bubble || !member.bubbleAt) return null;
                   const bubbleMs = new Date(member.bubbleAt).getTime();
                   if (!Number.isFinite(bubbleMs)) return null;
-                  if (Date.now() - bubbleMs > 4000) return null;
+                  if (Date.now() - bubbleMs > 6000) return null;
                   return <span className="workspace-bubble">{member.bubble}</span>;
                 })()}
                 {member.status === "on-break" ? <span className="actor-rest-mark" aria-hidden="true">Zz</span> : null}

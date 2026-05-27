@@ -4839,25 +4839,66 @@ function App() {
       });
 
       setCustomRooms((currentRooms) => {
-        const pendingLocalRooms = Array.from(pendingWorkspaceRoomsRef.current.values());
-        const pendingLocalRoomIds = new Set(pendingLocalRooms.map((room) => room.id));
-        const remoteRoomsForMerge = remoteRooms.filter((room) => !pendingLocalRoomIds.has(room.id));
-        const localOnlyRooms = currentRooms.filter(
-          (room) =>
-            !remoteRoomIds.has(room.id) &&
-            !pendingWorkspaceRoomsRef.current.has(room.id),
-        );
-        const hasLocalRoomsWaitingForCloud = pendingLocalRooms.length > 0 || localOnlyRooms.length > 0;
+        // Per-room merge: we used to *drop* a remote room update
+        // entirely if we still had a pending local write for it, which
+        // meant two users actively working in the same room would each
+        // keep filtering out the other's updates — bubbles, position,
+        // status, everything — until their own write debounce settled.
+        // The fix is to splice instead of replace: take the remote
+        // room as the base (so other members' freshly-arrived bubbles
+        // come through), then graft ONLY the current user's local
+        // self-member on top so our in-flight edits don't snap back.
+        const finalRoomMap = new Map<string, WorkspaceRoom>();
+
+        remoteRooms.forEach((remoteRoom) => {
+          const pendingLocal = pendingWorkspaceRoomsRef.current.get(remoteRoom.id);
+          if (!pendingLocal) {
+            finalRoomMap.set(remoteRoom.id, remoteRoom);
+            return;
+          }
+          const localSelf = pendingLocal.activeMembers.find(
+            (member) => member.userId === currentUser.uid,
+          );
+          const remoteOthers = remoteRoom.activeMembers.filter(
+            (member) => member.userId !== currentUser.uid,
+          );
+          const mergedMembers = localSelf
+            ? [...remoteOthers, localSelf]
+            : remoteOthers;
+          finalRoomMap.set(
+            remoteRoom.id,
+            normalizeWorkspaceRoom({ ...remoteRoom, activeMembers: mergedMembers }),
+          );
+        });
+
+        // Pending locally-created rooms that haven't synced yet still
+        // belong in the merge.
+        pendingWorkspaceRoomsRef.current.forEach((pendingLocal, roomId) => {
+          if (!finalRoomMap.has(roomId)) {
+            finalRoomMap.set(roomId, pendingLocal);
+          }
+        });
+
+        // Rooms that only exist locally (e.g. offline edits) stay
+        // as-is until they sync.
+        currentRooms.forEach((room) => {
+          if (!finalRoomMap.has(room.id) && !remoteRoomIds.has(room.id)) {
+            finalRoomMap.set(room.id, room);
+          }
+        });
+
         const nextRooms = cleanWorkspacePresenceForUser(
-          seedWorkspaceRooms([...remoteRoomsForMerge, ...pendingLocalRooms, ...localOnlyRooms]),
+          seedWorkspaceRooms(Array.from(finalRoomMap.values())),
           currentUser.uid,
           Date.now(),
         );
 
-        isApplyingRemoteRoomsRef.current = !hasLocalRoomsWaitingForCloud;
-        if (!hasLocalRoomsWaitingForCloud) {
-          lastSyncedWorkspaceRoomsRef.current = JSON.stringify(serializeWorkspaceRooms(nextRooms));
-        }
+        // The merged customRooms already reflect everything we'd write
+        // back (our local self + the remote other-members). Suppress
+        // the next sync-effect run so we don't burn a redundant write
+        // just to push the data we just merged in.
+        isApplyingRemoteRoomsRef.current = true;
+        lastSyncedWorkspaceRoomsRef.current = JSON.stringify(serializeWorkspaceRooms(nextRooms));
         setSelectedRoomId((currentRoomId) =>
           nextRooms.some((room) => room.id === currentRoomId) ? currentRoomId : nextRooms[0]?.id || "",
         );
