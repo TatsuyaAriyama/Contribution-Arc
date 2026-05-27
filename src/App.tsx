@@ -197,6 +197,15 @@ type UserProfile = {
   /* In-app currency balance. Spent in the shop to unlock character
      shapes; future revisions allow purchasing coins with real money. */
   coins?: number;
+  /* Last YYYY-MM-DD (local timezone) on which the user earned the
+     daily "post to feed" Arc bonus. Used to gate the reward so the
+     50-Arc payout fires exactly once per calendar day. */
+  lastFeedRewardDate?: string;
+  /* Total Arc the user has ever earned through the daily feed-post
+     bonus. Once this hits the lifetime cap (500) the daily reward
+     stops paying out. Independent of the actual coin balance — the
+     user can spend Arc and the cap still applies. */
+  feedRewardArcEarned?: number;
   level?: number;
   effortExp?: number;
   outputExp?: number;
@@ -1202,6 +1211,11 @@ function normalizeUserProfile(uid: string, data: Partial<UserProfile>): UserProf
           .filter((shape, index, arr) => arr.indexOf(shape) === index) as CharacterShape[])
       : ["default"],
     coins: typeof data.coins === "number" && Number.isFinite(data.coins) ? Math.max(0, Math.floor(data.coins)) : 0,
+    lastFeedRewardDate: typeof data.lastFeedRewardDate === "string" ? data.lastFeedRewardDate : "",
+    feedRewardArcEarned:
+      typeof data.feedRewardArcEarned === "number" && Number.isFinite(data.feedRewardArcEarned)
+        ? Math.max(0, Math.floor(data.feedRewardArcEarned))
+        : 0,
     level: data.level || 1,
     effortExp: data.effortExp || 0,
     outputExp: data.outputExp || 0,
@@ -3375,6 +3389,13 @@ function App() {
   const [playerCharacterShape, setPlayerCharacterShape] = useState<CharacterShape>("default");
   const [ownedCharacterShapes, setOwnedCharacterShapes] = useState<CharacterShape[]>(["default"]);
   const [coins, setCoins] = useState<number>(0);
+  /* Daily feed-post Arc reward bookkeeping. Both fields are mirrored
+     to the user profile doc so a second device sees the same gate.
+     The lifetime cap is enforced against `feedRewardArcEarned` (not
+     the live `coins` balance) so spending Arc never re-opens the
+     reward — exactly what the user asked for. */
+  const [lastFeedRewardDate, setLastFeedRewardDate] = useState<string>("");
+  const [feedRewardArcEarned, setFeedRewardArcEarned] = useState<number>(0);
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [customRooms, setCustomRooms] = useState<WorkspaceRoom[]>([]);
   const [isWorkspaceLoaded, setIsWorkspaceLoaded] = useState(false);
@@ -3775,6 +3796,8 @@ function App() {
         const grantedCoins = isAdmin ? Math.max(profile.coins || 0, 10000) : profile.coins || 0;
         setOwnedCharacterShapes(resolvedOwned);
         setCoins(grantedCoins);
+        setLastFeedRewardDate(profile.lastFeedRewardDate || "");
+        setFeedRewardArcEarned(profile.feedRewardArcEarned || 0);
         setPlayerCharacterShape(safeShape);
         setOpenedWorkspaceGiftLevels((levels) =>
           Array.from(new Set([...levels, ...(profile.openedWorkspaceGiftLevels || [])])).sort(
@@ -5446,6 +5469,15 @@ function App() {
   );
   const selectedRoom = allWorkspaceRooms.find((room) => room.id === selectedRoomId) || allWorkspaceRooms[0];
   const currentBuilding = workspaceTask.trim() || studySubject.trim() || "Deep work";
+  /* YYYY-MM-DD for the user's local day. Re-computed every render so
+     a midnight roll-over flips the daily-reward gate without needing
+     a separate timer. */
+  const todayDateKey = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+      d.getDate(),
+    ).padStart(2, "0")}`;
+  })();
   const activeRoom =
     allWorkspaceRooms.find((room) => room.activeMembers.some((member) => member.userId === currentUserUid)) || null;
   const githubConnectionLabel = githubId ? "GitHub connected" : "GitHub ready";
@@ -6025,6 +6057,33 @@ function App() {
     void putPersistentItem("posts", nextPost).catch(logPersistError);
     setPostDraft("");
 
+    // Daily-post Arc reward. First successful post each local day pays
+    // out 50 Arc up to a lifetime cap of 500. The cap tracks total
+    // *earned* (feedRewardArcEarned), not the live coin balance, so
+    // spending Arc in the shop never re-opens the daily reward.
+    const FEED_REWARD_PER_DAY = 50;
+    const FEED_REWARD_LIFETIME_CAP = 500;
+    const now = new Date();
+    const todayKey =
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
+        now.getDate(),
+      ).padStart(2, "0")}`;
+    const remainingCap = Math.max(0, FEED_REWARD_LIFETIME_CAP - feedRewardArcEarned);
+    if (todayKey !== lastFeedRewardDate && remainingCap > 0) {
+      const reward = Math.min(FEED_REWARD_PER_DAY, remainingCap);
+      const nextEarned = feedRewardArcEarned + reward;
+      setCoins((value) => value + reward);
+      setLastFeedRewardDate(todayKey);
+      setFeedRewardArcEarned(nextEarned);
+      const reachedCap = nextEarned >= FEED_REWARD_LIFETIME_CAP;
+      showToast(
+        reachedCap
+          ? `+${reward} Arc 獲得（投稿ボーナス上限 ${FEED_REWARD_LIFETIME_CAP} に到達）`
+          : `+${reward} Arc 獲得（累計 ${nextEarned} / ${FEED_REWARD_LIFETIME_CAP}）`,
+        { kind: "success" },
+      );
+    }
+
     if (onboardingStep === "firstPost") {
       safeSetLocalStorage(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
       setOnboardingStep("idle");
@@ -6478,6 +6537,8 @@ function App() {
       characterShape: playerCharacterShape,
       ownedCharacterShapes: [...ownedCharacterShapes].sort(),
       coins,
+      lastFeedRewardDate,
+      feedRewardArcEarned,
       streak: studyStreak,
       determination,
       following: [...following].sort(),
@@ -6540,6 +6601,8 @@ function App() {
     userId,
     coins,
     ownedCharacterShapes,
+    lastFeedRewardDate,
+    feedRewardArcEarned,
   ]);
 
   if (window.location.pathname === githubCallbackPath) {
@@ -11356,6 +11419,39 @@ function App() {
                 >
                   Arc を購入（近日公開）
                 </button>
+              </div>
+            </div>
+
+            {/* Daily feed-post bonus explainer. Surfaces the only
+                non-purchase way to earn Arc inside the app right now
+                — without this, users have no idea where the coins
+                come from. Progress bar fills as the user accrues
+                toward the 500 lifetime cap. */}
+            <div className="shop-feed-bonus" role="group" aria-label="投稿で Arc を貯める">
+              <div className="shop-feed-bonus-head">
+                <strong>投稿で Arc を貯める</strong>
+                <span className="shop-feed-bonus-amount">
+                  {feedRewardArcEarned} / 500 Arc
+                </span>
+              </div>
+              <p className="shop-feed-bonus-copy">
+                ログを 1 日 1 回投稿すると +50 Arc。累計 500 Arc までもらえます。
+                {feedRewardArcEarned >= 500
+                  ? "上限に到達しました。ありがとうございます！"
+                  : lastFeedRewardDate === todayDateKey
+                    ? "今日の分は受け取り済み。明日また投稿してみてください。"
+                    : "今日はまだ受け取っていません。ログを投稿してみてください。"}
+              </p>
+              <div
+                className="shop-feed-bonus-bar"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={500}
+                aria-valuenow={feedRewardArcEarned}
+              >
+                <span
+                  style={{ width: `${Math.min(100, (feedRewardArcEarned / 500) * 100)}%` }}
+                />
               </div>
             </div>
           </section>

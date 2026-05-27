@@ -52,6 +52,8 @@ export type UserProgressRecord = {
   characterShape: string;
   ownedCharacterShapes: string[];
   coins: number;
+  lastFeedRewardDate: string;
+  feedRewardArcEarned: number;
   streak: number;
   determination: string;
   following: string[];
@@ -231,6 +233,8 @@ export async function saveUserProgressToCloud(db: Firestore, profile: UserProgre
     characterShape: profile.characterShape,
     ownedCharacterShapes: profile.ownedCharacterShapes,
     coins: profile.coins,
+    lastFeedRewardDate: profile.lastFeedRewardDate,
+    feedRewardArcEarned: profile.feedRewardArcEarned,
     streak: profile.streak,
     determination: profile.determination,
     following: profile.following,
