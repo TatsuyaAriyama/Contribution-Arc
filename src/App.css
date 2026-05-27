@@ -17647,7 +17647,8 @@ body {
 .learning-card-meta {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 10px;
   font-size: 11px;
   color: var(--muted);
 }
@@ -17658,6 +17659,84 @@ body {
   border-radius: 4px;
   background: var(--border);
   color: var(--muted);
+  margin-left: auto;
+}
+
+/* Freshness chip — surfaces when the item was last logged so the user
+   can spot stale items at a glance. Three states:
+   - default: muted gray ("3日前", "2週間前", …)
+   - is-fresh: tinted with the card color when logged today
+   - is-untouched: italicised muted ("未記録") */
+.learning-card-last {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.learning-card-last.is-fresh {
+  color: var(--learning-card-color, var(--ink));
+  font-weight: 700;
+}
+
+.learning-card-last.is-untouched {
+  font-style: italic;
+  opacity: 0.7;
+}
+
+/* 7-day mini sparkline. Each bar's height encodes that day's logged
+   minutes (relative to the 7-day max). Days with no activity render as
+   a small floor stub so the row keeps its rhythm. Today (rightmost bar)
+   gets full opacity; earlier days fade slightly. */
+.learning-card-spark {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 18px;
+  margin-top: 2px;
+}
+
+.learning-card-spark-bar {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 8%;
+  border-radius: 2px;
+  background: rgba(var(--ink-rgb), 0.18);
+}
+
+.learning-card-spark-bar.has-value {
+  background: var(--learning-card-color, var(--ink));
+  opacity: 0.55;
+}
+
+.learning-card-spark-bar.has-value.is-today {
+  opacity: 1;
+}
+
+.learning-empty-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.learning-suggestion-chip {
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.12s ease;
+}
+
+.learning-suggestion-chip:hover {
+  border-color: rgba(var(--ink-rgb), 0.32);
+  background: var(--surface);
+}
+
+.learning-suggestion-chip:active {
+  transform: scale(0.97);
 }
 
 .learning-card-progress {

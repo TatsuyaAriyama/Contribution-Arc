@@ -1933,6 +1933,26 @@ function formatStudyTimeJa(minutes: number) {
   return `${hours}時間`;
 }
 
+// Compact "last logged" label used on learning cards. Buckets into:
+//   未記録 (no logs)
+//   今日 / 昨日 / N日前 (within 6 days)
+//   N週間前 / Nヶ月前 (older)
+function formatLearningLastLogged(
+  lastTs: number | undefined,
+  todayMidnightMs: number,
+  dayMs: number,
+) {
+  if (!lastTs) return "未記録";
+  if (lastTs >= todayMidnightMs) return "今日";
+  const yesterdayMidnight = todayMidnightMs - dayMs;
+  if (lastTs >= yesterdayMidnight) return "昨日";
+  const diffDays = Math.max(1, Math.floor((todayMidnightMs - lastTs) / dayMs));
+  if (diffDays < 7) return `${diffDays}日前`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}週間前`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)}ヶ月前`;
+  return `${Math.floor(diffDays / 365)}年前`;
+}
+
 function formatStayTime(minutes: number) {
   if (minutes < 60) {
     return `${minutes}分`;
@@ -10046,14 +10066,47 @@ function App() {
               })
               .filter((item) => !lowerQuery || item.name.toLowerCase().includes(lowerQuery));
 
+            // Build per-item aggregates in one pass: cumulative minutes,
+            // last-logged timestamp, this-week total, and a 7-day
+            // sparkline (index 0 = 6 days ago, index 6 = today). The
+            // sparkline drives the visual freshness signal so users can
+            // tell at a glance which items they actually touched.
             const totalsByItem = new Map<string, number>();
+            const lastLoggedByItem = new Map<string, number>();
+            const sparklineByItem = new Map<string, number[]>();
+            const todayMidnight = new Date();
+            todayMidnight.setHours(0, 0, 0, 0);
+            const dayMs = 24 * 60 * 60 * 1000;
+            const sparkStartMs = todayMidnight.getTime() - 6 * dayMs;
             studyLogs.forEach((log) => {
-              if (log.learningItemId) {
-                totalsByItem.set(log.learningItemId, (totalsByItem.get(log.learningItemId) || 0) + log.minutes);
+              if (!log.learningItemId) return;
+              totalsByItem.set(
+                log.learningItemId,
+                (totalsByItem.get(log.learningItemId) || 0) + log.minutes,
+              );
+              const ts = new Date(log.createdAt).getTime();
+              if (!Number.isFinite(ts)) return;
+              const prevLast = lastLoggedByItem.get(log.learningItemId) || 0;
+              if (ts > prevLast) lastLoggedByItem.set(log.learningItemId, ts);
+              if (ts >= sparkStartMs) {
+                const dayIndex = Math.min(6, Math.max(0, Math.floor((ts - sparkStartMs) / dayMs)));
+                const arr = sparklineByItem.get(log.learningItemId) || new Array(7).fill(0);
+                arr[dayIndex] += log.minutes;
+                sparklineByItem.set(log.learningItemId, arr);
               }
             });
 
+            // Sort priority:
+            //   1. Recently logged items float to the top so the user sees
+            //      what they're currently working on.
+            //   2. Among items with the same "never logged" state (no logs
+            //      at all), fall back to total minutes — keeps big dormant
+            //      projects above brand-new empty ones.
+            //   3. Finally createdAt desc so newest-added wins ties.
             const sorted = filtered.slice().sort((a, b) => {
+              const aLast = lastLoggedByItem.get(a.id) || 0;
+              const bLast = lastLoggedByItem.get(b.id) || 0;
+              if (aLast !== bLast) return bLast - aLast;
               const aMin = totalsByItem.get(a.id) || 0;
               const bMin = totalsByItem.get(b.id) || 0;
               if (aMin !== bMin) return bMin - aMin;
@@ -10061,9 +10114,28 @@ function App() {
             });
 
             if (sorted.length === 0) {
+              // First-run / fully-filtered-out state. Offer curated
+              // quick-add chips so a fresh user doesn't have to think up
+              // a name from scratch — one tap opens the editor pre-filled
+              // and they only need to pick the color.
+              const showSuggestions = learningCategoryTab === "all" && !lowerQuery;
               return (
                 <div className="learning-empty">
                   <p>学習対象を追加して、学習時間を記録しよう。</p>
+                  {showSuggestions ? (
+                    <div className="learning-empty-suggestions" aria-label="よく使われる学習対象">
+                      {["React", "TypeScript", "英語", "読書", "アルゴリズム"].map((name) => (
+                        <button
+                          key={name}
+                          type="button"
+                          className="learning-suggestion-chip"
+                          onClick={() => openLearningEditorForCreate(name)}
+                        >
+                          + {name}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
                   <button type="button" className="learning-add-button" onClick={() => openLearningEditorForCreate("")}>
                     + 追加
                   </button>
@@ -10081,6 +10153,13 @@ function App() {
                     isBook && typeof item.totalPages === "number" && item.totalPages > 0;
                   const progressPercent = hasProgress
                     ? Math.min(100, Math.round(((item.currentPages || 0) / (item.totalPages || 1)) * 100))
+                    : 0;
+                  const lastTs = lastLoggedByItem.get(item.id);
+                  const lastLabel = formatLearningLastLogged(lastTs, todayMidnight.getTime(), dayMs);
+                  const isFreshToday = !!lastTs && lastTs >= todayMidnight.getTime();
+                  const sparkline = sparklineByItem.get(item.id);
+                  const sparklineMax = sparkline
+                    ? sparkline.reduce((acc, value) => (value > acc ? value : acc), 0)
                     : 0;
                   return (
                     <button
@@ -10100,8 +10179,31 @@ function App() {
                       </div>
                       <div className="learning-card-meta">
                         <span>累計 {totalLabel}</span>
+                        <span
+                          className={`learning-card-last${isFreshToday ? " is-fresh" : ""}${
+                            !lastTs ? " is-untouched" : ""
+                          }`}
+                        >
+                          {lastLabel}
+                        </span>
                         {item.archived ? <span className="learning-card-archived">アーカイブ</span> : null}
                       </div>
+                      {sparkline && sparklineMax > 0 ? (
+                        <div className="learning-card-spark" aria-hidden="true">
+                          {sparkline.map((value, dayIndex) => {
+                            const heightPercent = sparklineMax > 0 ? (value / sparklineMax) * 100 : 0;
+                            return (
+                              <span
+                                key={dayIndex}
+                                className={`learning-card-spark-bar${value > 0 ? " has-value" : ""}${
+                                  dayIndex === 6 ? " is-today" : ""
+                                }`}
+                                style={{ height: `${Math.max(value > 0 ? 18 : 6, heightPercent)}%` }}
+                              />
+                            );
+                          })}
+                        </div>
+                      ) : null}
                       {hasProgress ? (
                         <div className="learning-card-progress" aria-label={`${progressPercent}%`}>
                           <span style={{ width: `${progressPercent}%` }} />
