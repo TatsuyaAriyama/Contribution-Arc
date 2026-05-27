@@ -20,6 +20,29 @@ export function ShareToXModal({ open, onClose, input }: ShareToXModalProps) {
   const [status, setStatus] = useState<string>("");
   const [error, setError] = useState<string>("");
   const generationToken = useRef(0);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Keyboard a11y: ESC closes the modal. Focus the textarea when the
+  // modal opens so keyboard users land on the editable field instead of
+  // having to tab past the backdrop.
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    const focusTimer = window.setTimeout(() => {
+      textareaRef.current?.focus();
+    }, 0);
+    return () => {
+      window.removeEventListener("keydown", handleKey);
+      window.clearTimeout(focusTimer);
+    };
+  }, [open, onClose]);
 
   // Regenerate the image whenever the modal opens with fresh input data.
   // The token guards against late resolutions overwriting a newer render.
@@ -131,13 +154,20 @@ export function ShareToXModal({ open, onClose, input }: ShareToXModalProps) {
             <label className="share-x-field">
               <span>投稿文</span>
               <textarea
+                ref={textareaRef}
                 value={text}
                 onChange={(event) => setText(event.target.value)}
                 rows={5}
                 maxLength={280}
                 placeholder="投稿内容を編集できます"
               />
-              <small className={isOverLimit ? "over-limit" : ""}>{charCount}/280</small>
+              <small
+                className={isOverLimit ? "over-limit" : ""}
+                aria-live="polite"
+                aria-label={`投稿文 ${charCount} / 280 文字`}
+              >
+                {charCount}/280
+              </small>
             </label>
 
             <p className="share-x-hint">

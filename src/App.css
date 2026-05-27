@@ -20024,6 +20024,26 @@ a[role="button"],
   touch-action: manipulation;
 }
 
+/* iOS Safari auto-zooms on focus when an input's computed font-size is
+   below 16px. Many form fields across the app sit at 12–15px for a
+   denser desktop layout — bump them up at phone widths so the focus
+   no longer triggers the zoom-and-pan. Desktop keeps its compact
+   sizing. */
+@media (max-width: 720px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="number"],
+  input:not([type]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
