@@ -3508,12 +3508,39 @@
   border: 1px solid rgba(var(--ink-rgb), 0.06);
   border-radius: 14px;
   background: var(--surface);
-  box-shadow: none;
-  transition: border-color 0.18s ease, background 0.18s ease;
+  box-shadow: 0 1px 0 rgba(var(--ink-rgb), 0.02);
+  transform: translateY(0);
+  transition:
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.18s ease,
+    background 0.18s ease;
+  will-change: transform;
 }
 
 .log-post-card:hover {
-  border-color: rgba(var(--ink-rgb), 0.12);
+  border-color: rgba(var(--ink-rgb), 0.14);
+  transform: translateY(-2px);
+  box-shadow:
+    0 1px 2px rgba(var(--ink-rgb), 0.04),
+    0 8px 20px -8px rgba(var(--ink-rgb), 0.12);
+}
+
+.log-post-card:active {
+  transform: translateY(-1px);
+  transition:
+    transform 0.08s ease,
+    box-shadow 0.08s ease;
+  box-shadow:
+    0 1px 2px rgba(var(--ink-rgb), 0.04),
+    0 4px 10px -6px rgba(var(--ink-rgb), 0.10);
+}
+
+[data-theme="dark"] .log-post-card:hover {
+  border-color: rgba(var(--ink-rgb), 0.18);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.25),
+    0 10px 26px -10px rgba(0, 0, 0, 0.45);
 }
 
 .log-post-card.compact {
@@ -7735,6 +7762,177 @@
 
 .workspace-2d-shell.focus-presentation {
   grid-template-columns: 1fr;
+}
+
+/* Pre-join preview shell — no stage, just one focused entry card.
+   The shell becomes a tall centering container so the card sits in
+   the middle of the canvas regardless of viewport height. */
+.workspace-2d-shell.is-preview {
+  display: grid;
+  place-items: center;
+  min-height: clamp(420px, 56vh, 620px);
+  padding: 24px;
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(15, 23, 42, 0.04), transparent 22rem),
+    linear-gradient(180deg, var(--surface), rgba(var(--surface-rgb), 0.92));
+  box-shadow: inset 0 1px 0 rgba(var(--surface-rgb), 0.92);
+}
+
+.workspace-room-preview {
+  display: grid;
+  gap: 18px;
+  width: min(440px, 100%);
+  padding: 24px;
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
+  border-radius: 22px;
+  background: var(--surface);
+  box-shadow: 0 24px 48px rgba(var(--ink-rgb), 0.08);
+}
+
+.room-preview-header {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+}
+
+.room-preview-kicker {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.room-preview-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(20px, 2.4vw, 26px);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.room-preview-members {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 36px;
+}
+
+.room-preview-avatar-stack {
+  display: flex;
+  align-items: center;
+}
+
+.room-preview-avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-left: -8px;
+  overflow: hidden;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--actor-color, var(--green));
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.room-preview-avatar:first-child {
+  margin-left: 0;
+}
+
+.room-preview-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.room-preview-avatar-more {
+  background: rgba(var(--ink-rgb), 0.08);
+  color: var(--ink);
+}
+
+.room-preview-count {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.room-preview-task-field {
+  display: grid;
+  gap: 6px;
+}
+
+.room-preview-task-field > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.room-preview-task-field input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid rgba(var(--ink-rgb), 0.12);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.room-preview-task-field input:focus {
+  border-color: rgba(31, 111, 74, 0.5);
+  box-shadow: 0 0 0 3px rgba(31, 111, 74, 0.12);
+  outline: none;
+}
+
+.room-preview-join {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  margin-top: 2px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.room-preview-join:hover {
+  background: #0f172a;
+  transform: translateY(-1px);
+}
+
+[data-theme="dark"] .room-preview-join:hover {
+  background: var(--cta-bg);
+  filter: brightness(1.05);
+}
+
+@media (max-width: 540px) {
+  .workspace-2d-shell.is-preview {
+    padding: 16px;
+    border-radius: 18px;
+  }
+  .workspace-room-preview {
+    padding: 18px;
+    gap: 14px;
+  }
 }
 
 .workspace-2d-main,
