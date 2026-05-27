@@ -14722,88 +14722,96 @@
   animation: workspace-npc-seated 6.8s ease-in-out infinite;
 }
 
-/* Drop-in entrance — game-feel polished landing.
-   The outer element's React key includes `joinedAt`, so this
-   animation mounts fresh for both the joiner and every other
-   subscriber when Firestore broadcasts the new presence.
-   The choreography is built in five beats:
-     0-10%   anticipation hold above the frame (invisible)
-     10-50%  accelerating fall with vertical stretch + brief blur
-             (suggests speed without using a literal motion-blur
-             filter, which reads as cheap)
-     50-56%  hard impact: deep horizontal squash, vertical crush
-     56-70%  primary rebound, stretched vertical
-     70-92%  secondary micro-bounce — the polish beat that makes it
-             feel weighted instead of just elastic
-     92-100% settle to the resting position
+/* Drop-in entrance.
+   The outer element's React key includes `joinedAt`, so this animation
+   mounts fresh for both the joiner and every other subscriber when
+   Firestore broadcasts the new presence.
+
+   This pass replaces an earlier choreography that ended at
+   translateY(-8px) — meaning when the is-just-joined class was
+   eventually removed the actor visibly snapped 8px downward, the
+   single biggest source of the previous "off" feeling. Final keyframe
+   now lands exactly on translate(-50%, -50%) so the transition out of
+   the animated state is invisible.
+
+   Choreography (six beats, 950ms):
+     0-10%   anticipation hold above the frame (invisible, faint blur)
+     10-50%  controlled fall with a small vertical stretch
+             (the body extends slightly toward the ground for weight
+             rather than smearing — a deep cartoon stretch reads as
+             gimmicky in a quiet productivity app)
+     50-62%  primary impact: 1.18× horizontal squash, 0.82× crush
+             (smaller than before — high-quality game feel relies on
+             precision, not amplitude)
+     62-78%  single rebound, 0.97/1.03 small overshoot
+     78-92%  micro-correction to absorb the rebound
+     92-100% settle to neutral
    Rotation is intentionally avoided — keeping the actor upright the
    whole way feels more controlled / refined than a wobbly drop. */
 @keyframes workspace-drop-in {
   0% {
-    transform: translate(-50%, -50%) translateY(-720px) scale(0.94, 0.94);
+    transform: translate(-50%, -50%) translateY(-200px) scale(0.95, 0.95);
     opacity: 0;
-    filter: blur(1.6px);
+    filter: blur(1.4px);
   }
   10% {
     opacity: 0;
-    filter: blur(1.6px);
+    filter: blur(1.4px);
   }
-  36% {
-    transform: translate(-50%, -50%) translateY(-200px) scale(0.84, 1.2);
-    opacity: 0.7;
-    filter: blur(1.1px);
+  24% {
+    transform: translate(-50%, -50%) translateY(-130px) scale(0.92, 1.06);
+    opacity: 0.55;
+    filter: blur(0.9px);
   }
   50% {
-    transform: translate(-50%, -50%) translateY(-22px) scale(0.82, 1.24);
+    transform: translate(-50%, -50%) translateY(-28px) scale(0.9, 1.1);
     opacity: 1;
-    filter: blur(0.3px);
+    filter: blur(0.2px);
   }
-  56% {
-    transform: translate(-50%, -50%) translateY(22px) scale(1.26, 0.74);
+  62% {
+    transform: translate(-50%, -50%) translateY(0) scale(1.18, 0.82);
     filter: blur(0);
   }
-  70% {
-    transform: translate(-50%, -50%) translateY(-34px) scale(0.93, 1.1);
-  }
-  82% {
-    transform: translate(-50%, -50%) translateY(-2px) scale(1.06, 0.94);
+  78% {
+    transform: translate(-50%, -50%) translateY(-10px) scale(0.97, 1.03);
   }
   92% {
-    transform: translate(-50%, -50%) translateY(-12px) scale(0.99, 1.01);
+    transform: translate(-50%, -50%) translateY(-2px) scale(1.01, 0.99);
   }
   100% {
-    transform: translate(-50%, -50%) translateY(-8px) scale(1, 1);
+    transform: translate(-50%, -50%) translateY(0) scale(1, 1);
     opacity: 1;
   }
 }
 
-/* Shadow choreography — stays small + faint while the actor is in
-   the air (so depth reads correctly), snaps wider than rest on
-   first impact, then settles in lockstep with the actor's bounces. */
+/* Shadow choreography — barely visible while the actor is in the air
+   (so the depth perception reads correctly), grows wider than rest
+   on first impact, then settles in lockstep with the actor's
+   rebound. */
 @keyframes workspace-drop-in-shadow {
   0% {
     opacity: 0;
-    transform: scaleX(0.16) scaleY(0.5);
+    transform: scaleX(0.15) scaleY(0.45);
   }
-  48% {
-    opacity: 0.35;
-    transform: scaleX(0.22) scaleY(0.55);
+  24% {
+    opacity: 0.18;
+    transform: scaleX(0.28) scaleY(0.52);
   }
-  56% {
+  50% {
+    opacity: 0.36;
+    transform: scaleX(0.6) scaleY(0.7);
+  }
+  62% {
     opacity: 1;
-    transform: scaleX(1.45) scaleY(1.25);
+    transform: scaleX(1.36) scaleY(1.18);
   }
-  70% {
-    opacity: 0.92;
-    transform: scaleX(0.86) scaleY(0.92);
-  }
-  82% {
-    opacity: 1;
-    transform: scaleX(1.06) scaleY(1.04);
+  78% {
+    opacity: 0.96;
+    transform: scaleX(0.92) scaleY(0.96);
   }
   92% {
-    opacity: 0.96;
-    transform: scaleX(0.96) scaleY(0.98);
+    opacity: 1;
+    transform: scaleX(1.02) scaleY(1.0);
   }
   100% {
     opacity: 1;
@@ -14811,61 +14819,43 @@
   }
 }
 
-/* Primary impact ring — fires at the first impact frame (~56%) and
-   expands outward as it fades. */
+/* Single impact ring — fires at the moment of landing (~62%) and
+   expands outward as it fades. The previous version layered two
+   rings which read as a game particle effect; one ring at a slightly
+   softer opacity hits the right note for this app. */
 @keyframes workspace-drop-in-ring {
-  0%,
-  54% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.4);
-  }
-  58% {
-    opacity: 0.78;
-    transform: translate(-50%, -50%) scale(0.85);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(2.8);
-  }
-}
-
-/* Secondary impact ring — slightly delayed, smaller, lingers a
-   moment longer for a layered "shockwave" feel without becoming
-   gaudy. Two rings give the landing weight; three would read as a
-   particle effect. */
-@keyframes workspace-drop-in-ring-2 {
   0%,
   60% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.5);
+    transform: translate(-50%, -50%) scale(0.45);
   }
-  66% {
-    opacity: 0.5;
-    transform: translate(-50%, -50%) scale(1);
+  64% {
+    opacity: 0.68;
+    transform: translate(-50%, -50%) scale(0.95);
   }
   100% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(2.0);
+    transform: translate(-50%, -50%) scale(2.4);
   }
 }
 
-/* Sprite flash — a single, tight bloom at the actor's body the
-   moment it lands. Adds a frame of "weight transferred" without
-   tinting the actor. */
+/* Sprite flash — a single, restrained bloom at the actor's body the
+   moment it lands. Softer than the previous version (no large outer
+   glow) so the landing feels weighted, not "powered up". */
 @keyframes workspace-drop-in-flash {
   0%,
-  53% {
+  60% {
     box-shadow:
       inset 0 1px 0 rgba(var(--surface-rgb), 0.18),
       0 10px 18px rgba(0, 0, 0, 0.18);
   }
-  58% {
+  64% {
     box-shadow:
-      inset 0 1px 0 rgba(var(--surface-rgb), 0.4),
-      0 0 0 6px rgba(var(--surface-rgb), 0.16),
-      0 22px 30px rgba(0, 0, 0, 0.32);
+      inset 0 1px 0 rgba(var(--surface-rgb), 0.3),
+      0 0 0 3px rgba(var(--surface-rgb), 0.12),
+      0 16px 24px rgba(0, 0, 0, 0.26);
   }
-  70%,
+  78%,
   100% {
     box-shadow:
       inset 0 1px 0 rgba(var(--surface-rgb), 0.18),
@@ -14874,51 +14864,36 @@
 }
 
 .workspace-actor.is-just-joined {
-  /* Slightly longer than the original 1s so the multi-stage settle
-     has room to breathe. Easing is asymmetric — fast acceleration
-     on the way down, controlled deceleration on the way up. */
-  animation: workspace-drop-in 1.15s cubic-bezier(0.32, 0, 0.36, 1) both;
+  /* Asymmetric easing: heavy ease-in for the controlled fall, smooth
+     deceleration into the impact + bounces. cubic-bezier tuned by
+     eye against the keyframe timings above. */
+  animation: workspace-drop-in 950ms cubic-bezier(0.42, 0, 0.25, 1) both;
 }
 
 .workspace-actor.is-just-joined .actor-shadow {
   transform-origin: center;
-  animation: workspace-drop-in-shadow 1.15s cubic-bezier(0.32, 0, 0.36, 1) both;
+  animation: workspace-drop-in-shadow 950ms cubic-bezier(0.42, 0, 0.25, 1) both;
 }
 
 .workspace-actor.is-just-joined .actor-sprite {
-  animation: workspace-drop-in-flash 1.15s cubic-bezier(0.32, 0, 0.36, 1) both;
+  animation: workspace-drop-in-flash 950ms cubic-bezier(0.42, 0, 0.25, 1) both;
 }
 
-/* Primary impact ring on the shadow's ::after. */
+/* Single impact ring on the shadow's ::after — replaces the previous
+   two-ring stack. */
 .workspace-actor.is-just-joined .actor-shadow::after {
   content: "";
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 64px;
-  height: 64px;
-  border: 1.5px solid rgba(15, 23, 42, 0.28);
+  width: 60px;
+  height: 60px;
+  border: 1.5px solid rgba(15, 23, 42, 0.24);
   border-radius: 50%;
   pointer-events: none;
-  transform: translate(-50%, -50%) scale(0.4);
+  transform: translate(-50%, -50%) scale(0.45);
   opacity: 0;
-  animation: workspace-drop-in-ring 1.15s cubic-bezier(0.16, 0.6, 0.32, 1) both;
-}
-
-/* Secondary impact ring on the shadow's ::before. */
-.workspace-actor.is-just-joined .actor-shadow::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 44px;
-  height: 44px;
-  border: 1px solid rgba(15, 23, 42, 0.22);
-  border-radius: 50%;
-  pointer-events: none;
-  transform: translate(-50%, -50%) scale(0.5);
-  opacity: 0;
-  animation: workspace-drop-in-ring-2 1.15s cubic-bezier(0.16, 0.6, 0.32, 1) both;
+  animation: workspace-drop-in-ring 950ms cubic-bezier(0.16, 0.7, 0.3, 1) both;
 }
 
 /* Reduced motion: skip the dramatic fall entirely. Replace with a
@@ -14934,7 +14909,6 @@
     animation: none;
   }
 
-  .workspace-actor.is-just-joined .actor-shadow::before,
   .workspace-actor.is-just-joined .actor-shadow::after {
     animation: none;
     opacity: 0;
