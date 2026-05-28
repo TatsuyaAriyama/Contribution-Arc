@@ -306,6 +306,28 @@ service cloud.firestore {
         && resource.data.invitedBy == request.auth.uid;
     }
 
+    // 監査ログ（Phase 5）。Org 単位のイベント履歴。
+    // - read: 同じ org に属するメンバーのみ。クライアント側の
+    //   admin ダッシュボードで一覧表示する用途。
+    //   ※ ここでは orgId 一致のみチェックし、users/{uid} の
+    //   organizationId フィールドを引き合わせる get() で
+    //   メンバーシップを確認している。
+    // - create: 自分が actor として記録する分に限り許可。
+    //   actorUid == 自分、orgId は自分の所属する組織のみ。
+    // - update/delete: 改ざん禁止。完全な追記専用台帳とする。
+    match /auditLogs/{logId} {
+      allow read: if signedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organizationId == resource.data.orgId;
+      allow create: if signedIn()
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.orgId is string
+        && request.resource.data.type is string
+        && request.resource.data.target is string
+        && request.resource.data.createdAt is string
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organizationId == request.resource.data.orgId;
+      allow update, delete: if false;
+    }
+
     match /friendRequests/{requestId} {
       allow read: if signedIn()
         && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
