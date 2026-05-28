@@ -12828,7 +12828,6 @@ function App() {
 
           <section className="teams-values" aria-label="価値提案">
             <article>
-              <span className="teams-value-icon" aria-hidden="true">🔒</span>
               <h3>組織限定の作業部屋</h3>
               <p>
                 社内・チーム内だけで共有できるルーム。他社や個人ユーザーからは
@@ -12836,7 +12835,6 @@ function App() {
               </p>
             </article>
             <article>
-              <span className="teams-value-icon" aria-hidden="true">💬</span>
               <h3>Slack に流れる気配</h3>
               <p>
                 メンバーの入室・募集・日次サマリーを Slack チャンネルに
@@ -12844,7 +12842,6 @@ function App() {
               </p>
             </article>
             <article>
-              <span className="teams-value-icon" aria-hidden="true">📊</span>
               <h3>投資の可視化</h3>
               <p>
                 Admin ダッシュボードでチームの累計学習時間・ストリーク・
@@ -13165,7 +13162,6 @@ function App() {
           className="home-teams-ribbon"
           onClick={() => setCurrentView("teams")}
         >
-          <span className="home-teams-ribbon-icon" aria-hidden="true">🏢</span>
           <span className="home-teams-ribbon-copy">
             <strong>チーム / 企業で使う</strong>
             <small>組織限定ルーム・Admin ダッシュボード・Slack 連携</small>
