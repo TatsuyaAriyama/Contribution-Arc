@@ -3681,13 +3681,20 @@ function App() {
   /* Capture a ?join-org=<token> URL parameter on the very first
      render. Stash it in state so it survives any sign-in redirect on
      a fresh session; the auto-accept effect below claims it once the
-     user is authenticated. */
+     user is authenticated. Also handles the marketing-friendly
+     ?view=teams short-link by switching the app to the B2B landing
+     view immediately, regardless of auth state — that page is the
+     prospect-facing pitch surface and must render pre-sign-in. */
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
       const url = new URL(window.location.href);
       const token = url.searchParams.get("join-org");
       if (token) setOrgInviteToken(token);
+      const view = url.searchParams.get("view");
+      if (view === "teams") {
+        setCurrentViewRaw("teams");
+      }
     } catch {
       /* ignore malformed URLs */
     }
@@ -12487,6 +12494,175 @@ function App() {
             </div>
           </section>
         </motion.section>
+      ) : currentView === "teams" ? (
+        <motion.section
+          className="teams-screen"
+          aria-label="Contribution Arc for Teams"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={SPRING_SNAPPY}
+        >
+          {/* B2B pitch surface. Reachable directly via ?view=teams so
+              the URL can be shared in emails / Twitter / decks; also
+              linked from the home dashboard for in-app discovery. The
+              CTA branches on auth + org state so prospects, fresh
+              signups, and existing solo users all land somewhere
+              actionable. */}
+          <header className="teams-hero">
+            <p className="card-kicker">Contribution Arc for Teams</p>
+            <h1>
+              チームの学びと集中を、<br />
+              静かに可視化する。
+            </h1>
+            <p className="teams-hero-lede">
+              通話なしの 2D 作業部屋・学習時間の自動集計・GitHub 連携。
+              個人で使えるツールを、組織でそのまま運用できる形にしました。
+            </p>
+            <div className="teams-hero-cta">
+              {currentOrganization ? (
+                <button
+                  type="button"
+                  className="teams-cta-primary"
+                  onClick={() => {
+                    setCurrentView("workspace");
+                  }}
+                >
+                  {currentOrganization.name} のワークスペースを開く →
+                </button>
+              ) : currentUser ? (
+                <button
+                  type="button"
+                  className="teams-cta-primary"
+                  onClick={handleSettingsOpen}
+                >
+                  組織を作って始める →
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="teams-cta-primary"
+                  onClick={() => signInWithPopup(auth, googleProvider).catch(() => undefined)}
+                >
+                  Google で 30 秒で始める →
+                </button>
+              )}
+              <a
+                href="mailto:ari.initx@gmail.com?subject=Contribution%20Arc%20for%20Teams%20%E5%B0%8E%E5%85%A5%E7%9B%B8%E8%AB%87"
+                className="teams-cta-secondary"
+              >
+                導入相談（メール）
+              </a>
+            </div>
+          </header>
+
+          <section className="teams-values" aria-label="価値提案">
+            <article>
+              <span className="teams-value-icon" aria-hidden="true">🔒</span>
+              <h3>組織限定の作業部屋</h3>
+              <p>
+                社内・チーム内だけで共有できるルーム。他社や個人ユーザーからは
+                見えず、招待リンクで仲間を招きます。
+              </p>
+            </article>
+            <article>
+              <span className="teams-value-icon" aria-hidden="true">💬</span>
+              <h3>Slack に流れる気配</h3>
+              <p>
+                メンバーの入室・募集・日次サマリーを Slack チャンネルに
+                自動投稿。リモート同士でも空気感が伝わります。
+              </p>
+            </article>
+            <article>
+              <span className="teams-value-icon" aria-hidden="true">📊</span>
+              <h3>投資の可視化</h3>
+              <p>
+                Admin ダッシュボードでチームの累計学習時間・ストリーク・
+                コミット数を集計。CSV エクスポートで L&D レポートに直結。
+              </p>
+            </article>
+          </section>
+
+          <section className="teams-privacy" aria-label="プライバシー方針">
+            <div>
+              <p className="card-kicker">Privacy by design</p>
+              <h2>監視ではなく、投資の可視化に振り切る</h2>
+              <p>
+                個別の学習ログ・投稿内容は admin にも表示しません。
+                可視化されるのは「チームがどれだけ投資したか」だけ。
+                マネージャー・現場の双方が安心して使える設計です。
+              </p>
+            </div>
+            <ul>
+              <li>個別の作業内容・投稿本文は admin に非表示</li>
+              <li>退出すると組織限定ルームは即時に見えなくなります</li>
+              <li>データは Firestore に暗号化保存・退会時に削除可能</li>
+              <li>労務管理を意識した長時間警告・休憩促し（順次対応）</li>
+            </ul>
+          </section>
+
+          <section className="teams-pricing" aria-label="プラン">
+            <header>
+              <h2>プラン（β 期間中は全機能無料）</h2>
+              <p>正式版リリース時に以下の構成で提供予定です。</p>
+            </header>
+            <div className="teams-pricing-grid">
+              <article className="teams-plan">
+                <h3>Free</h3>
+                <p className="teams-plan-price">¥0</p>
+                <p className="teams-plan-tagline">個人 / 小規模利用</p>
+                <ul>
+                  <li>公開ルーム参加</li>
+                  <li>学習ログ・GitHub 連携</li>
+                  <li>Arc 通貨でカスタマイズ</li>
+                </ul>
+              </article>
+              <article className="teams-plan is-featured">
+                <span className="teams-plan-badge">推奨</span>
+                <h3>Team</h3>
+                <p className="teams-plan-price">
+                  ¥800<small>/ user / 月</small>
+                </p>
+                <p className="teams-plan-tagline">5〜50 名のチーム</p>
+                <ul>
+                  <li>組織テナント・招待リンク</li>
+                  <li>組織限定ルーム</li>
+                  <li>Admin ダッシュボード + CSV</li>
+                  <li>Slack 連携</li>
+                  <li>メール優先サポート</li>
+                </ul>
+              </article>
+              <article className="teams-plan">
+                <h3>Enterprise</h3>
+                <p className="teams-plan-price">お問い合わせ</p>
+                <p className="teams-plan-tagline">51 名以上 / 法務要件あり</p>
+                <ul>
+                  <li>SAML / SSO 認証</li>
+                  <li>SCIM プロビジョニング</li>
+                  <li>監査ログ・データレジデンシー</li>
+                  <li>SLA・専任カスタマーサクセス</li>
+                </ul>
+              </article>
+            </div>
+            <p className="teams-pricing-note">
+              ※ 価格は予定です。β 期間中は全機能無料でお使いいただけます。
+            </p>
+          </section>
+
+          <footer className="teams-foot">
+            <p>
+              質問・導入相談は{" "}
+              <a href="mailto:ari.initx@gmail.com">ari.initx@gmail.com</a>{" "}
+              までお気軽にどうぞ。
+            </p>
+            <button
+              type="button"
+              className="teams-cta-secondary"
+              onClick={() => setCurrentView("home")}
+            >
+              ← ホームに戻る
+            </button>
+          </footer>
+        </motion.section>
       ) : currentView === "shop" ? (
         <motion.section
           className="shop-screen"
@@ -12656,6 +12832,26 @@ function App() {
             t("下の「みんなの記録」「日報」もここから流れてきます"),
           ]}
         />
+      ) : null}
+
+      {/* Discovery ribbon for the B2B surface. Sits near the top of
+          the home view so any signed-in user (and anyone we share a
+          screenshot with) sees a clear path into the Teams pitch.
+          Hidden when the user is already inside an org — at that
+          point the ribbon would just be noise. */}
+      {!currentOrganization ? (
+        <button
+          type="button"
+          className="home-teams-ribbon"
+          onClick={() => setCurrentView("teams")}
+        >
+          <span className="home-teams-ribbon-icon" aria-hidden="true">🏢</span>
+          <span className="home-teams-ribbon-copy">
+            <strong>チーム / 企業で使う</strong>
+            <small>組織限定ルーム・Admin ダッシュボード・Slack 連携</small>
+          </span>
+          <span className="home-teams-ribbon-arrow" aria-hidden="true">→</span>
+        </button>
       ) : null}
 
       {contributionArcCardSection}
