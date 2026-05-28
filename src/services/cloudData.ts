@@ -354,6 +354,7 @@ export type AuditLogEventType =
   | "organization.member_joined"
   | "organization.member_left"
   | "organization.slack_updated"
+  | "organization.owner_transferred"
   | "room.created";
 
 export type AuditLogRecord = {
@@ -400,6 +401,65 @@ export async function recordAuditLog(
     // even if the write was rejected by rules / offline / quota.
     console.info("audit log write skipped", entry.type, error);
   }
+}
+
+/* Transfer organization ownership from the current owner to another
+   existing member. Three docs change atomically inside a Firestore
+   transaction so the org and both user docs stay consistent even if
+   another tab is mutating one of them at the same moment.
+
+   The current owner becomes a regular member; the target becomes
+   the new owner. The audit log row is written separately AFTER the
+   transaction so the audit-rule's get(users/{currentUid}) check
+   still finds the current actor inside the org. */
+export async function transferOrganizationOwnership(
+  db: Firestore,
+  orgId: string,
+  currentOwnerUid: string,
+  currentOwnerName: string,
+  newOwnerUid: string,
+  newOwnerName: string,
+): Promise<void> {
+  if (currentOwnerUid === newOwnerUid) {
+    throw new Error("SAME_OWNER");
+  }
+  await runTransaction(db, async (transaction) => {
+    const orgRef = doc(db, "organizations", orgId);
+    const orgSnap = await transaction.get(orgRef);
+    if (!orgSnap.exists()) {
+      throw new Error("ORG_NOT_FOUND");
+    }
+    const orgData = orgSnap.data() as Partial<OrganizationRecord>;
+    if (orgData.ownerUid !== currentOwnerUid) {
+      throw new Error("NOT_CURRENT_OWNER");
+    }
+    const newOwnerRef = doc(db, "users", newOwnerUid);
+    const newOwnerSnap = await transaction.get(newOwnerRef);
+    if (!newOwnerSnap.exists()) {
+      throw new Error("NEW_OWNER_NOT_FOUND");
+    }
+    const newOwnerData = newOwnerSnap.data() as Record<string, unknown>;
+    if (newOwnerData.organizationId !== orgId) {
+      throw new Error("NEW_OWNER_NOT_MEMBER");
+    }
+
+    transaction.update(orgRef, { ownerUid: newOwnerUid, updatedAt: serverTimestamp() });
+    transaction.set(newOwnerRef, { organizationRole: "owner" }, { merge: true });
+    transaction.set(
+      doc(db, "users", currentOwnerUid),
+      { organizationRole: "member" },
+      { merge: true },
+    );
+  });
+
+  await recordAuditLog(db, {
+    orgId,
+    type: "organization.owner_transferred",
+    actorUid: currentOwnerUid,
+    actorName: currentOwnerName,
+    target: newOwnerName,
+    payload: { newOwnerUid },
+  });
 }
 
 export async function listAuditLogs(

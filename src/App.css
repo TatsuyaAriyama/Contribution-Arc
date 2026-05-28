@@ -21671,6 +21671,33 @@ a[role="button"],
   gap: 12px;
 }
 
+/* Owner-only inline action in the members table — transfers
+   ownership to the target row. Visually muted so it doesn't
+   compete with the data; emphasised on hover. */
+.org-admin-actions-cell {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.org-admin-transfer {
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 800;
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+}
+
+.org-admin-transfer:hover {
+  border-color: rgba(31, 111, 74, 0.4);
+  color: var(--green);
+  background: rgba(31, 111, 74, 0.06);
+}
+
 .org-admin-audit-time {
   color: var(--muted);
   font-size: 12px;

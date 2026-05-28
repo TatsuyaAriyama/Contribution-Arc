@@ -62,6 +62,7 @@ import {
   saveUserProgressToCloud,
   saveWorkspaceSessionToCloud,
   subscribeStudyLogsFromCloud,
+  transferOrganizationOwnership,
   updateOrganizationSlack,
   type AuditLogRecord,
   type OrganizationMemberRecord,
@@ -8102,7 +8103,7 @@ function App() {
   const handleLeaveOrganization = async () => {
     if (!currentUser || !currentOrganization || isOrgWorking) return;
     if (currentOrganization.ownerUid === currentUser.uid) {
-      setOrgError("オーナーは退出できません。先に他のメンバーへオーナーを譲渡してください。");
+      setOrgError("オーナーは退出できません。Admin ダッシュボードから他メンバーへオーナーを譲渡してから退出してください。");
       return;
     }
     const confirmed = window.confirm(
@@ -8156,6 +8157,55 @@ function App() {
       setOrgAdminError("メンバー一覧を読み込めませんでした。再度お試しください。");
     } finally {
       setIsLoadingOrgMembers(false);
+    }
+  };
+
+  /* Ownership transfer — Phase 6. Owner picks a member, confirms,
+     and the org doc + both user docs flip atomically inside a
+     Firestore transaction. After the transaction returns we
+     immediately refresh both the local currentOrganization mirror
+     (so the UI updates without a reload) and the members list
+     (so the new role badges render). */
+  const handleTransferOwnership = async (target: OrganizationMemberRecord) => {
+    if (!currentUser || !currentOrganization) return;
+    if (currentOrganization.ownerUid !== currentUser.uid) return;
+    if (target.uid === currentUser.uid) return;
+    const confirmed = window.confirm(
+      `「${currentOrganization.name}」のオーナー権限を ${target.displayName} に譲渡します。譲渡後、あなたはメンバーになります。よろしいですか？`,
+    );
+    if (!confirmed) return;
+    setOrgAdminError("");
+    try {
+      await transferOrganizationOwnership(
+        db,
+        currentOrganization.id,
+        currentUser.uid,
+        playerName,
+        target.uid,
+        target.displayName,
+      );
+      setCurrentOrganization((prev) => (prev ? { ...prev, ownerUid: target.uid } : prev));
+      // Refresh the cached members list so the role badges flip.
+      try {
+        const members = await listOrganizationMembers(db, currentOrganization.id);
+        setOrgMembers(members);
+      } catch {
+        /* non-fatal — the badges will update on next admin open */
+      }
+      showToast(`オーナーを ${target.displayName} に譲渡しました`, { kind: "success" });
+    } catch (error) {
+      const code = (error as Error)?.message || "";
+      const message =
+        code === "ORG_NOT_FOUND"
+          ? "組織情報を読み込めませんでした。"
+          : code === "NOT_CURRENT_OWNER"
+            ? "現在のオーナーのみ譲渡できます。"
+            : code === "NEW_OWNER_NOT_MEMBER"
+              ? "譲渡先は同じ組織のメンバーである必要があります。"
+              : code === "SAME_OWNER"
+                ? "同じユーザーへの譲渡はできません。"
+                : "オーナー譲渡に失敗しました。再度お試しください。";
+      setOrgAdminError(message);
     }
   };
 
@@ -10647,6 +10697,7 @@ function App() {
                     <th>Output</th>
                     <th>ストリーク</th>
                     <th>最終アクティブ</th>
+                    {currentOrganization?.ownerUid === currentUser?.uid ? <th aria-label="操作" /> : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -10703,6 +10754,21 @@ function App() {
                           <td className="org-admin-num">{member.outputExp.toLocaleString()}</td>
                           <td className="org-admin-num">{member.streak.toLocaleString()}</td>
                           <td>{lastActive}</td>
+                          {currentOrganization?.ownerUid === currentUser?.uid ? (
+                            <td className="org-admin-actions-cell">
+                              {member.uid !== currentUser?.uid &&
+                              member.organizationRole !== "owner" ? (
+                                <button
+                                  type="button"
+                                  className="org-admin-transfer"
+                                  onClick={() => handleTransferOwnership(member)}
+                                  title="このメンバーにオーナーを譲渡"
+                                >
+                                  オーナー譲渡
+                                </button>
+                              ) : null}
+                            </td>
+                          ) : null}
                         </tr>
                       );
                     })}
