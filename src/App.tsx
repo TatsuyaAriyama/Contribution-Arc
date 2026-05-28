@@ -6949,6 +6949,37 @@ function App() {
     currentOrganization,
   ]);
 
+  /* Auto-join domain discovery (Phase 7). Fires when the user is
+     signed in, has an email address, and isn't already in an org.
+     Surfaces any orgs that have whitelisted the user's email domain
+     so they can one-tap join without an invite link. The query is
+     cheap (array-contains on a top-level field, single equality)
+     so we re-run it on signin / when the user lands without an org.
+
+     NOTE: this hook MUST stay above the early returns below — moving
+     it below them caused React error #310 (rendered fewer hooks than
+     expected) on initial load, since the auth-loading render path
+     skipped the hook entirely. */
+  useEffect(() => {
+    if (!currentUser?.email || currentOrganization) {
+      setDiscoveredOrgs([]);
+      return;
+    }
+    const domain = currentUser.email.split("@")[1]?.toLowerCase().trim();
+    if (!domain) return;
+    let cancelled = false;
+    void findOrganizationsByEmailDomain(db, domain)
+      .then((orgs) => {
+        if (!cancelled) setDiscoveredOrgs(orgs);
+      })
+      .catch((error) => {
+        console.info("Domain auto-join discovery skipped.", error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser?.email, currentOrganization]);
+
   if (window.location.pathname === githubCallbackPath) {
     return <GitHubCallbackPage />;
   }
@@ -8187,32 +8218,6 @@ function App() {
       setIsLoadingOrgMembers(false);
     }
   };
-
-  /* Auto-join domain discovery (Phase 7). Fires when the user is
-     signed in, has an email address, and isn't already in an org.
-     Surfaces any orgs that have whitelisted the user's email domain
-     so they can one-tap join without an invite link. The query is
-     cheap (array-contains on a top-level field, single equality)
-     so we re-run it on signin / when the user lands without an org. */
-  useEffect(() => {
-    if (!currentUser?.email || currentOrganization) {
-      setDiscoveredOrgs([]);
-      return;
-    }
-    const domain = currentUser.email.split("@")[1]?.toLowerCase().trim();
-    if (!domain) return;
-    let cancelled = false;
-    void findOrganizationsByEmailDomain(db, domain)
-      .then((orgs) => {
-        if (!cancelled) setDiscoveredOrgs(orgs);
-      })
-      .catch((error) => {
-        console.info("Domain auto-join discovery skipped.", error);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [currentUser?.email, currentOrganization]);
 
   /* One-tap domain join from the home discovery ribbon. */
   const handleJoinByDomain = async (org: OrganizationRecord) => {
