@@ -896,6 +896,25 @@
   opacity: 0.92;
 }
 
+.settings-org-admin {
+  flex: 1 1 auto;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(31, 111, 74, 0.2);
+  border-radius: 12px;
+  background: rgba(31, 111, 74, 0.06);
+  color: var(--green);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.settings-org-admin:hover {
+  background: rgba(31, 111, 74, 0.12);
+  border-color: rgba(31, 111, 74, 0.32);
+}
+
 .settings-org-leave {
   color: #c4322c;
   border-color: rgba(196, 50, 44, 0.24);
@@ -21626,6 +21645,279 @@ a[role="button"],
   .workspace-room-overlay.is-collapsed .workspace-room-overlay-actions,
   .workspace-room-overlay.is-collapsed .workspace-room-overlay-recruitment {
     display: revert;
+  }
+}
+
+/* =================================================================
+   Organization admin dashboard — Phase 2.
+   Wider modal than the standard settings sheet (member tables need
+   real estate). Aggregate metric cards wrap on narrow viewports;
+   the members table uses overflow-x:auto so it doesn't blow up the
+   modal on phones.
+   ================================================================= */
+.org-admin-modal {
+  width: min(820px, 100%);
+  max-height: calc(100svh - 40px);
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+}
+
+.org-admin-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.org-admin-head h2 {
+  margin: 4px 0 0;
+  color: var(--ink-strong);
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.org-admin-close {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.org-admin-close:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.org-admin-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.org-admin-metric {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  background: var(--surface-warm);
+}
+
+.org-admin-metric span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.org-admin-metric strong {
+  color: var(--ink-strong);
+  font-size: 18px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.org-admin-toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.org-admin-primary,
+.org-admin-secondary {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.org-admin-primary {
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+  border-color: var(--cta-bg);
+}
+
+.org-admin-primary:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+.org-admin-secondary {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.org-admin-secondary:hover:not(:disabled) {
+  background: var(--bg);
+}
+
+.org-admin-primary:disabled,
+.org-admin-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.org-admin-error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(196, 50, 44, 0.08);
+  color: #c4322c;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.org-admin-table-scroll {
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.org-admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.org-admin-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 10px 12px;
+  background: var(--surface-warm);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.org-admin-table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--ink);
+  vertical-align: middle;
+}
+
+.org-admin-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.org-admin-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.org-admin-member-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 180px;
+}
+
+.org-admin-member-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+  overflow: hidden;
+}
+
+.org-admin-member-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.org-admin-member-name {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.org-admin-member-name strong {
+  color: var(--ink-strong);
+  font-size: 13px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.org-admin-member-name small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.org-admin-role {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.org-admin-role.role-owner {
+  background: rgba(31, 111, 74, 0.14);
+  color: var(--green);
+}
+
+.org-admin-role.role-admin {
+  background: rgba(31, 111, 74, 0.08);
+  color: var(--green);
+}
+
+.org-admin-role.role-member {
+  background: rgba(var(--ink-rgb), 0.06);
+  color: var(--muted);
+}
+
+.org-admin-empty {
+  padding: 28px 12px !important;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.org-admin-foot {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+@media (max-width: 540px) {
+  .org-admin-modal {
+    padding: 18px;
+  }
+  .org-admin-head h2 {
+    font-size: 20px;
+  }
+  .org-admin-metric strong {
+    font-size: 16px;
   }
 }
 

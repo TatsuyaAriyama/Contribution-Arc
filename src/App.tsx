@@ -52,6 +52,7 @@ import {
   createOrganizationInvite,
   deleteStudyLogFromCloud,
   leaveOrganization,
+  listOrganizationMembers,
   loadOrganization,
   migrateStudyLogsToCloud,
   saveGithubActivitySummary,
@@ -59,6 +60,7 @@ import {
   saveUserProgressToCloud,
   saveWorkspaceSessionToCloud,
   subscribeStudyLogsFromCloud,
+  type OrganizationMemberRecord,
 } from "./services/cloudData";
 import {
   deleteLearningItemFromCloud,
@@ -3518,6 +3520,13 @@ function App() {
   const [orgInviteToken, setOrgInviteToken] = useState<string>("");
   const [isOrgWorking, setIsOrgWorking] = useState<boolean>(false);
   const [newOrgName, setNewOrgName] = useState<string>("");
+  // Admin dashboard (Phase 2) — owner-only modal with members list,
+  // aggregate metrics, CSV export. Members are loaded on demand
+  // (not on every settings open) since the query is per-org.
+  const [isOrgAdminOpen, setIsOrgAdminOpen] = useState<boolean>(false);
+  const [orgMembers, setOrgMembers] = useState<OrganizationMemberRecord[]>([]);
+  const [isLoadingOrgMembers, setIsLoadingOrgMembers] = useState<boolean>(false);
+  const [orgAdminError, setOrgAdminError] = useState<string>("");
   // Records the token we've already attempted to auto-claim so a
   // re-render after the successful accept doesn't fire the call a
   // second time.
@@ -7971,6 +7980,102 @@ function App() {
     }
   };
 
+  /* Admin dashboard — Phase 2. Fires the members query on open and
+     caches the result; refresh is manual to keep Firestore reads
+     predictable (a real-time listener would burn quota on each org
+     member's heartbeat-style progress write). */
+  const handleOpenOrgAdmin = async () => {
+    if (!currentUser || !currentOrganization) return;
+    setIsOrgAdminOpen(true);
+    setIsSettingsOpen(false);
+    setOrgAdminError("");
+    setIsLoadingOrgMembers(true);
+    try {
+      const members = await listOrganizationMembers(db, currentOrganization.id);
+      setOrgMembers(members);
+    } catch (error) {
+      console.warn("List org members failed", error);
+      setOrgAdminError("メンバー一覧を読み込めませんでした。再度お試しください。");
+    } finally {
+      setIsLoadingOrgMembers(false);
+    }
+  };
+
+  const handleRefreshOrgMembers = async () => {
+    if (!currentOrganization || isLoadingOrgMembers) return;
+    setOrgAdminError("");
+    setIsLoadingOrgMembers(true);
+    try {
+      const members = await listOrganizationMembers(db, currentOrganization.id);
+      setOrgMembers(members);
+    } catch (error) {
+      console.warn("Refresh org members failed", error);
+      setOrgAdminError("再読み込みに失敗しました。");
+    } finally {
+      setIsLoadingOrgMembers(false);
+    }
+  };
+
+  const handleExportOrgMembersCsv = () => {
+    if (!currentOrganization || orgMembers.length === 0) return;
+    // UTF-8 BOM prefix so Excel on Windows opens the file without
+    // mojibake on Japanese display names. Columns are documented in
+    // Japanese matching the on-screen labels.
+    const header = [
+      "ユーザーID",
+      "表示名",
+      "役割",
+      "レベル",
+      "Effort EXP",
+      "Output EXP",
+      "ストリーク",
+      "コミット数",
+      "最終アクティブ",
+    ];
+    const escape = (value: string | number) => {
+      const stringValue = String(value ?? "");
+      if (/[",\n\r]/.test(stringValue)) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+      }
+      return stringValue;
+    };
+    const lines = [header.map(escape).join(",")];
+    for (const member of orgMembers) {
+      lines.push(
+        [
+          member.userId,
+          member.displayName,
+          member.organizationRole === "owner"
+            ? "オーナー"
+            : member.organizationRole === "admin"
+              ? "管理者"
+              : "メンバー",
+          member.level,
+          member.effortExp,
+          member.outputExp,
+          member.streak,
+          member.contributionCount,
+          member.lastSyncedAt || "",
+        ]
+          .map(escape)
+          .join(","),
+      );
+    }
+    const csv = "﻿" + lines.join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    const dateKey = new Date().toISOString().slice(0, 10);
+    const safeOrgName = currentOrganization.name.replace(/[\\/:*?"<>|]/g, "_");
+    anchor.download = `${safeOrgName}-members-${dateKey}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+    showToast("CSVをダウンロードしました", { kind: "success" });
+  };
+
   const handleRoomCreate = () => {
     if (!currentUser) {
       return;
@@ -10034,6 +10139,188 @@ function App() {
         </div>
       ) : null}
 
+      {isOrgAdminOpen && currentOrganization ? (
+        <div className="settings-modal-backdrop" role="presentation" onClick={() => setIsOrgAdminOpen(false)}>
+          <section
+            className="settings-modal org-admin-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="org-admin-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="org-admin-head">
+              <div>
+                <p className="card-kicker">Organization · Admin</p>
+                <h2 id="org-admin-title">{currentOrganization.name}</h2>
+              </div>
+              <button
+                type="button"
+                className="org-admin-close"
+                onClick={() => setIsOrgAdminOpen(false)}
+                aria-label="閉じる"
+              >
+                ×
+              </button>
+            </header>
+
+            {(() => {
+              // Aggregate metrics shown above the table. Computed
+              // on every render — the dataset is per-org so the cost
+              // is bounded by team size (single-digit ms at any
+              // realistic SaaS scale).
+              const totalMembers = orgMembers.length;
+              const totalEffort = orgMembers.reduce((acc, m) => acc + (m.effortExp || 0), 0);
+              const totalOutput = orgMembers.reduce((acc, m) => acc + (m.outputExp || 0), 0);
+              const maxStreak = orgMembers.reduce((acc, m) => Math.max(acc, m.streak || 0), 0);
+              const totalContribution = orgMembers.reduce(
+                (acc, m) => acc + (m.contributionCount || 0),
+                0,
+              );
+              const lastActiveMs = orgMembers.reduce((acc, m) => {
+                const ts = new Date(m.lastSyncedAt || 0).getTime();
+                return Number.isFinite(ts) && ts > acc ? ts : acc;
+              }, 0);
+              const lastActiveLabel = lastActiveMs
+                ? new Date(lastActiveMs).toLocaleString("ja-JP", {
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : "—";
+
+              return (
+                <div className="org-admin-metrics" role="group" aria-label="集計">
+                  <div className="org-admin-metric">
+                    <span>メンバー</span>
+                    <strong>{totalMembers.toLocaleString()}人</strong>
+                  </div>
+                  <div className="org-admin-metric">
+                    <span>合計 Effort EXP</span>
+                    <strong>{totalEffort.toLocaleString()}</strong>
+                  </div>
+                  <div className="org-admin-metric">
+                    <span>合計 Output EXP</span>
+                    <strong>{totalOutput.toLocaleString()}</strong>
+                  </div>
+                  <div className="org-admin-metric">
+                    <span>最長ストリーク</span>
+                    <strong>{maxStreak.toLocaleString()}日</strong>
+                  </div>
+                  <div className="org-admin-metric">
+                    <span>合計 Contributions</span>
+                    <strong>{totalContribution.toLocaleString()}</strong>
+                  </div>
+                  <div className="org-admin-metric">
+                    <span>最新アクティブ</span>
+                    <strong>{lastActiveLabel}</strong>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="org-admin-toolbar">
+              <button
+                type="button"
+                className="org-admin-secondary"
+                onClick={handleRefreshOrgMembers}
+                disabled={isLoadingOrgMembers}
+              >
+                {isLoadingOrgMembers ? "更新中…" : "再読み込み"}
+              </button>
+              <button
+                type="button"
+                className="org-admin-primary"
+                onClick={handleExportOrgMembersCsv}
+                disabled={orgMembers.length === 0 || isLoadingOrgMembers}
+              >
+                CSV をダウンロード
+              </button>
+            </div>
+
+            {orgAdminError ? <p className="org-admin-error">{orgAdminError}</p> : null}
+
+            <div className="org-admin-table-scroll">
+              <table className="org-admin-table">
+                <thead>
+                  <tr>
+                    <th>名前</th>
+                    <th>役割</th>
+                    <th>Lv</th>
+                    <th>Effort</th>
+                    <th>Output</th>
+                    <th>ストリーク</th>
+                    <th>最終アクティブ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orgMembers.length === 0 && !isLoadingOrgMembers ? (
+                    <tr>
+                      <td colSpan={7} className="org-admin-empty">
+                        まだメンバーがいません。招待リンクで仲間を招待しましょう。
+                      </td>
+                    </tr>
+                  ) : null}
+                  {orgMembers
+                    .slice()
+                    .sort((a, b) => (b.effortExp || 0) - (a.effortExp || 0))
+                    .map((member) => {
+                      const lastActiveMs = new Date(member.lastSyncedAt || 0).getTime();
+                      const lastActive =
+                        member.lastSyncedAt && Number.isFinite(lastActiveMs)
+                          ? new Date(lastActiveMs).toLocaleDateString("ja-JP", {
+                              month: "2-digit",
+                              day: "2-digit",
+                            })
+                          : "—";
+                      return (
+                        <tr key={member.uid}>
+                          <td>
+                            <div className="org-admin-member-cell">
+                              <span
+                                className="org-admin-member-avatar"
+                                aria-hidden="true"
+                              >
+                                {member.avatarUrl ? (
+                                  <img src={member.avatarUrl} alt="" />
+                                ) : (
+                                  (member.displayName || "?").charAt(0).toUpperCase()
+                                )}
+                              </span>
+                              <div className="org-admin-member-name">
+                                <strong>{member.displayName}</strong>
+                                <small>@{member.userId || "—"}</small>
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <span className={`org-admin-role role-${member.organizationRole}`}>
+                              {member.organizationRole === "owner"
+                                ? "オーナー"
+                                : member.organizationRole === "admin"
+                                  ? "管理者"
+                                  : "メンバー"}
+                            </span>
+                          </td>
+                          <td className="org-admin-num">{member.level.toLocaleString()}</td>
+                          <td className="org-admin-num">{member.effortExp.toLocaleString()}</td>
+                          <td className="org-admin-num">{member.outputExp.toLocaleString()}</td>
+                          <td className="org-admin-num">{member.streak.toLocaleString()}</td>
+                          <td>{lastActive}</td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+
+            <p className="org-admin-foot">
+              個別の学習ログ・投稿内容は admin にも表示しません。投資の可視化のみが目的です。
+            </p>
+          </section>
+        </div>
+      ) : null}
+
       {isSettingsOpen ? (
         <div className="settings-modal-backdrop" role="presentation">
           <section
@@ -10181,6 +10468,15 @@ function App() {
                         >
                           招待リンクをコピー
                         </button>
+                        {currentOrganization.ownerUid === currentUser?.uid ? (
+                          <button
+                            type="button"
+                            className="settings-org-admin"
+                            onClick={handleOpenOrgAdmin}
+                          >
+                            メンバー一覧 / Admin
+                          </button>
+                        ) : null}
                         {currentOrganization.ownerUid !== currentUser?.uid ? (
                           <button
                             type="button"
