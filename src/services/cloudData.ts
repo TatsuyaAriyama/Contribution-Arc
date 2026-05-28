@@ -3,6 +3,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   query,
   runTransaction,
@@ -425,6 +426,54 @@ export async function createOrganizationInvite(
   };
   await setDoc(doc(db, "organizationInvites", token), record);
   return token;
+}
+
+/* Snapshot of a single org member for the admin dashboard. Sourced
+   from the `users/{uid}` documents — readable by any signed-in user
+   under the existing rules, so we don't need to expand the privacy
+   surface to ship the dashboard. Individual learning logs / posts
+   are deliberately NOT surfaced here; the dashboard is for "team
+   investment visibility", not for surveillance. */
+export type OrganizationMemberRecord = {
+  uid: string;
+  userId: string;
+  displayName: string;
+  avatarUrl: string;
+  level: number;
+  effortExp: number;
+  outputExp: number;
+  streak: number;
+  organizationRole: "owner" | "admin" | "member";
+  lastSyncedAt: string;
+  contributionCount: number;
+};
+
+export async function listOrganizationMembers(
+  db: Firestore,
+  orgId: string,
+): Promise<OrganizationMemberRecord[]> {
+  // Single equality query against the org-id field. Firestore needs
+  // no composite index for a single-where on a top-level field.
+  const snapshot = await getDocs(query(collection(db, "users"), where("organizationId", "==", orgId)));
+  return snapshot.docs.map((item) => {
+    const data = item.data() as Record<string, unknown>;
+    const roleRaw = data.organizationRole;
+    const role: OrganizationMemberRecord["organizationRole"] =
+      roleRaw === "owner" || roleRaw === "admin" || roleRaw === "member" ? roleRaw : "member";
+    return {
+      uid: item.id,
+      userId: typeof data.userId === "string" ? data.userId : "",
+      displayName: typeof data.displayName === "string" ? data.displayName : "Developer",
+      avatarUrl: typeof data.avatarUrl === "string" ? data.avatarUrl : "",
+      level: typeof data.level === "number" ? data.level : 1,
+      effortExp: typeof data.effortExp === "number" ? data.effortExp : 0,
+      outputExp: typeof data.outputExp === "number" ? data.outputExp : 0,
+      streak: typeof data.streak === "number" ? data.streak : 0,
+      organizationRole: role,
+      lastSyncedAt: typeof data.lastSyncedAt === "string" ? data.lastSyncedAt : "",
+      contributionCount: typeof data.contributionCount === "number" ? data.contributionCount : 0,
+    };
+  });
 }
 
 export async function acceptOrganizationInvite(
