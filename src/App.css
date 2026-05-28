@@ -21909,6 +21909,159 @@ a[role="button"],
   line-height: 1.5;
 }
 
+/* Slack integration section — sits inside the admin modal below
+   the members table. Visually demarcated as its own card so the
+   admin reads it as a "settings" surface, not part of the team
+   roster. */
+.org-admin-slack {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  background: var(--surface-warm);
+}
+
+.org-admin-slack-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.org-admin-slack-head h3 {
+  margin: 2px 0 0;
+  color: var(--ink-strong);
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.org-admin-slack-help {
+  flex: 0 0 auto;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.org-admin-slack-help:hover {
+  text-decoration: underline;
+}
+
+.org-admin-slack-copy {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.org-admin-slack-field {
+  display: grid;
+  gap: 6px;
+}
+
+.org-admin-slack-field span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.org-admin-slack-field input {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 13px;
+}
+
+.org-admin-slack-field input:focus {
+  outline: none;
+  border-color: rgba(31, 111, 74, 0.4);
+  box-shadow: var(--ring-focus);
+}
+
+.org-admin-slack-toggles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.org-admin-slack-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.org-admin-slack-toggle:hover {
+  border-color: rgba(31, 111, 74, 0.32);
+}
+
+.org-admin-slack-toggle.is-on {
+  border-color: rgba(31, 111, 74, 0.5);
+  background: rgba(31, 111, 74, 0.06);
+}
+
+.org-admin-slack-toggle input {
+  margin-top: 2px;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--green);
+  cursor: pointer;
+}
+
+.org-admin-slack-toggle div {
+  display: grid;
+  gap: 2px;
+}
+
+.org-admin-slack-toggle strong {
+  color: var(--ink-strong);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.org-admin-slack-toggle small {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.org-admin-slack-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.org-admin-slack-message {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.org-admin-slack-message.is-info {
+  background: rgba(31, 111, 74, 0.08);
+  color: var(--green);
+}
+
+.org-admin-slack-message.is-error {
+  background: rgba(196, 50, 44, 0.08);
+  color: #c4322c;
+}
+
 @media (max-width: 540px) {
   .org-admin-modal {
     padding: 18px;

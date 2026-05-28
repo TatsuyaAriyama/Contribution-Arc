@@ -60,8 +60,10 @@ import {
   saveUserProgressToCloud,
   saveWorkspaceSessionToCloud,
   subscribeStudyLogsFromCloud,
+  updateOrganizationSlack,
   type OrganizationMemberRecord,
 } from "./services/cloudData";
+import { isValidSlackWebhookUrl, postToSlackWebhook } from "./services/slack";
 import {
   deleteLearningItemFromCloud,
   saveLearningItemToCloud,
@@ -386,12 +388,19 @@ type WorkspaceRoom = {
 
 /* Organization (tenant). Created by an owner; members join via an
    invite link. Rooms tagged `visibility: "org"` only surface in the
-   workspace list for that org's members. */
+   workspace list for that org's members. Slack integration (Phase
+   3) is gated on the URL + per-event toggles below. */
 type Organization = {
   id: string;
   name: string;
   ownerUid: string;
   createdAt: string;
+  slackWebhookUrl?: string;
+  slackEvents?: {
+    roomJoins?: boolean;
+    recruitments?: boolean;
+    dailyDigest?: boolean;
+  };
 };
 
 type OrganizationRole = "owner" | "admin" | "member";
@@ -3527,6 +3536,15 @@ function App() {
   const [orgMembers, setOrgMembers] = useState<OrganizationMemberRecord[]>([]);
   const [isLoadingOrgMembers, setIsLoadingOrgMembers] = useState<boolean>(false);
   const [orgAdminError, setOrgAdminError] = useState<string>("");
+  // Slack integration editor state — local copies so the input
+  // doesn't lose focus mid-typing, then committed via the save
+  // button. Initialised when the admin modal opens.
+  const [slackDraftUrl, setSlackDraftUrl] = useState<string>("");
+  const [slackDraftRoomJoins, setSlackDraftRoomJoins] = useState<boolean>(false);
+  const [slackDraftRecruitments, setSlackDraftRecruitments] = useState<boolean>(false);
+  const [slackDraftDailyDigest, setSlackDraftDailyDigest] = useState<boolean>(false);
+  const [slackSaveState, setSlackSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [slackSaveMessage, setSlackSaveMessage] = useState<string>("");
   // Records the token we've already attempted to auto-claim so a
   // re-render after the successful accept doesn't fire the call a
   // second time.
@@ -7649,6 +7667,22 @@ function App() {
     }
 
     startWorkspaceSession(roomId, nextTask, studyColor);
+
+    // Fire-and-forget Slack notification when the joining user
+    // belongs to an org that has opted into the roomJoins event.
+    // The fetch is intentionally not awaited — a slow Slack POST
+    // must not delay the visible "you're in" feedback. Failures
+    // are swallowed inside postToSlackWebhook.
+    if (
+      currentOrganization?.slackWebhookUrl &&
+      currentOrganization.slackEvents?.roomJoins
+    ) {
+      const room = allWorkspaceRooms.find((item) => item.id === roomId);
+      const roomName = room?.name || "作業部屋";
+      void postToSlackWebhook(currentOrganization.slackWebhookUrl, {
+        text: `:wave: *${playerName}* が *${roomName}* に入室しました（${nextTask}）`,
+      });
+    }
   };
 
   const handleWorkspaceStart = (event: FormEvent<HTMLFormElement>) => {
@@ -7767,6 +7801,25 @@ function App() {
       setWorkspaceRecruitments((prev) => [record, ...prev.filter((item) => item.id !== record.id)]);
       setIsRecruitmentModalOpen(false);
       setRecruitmentError("");
+
+      // Mirror the recruitment to Slack if the org has opted in.
+      // Same fire-and-forget pattern as the room-join hook — must
+      // not block the publish acknowledgement.
+      if (
+        currentOrganization?.slackWebhookUrl &&
+        currentOrganization.slackEvents?.recruitments
+      ) {
+        const startAtLabel = startAtDate.toLocaleString("ja-JP", {
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        const messageLine = message ? `\n> ${message}` : "";
+        void postToSlackWebhook(currentOrganization.slackWebhookUrl, {
+          text: `:loudspeaker: *${playerName}* が *${selectedRoom.name}* で募集中（${task}・${duration}分・開始 ${startAtLabel}）${messageLine}`,
+        });
+      }
     } catch (error) {
       console.warn("Failed to create recruitment", error);
       setRecruitmentError("募集の投稿に失敗しました。時間をおいて再度お試しください。");
@@ -7989,6 +8042,15 @@ function App() {
     setIsOrgAdminOpen(true);
     setIsSettingsOpen(false);
     setOrgAdminError("");
+    // Seed Slack editor state from the current org snapshot so the
+    // form reflects what's actually persisted, not stale values from
+    // a previous open.
+    setSlackDraftUrl(currentOrganization.slackWebhookUrl || "");
+    setSlackDraftRoomJoins(Boolean(currentOrganization.slackEvents?.roomJoins));
+    setSlackDraftRecruitments(Boolean(currentOrganization.slackEvents?.recruitments));
+    setSlackDraftDailyDigest(Boolean(currentOrganization.slackEvents?.dailyDigest));
+    setSlackSaveState("idle");
+    setSlackSaveMessage("");
     setIsLoadingOrgMembers(true);
     try {
       const members = await listOrganizationMembers(db, currentOrganization.id);
@@ -7998,6 +8060,116 @@ function App() {
       setOrgAdminError("メンバー一覧を読み込めませんでした。再度お試しください。");
     } finally {
       setIsLoadingOrgMembers(false);
+    }
+  };
+
+  /* Persist the Slack webhook + per-event toggles. The save merges
+     onto the existing org doc; once it succeeds we also refresh the
+     local currentOrganization mirror so downstream event hooks (room
+     join, recruitment) immediately pick up the new URL without
+     waiting for the next profile load. */
+  const handleSaveSlackSettings = async () => {
+    if (!currentOrganization) return;
+    const trimmedUrl = slackDraftUrl.trim();
+    if (trimmedUrl && !isValidSlackWebhookUrl(trimmedUrl)) {
+      setSlackSaveState("error");
+      setSlackSaveMessage("https://hooks.slack.com/services/… 形式のURLのみ受け付けます。");
+      return;
+    }
+    setSlackSaveState("saving");
+    setSlackSaveMessage("");
+    try {
+      await updateOrganizationSlack(db, currentOrganization.id, {
+        slackWebhookUrl: trimmedUrl,
+        slackEvents: {
+          roomJoins: slackDraftRoomJoins,
+          recruitments: slackDraftRecruitments,
+          dailyDigest: slackDraftDailyDigest,
+        },
+      });
+      setCurrentOrganization((prev) =>
+        prev
+          ? {
+              ...prev,
+              slackWebhookUrl: trimmedUrl || undefined,
+              slackEvents: {
+                roomJoins: slackDraftRoomJoins,
+                recruitments: slackDraftRecruitments,
+                dailyDigest: slackDraftDailyDigest,
+              },
+            }
+          : prev,
+      );
+      setSlackSaveState("saved");
+      setSlackSaveMessage(trimmedUrl ? "保存しました。" : "Slack連携を解除しました。");
+      showToast("Slack設定を保存しました", { kind: "success" });
+    } catch (error) {
+      console.warn("Save slack settings failed", error);
+      setSlackSaveState("error");
+      setSlackSaveMessage("保存に失敗しました。再度お試しください。");
+    }
+  };
+
+  /* Test-send a sample message. Bypasses the per-event toggles —
+     the admin explicitly clicked the button, so we always attempt
+     the POST as long as the URL parses. */
+  const handleSlackTestSend = async () => {
+    const trimmedUrl = slackDraftUrl.trim();
+    if (!currentOrganization) return;
+    if (!isValidSlackWebhookUrl(trimmedUrl)) {
+      setSlackSaveState("error");
+      setSlackSaveMessage("先にSlack Incoming Webhook URLを入力してください。");
+      return;
+    }
+    setSlackSaveState("saving");
+    setSlackSaveMessage("");
+    const result = await postToSlackWebhook(trimmedUrl, {
+      text: `:white_check_mark: Contribution Arc から *${currentOrganization.name}* に接続テストを送信しました。`,
+    });
+    if (result.ok) {
+      setSlackSaveState("saved");
+      setSlackSaveMessage("Slackチャンネルに送信しました。届いていれば設定OKです。");
+    } else {
+      setSlackSaveState("error");
+      setSlackSaveMessage(
+        result.error === "INVALID_WEBHOOK_URL"
+          ? "URLが Slack の hooks.slack.com 形式ではありません。"
+          : `Slackへの送信に失敗しました (${result.error || "unknown"}).`,
+      );
+    }
+  };
+
+  /* Manual daily digest — owner taps a button in the admin modal
+     and we POST a summary to Slack right then. Production-grade
+     scheduling needs a Cloud Function; this MVP keeps it
+     user-triggered so we don't need backend infra. */
+  const handleSendDailyDigest = async () => {
+    if (!currentOrganization?.slackWebhookUrl) return;
+    setSlackSaveState("saving");
+    setSlackSaveMessage("");
+    const totalEffort = orgMembers.reduce((acc, m) => acc + (m.effortExp || 0), 0);
+    const totalOutput = orgMembers.reduce((acc, m) => acc + (m.outputExp || 0), 0);
+    const totalContributions = orgMembers.reduce((acc, m) => acc + (m.contributionCount || 0), 0);
+    const topMembers = orgMembers
+      .slice()
+      .sort((a, b) => (b.effortExp || 0) - (a.effortExp || 0))
+      .slice(0, 5)
+      .map((m, idx) => `${idx + 1}. *${m.displayName}* — Effort ${m.effortExp.toLocaleString()} / ストリーク ${m.streak}日`)
+      .join("\n");
+    const text = [
+      `:bar_chart: *${currentOrganization.name}* の日次サマリー`,
+      `メンバー: ${orgMembers.length}人 / Effort合計 ${totalEffort.toLocaleString()} / Output合計 ${totalOutput.toLocaleString()} / Contributions ${totalContributions.toLocaleString()}`,
+      "",
+      topMembers || "_まだ活動がありません。_",
+    ].join("\n");
+    const result = await postToSlackWebhook(currentOrganization.slackWebhookUrl, { text });
+    if (result.ok) {
+      setSlackSaveState("saved");
+      setSlackSaveMessage("日次サマリーを送信しました。");
+      showToast("日次サマリーをSlackに送信", { kind: "success" });
+    } else {
+      setSlackSaveState("error");
+      setSlackSaveMessage(`送信に失敗しました (${result.error || "unknown"}).`);
     }
   };
 
@@ -10313,6 +10485,119 @@ function App() {
                 </tbody>
               </table>
             </div>
+
+            <section className="org-admin-slack" aria-label="Slack連携">
+              <header className="org-admin-slack-head">
+                <div>
+                  <p className="card-kicker">Integrations</p>
+                  <h3>Slack 連携</h3>
+                </div>
+                <a
+                  className="org-admin-slack-help"
+                  href="https://api.slack.com/messaging/webhooks"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Webhook URLの取得方法 →
+                </a>
+              </header>
+              <p className="org-admin-slack-copy">
+                Slack の Incoming Webhook URL を貼り付けると、組織メンバーの入室や募集が
+                指定チャンネルに自動投稿されます。URL は組織のオーナーのみ編集できます。
+              </p>
+              <label className="org-admin-slack-field">
+                <span>Webhook URL</span>
+                <input
+                  type="url"
+                  inputMode="url"
+                  value={slackDraftUrl}
+                  onChange={(event) => {
+                    setSlackDraftUrl(event.target.value);
+                    if (slackSaveState !== "idle") {
+                      setSlackSaveState("idle");
+                      setSlackSaveMessage("");
+                    }
+                  }}
+                  placeholder="https://hooks.slack.com/services/T000/B000/XXX"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </label>
+
+              <div className="org-admin-slack-toggles" role="group" aria-label="通知イベント">
+                <label className={`org-admin-slack-toggle ${slackDraftRoomJoins ? "is-on" : ""}`}>
+                  <input
+                    type="checkbox"
+                    checked={slackDraftRoomJoins}
+                    onChange={(event) => setSlackDraftRoomJoins(event.target.checked)}
+                  />
+                  <div>
+                    <strong>入室通知</strong>
+                    <small>メンバーが作業部屋に入った時</small>
+                  </div>
+                </label>
+                <label className={`org-admin-slack-toggle ${slackDraftRecruitments ? "is-on" : ""}`}>
+                  <input
+                    type="checkbox"
+                    checked={slackDraftRecruitments}
+                    onChange={(event) => setSlackDraftRecruitments(event.target.checked)}
+                  />
+                  <div>
+                    <strong>募集通知</strong>
+                    <small>メンバーが募集を出した時</small>
+                  </div>
+                </label>
+                <label className={`org-admin-slack-toggle ${slackDraftDailyDigest ? "is-on" : ""}`}>
+                  <input
+                    type="checkbox"
+                    checked={slackDraftDailyDigest}
+                    onChange={(event) => setSlackDraftDailyDigest(event.target.checked)}
+                  />
+                  <div>
+                    <strong>日次サマリー</strong>
+                    <small>手動送信ボタンから利用（自動配信は今後対応）</small>
+                  </div>
+                </label>
+              </div>
+
+              <div className="org-admin-slack-actions">
+                <button
+                  type="button"
+                  className="org-admin-secondary"
+                  onClick={handleSlackTestSend}
+                  disabled={slackSaveState === "saving"}
+                >
+                  テスト送信
+                </button>
+                {currentOrganization.slackWebhookUrl && slackDraftDailyDigest ? (
+                  <button
+                    type="button"
+                    className="org-admin-secondary"
+                    onClick={handleSendDailyDigest}
+                    disabled={slackSaveState === "saving" || isLoadingOrgMembers}
+                  >
+                    日次サマリーを送信
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="org-admin-primary"
+                  onClick={handleSaveSlackSettings}
+                  disabled={slackSaveState === "saving"}
+                >
+                  {slackSaveState === "saving" ? "保存中…" : "保存"}
+                </button>
+              </div>
+
+              {slackSaveMessage ? (
+                <p
+                  className={`org-admin-slack-message ${slackSaveState === "error" ? "is-error" : "is-info"}`}
+                  role="status"
+                >
+                  {slackSaveMessage}
+                </p>
+              ) : null}
+            </section>
 
             <p className="org-admin-foot">
               個別の学習ログ・投稿内容は admin にも表示しません。投資の可視化のみが目的です。
