@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 import { FriendGithubMini } from "./FriendGithubMini";
 
-export type AppView = "home" | "profile" | "workspace" | "logs" | "daily" | "learning" | "shop" | "teams";
+export type AppView = "home" | "profile" | "workspace" | "logs" | "daily" | "learning" | "shop" | "teams" | "manager";
 export type FriendPreviewStatus = "online" | "away" | "offline";
 
 export type FriendPreview = {

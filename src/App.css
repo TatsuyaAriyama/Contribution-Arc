@@ -22382,6 +22382,21 @@ a[role="button"],
   padding: 0;
   list-style: none;
   display: grid;
+  gap: 10px;
+  align-content: center;
+}
+
+/* ─── Manager Dashboard ──────────────────────────────────────────
+   Team-wide learning analytics for organization owners. Displays
+   aggregate statistics, team member leaderboard, and search/filter. */
+.manager-dashboard {
+  display: grid;
+  gap: 24px;
+  padding: 24px;
+}
+
+.manager-header {
+  display: grid;
   gap: 8px;
 }
 
@@ -22505,3 +22520,232 @@ a[role="button"],
   font-weight: 900;
 }
 
+.manager-title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 760;
+  color: var(--ink);
+}
+
+.manager-subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.manager-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.manager-stat-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid rgba(var(--ink-rgb, 31, 32, 36), 0.12);
+  border-radius: 12px;
+  background: rgba(var(--surface-rgb), 0.6);
+  text-align: center;
+}
+
+.manager-stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.03em;
+}
+
+.manager-stat-value {
+  font-size: 20px;
+  font-weight: 780;
+  color: var(--ink);
+}
+
+.manager-controls {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.manager-period-selector {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(var(--ink-rgb, 31, 32, 36), 0.12);
+  border-radius: 8px;
+  background: rgba(var(--surface-rgb), 0.4);
+}
+
+.manager-period-selector button {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+}
+
+.manager-period-selector button:hover {
+  background: rgba(var(--surface-rgb), 0.6);
+}
+
+.manager-period-selector button.active {
+  background: rgba(var(--green-rgb, 91, 154, 117), 0.12);
+  color: var(--green);
+}
+
+.manager-search {
+  padding: 10px 12px;
+  border: 1px solid rgba(var(--ink-rgb, 31, 32, 36), 0.12);
+  border-radius: 8px;
+  background: rgba(var(--surface-rgb), 0.6);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14px;
+  transition: border-color 0.18s;
+}
+
+.manager-search:focus {
+  outline: none;
+  border-color: var(--green);
+}
+
+.manager-members-section {
+  display: grid;
+  gap: 12px;
+}
+
+.manager-members-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 720;
+  color: var(--ink);
+}
+
+.manager-empty {
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  background: rgba(var(--surface-rgb), 0.4);
+  border-radius: 12px;
+}
+
+.manager-members-list {
+  display: grid;
+  gap: 8px;
+}
+
+.manager-member-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(var(--ink-rgb, 31, 32, 36), 0.12);
+  border-radius: 12px;
+  background: rgba(var(--surface-rgb), 0.6);
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s;
+}
+
+.manager-member-card:hover {
+  background: rgba(var(--surface-rgb), 0.8);
+  border-color: var(--green);
+}
+
+.manager-member-card:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.manager-member-avatar {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(var(--green-rgb, 91, 154, 117), 0.12);
+  color: var(--green);
+  font-weight: 700;
+  font-size: 16px;
+  overflow: hidden;
+}
+
+.manager-member-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.manager-member-info {
+  display: grid;
+  gap: 4px;
+}
+
+.manager-member-name {
+  font-size: 15px;
+  font-weight: 720;
+  color: var(--ink);
+}
+
+.manager-member-id {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.manager-member-stats {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  gap: 16px;
+  text-align: center;
+}
+
+.manager-member-stat {
+  display: grid;
+  gap: 4px;
+}
+
+.manager-member-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.03em;
+}
+
+.manager-member-stat strong {
+  font-size: 14px;
+  font-weight: 780;
+  color: var(--ink);
+}
+
+@media (max-width: 720px) {
+  .manager-dashboard {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .manager-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .manager-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .manager-member-card {
+    grid-template-columns: auto 1fr;
+  }
+
+  .manager-member-stats {
+    grid-column: 1 / -1;
+    gap: 8px;
+  }
+}

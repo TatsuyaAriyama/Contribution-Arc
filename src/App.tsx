@@ -99,6 +99,7 @@ import { fetchGithubContributions, type GithubContributions } from "./services/g
 import { type AppView, type FriendPreview, type LiveActivity } from "./components/PremiumNavigation";
 import { SilentWorkspaceRoom, type RoomActivityItem } from "./components/SilentWorkspaceRoom";
 import { ArcPurchasePanel } from "./components/ArcPurchasePanel";
+import { ManagerDashboard } from "./components/ManagerDashboard";
 import { ShareToXModal } from "./components/ShareToXModal";
 import { TutorialHint } from "./components/TutorialHint";
 import { ToastHost } from "./components/ToastHost";
@@ -3736,6 +3737,27 @@ function App() {
         setOrgError(message);
       });
   }, [orgInviteToken, currentUser]);
+
+  /* Load organization members when manager view is opened.
+     Only org owners can access the manager dashboard. */
+  useEffect(() => {
+    if (currentView !== "manager" || !currentOrganization) return;
+    if (currentUser?.uid !== currentOrganization.ownerUid) return;
+    if (orgMembers.length > 0 && !isLoadingOrgMembers) return; // Already loaded
+
+    setIsLoadingOrgMembers(true);
+    listOrganizationMembers(db, currentOrganization.id)
+      .then((members) => {
+        setOrgMembers(members);
+      })
+      .catch((error) => {
+        console.warn("Failed to load org members for manager dashboard", error);
+        setOrgAdminError("メンバー一覧を読み込めませんでした。");
+      })
+      .finally(() => {
+        setIsLoadingOrgMembers(false);
+      });
+  }, [currentView, currentOrganization, currentUser?.uid]);
 
   useEffect(() => {
     return onAuthStateChanged(auth, (user) => {
@@ -9648,6 +9670,28 @@ function App() {
         </div>
 
         <div className="user-session">
+          {currentOrganization && currentUser?.uid === currentOrganization.ownerUid ? (
+            <button
+              type="button"
+              className="topbar-icon-button topbar-manager-button"
+              aria-label="Manager Dashboard"
+              title="Manager Dashboard"
+              onClick={() => {
+                setCurrentView("manager");
+                setIsFriendsPopoverOpen(false);
+                setIsLivePopoverOpen(false);
+              }}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <rect x="3" y="6" width="8" height="10" fill="none" stroke="currentColor" strokeWidth="1.6" rx="0.5" />
+                <rect x="13" y="6" width="8" height="10" fill="none" stroke="currentColor" strokeWidth="1.6" rx="0.5" />
+                <circle cx="7" cy="10.5" r="1.2" fill="currentColor" />
+                <circle cx="17" cy="10.5" r="1.2" fill="currentColor" />
+                <path d="M7 12.5v3 M17 12.5v3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              </svg>
+            </button>
+          ) : null}
+
           <button
             type="button"
             className="topbar-icon-button topbar-shop-button"
@@ -12810,6 +12854,55 @@ function App() {
               })}
             </div>
           </section>
+        </motion.section>
+      ) : currentView === "manager" ? (
+        <motion.section
+          className="manager-screen"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={SPRING_SNAPPY}
+        >
+          <div className="profile-topbar">
+            <button type="button" onClick={() => setCurrentView("home")}>
+              ← Home
+            </button>
+          </div>
+          {currentOrganization && currentUser?.uid === currentOrganization.ownerUid ? (
+            isLoadingOrgMembers ? (
+              <div className="manager-loading">
+                <p>{t("読み込み中…")}</p>
+              </div>
+            ) : (
+              <ManagerDashboard
+                teamMembers={orgMembers}
+                currentUser={{
+                  uid: currentUser.uid,
+                  userId: userId,
+                  displayName: currentUser.displayName || "Manager",
+                  avatarUrl: currentUser.photoURL || "",
+                  level: 0,
+                  effortExp: 0,
+                  outputExp: 0,
+                  streak: 0,
+                  organizationRole: "owner",
+                  lastSyncedAt: new Date().toISOString(),
+                  contributionCount: 0,
+                }}
+                onMemberSelect={(member) => {
+                  // For now, clicking a member just shows their profile
+                  // In a future phase, this could open a detail view
+                }}
+              />
+            )
+          ) : (
+            <div className="manager-empty-state">
+              <div className="card">
+                <p className="card-kicker">Manager Dashboard</p>
+                <h2>アクセス権限がありません</h2>
+                <p>マネージャーダッシュボードはOrganizationのオーナーのみアクセス可能です</p>
+              </div>
+            </div>
+          )}
         </motion.section>
       ) : (
       <motion.div
