@@ -324,7 +324,40 @@ export type OrganizationRecord = {
   name: string;
   ownerUid: string;
   createdAt: string;
+  // Phase 3: outbound Slack integration. Empty string / undefined =
+  // no integration. The owner manages this from the admin dashboard.
+  slackWebhookUrl?: string;
+  slackEvents?: {
+    roomJoins?: boolean;
+    recruitments?: boolean;
+    dailyDigest?: boolean;
+  };
 };
+
+export type OrganizationSlackSettings = {
+  slackWebhookUrl: string;
+  slackEvents: {
+    roomJoins: boolean;
+    recruitments: boolean;
+    dailyDigest: boolean;
+  };
+};
+
+export async function updateOrganizationSlack(
+  db: Firestore,
+  orgId: string,
+  settings: OrganizationSlackSettings,
+) {
+  await setDoc(
+    doc(db, "organizations", orgId),
+    {
+      slackWebhookUrl: settings.slackWebhookUrl,
+      slackEvents: settings.slackEvents,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+}
 
 export type OrganizationInviteRecord = {
   orgId: string;
@@ -385,6 +418,14 @@ export async function loadOrganization(
     name: data.name,
     ownerUid: data.ownerUid,
     createdAt: data.createdAt || new Date().toISOString(),
+    slackWebhookUrl: typeof data.slackWebhookUrl === "string" ? data.slackWebhookUrl : undefined,
+    slackEvents: data.slackEvents
+      ? {
+          roomJoins: Boolean(data.slackEvents.roomJoins),
+          recruitments: Boolean(data.slackEvents.recruitments),
+          dailyDigest: Boolean(data.slackEvents.dailyDigest),
+        }
+      : undefined,
   };
 }
 
