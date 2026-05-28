@@ -68,6 +68,7 @@ import {
   findOrganizationsByEmailDomain,
   joinOrganizationByDomain,
   removeOrganizationMember,
+  setMemberTeamName,
   exportUserData,
   deleteUserAccount,
   type AuditLogRecord,
@@ -8320,6 +8321,40 @@ function App() {
     }
   };
 
+  /* Phase 9: owner edits a member's team label inline. Optimistically
+     updates the cached members list so the input value sticks after
+     blur even before the Firestore write resolves; rolls back on
+     failure. Free-form, 40 char cap matches the rule's size guard. */
+  const handleSetMemberTeamName = async (
+    target: OrganizationMemberRecord,
+    nextTeamName: string,
+  ) => {
+    if (!currentUser || !currentOrganization) return;
+    if (currentOrganization.ownerUid !== currentUser.uid) return;
+    const trimmed = nextTeamName.trim().slice(0, 40);
+    if (trimmed === (target.teamName || "")) return;
+    const previous = target.teamName || "";
+    setOrgMembers((current) =>
+      current.map((m) => (m.uid === target.uid ? { ...m, teamName: trimmed } : m)),
+    );
+    try {
+      await setMemberTeamName(
+        db,
+        currentOrganization.id,
+        target.uid,
+        trimmed,
+        { uid: currentUser.uid, name: playerName },
+        { name: target.displayName },
+      );
+    } catch (error) {
+      console.warn("Set member team name failed", error);
+      setOrgMembers((current) =>
+        current.map((m) => (m.uid === target.uid ? { ...m, teamName: previous } : m)),
+      );
+      setOrgAdminError("チーム名の保存に失敗しました。");
+    }
+  };
+
   /* Personal data export — Phase 8. Bundle all user-owned Firestore
      documents into a single JSON file and trigger a browser
      download. Satisfies 個人情報保護法 / GDPR data-subject access
@@ -10993,6 +11028,7 @@ function App() {
                   <tr>
                     <th>名前</th>
                     <th>役割</th>
+                    <th>チーム</th>
                     <th>Lv</th>
                     <th>Effort</th>
                     <th>Output</th>
@@ -11004,7 +11040,7 @@ function App() {
                 <tbody>
                   {orgMembers.length === 0 && !isLoadingOrgMembers ? (
                     <tr>
-                      <td colSpan={7} className="org-admin-empty">
+                      <td colSpan={8} className="org-admin-empty">
                         まだメンバーがいません。招待リンクで仲間を招待しましょう。
                       </td>
                     </tr>
@@ -11049,6 +11085,30 @@ function App() {
                                   ? "管理者"
                                   : "メンバー"}
                             </span>
+                          </td>
+                          <td className="org-admin-team-cell">
+                            {currentOrganization?.ownerUid === currentUser?.uid ? (
+                              <input
+                                type="text"
+                                className="org-admin-team-input"
+                                defaultValue={member.teamName || ""}
+                                placeholder="未割り当て"
+                                maxLength={40}
+                                aria-label={`${member.displayName} のチーム`}
+                                onBlur={(event) => {
+                                  void handleSetMemberTeamName(member, event.target.value);
+                                }}
+                                onKeyDown={(event) => {
+                                  if (event.key === "Enter") {
+                                    event.currentTarget.blur();
+                                  }
+                                }}
+                              />
+                            ) : (
+                              <span className="org-admin-team-readonly">
+                                {member.teamName || "—"}
+                              </span>
+                            )}
                           </td>
                           <td className="org-admin-num">{member.level.toLocaleString()}</td>
                           <td className="org-admin-num">{member.effortExp.toLocaleString()}</td>

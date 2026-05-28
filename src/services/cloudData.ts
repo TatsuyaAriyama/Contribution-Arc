@@ -362,6 +362,7 @@ export type AuditLogEventType =
   | "organization.member_removed"
   | "organization.slack_updated"
   | "organization.owner_transferred"
+  | "organization.team_updated"
   | "room.created";
 
 export type AuditLogRecord = {
@@ -484,7 +485,10 @@ export async function listAuditLogs(
       data.type === "organization.created" ||
       data.type === "organization.member_joined" ||
       data.type === "organization.member_left" ||
+      data.type === "organization.member_removed" ||
       data.type === "organization.slack_updated" ||
+      data.type === "organization.owner_transferred" ||
+      data.type === "organization.team_updated" ||
       data.type === "room.created"
         ? (data.type as AuditLogEventType)
         : ("organization.created" as AuditLogEventType);
@@ -819,6 +823,12 @@ export type OrganizationMemberRecord = {
   organizationRole: "owner" | "admin" | "member";
   lastSyncedAt: string;
   contributionCount: number;
+  /* Phase 9: optional team-grouping label set by the org owner.
+     Free-form so non-engineering orgs can use whatever taxonomy makes
+     sense ("Frontend" / "Backend" / "Infra", or "Sales" / "Marketing").
+     Empty string when unassigned — the dashboard groups those as
+     「未割り当て」. */
+  teamName: string;
 };
 
 export async function listOrganizationMembers(
@@ -845,7 +855,36 @@ export async function listOrganizationMembers(
       organizationRole: role,
       lastSyncedAt: typeof data.lastSyncedAt === "string" ? data.lastSyncedAt : "",
       contributionCount: typeof data.contributionCount === "number" ? data.contributionCount : 0,
+      teamName: typeof data.teamName === "string" ? data.teamName : "",
     };
+  });
+}
+
+/* Phase 9: org owner sets / clears a member's team label. Only the
+   `teamName` field changes; the Firestore rule's diff() check
+   enforces that the owner cannot piggy-back any other field edit on
+   this write. Empty string clears the assignment. */
+export async function setMemberTeamName(
+  db: Firestore,
+  orgId: string,
+  targetUid: string,
+  teamName: string,
+  actor: { uid: string; name: string },
+  target: { name: string },
+): Promise<void> {
+  const trimmed = teamName.trim().slice(0, 40);
+  await setDoc(
+    doc(db, "users", targetUid),
+    { teamName: trimmed },
+    { merge: true },
+  );
+  await recordAuditLog(db, {
+    orgId,
+    type: "organization.team_updated",
+    actorUid: actor.uid,
+    actorName: actor.name,
+    target: target.name,
+    payload: trimmed ? { teamName: trimmed } : { teamName: "" },
   });
 }
 

@@ -40,6 +40,7 @@ function buildMembersCsv(members: OrganizationMemberRecord[]): string {
     "表示名",
     "ユーザーID",
     "ロール",
+    "チーム",
     "レベル",
     "学習時間（時間）",
     "アウトプットEXP",
@@ -52,6 +53,7 @@ function buildMembersCsv(members: OrganizationMemberRecord[]): string {
     csvCell(m.displayName),
     csvCell(m.userId),
     csvCell(m.organizationRole),
+    csvCell(m.teamName || ""),
     csvCell(m.level || 0),
     csvCell(Math.round((m.effortExp || 0) / 60)),
     csvCell(m.outputExp || 0),
@@ -92,8 +94,25 @@ export function ManagerDashboard({
 }: ManagerDashboardProps) {
   const [timePeriod, setTimePeriod] = useState<TimePeriod>("weekly");
   const [searchQuery, setSearchQuery] = useState("");
+  /* Phase 9: team filter. Empty string means "all teams"; the sentinel
+     "__unassigned__" surfaces members with no teamName set. Built from
+     the observed teamName values so the dropdown reflects whatever the
+     org owner has typed without needing a separate teams collection. */
+  const [teamFilter, setTeamFilter] = useState<string>("");
   const [digestState, setDigestState] = useState<DigestSendState>("idle");
   const [digestMessage, setDigestMessage] = useState<string>("");
+
+  /* Unique sorted set of team names found across members, excluding
+     blanks. Used to populate the team filter dropdown. Sorted by
+     locale so Japanese / English labels both land in expected order. */
+  const teamOptions = useMemo(() => {
+    const set = new Set<string>();
+    teamMembers.forEach((m) => {
+      const name = (m.teamName || "").trim();
+      if (name) set.add(name);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "ja"));
+  }, [teamMembers]);
 
   // Sanitize the org name into a filename-safe slug. Keeps Japanese
   // letters readable (most OSes accept them in filenames now) but
@@ -136,15 +155,20 @@ export function ManagerDashboard({
     }
   };
 
-  // Filter members by search query (name or userId)
+  // Filter members by search query (name or userId) and team selection.
   const filteredMembers = useMemo(() => {
     const query = searchQuery.toLowerCase();
-    return teamMembers.filter(
-      (m) =>
+    return teamMembers.filter((m) => {
+      const matchesQuery =
         m.displayName.toLowerCase().includes(query) ||
-        m.userId.toLowerCase().includes(query),
-    );
-  }, [teamMembers, searchQuery]);
+        m.userId.toLowerCase().includes(query);
+      if (!matchesQuery) return false;
+      if (!teamFilter) return true;
+      const name = (m.teamName || "").trim();
+      if (teamFilter === "__unassigned__") return name === "";
+      return name === teamFilter;
+    });
+  }, [teamMembers, searchQuery, teamFilter]);
 
   // Calculate team-wide statistics
   const teamStats = useMemo(() => {
@@ -361,6 +385,22 @@ export function ManagerDashboard({
           onChange={(e) => setSearchQuery(e.target.value)}
           aria-label="メンバー検索"
         />
+        {teamOptions.length > 0 || teamMembers.some((m) => !(m.teamName || "").trim()) ? (
+          <select
+            className="manager-team-filter"
+            value={teamFilter}
+            onChange={(e) => setTeamFilter(e.target.value)}
+            aria-label="チームで絞り込む"
+          >
+            <option value="">すべてのチーム</option>
+            {teamOptions.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+            <option value="__unassigned__">未割り当て</option>
+          </select>
+        ) : null}
       </section>
 
       {/* Members List */}
@@ -399,6 +439,9 @@ export function ManagerDashboard({
                 <div className="manager-member-info">
                   <strong className="manager-member-name">{member.displayName}</strong>
                   <small className="manager-member-id">@{member.userId}</small>
+                  {member.teamName ? (
+                    <span className="manager-member-team">{member.teamName}</span>
+                  ) : null}
                 </div>
 
                 <div className="manager-member-stats">

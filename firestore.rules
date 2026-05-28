@@ -53,6 +53,16 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/organizations/$(resource.data.organizationId)).data.ownerUid == request.auth.uid
         && request.resource.data.diff(resource.data).changedKeys().hasOnly(["organizationId", "organizationName", "organizationRole"])
         && request.resource.data.organizationId == null
+      ) || (
+        // Phase 9: org owner sets / clears the member's team label.
+        // Only the `teamName` field may change on this path — no
+        // other user-doc field can be piggy-backed, so this cannot
+        // be abused to flip roles or rewrite display names.
+        resource.data.organizationId is string
+        && get(/databases/$(database)/documents/organizations/$(resource.data.organizationId)).data.ownerUid == request.auth.uid
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(["teamName"])
+        && request.resource.data.teamName is string
+        && request.resource.data.teamName.size() <= 40
       );
       // Phase 8: self-delete is required for 個人情報保護法 / GDPR
       // data-subject deletion rights. The client is responsible for
