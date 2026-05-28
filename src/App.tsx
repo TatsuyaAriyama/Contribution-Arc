@@ -125,6 +125,18 @@ import {
   extractMentionsFromFields,
   renderTextWithMentions,
 } from "./services/dailyMentions";
+import {
+  DailyPlanChecklist,
+  PlanChecklistPreview,
+} from "./components/DailyPlanChecklist";
+import {
+  derivePlanText,
+  getCarriedOverItems,
+  normalizePlanItems,
+  type PlanItem,
+  planItemsFromLegacyText,
+  planItemsToMentionScannable,
+} from "./services/dailyPlanItems";
 import { resetAllTutorials } from "./services/tutorial";
 import { showToast } from "./services/toast";
 import { useTranslation } from "./i18n/LanguageContext";
@@ -488,6 +500,12 @@ type DailyReport = {
      reflection. Computed at save time from `@<userId>` tokens so a
      future "you were mentioned" inbox can query without re-parsing. */
   mentions?: string[];
+  /* Phase 10b: plan-as-checklist. Optional — reports written before
+     this version keep `plan: string` only, and the editor lazily lifts
+     legacy text into items on open. When present, `plan` is derived
+     from `planItems` at save time and serves as the canonical preview
+     / search field for legacy clients. */
+  planItems?: PlanItem[];
 };
 
 type KnowledgeNode = {
@@ -1651,6 +1669,7 @@ function normalizeDailyReport(data: Partial<DailyReport>, fallbackUserId: string
     mentions: Array.isArray(data.mentions)
       ? data.mentions.filter((value): value is string => typeof value === "string")
       : [],
+    planItems: normalizePlanItems(data.planItems),
   };
 }
 
@@ -3665,9 +3684,23 @@ function App() {
   const [workspacePresetMessages, setWorkspacePresetMessages] = useState(defaultWorkspacePresetMessages);
   const [openedWorkspaceGiftLevels, setOpenedWorkspaceGiftLevels] = useState<number[]>([]);
   const [posts, setPosts] = useState<ContributionPostRecord[]>([]);
-  const [postDraft, setPostDraft] = useState("");
+  // Draft is hydrated from localStorage so that switching views or closing
+  // the quick-capture modal (⌘K) never silently throws away what the user
+  // was typing. Cleared explicitly on successful submit.
+  const [postDraft, setPostDraft] = useState(() => {
+    try {
+      return window.localStorage.getItem("contribution-arc:post-draft") || "";
+    } catch {
+      return "";
+    }
+  });
   const [postError, setPostError] = useState("");
   const [isPosting, setIsPosting] = useState(false);
+  // Quick Capture modal (⌘K / Ctrl+K). The textarea ref is used to focus
+  // the field as soon as the modal opens; the open flag is also toggled
+  // by the global keydown listener.
+  const [isQuickCaptureOpen, setIsQuickCaptureOpen] = useState(false);
+  const quickCaptureTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [timelineFilter, setTimelineFilter] = useState<"following" | "all">("all");
   const [workspaceRecruitments, setWorkspaceRecruitments] = useState<WorkspaceRecruitmentRecord[]>([]);
   const [feedNowTick, setFeedNowTick] = useState(() => Date.now());
@@ -3683,7 +3716,7 @@ function App() {
   const [dailyReports, setDailyReports] = useState<DailyReport[]>([]);
   const [sharedDailyReports, setSharedDailyReports] = useState<DailyReport[]>([]);
   const [selectedDailyDate, setSelectedDailyDate] = useState(getLearnerDate());
-  const [dailyPlanDraft, setDailyPlanDraft] = useState("");
+  const [dailyPlanItemsDraft, setDailyPlanItemsDraft] = useState<PlanItem[]>([]);
   const [dailyReflectionDraft, setDailyReflectionDraft] = useState("");
   const [dailyHistoryDateFilter, setDailyHistoryDateFilter] = useState("");
   const [dailyHistorySearch, setDailyHistorySearch] = useState("");
@@ -3886,7 +3919,7 @@ function App() {
       setDailyReports([]);
       setSharedDailyReports([]);
       setSelectedDailyDate(getLearnerDate());
-      setDailyPlanDraft("");
+      setDailyPlanItemsDraft([]);
       setDailyReflectionDraft("");
       setDailyHistoryDateFilter("");
       setDailyHistorySearch("");
@@ -4712,7 +4745,20 @@ function App() {
 
   useEffect(() => {
     const nextReport = dailyReports.find((report) => report.date === selectedDailyDate);
-    setDailyPlanDraft(nextReport?.plan || "");
+    /* Phase 10b: pick the freshest plan representation.
+       Priority: explicit planItems > legacy plan text (lifted lazily)
+       > carryover from the most recent prior report (only when there
+       is no report at all for today — we don't want to clobber an
+       in-progress edit). */
+    if (nextReport?.planItems && nextReport.planItems.length > 0) {
+      setDailyPlanItemsDraft(nextReport.planItems);
+    } else if (nextReport?.plan) {
+      setDailyPlanItemsDraft(planItemsFromLegacyText(nextReport.plan));
+    } else if (!nextReport) {
+      setDailyPlanItemsDraft(getCarriedOverItems(dailyReports, selectedDailyDate));
+    } else {
+      setDailyPlanItemsDraft([]);
+    }
     setDailyReflectionDraft(nextReport?.reflection || "");
     setDailyIsDraftDraft(nextReport?.isDraft === true);
   }, [dailyReports, selectedDailyDate]);
@@ -6653,7 +6699,7 @@ function App() {
     void deletePersistentItem("dailyReports", report.id);
 
     if (selectedDailyDate === report.date) {
-      setDailyPlanDraft("");
+      setDailyPlanItemsDraft([]);
       setDailyReflectionDraft("");
       setDailyMessage("日報を削除しました。");
     }
@@ -6711,9 +6757,11 @@ function App() {
     });
     void putPersistentItem("dailyReports", report);
 
-    // Keep the daily-screen draft in sync if the user opens it next
+    // Keep the daily-screen draft in sync if the user opens it next.
+    // The home-screen prompt is plain text (single textarea), so we
+    // lift it into PlanItem rows the same way the editor would on open.
     if (selectedDailyDate === date) {
-      setDailyPlanDraft(planText);
+      setDailyPlanItemsDraft(planItemsFromLegacyText(planText));
     }
 
     try {
@@ -6741,7 +6789,16 @@ function App() {
   const handleDailyDateChange = (date: string) => {
     const nextReport = dailyReports.find((report) => report.date === date);
     setSelectedDailyDate(date);
-    setDailyPlanDraft(nextReport?.plan || "");
+    /* Same priority as the load effect — see comment above. */
+    if (nextReport?.planItems && nextReport.planItems.length > 0) {
+      setDailyPlanItemsDraft(nextReport.planItems);
+    } else if (nextReport?.plan) {
+      setDailyPlanItemsDraft(planItemsFromLegacyText(nextReport.plan));
+    } else if (!nextReport) {
+      setDailyPlanItemsDraft(getCarriedOverItems(dailyReports, date));
+    } else {
+      setDailyPlanItemsDraft([]);
+    }
     setDailyReflectionDraft(nextReport?.reflection || "");
     // Carry the saved draft flag forward so reopening an in-progress
     // draft doesn't accidentally publish it on the next save.
@@ -6759,21 +6816,52 @@ function App() {
       return;
     }
 
-    const planText = dailyPlanDraft.trim();
+    /* Phase 10b: when the writer saves the plan section, drop empty
+       rows but otherwise keep the checklist intact. Empty rows are an
+       in-editor artifact ("+ 項目を追加" left blank) — persisting them
+       would clutter the carryover list tomorrow. Trim text per row so
+       trailing whitespace doesn't sneak into search / Team Daily. */
+    const trimmedPlanItems = dailyPlanItemsDraft
+      .map((item) => ({
+        ...item,
+        text: item.text.trim(),
+        comment: item.comment?.trim() || "",
+      }))
+      .filter((item) => item.text.length > 0);
+    const planTextFromItems = derivePlanText(trimmedPlanItems);
     const reflectionText = dailyReflectionDraft.trim();
-    const sectionText = section === "plan" ? planText : reflectionText;
     const sectionLabel = section === "plan" ? "今日やること" : "振り返り";
 
-    if (!sectionText) {
+    if (section === "plan" && trimmedPlanItems.length === 0) {
+      setDailyMessage(`${sectionLabel}を入力してください。`);
+      return;
+    }
+    if (section === "reflection" && !reflectionText) {
       setDailyMessage(`${sectionLabel}を入力してください。`);
       return;
     }
 
     const now = new Date().toISOString();
     const existingReport = dailyReports.find((report) => report.date === selectedDailyDate);
-    const nextPlan = section === "plan" ? planText : existingReport?.plan || "";
+    /* Plan section save replaces both `planItems` and the derived
+       `plan` text. Reflection section save preserves whatever the
+       existing report already had — including legacy text-only plans
+       that haven't yet been edited under the new checklist editor. */
+    const nextPlanItems =
+      section === "plan" ? trimmedPlanItems : existingReport?.planItems || [];
+    const nextPlan =
+      section === "plan"
+        ? planTextFromItems
+        : existingReport?.plan || "";
     const nextReflection = section === "reflection" ? reflectionText : existingReport?.reflection || "";
     const isDraft = dailyIsDraftDraft;
+    /* Mention extraction scans the plan checklist (text + per-item
+       comments) plus the reflection body, so an `@alice` typed inside
+       an item comment still feeds the future mentions inbox. */
+    const planMentionScannable =
+      section === "plan"
+        ? planItemsToMentionScannable(nextPlanItems)
+        : nextPlan;
     const report: DailyReport = {
       id: `${currentUser.uid}_${selectedDailyDate}`,
       userId: currentUser.uid,
@@ -6788,7 +6876,8 @@ function App() {
       syncStatus: "pending",
       syncError: "",
       isDraft,
-      mentions: extractMentionsFromFields(nextPlan, nextReflection),
+      mentions: extractMentionsFromFields(planMentionScannable, nextReflection),
+      planItems: nextPlanItems,
     };
 
     setIsSavingDailyReport(true);
@@ -10747,7 +10836,12 @@ function App() {
                 </button>
               </header>
 
-              {report.plan ? (
+              {report.planItems && report.planItems.length > 0 ? (
+                <section className="daily-detail-modal-section">
+                  <h3>今日やること</h3>
+                  <PlanChecklistPreview items={report.planItems} />
+                </section>
+              ) : report.plan ? (
                 <section className="daily-detail-modal-section">
                   <h3>今日やること</h3>
                   <p>{renderTextWithMentions(report.plan, { lookup: dailyMentionLookup, keyPrefix: `plan-${report.id}` })}</p>
@@ -10761,7 +10855,7 @@ function App() {
                 </section>
               ) : null}
 
-              {!report.plan && !report.reflection ? (
+              {!report.plan && !report.reflection && !(report.planItems && report.planItems.length > 0) ? (
                 <p className="daily-detail-modal-empty">本文はまだ書かれていません。</p>
               ) : null}
 
@@ -12119,18 +12213,26 @@ function App() {
               </div>
 
               <form className="daily-entry-card" onSubmit={(event) => handleDailyReportSectionSubmit(event, "plan")}>
-                <label>
-                  <span>{t("今日やること")}</span>
-                  <DailyMentionTextarea
-                    value={dailyPlanDraft}
-                    onChange={setDailyPlanDraft}
-                    placeholder={t("今日進める業務、確認すること、優先順位など")}
-                    rows={7}
-                    disabled={!canEditSelectedDailyReport}
-                    candidates={dailyMentionCandidates}
-                    ariaLabel={t("今日やること")}
-                  />
-                </label>
+                <div className="daily-entry-label-row">
+                  <span className="daily-entry-label">{t("今日やること")}</span>
+                  <small className="daily-entry-hint">
+                    {t("1行1タスク。完了したらチェックして、必要なら一言メモを残せます。")}
+                  </small>
+                </div>
+                <DailyPlanChecklist
+                  items={dailyPlanItemsDraft}
+                  onChange={setDailyPlanItemsDraft}
+                  disabled={!canEditSelectedDailyReport}
+                  ariaLabel={t("今日やること")}
+                  labels={{
+                    addItem: t("項目を追加"),
+                    placeholderText: t("やることを1行で"),
+                    placeholderComment: t("完了メモ(任意) — 何をやったか / 何で詰まったか"),
+                    carriedFrom: t("←前日から"),
+                    remove: t("削除"),
+                    commentAriaLabel: t("完了メモ"),
+                  }}
+                />
 
                 <div className="daily-editor-actions">
                   <button type="submit" disabled={isSavingDailyReport || !canEditSelectedDailyReport}>
@@ -12138,7 +12240,7 @@ function App() {
                       ? t("保存中")
                       : dailyIsDraftDraft
                         ? t("下書きで保存")
-                        : selectedDailyReport?.plan
+                        : selectedDailyReport?.planItems?.length || selectedDailyReport?.plan
                           ? t("今日やることを更新")
                           : t("今日やることを送信")}
                   </button>
@@ -12280,7 +12382,17 @@ function App() {
                               <small>{formatDailyDate(report.date)}</small>
                             </span>
                           </div>
-                          {report.plan ? (
+                          {report.planItems && report.planItems.length > 0 ? (
+                            <p className="daily-shared-section">
+                              <strong>{t("今日やること")}</strong>
+                              <span>
+                                <PlanChecklistPreview
+                                  items={report.planItems}
+                                  maxRows={4}
+                                />
+                              </span>
+                            </p>
+                          ) : report.plan ? (
                             <p className="daily-shared-section">
                               <strong>{t("今日やること")}</strong>
                               <span>
