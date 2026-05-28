@@ -326,10 +326,16 @@ export type OrganizationRecord = {
   createdAt: string;
   // Phase 3: outbound Slack integration. Empty string / undefined =
   // no integration. The owner manages this from the admin dashboard.
+  // Phase 9 expanded the event taxonomy — older docs that only
+  // carry the original three booleans still work fine since the
+  // new fields are optional.
   slackWebhookUrl?: string;
   slackEvents?: {
     roomJoins?: boolean;
+    roomLeaves?: boolean;
+    breakStarted?: boolean;
     recruitments?: boolean;
+    posts?: boolean;
     dailyDigest?: boolean;
   };
   // Phase 7: domain auto-join. If a signed-in user's email domain
@@ -344,7 +350,10 @@ export type OrganizationSlackSettings = {
   slackWebhookUrl: string;
   slackEvents: {
     roomJoins: boolean;
+    roomLeaves: boolean;
+    breakStarted: boolean;
     recruitments: boolean;
+    posts: boolean;
     dailyDigest: boolean;
   };
 };
@@ -737,7 +746,10 @@ export async function loadOrganization(
     slackEvents: data.slackEvents
       ? {
           roomJoins: Boolean(data.slackEvents.roomJoins),
+          roomLeaves: Boolean(data.slackEvents.roomLeaves),
+          breakStarted: Boolean(data.slackEvents.breakStarted),
           recruitments: Boolean(data.slackEvents.recruitments),
+          posts: Boolean(data.slackEvents.posts),
           dailyDigest: Boolean(data.slackEvents.dailyDigest),
         }
       : undefined,
