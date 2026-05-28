@@ -11495,6 +11495,64 @@
   gap: 10px;
 }
 
+/* Phase 10d: topbar クイック記録トリガー. 静的テキストだった
+   `.topbar-today` をボタン化して常に表示. 控えめ・低彩度. */
+.topbar-quicklog {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: border-color 120ms ease-out, color 120ms ease-out,
+    background-color 120ms ease-out, transform 120ms ease-out;
+}
+
+.topbar-quicklog:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.topbar-quicklog:active {
+  transform: scale(0.98);
+}
+
+.topbar-quicklog.is-open {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.topbar-quicklog.has-progress {
+  color: var(--ink);
+}
+
+.topbar-quicklog-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: rgba(var(--ink-rgb), 0.08);
+  font-size: 13px;
+  line-height: 1;
+}
+
+.topbar-quicklog:hover .topbar-quicklog-icon {
+  background: rgba(var(--ink-rgb), 0.14);
+}
+
+.topbar-quicklog-label {
+  font-feature-settings: "tnum" 1;
+}
+
 .premium-dashboard-header .user-search-button {
   position: relative;
   min-width: 168px;
@@ -23809,4 +23867,334 @@ a[role="button"],
   .manager-bar-label {
     font-size: 11.5px;
   }
+}
+
+/* ============================================================
+   Phase 10d — グローバルクイック記録ポップオーバー
+   どの画面からでも、トップバー / mobile 中央 CTA から
+   2 タップで時間を残せるための共有 UI.
+   ============================================================ */
+
+.quicklog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(20, 30, 24, 0.32);
+  animation: quicklog-fade 140ms ease-out;
+}
+
+@keyframes quicklog-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.quicklog-popover {
+  width: 100%;
+  max-width: 420px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg);
+  box-shadow: 0 24px 64px rgba(20, 30, 24, 0.18);
+  padding: 18px 18px 14px;
+  animation: quicklog-pop 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes quicklog-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.quicklog-popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.quicklog-popover-head .card-kicker {
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  margin: 0 0 2px;
+}
+
+.quicklog-popover-head h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 760;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.quicklog-popover-close {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+
+.quicklog-popover-close:hover {
+  background: rgba(var(--ink-rgb), 0.06);
+  color: var(--ink);
+}
+
+.quicklog-popover-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.quicklog-popover-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px 8px 10px;
+  border-radius: 8px;
+  border-left: 3px solid var(--learning-card-color, var(--ink));
+  transition: background-color 120ms ease-out;
+}
+
+.quicklog-popover-row:hover {
+  background: rgba(var(--ink-rgb), 0.025);
+}
+
+.quicklog-popover-row-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.quicklog-popover-row-name i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--learning-card-color, var(--ink));
+}
+
+.quicklog-popover-row-name strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quicklog-popover-row-chips {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.quicklog-popover-chip {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: border-color 120ms ease-out, color 120ms ease-out,
+    transform 120ms ease-out;
+}
+
+.quicklog-popover-chip:hover {
+  border-color: var(--learning-card-color, var(--ink));
+  color: var(--learning-card-color, var(--ink));
+}
+
+.quicklog-popover-chip:active {
+  transform: scale(0.96);
+}
+
+.quicklog-popover-chip.is-more {
+  padding: 4px 8px;
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+.quicklog-popover-row-custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.quicklog-popover-row-custom input[type="number"] {
+  width: 64px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+
+.quicklog-popover-row-custom input[type="number"]:focus {
+  outline: none;
+  border-color: var(--learning-card-color, var(--ink));
+}
+
+.quicklog-popover-unit {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.quicklog-popover-submit {
+  padding: 4px 12px;
+  border: none;
+  border-radius: 6px;
+  background: var(--learning-card-color, var(--ink));
+  color: var(--bg);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.quicklog-popover-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.quicklog-popover-cancel {
+  padding: 2px 6px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.quicklog-popover-cancel:hover {
+  color: var(--ink);
+}
+
+.quicklog-popover-empty {
+  padding: 12px 4px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  text-align: center;
+}
+
+.quicklog-popover-empty p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.quicklog-popover-cta {
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.quicklog-popover-cta:hover {
+  border-color: var(--ink);
+}
+
+.quicklog-popover-foot {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.quicklog-popover-link {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: color 120ms ease-out, background-color 120ms ease-out;
+}
+
+.quicklog-popover-link:hover {
+  color: var(--ink);
+  background: rgba(var(--ink-rgb), 0.05);
+}
+
+/* モバイル: 中央寄せからボトムシートへ. 親指動線に置く. */
+@media (max-width: 720px) {
+  .quicklog-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .quicklog-popover {
+    max-width: none;
+    border-radius: 16px 16px 0 0;
+    padding: 16px 16px 24px;
+    animation: quicklog-slide 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @keyframes quicklog-slide {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* dark mode — popover surface. */
+[data-theme="dark"] .quicklog-popover {
+  background: var(--surface);
+  border-color: var(--line);
+  box-shadow: var(--shadow-card);
+}
+
+[data-theme="dark"] .quicklog-popover-cta,
+[data-theme="dark"] .topbar-quicklog {
+  background: var(--surface);
+  border-color: var(--line);
 }

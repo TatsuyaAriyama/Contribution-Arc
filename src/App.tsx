@@ -3454,6 +3454,13 @@ function App() {
      0 の場合は記録ボタンを無効化する. */
   const [learningQuickLogOpenId, setLearningQuickLogOpenId] = useState<string | null>(null);
   const [learningQuickLogCustomMinutes, setLearningQuickLogCustomMinutes] = useState("");
+  /* Phase 10d: グローバルなクイック記録ポップオーバー. トップバーと
+     mobile bottom nav の「+ 記録」から開かれ、どの画面からでも 1-2
+     タップで時間を残せるようにする. 同じ popover 内で各 Learning Item
+     の「他の時間…」をインライン展開できる. */
+  const [isQuickLogPopoverOpen, setIsQuickLogPopoverOpen] = useState(false);
+  const [quickLogPopoverCustomId, setQuickLogPopoverCustomId] = useState<string | null>(null);
+  const [quickLogPopoverCustomMinutes, setQuickLogPopoverCustomMinutes] = useState("");
   const [selectedStudyDay, setSelectedStudyDay] = useState(dayLabels[(new Date().getDay() + 6) % 7]);
   const [selectedArcDayKey, setSelectedArcDayKey] = useState<string | null>(null);
   const [hoveredArcCell, setHoveredArcCell] = useState<
@@ -5854,6 +5861,52 @@ function App() {
   }, [githubUsername]);
   const totalWeeklyMinutes = weeklyStudyHours.reduce((sum, item) => sum + item.totalMinutes, 0);
   const todayStudyMinutes = weeklyStudyHours.find((item) => item.isToday)?.totalMinutes ?? 0;
+  /* Phase 10d: クイック記録ポップオーバーに並べる「最近の対象」.
+     直近の studyLogs を新しい順に走査して、まだ拾っていない
+     learningItemId を集める. archived は除外、最大 5 件まで.
+     登録 0 件のときは空配列 — ポップオーバー側で「学習対象を追加」へ
+     誘導する空状態を出す. */
+  const quickLogRecentItems = useMemo(() => {
+    const activeItems = learningItems.filter((item) => !item.archived);
+    if (activeItems.length === 0) return [] as LearningItem[];
+    const byId = new Map(activeItems.map((item) => [item.id, item] as const));
+    const ordered: LearningItem[] = [];
+    const seen = new Set<string>();
+    for (let i = studyLogs.length - 1; i >= 0 && ordered.length < 5; i--) {
+      const log = studyLogs[i];
+      const id = log.learningItemId;
+      if (!id || seen.has(id)) continue;
+      const item = byId.get(id);
+      if (!item) continue;
+      ordered.push(item);
+      seen.add(id);
+    }
+    // 直近ログが少ないユーザーは、最近作った Learning Item で補完
+    // する. 全く記録していない状態でもポップオーバーから出発できる.
+    if (ordered.length < 5) {
+      const remaining = activeItems
+        .filter((item) => !seen.has(item.id))
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      for (const item of remaining) {
+        if (ordered.length >= 5) break;
+        ordered.push(item);
+        seen.add(item.id);
+      }
+    }
+    return ordered;
+  }, [studyLogs, learningItems]);
+
+  const openQuickLogPopover = useCallback(() => {
+    setQuickLogPopoverCustomId(null);
+    setQuickLogPopoverCustomMinutes("");
+    setIsQuickLogPopoverOpen(true);
+  }, []);
+
+  const closeQuickLogPopover = useCallback(() => {
+    setIsQuickLogPopoverOpen(false);
+    setQuickLogPopoverCustomId(null);
+    setQuickLogPopoverCustomMinutes("");
+  }, []);
   // Most-time-spent subject of today's logs — used as the share-image label.
   const todayTopSubject = useMemo(() => {
     const today = new Date();
@@ -10351,11 +10404,29 @@ function App() {
         </nav>
 
         <div className="topbar-context">
-          {todayStudyMinutes > 0 ? (
-            <span className="topbar-today">
-              {t("今日 {duration} 学習", { duration: formatStudyTimeJa(todayStudyMinutes) })}
+          {/* Phase 10d: トップバーから直接記録を開く. 静的テキストを
+              そのままボタン化し、左にプラスのグリフ、右に「今日 1h30m」
+              を出す. 0 分のときも「+ 記録」だけ出して、毎日の初回も
+              ひと目で記録できる位置に置く. 煽らない控えめなトーン. */}
+          <button
+            type="button"
+            className={`topbar-quicklog${todayStudyMinutes > 0 ? " has-progress" : ""}${isQuickLogPopoverOpen ? " is-open" : ""}`}
+            onClick={openQuickLogPopover}
+            aria-label={
+              todayStudyMinutes > 0
+                ? t("クイック記録 — 今日 {duration} 学習", { duration: formatStudyTimeJa(todayStudyMinutes) })
+                : t("クイック記録")
+            }
+          >
+            <span className="topbar-quicklog-icon" aria-hidden="true">
+              +
             </span>
-          ) : null}
+            <span className="topbar-quicklog-label">
+              {todayStudyMinutes > 0
+                ? t("今日 {duration}", { duration: formatStudyTimeJa(todayStudyMinutes) })
+                : t("記録")}
+            </span>
+          </button>
         </div>
 
         <div className="user-session">
@@ -14421,10 +14492,14 @@ function App() {
               ) : null}
             </span>
           </button>
+          {/* Phase 10d: 中央CTA を「学習対象タブへの遷移」から「クイック
+              記録ポップオーバーを開く」に変更. ボタンのラベルが「記録する」
+              なので、押すと記録できる、が自然な動作. 学習対象の登録/編集
+              は popover 内の「学習対象を管理 →」から辿れる. */}
           <button
             type="button"
-            className={`is-cta${currentView === "learning" ? " is-active" : ""}`}
-            onClick={() => setCurrentView("learning")}
+            className={`is-cta${isQuickLogPopoverOpen ? " is-active" : ""}`}
+            onClick={openQuickLogPopover}
             aria-label="記録する"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -14462,6 +14537,169 @@ function App() {
           can `showToast(...)` without prop-drilling. The fixed
           positioning + high z-index makes it the topmost UI surface,
           including on top of the mobile bottom nav. */}
+      {/* Phase 10d: グローバルなクイック記録ポップオーバー. トップバーと
+          mobile bottom nav から開かれる. backdrop クリック or ESC で閉じる. */}
+      {isQuickLogPopoverOpen ? (
+        <div
+          className="quicklog-backdrop"
+          role="presentation"
+          onClick={closeQuickLogPopover}
+        >
+          <div
+            className="quicklog-popover"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="quicklog-popover-title"
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                closeQuickLogPopover();
+              }
+            }}
+          >
+            <header className="quicklog-popover-head">
+              <div>
+                <p className="card-kicker">Quick Log</p>
+                <h3 id="quicklog-popover-title">{t("今すぐ記録")}</h3>
+              </div>
+              <button
+                type="button"
+                className="quicklog-popover-close"
+                onClick={closeQuickLogPopover}
+                aria-label={t("閉じる")}
+              >
+                ×
+              </button>
+            </header>
+            {quickLogRecentItems.length === 0 ? (
+              <div className="quicklog-popover-empty">
+                <p>{t("学習対象がまだありません。1つ登録すると、ここから時間を記録できます。")}</p>
+                <button
+                  type="button"
+                  className="quicklog-popover-cta"
+                  onClick={() => {
+                    closeQuickLogPopover();
+                    setCurrentView("learning");
+                  }}
+                >
+                  + {t("学習対象を追加")}
+                </button>
+              </div>
+            ) : (
+              <ul className="quicklog-popover-list">
+                {quickLogRecentItems.map((item) => {
+                  const isCustomOpen = quickLogPopoverCustomId === item.id;
+                  const customMinutes = Number(quickLogPopoverCustomMinutes);
+                  const canSubmitCustom =
+                    Number.isFinite(customMinutes) && customMinutes > 0;
+                  const submitCustom = () => {
+                    if (!canSubmitCustom) return;
+                    handleLearningQuickLog(item, customMinutes);
+                    closeQuickLogPopover();
+                  };
+                  return (
+                    <li
+                      key={item.id}
+                      className="quicklog-popover-row"
+                      style={{ "--learning-card-color": item.color } as CSSProperties}
+                    >
+                      <span className="quicklog-popover-row-name">
+                        <i aria-hidden="true" />
+                        <strong>{item.name}</strong>
+                      </span>
+                      {isCustomOpen ? (
+                        <span className="quicklog-popover-row-custom">
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            min="1"
+                            step="1"
+                            value={quickLogPopoverCustomMinutes}
+                            autoFocus
+                            onChange={(event) => setQuickLogPopoverCustomMinutes(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") {
+                                event.preventDefault();
+                                submitCustom();
+                              } else if (event.key === "Escape") {
+                                event.preventDefault();
+                                setQuickLogPopoverCustomId(null);
+                                setQuickLogPopoverCustomMinutes("");
+                              }
+                            }}
+                            placeholder="45"
+                            aria-label={t("記録する分数")}
+                          />
+                          <span className="quicklog-popover-unit">{t("分")}</span>
+                          <button
+                            type="button"
+                            className="quicklog-popover-submit"
+                            disabled={!canSubmitCustom}
+                            onClick={submitCustom}
+                          >
+                            {t("記録")}
+                          </button>
+                          <button
+                            type="button"
+                            className="quicklog-popover-cancel"
+                            onClick={() => {
+                              setQuickLogPopoverCustomId(null);
+                              setQuickLogPopoverCustomMinutes("");
+                            }}
+                            aria-label={t("戻る")}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ) : (
+                        <span className="quicklog-popover-row-chips">
+                          {[15, 30, 60].map((minutes) => (
+                            <button
+                              key={minutes}
+                              type="button"
+                              className="quicklog-popover-chip"
+                              onClick={() => {
+                                handleLearningQuickLog(item, minutes);
+                                closeQuickLogPopover();
+                              }}
+                            >
+                              +{minutes < 60 ? `${minutes}m` : `${minutes / 60}h`}
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            className="quicklog-popover-chip is-more"
+                            onClick={() => {
+                              setQuickLogPopoverCustomId(item.id);
+                              setQuickLogPopoverCustomMinutes("");
+                            }}
+                            aria-label={t("他の時間を指定して記録")}
+                          >
+                            …
+                          </button>
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            <footer className="quicklog-popover-foot">
+              <button
+                type="button"
+                className="quicklog-popover-link"
+                onClick={() => {
+                  closeQuickLogPopover();
+                  setCurrentView("learning");
+                }}
+              >
+                {t("学習対象を管理")} →
+              </button>
+            </footer>
+          </div>
+        </div>
+      ) : null}
       <ToastHost />
       <IOSInstallHint />
     </motion.main>
