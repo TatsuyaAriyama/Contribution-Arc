@@ -117,6 +117,14 @@ import { ShareToXModal } from "./components/ShareToXModal";
 import { TutorialHint } from "./components/TutorialHint";
 import { ToastHost } from "./components/ToastHost";
 import { IOSInstallHint } from "./components/IOSInstallHint";
+import {
+  DailyMentionTextarea,
+  type MentionCandidate,
+} from "./components/DailyMentionTextarea";
+import {
+  extractMentionsFromFields,
+  renderTextWithMentions,
+} from "./services/dailyMentions";
 import { resetAllTutorials } from "./services/tutorial";
 import { showToast } from "./services/toast";
 import { useTranslation } from "./i18n/LanguageContext";
@@ -471,6 +479,15 @@ type DailyReport = {
   updatedAt: string;
   syncStatus?: "synced" | "pending";
   syncError?: string;
+  /* Phase 10a: 下書きフラグ. True when the report is "saved for me only"
+     — it lives in localStorage + IndexedDB but never reaches Firestore,
+     and is hidden from the Team Daily feed. Flipping it false on a
+     subsequent save publishes the report to the cloud. */
+  isDraft?: boolean;
+  /* Phase 10a: denormalized list of userIds mentioned in plan or
+     reflection. Computed at save time from `@<userId>` tokens so a
+     future "you were mentioned" inbox can query without re-parsing. */
+  mentions?: string[];
 };
 
 type KnowledgeNode = {
@@ -1630,11 +1647,20 @@ function normalizeDailyReport(data: Partial<DailyReport>, fallbackUserId: string
     updatedAt: typeof data.updatedAt === "string" && data.updatedAt ? data.updatedAt : new Date().toISOString(),
     syncStatus: data.syncStatus === "pending" ? "pending" : "synced",
     syncError: typeof data.syncError === "string" ? data.syncError : "",
+    isDraft: data.isDraft === true,
+    mentions: Array.isArray(data.mentions)
+      ? data.mentions.filter((value): value is string => typeof value === "string")
+      : [],
   };
 }
 
 function dailyReportToCloudPayload(report: DailyReport) {
-  const { syncStatus, syncError, ...cloudReport } = report;
+  // Strip local-only sync metadata AND the draft flag. Drafts never
+  // hit Firestore — `handleDailyReportSectionSave` already skips the
+  // cloud write — but if a future code path (e.g. legacy migration)
+  // tries to upload a draft, this defense-in-depth ensures the cloud
+  // copy is always treated as published.
+  const { syncStatus, syncError, isDraft, ...cloudReport } = report;
   return cloudReport;
 }
 
@@ -3667,6 +3693,12 @@ function App() {
   const [expandedDailyReport, setExpandedDailyReport] = useState<DailyReport | null>(null);
   const [dailyMessage, setDailyMessage] = useState("");
   const [isSavingDailyReport, setIsSavingDailyReport] = useState(false);
+  /* Phase 10a: 下書きモード. When true, the next save persists locally
+     only (no Firestore write). Defaulting to false keeps the published
+     flow as the path of least resistance — drafting is an explicit
+     opt-in for in-progress notes the writer doesn't want the team to
+     see yet. Resets to the loaded report's flag on date change. */
+  const [dailyIsDraftDraft, setDailyIsDraftDraft] = useState(false);
   const [postReplies, setPostReplies] = useState<ContributionReplyRecord[]>([]);
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [replyError, setReplyError] = useState("");
@@ -4548,7 +4580,15 @@ function App() {
       persistDailyReports(currentUser.uid, userId, durableReports);
 
       durableReports
-        .filter((report) => report.userId === currentUser.uid && report.syncStatus === "pending")
+        // Skip drafts here — pending sync is only for *published*
+        // reports whose cloud write was deferred. Draft persistence is
+        // intentionally local-only.
+        .filter(
+          (report) =>
+            report.userId === currentUser.uid &&
+            report.syncStatus === "pending" &&
+            report.isDraft !== true,
+        )
         .forEach((report) => {
           void setDoc(
             doc(db, "dailyReports", report.id),
@@ -4608,17 +4648,22 @@ function App() {
           setDailyReports(durableReportsCache);
           persistDailyReports(currentUser.uid, userId, durableReportsCache);
           void Promise.all(
-            durableReportsCache.map((report) =>
-              setDoc(
-                doc(db, "dailyReports", report.id),
-                {
-                  ...dailyReportToCloudPayload(report),
-                  userId: currentUser.uid,
-                  serverUpdatedAt: serverTimestamp(),
-                },
-                { merge: true },
+            durableReportsCache
+              // Drafts stay local-only even during a first-login
+              // migration — uploading them would silently publish
+              // notes the writer marked as private.
+              .filter((report) => report.isDraft !== true)
+              .map((report) =>
+                setDoc(
+                  doc(db, "dailyReports", report.id),
+                  {
+                    ...dailyReportToCloudPayload(report),
+                    userId: currentUser.uid,
+                    serverUpdatedAt: serverTimestamp(),
+                  },
+                  { merge: true },
+                ),
               ),
-            ),
           ).catch((error) => {
             console.info("Daily report migration to cloud skipped.", error);
           });
@@ -4669,6 +4714,7 @@ function App() {
     const nextReport = dailyReports.find((report) => report.date === selectedDailyDate);
     setDailyPlanDraft(nextReport?.plan || "");
     setDailyReflectionDraft(nextReport?.reflection || "");
+    setDailyIsDraftDraft(nextReport?.isDraft === true);
   }, [dailyReports, selectedDailyDate]);
 
   useEffect(() => {
@@ -5965,9 +6011,42 @@ function App() {
   const currentLearnerDate = getLearnerDate(new Date(feedNowTick));
   const todayDailyReport = dailyReports.find((report) => report.date === currentLearnerDate) || null;
   const canEditSelectedDailyReport = canEditDailyReportDate(selectedDailyDate);
+  /* Candidate pool for @mentions inside the daily editor. We surface
+     org members first — in the B2B context they're the people you
+     actually want to call out by name. Solo users with no org get an
+     empty pool, so the popup simply never appears (typing `@foo`
+     still works as plain text). */
+  const dailyMentionCandidates: MentionCandidate[] = useMemo(
+    () =>
+      orgMembers
+        .filter((member) => member.userId && member.uid !== currentUserUid)
+        .map((member) => ({
+          userId: member.userId,
+          displayName: member.displayName || member.userId,
+          avatarUrl: member.avatarUrl || undefined,
+        })),
+    [orgMembers, currentUserUid],
+  );
+  /* userId → display name resolver for rendering inline mentions in
+     the team feed / modal. Built once per render rather than per
+     mention token so a long body with many @mentions stays cheap. */
+  const dailyMentionLookup = useMemo(() => {
+    const map = new Map<string, string>();
+    orgMembers.forEach((member) => {
+      if (member.userId) map.set(member.userId, member.displayName || member.userId);
+    });
+    if (userId) {
+      map.set(userId, playerName || userId);
+    }
+    return (id: string) => map.get(id);
+  }, [orgMembers, userId, playerName]);
   const visibleSharedDailyReports = Array.from(
     new Map([...sharedDailyReports, ...dailyReports].map((report) => [report.id, report])).values(),
   )
+    // Drafts never reach Firestore, but `dailyReports` (own cache) can
+    // hold a local-only draft for today — exclude it from the team
+    // feed so the writer's own placeholder doesn't leak in.
+    .filter((report) => report.isDraft !== true)
     .sort((a, b) => b.date.localeCompare(a.date) || new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 12);
   const normalizedDailyHistorySearch = dailyHistorySearch.trim().toLowerCase();
@@ -6664,6 +6743,9 @@ function App() {
     setSelectedDailyDate(date);
     setDailyPlanDraft(nextReport?.plan || "");
     setDailyReflectionDraft(nextReport?.reflection || "");
+    // Carry the saved draft flag forward so reopening an in-progress
+    // draft doesn't accidentally publish it on the next save.
+    setDailyIsDraftDraft(nextReport?.isDraft === true);
     setDailyMessage("");
   };
 
@@ -6689,6 +6771,9 @@ function App() {
 
     const now = new Date().toISOString();
     const existingReport = dailyReports.find((report) => report.date === selectedDailyDate);
+    const nextPlan = section === "plan" ? planText : existingReport?.plan || "";
+    const nextReflection = section === "reflection" ? reflectionText : existingReport?.reflection || "";
+    const isDraft = dailyIsDraftDraft;
     const report: DailyReport = {
       id: `${currentUser.uid}_${selectedDailyDate}`,
       userId: currentUser.uid,
@@ -6696,12 +6781,14 @@ function App() {
       characterColor: playerCharacterColor,
       currentTitle,
       date: selectedDailyDate,
-      plan: section === "plan" ? planText : existingReport?.plan || "",
-      reflection: section === "reflection" ? reflectionText : existingReport?.reflection || "",
+      plan: nextPlan,
+      reflection: nextReflection,
       createdAt: existingReport?.createdAt || now,
       updatedAt: now,
       syncStatus: "pending",
       syncError: "",
+      isDraft,
+      mentions: extractMentionsFromFields(nextPlan, nextReflection),
     };
 
     setIsSavingDailyReport(true);
@@ -6714,6 +6801,20 @@ function App() {
       return nextReports;
     });
     void putPersistentItem("dailyReports", report);
+
+    // 下書きはクラウドへ送らない. 公開時に切り替えれば、その時点の
+    // 内容がそのまま Firestore へ flush される.
+    if (isDraft) {
+      const localReport: DailyReport = { ...report, syncStatus: "synced", syncError: "" };
+      setDailyReports((reports) => {
+        const nextReports = mergeDailyReports([localReport, ...reports.filter((item) => item.id !== report.id)]);
+        persistDailyReports(currentUser.uid, userId, nextReports);
+        return nextReports;
+      });
+      setDailyMessage(`${sectionLabel}を下書き保存しました。共有はされていません。`);
+      setIsSavingDailyReport(false);
+      return;
+    }
 
     try {
       await withTimeout(
@@ -10649,14 +10750,14 @@ function App() {
               {report.plan ? (
                 <section className="daily-detail-modal-section">
                   <h3>今日やること</h3>
-                  <p>{report.plan}</p>
+                  <p>{renderTextWithMentions(report.plan, { lookup: dailyMentionLookup, keyPrefix: `plan-${report.id}` })}</p>
                 </section>
               ) : null}
 
               {report.reflection ? (
                 <section className="daily-detail-modal-section">
                   <h3>振り返り</h3>
-                  <p>{report.reflection}</p>
+                  <p>{renderTextWithMentions(report.reflection, { lookup: dailyMentionLookup, keyPrefix: `refl-${report.id}` })}</p>
                 </section>
               ) : null}
 
@@ -12002,21 +12103,44 @@ function App() {
             ) : null}
 
             <div className="daily-editor-form">
+              <div className="daily-editor-mode" role="group" aria-label={t("公開設定")}>
+                <label className="daily-mode-toggle">
+                  <input
+                    type="checkbox"
+                    checked={dailyIsDraftDraft}
+                    disabled={!canEditSelectedDailyReport}
+                    onChange={(event) => setDailyIsDraftDraft(event.target.checked)}
+                  />
+                  <span>
+                    <strong>{t("下書きにする")}</strong>
+                    <small>{t("チームの Daily フィードに流れません。自分だけの場所として書けます。")}</small>
+                  </span>
+                </label>
+              </div>
+
               <form className="daily-entry-card" onSubmit={(event) => handleDailyReportSectionSubmit(event, "plan")}>
                 <label>
                   <span>{t("今日やること")}</span>
-                  <textarea
+                  <DailyMentionTextarea
                     value={dailyPlanDraft}
-                    onChange={(event) => setDailyPlanDraft(event.target.value)}
+                    onChange={setDailyPlanDraft}
                     placeholder={t("今日進める業務、確認すること、優先順位など")}
                     rows={7}
                     disabled={!canEditSelectedDailyReport}
+                    candidates={dailyMentionCandidates}
+                    ariaLabel={t("今日やること")}
                   />
                 </label>
 
                 <div className="daily-editor-actions">
                   <button type="submit" disabled={isSavingDailyReport || !canEditSelectedDailyReport}>
-                    {isSavingDailyReport ? t("保存中") : selectedDailyReport?.plan ? t("今日やることを更新") : t("今日やることを送信")}
+                    {isSavingDailyReport
+                      ? t("保存中")
+                      : dailyIsDraftDraft
+                        ? t("下書きで保存")
+                        : selectedDailyReport?.plan
+                          ? t("今日やることを更新")
+                          : t("今日やることを送信")}
                   </button>
                 </div>
               </form>
@@ -12027,18 +12151,26 @@ function App() {
               >
                 <label>
                   <span>{t("振り返り")}</span>
-                  <textarea
+                  <DailyMentionTextarea
                     value={dailyReflectionDraft}
-                    onChange={(event) => setDailyReflectionDraft(event.target.value)}
+                    onChange={setDailyReflectionDraft}
                     placeholder={t("できたこと、詰まったこと、明日に回すことなど")}
                     rows={7}
                     disabled={!canEditSelectedDailyReport}
+                    candidates={dailyMentionCandidates}
+                    ariaLabel={t("振り返り")}
                   />
                 </label>
 
                 <div className="daily-editor-actions">
                   <button type="submit" disabled={isSavingDailyReport || !canEditSelectedDailyReport}>
-                    {isSavingDailyReport ? t("保存中") : selectedDailyReport?.reflection ? t("振り返りを更新") : t("振り返りを送信")}
+                    {isSavingDailyReport
+                      ? t("保存中")
+                      : dailyIsDraftDraft
+                        ? t("下書きで保存")
+                        : selectedDailyReport?.reflection
+                          ? t("振り返りを更新")
+                          : t("振り返りを送信")}
                   </button>
                 </div>
               </form>
@@ -12089,7 +12221,14 @@ function App() {
                     className={report.date === selectedDailyDate ? "active" : ""}
                   >
                     <button type="button" onClick={() => handleDailyDateChange(report.date)}>
-                      <strong>{formatDailyDate(report.date)}</strong>
+                      <strong>
+                        {formatDailyDate(report.date)}
+                        {report.isDraft ? (
+                          <span className="daily-history-badge" aria-label={t("下書き")}>
+                            {t("下書き")}
+                          </span>
+                        ) : null}
+                      </strong>
                       <span>{report.plan || t("今日やることは未入力")}</span>
                       <small>{report.reflection ? t("振り返り済み") : t("振り返り未入力")}</small>
                     </button>
@@ -12144,13 +12283,23 @@ function App() {
                           {report.plan ? (
                             <p className="daily-shared-section">
                               <strong>{t("今日やること")}</strong>
-                              <span>{report.plan}</span>
+                              <span>
+                                {renderTextWithMentions(report.plan, {
+                                  lookup: dailyMentionLookup,
+                                  keyPrefix: `feed-plan-${report.id}`,
+                                })}
+                              </span>
                             </p>
                           ) : null}
                           {report.reflection ? (
                             <p className="daily-shared-section">
                               <strong>{t("振り返り")}</strong>
-                              <span>{report.reflection}</span>
+                              <span>
+                                {renderTextWithMentions(report.reflection, {
+                                  lookup: dailyMentionLookup,
+                                  keyPrefix: `feed-refl-${report.id}`,
+                                })}
+                              </span>
                             </p>
                           ) : null}
                         </button>
