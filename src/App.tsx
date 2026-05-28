@@ -12689,6 +12689,7 @@ function App() {
           animate={{ opacity: 1, y: 0 }}
           transition={SPRING_SNAPPY}
         >
+          {contributionArcCardSection}
           {currentUser ? (
             <TutorialHint
               uid={currentUser.uid}
@@ -12703,7 +12704,6 @@ function App() {
               ]}
             />
           ) : null}
-      {contributionArcCardSection}
 
           <section className="today-strip" aria-label="今日の足場">
             <div className="today-strip-stat">
