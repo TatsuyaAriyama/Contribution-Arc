@@ -133,6 +133,50 @@ export function ManagerDashboard({
     };
   }, [teamMembers]);
 
+  /* Effort distribution chart data — sort members by total learning
+     hours descending and compute each bar's width as a fraction of
+     the team's top performer. Capped at 10 rows so a large team
+     doesn't blow out the dashboard; remainder is shown as a count. */
+  const effortDistribution = useMemo(() => {
+    const sorted = [...teamMembers]
+      .sort((a, b) => (b.effortExp || 0) - (a.effortExp || 0));
+    const top = sorted.slice(0, 10);
+    const max = top[0]?.effortExp || 0;
+    const remainderCount = Math.max(0, sorted.length - top.length);
+    return {
+      top: top.map((m) => ({
+        uid: m.uid,
+        displayName: m.displayName,
+        hours: Math.round((m.effortExp || 0) / 60),
+        // Floor at a tiny visible value when the member has zero so
+        // their bar is still discoverable; null when truly empty so
+        // we can skip rendering.
+        ratio: max > 0 ? Math.max((m.effortExp || 0) / max, 0.02) : 0,
+      })),
+      remainderCount,
+    };
+  }, [teamMembers]);
+
+  /* Level distribution — bucket members into wide level ranges so the
+     manager sees at a glance whether the team is mostly fresh or
+     experienced. Buckets chosen to keep things meaningful at small
+     team sizes (a 5-person team should still show variation). */
+  const levelDistribution = useMemo(() => {
+    const buckets = [
+      { label: "Lv 1–5", min: 1, max: 5, count: 0 },
+      { label: "Lv 6–10", min: 6, max: 10, count: 0 },
+      { label: "Lv 11–20", min: 11, max: 20, count: 0 },
+      { label: "Lv 21+", min: 21, max: Infinity, count: 0 },
+    ];
+    teamMembers.forEach((m) => {
+      const lv = Math.max(1, m.level || 1);
+      const bucket = buckets.find((b) => lv >= b.min && lv <= b.max);
+      if (bucket) bucket.count += 1;
+    });
+    const max = Math.max(1, ...buckets.map((b) => b.count));
+    return buckets.map((b) => ({ ...b, ratio: b.count / max }));
+  }, [teamMembers]);
+
   return (
     <div className="manager-dashboard">
       <section className="manager-header">
@@ -178,6 +222,61 @@ export function ManagerDashboard({
           </strong>
         </article>
       </section>
+
+      {/* Distribution charts — only render when there's enough data to
+          make a visual comparison meaningful. */}
+      {teamMembers.length > 0 ? (
+        <section className="manager-charts">
+          <article className="manager-chart-card">
+            <header className="manager-chart-head">
+              <h3 className="manager-chart-title">メンバー別 学習時間</h3>
+              <p className="manager-chart-sublabel">累計（時間）</p>
+            </header>
+            <ul className="manager-bar-list">
+              {effortDistribution.top.map((row) => (
+                <li key={row.uid} className="manager-bar-row">
+                  <span className="manager-bar-label" title={row.displayName}>
+                    {row.displayName}
+                  </span>
+                  <span className="manager-bar-track" aria-hidden="true">
+                    <span
+                      className="manager-bar-fill"
+                      style={{ width: `${row.ratio * 100}%` }}
+                    />
+                  </span>
+                  <span className="manager-bar-value">{row.hours}h</span>
+                </li>
+              ))}
+            </ul>
+            {effortDistribution.remainderCount > 0 ? (
+              <p className="manager-chart-foot">
+                他 {effortDistribution.remainderCount} 名
+              </p>
+            ) : null}
+          </article>
+
+          <article className="manager-chart-card">
+            <header className="manager-chart-head">
+              <h3 className="manager-chart-title">レベル分布</h3>
+              <p className="manager-chart-sublabel">人数</p>
+            </header>
+            <ul className="manager-bar-list">
+              {levelDistribution.map((bucket) => (
+                <li key={bucket.label} className="manager-bar-row">
+                  <span className="manager-bar-label">{bucket.label}</span>
+                  <span className="manager-bar-track" aria-hidden="true">
+                    <span
+                      className="manager-bar-fill is-subtle"
+                      style={{ width: `${bucket.ratio * 100}%` }}
+                    />
+                  </span>
+                  <span className="manager-bar-value">{bucket.count}</span>
+                </li>
+              ))}
+            </ul>
+          </article>
+        </section>
+      ) : null}
 
       {/* Controls */}
       <section className="manager-controls">
