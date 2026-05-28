@@ -12138,7 +12138,7 @@ function App() {
           <header className="learning-header">
             <div>
               <p className="card-kicker">Learning Items</p>
-              <h2>📚 {t("記録する")}</h2>
+              <h2>{t("記録する")}</h2>
               <small>{t("学習対象を登録しておくと、ログ入力時にブレずに集計できる。")}</small>
             </div>
             <button type="button" className="learning-add-button" onClick={() => openLearningEditorForCreate("")}>
