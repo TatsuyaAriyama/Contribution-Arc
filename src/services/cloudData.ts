@@ -332,6 +332,12 @@ export type OrganizationRecord = {
     recruitments?: boolean;
     dailyDigest?: boolean;
   };
+  // Phase 7: domain auto-join. If a signed-in user's email domain
+  // appears in this list and they don't already belong to any org,
+  // the home dashboard surfaces a one-tap join CTA. Stored as an
+  // array so a single org can cover multiple domains (acme.com +
+  // acme.jp etc.).
+  autoJoinDomains?: string[];
 };
 
 export type OrganizationSlackSettings = {
@@ -587,6 +593,128 @@ export async function createOrganization(
   return record;
 }
 
+/* Update the auto-join domains for an org. Owner-only at the rule
+   level. Empty array clears the policy. Domain strings are stored
+   lowercased + trimmed; validation happens in the caller. */
+export async function updateOrganizationDomains(
+  db: Firestore,
+  orgId: string,
+  domains: string[],
+  actor: { uid: string; name: string } | null = null,
+) {
+  const normalised = Array.from(
+    new Set(
+      domains
+        .map((value) => value.trim().toLowerCase())
+        .filter((value) => /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/.test(value)),
+    ),
+  );
+  await setDoc(
+    doc(db, "organizations", orgId),
+    {
+      autoJoinDomains: normalised,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+  if (actor) {
+    await recordAuditLog(db, {
+      orgId,
+      type: "organization.slack_updated",
+      // Re-use the slack_updated event type for now — the audit log
+      // surface treats both as "settings changed". A dedicated
+      // domain_updated event can be added later if procurement asks.
+      actorUid: actor.uid,
+      actorName: actor.name,
+      target: normalised.length > 0 ? `ドメイン: ${normalised.join(", ")}` : "ドメイン自動参加を解除",
+    });
+  }
+}
+
+/* Find orgs that have opted into auto-join for a given email domain.
+   The caller already has the email; we only pass the domain part so
+   the personal-data surface stays small. Capped at a small number
+   client-side because realistic apps with a real domain match should
+   surface 1-2 orgs at most; >5 implies misconfiguration. */
+export async function findOrganizationsByEmailDomain(
+  db: Firestore,
+  domain: string,
+): Promise<OrganizationRecord[]> {
+  const trimmed = domain.trim().toLowerCase();
+  if (!trimmed) return [];
+  const snapshot = await getDocs(
+    query(collection(db, "organizations"), where("autoJoinDomains", "array-contains", trimmed)),
+  );
+  return snapshot.docs
+    .map((item) => {
+      const data = item.data() as Partial<OrganizationRecord>;
+      if (!data.name || !data.ownerUid) return null;
+      return {
+        id: data.id || item.id,
+        name: data.name,
+        ownerUid: data.ownerUid,
+        createdAt: data.createdAt || new Date().toISOString(),
+      } satisfies OrganizationRecord;
+    })
+    .filter((value): value is OrganizationRecord => value !== null)
+    .slice(0, 5);
+}
+
+/* Join an org via domain auto-discovery. Different shape from the
+   invite-link flow: there's no token to consume, just the org id and
+   the joining user's uid. Auth is via the user-doc rule (only the
+   user can update their own organizationId) plus a sanity check
+   inside the transaction that the org actually carries the user's
+   email domain in its autoJoinDomains list. */
+export async function joinOrganizationByDomain(
+  db: Firestore,
+  orgId: string,
+  uid: string,
+  emailDomain: string,
+  actorName: string,
+): Promise<OrganizationRecord> {
+  const domain = emailDomain.trim().toLowerCase();
+  if (!domain) throw new Error("DOMAIN_REQUIRED");
+
+  const result = await runTransaction(db, async (transaction) => {
+    const orgRef = doc(db, "organizations", orgId);
+    const orgSnap = await transaction.get(orgRef);
+    if (!orgSnap.exists()) {
+      throw new Error("ORG_NOT_FOUND");
+    }
+    const orgData = orgSnap.data() as Partial<OrganizationRecord>;
+    const allowed = Array.isArray(orgData.autoJoinDomains) ? orgData.autoJoinDomains : [];
+    if (!allowed.includes(domain)) {
+      throw new Error("DOMAIN_NOT_ALLOWED");
+    }
+    transaction.set(
+      doc(db, "users", uid),
+      {
+        organizationId: orgId,
+        organizationName: orgData.name || "",
+        organizationRole: "member",
+      },
+      { merge: true },
+    );
+    return {
+      id: orgData.id || orgId,
+      name: orgData.name || "",
+      ownerUid: orgData.ownerUid || "",
+      createdAt: orgData.createdAt || new Date().toISOString(),
+    } satisfies OrganizationRecord;
+  });
+
+  await recordAuditLog(db, {
+    orgId: result.id,
+    type: "organization.member_joined",
+    actorUid: uid,
+    actorName,
+    target: `${result.name}（ドメイン自動参加）`,
+  });
+
+  return result;
+}
+
 export async function loadOrganization(
   db: Firestore,
   orgId: string,
@@ -607,6 +735,9 @@ export async function loadOrganization(
           recruitments: Boolean(data.slackEvents.recruitments),
           dailyDigest: Boolean(data.slackEvents.dailyDigest),
         }
+      : undefined,
+    autoJoinDomains: Array.isArray(data.autoJoinDomains)
+      ? (data.autoJoinDomains.filter((value) => typeof value === "string") as string[])
       : undefined,
   };
 }
