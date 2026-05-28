@@ -22101,3 +22101,407 @@ a[role="button"],
   min-width: 96px;
 }
 
+/* =================================================================
+   Contribution Arc for Teams — B2B landing page (Phase 4).
+
+   Reachable at ?view=teams. The page exists to make the B2B feature
+   set discoverable from outside the existing user base: a prospect
+   can be sent a single link, see the pitch, see screenshots-by-words
+   (since we don't ship marketing images yet), see pricing, and find
+   the CTA without ever having signed in.
+
+   Visual register matches the rest of the app (soft surfaces, green
+   accent) but with marketing-style typography — bigger hero, longer
+   measure on the copy, generous vertical rhythm.
+   ================================================================= */
+.teams-screen {
+  display: grid;
+  gap: 56px;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+
+.teams-hero {
+  display: grid;
+  gap: 22px;
+  padding: 56px 0 32px;
+  text-align: center;
+}
+
+.teams-hero h1 {
+  margin: 0;
+  color: var(--ink-strong);
+  font-size: clamp(34px, 5vw, 56px);
+  font-weight: 900;
+  line-height: 1.16;
+  letter-spacing: -0.01em;
+}
+
+.teams-hero-lede {
+  margin: 0 auto;
+  max-width: 600px;
+  color: var(--muted);
+  font-size: clamp(15px, 1.7vw, 18px);
+  font-weight: 500;
+  line-height: 1.65;
+}
+
+.teams-hero-cta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin: 8px auto 0;
+}
+
+.teams-cta-primary {
+  min-height: 52px;
+  padding: 0 28px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 900;
+  box-shadow:
+    0 18px 40px rgba(var(--ink-rgb), 0.12),
+    0 0 0 1px rgba(var(--ink-rgb), 0.08);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.teams-cta-primary:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 24px 50px rgba(var(--ink-rgb), 0.16),
+    0 0 0 1px rgba(var(--ink-rgb), 0.12);
+}
+
+.teams-cta-secondary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 52px;
+  padding: 0 22px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.teams-cta-secondary:hover {
+  background: var(--bg);
+  border-color: rgba(var(--ink-rgb), 0.24);
+}
+
+.teams-values {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+}
+
+.teams-values article {
+  display: grid;
+  gap: 10px;
+  padding: 28px 24px;
+  border: 1px solid var(--line-strong);
+  border-radius: 22px;
+  background: var(--surface-warm);
+}
+
+.teams-value-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: rgba(31, 111, 74, 0.1);
+  font-size: 22px;
+}
+
+.teams-values h3 {
+  margin: 4px 0 0;
+  color: var(--ink-strong);
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.teams-values p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.teams-privacy {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 32px;
+  padding: 36px;
+  border: 1px solid var(--line-strong);
+  border-radius: 28px;
+  background:
+    radial-gradient(80% 80% at 0% 0%, rgba(31, 111, 74, 0.06), transparent 60%),
+    var(--surface);
+}
+
+.teams-privacy h2 {
+  margin: 6px 0 12px;
+  color: var(--ink-strong);
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.teams-privacy > div p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14.5px;
+  line-height: 1.75;
+}
+
+.teams-privacy ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+  align-content: center;
+}
+
+.teams-privacy li {
+  position: relative;
+  padding: 0 0 0 24px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.teams-privacy li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  top: 1px;
+  color: var(--green);
+  font-weight: 900;
+}
+
+.teams-pricing > header {
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.teams-pricing h2 {
+  margin: 0;
+  color: var(--ink-strong);
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.teams-pricing > header p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.teams-pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.teams-plan {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  padding: 28px 22px;
+  border: 1px solid var(--line-strong);
+  border-radius: 22px;
+  background: var(--surface);
+}
+
+.teams-plan.is-featured {
+  border-color: rgba(31, 111, 74, 0.4);
+  box-shadow:
+    0 26px 60px rgba(31, 111, 74, 0.12),
+    0 0 0 4px rgba(31, 111, 74, 0.06);
+}
+
+.teams-plan-badge {
+  position: absolute;
+  top: -12px;
+  right: 18px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--green);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.teams-plan h3 {
+  margin: 0;
+  color: var(--ink-strong);
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.teams-plan-price {
+  margin: 0;
+  color: var(--ink-strong);
+  font-size: 32px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.teams-plan-price small {
+  display: inline-block;
+  margin-left: 4px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.teams-plan-tagline {
+  margin: -6px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.teams-plan ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.teams-plan li {
+  position: relative;
+  padding: 0 0 0 20px;
+  color: var(--ink);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.teams-plan li::before {
+  content: "•";
+  position: absolute;
+  left: 4px;
+  color: var(--green);
+  font-weight: 900;
+}
+
+.teams-pricing-note {
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.teams-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 0 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.teams-foot p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+
+.teams-foot a {
+  color: var(--green);
+  font-weight: 800;
+}
+
+@media (max-width: 720px) {
+  .teams-screen {
+    gap: 36px;
+    padding: 20px 16px 56px;
+  }
+  .teams-hero {
+    padding: 24px 0 16px;
+  }
+  .teams-privacy {
+    grid-template-columns: 1fr;
+    padding: 24px;
+  }
+}
+
+/* Home discovery ribbon for the Teams view — a single-row CTA strip
+   shown at the top of the home dashboard for users not yet in an
+   org. Clear, unobtrusive, doesn't compete with the main content. */
+.home-teams-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: 18px;
+  background:
+    radial-gradient(120% 80% at 0% 0%, rgba(31, 111, 74, 0.08), transparent 60%),
+    var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.home-teams-ribbon:hover {
+  transform: translateY(-1px);
+  border-color: rgba(31, 111, 74, 0.4);
+  box-shadow: 0 18px 40px rgba(var(--ink-rgb), 0.06);
+}
+
+.home-teams-ribbon-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(31, 111, 74, 0.1);
+  font-size: 20px;
+}
+
+.home-teams-ribbon-copy {
+  display: grid;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.home-teams-ribbon-copy strong {
+  color: var(--ink-strong);
+  font-size: 14.5px;
+  font-weight: 900;
+}
+
+.home-teams-ribbon-copy small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.home-teams-ribbon-arrow {
+  flex: 0 0 auto;
+  color: var(--green);
+  font-size: 18px;
+  font-weight: 900;
+}
+
