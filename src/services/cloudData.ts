@@ -343,10 +343,107 @@ export type OrganizationSlackSettings = {
   };
 };
 
+/* Audit log entry — Phase 5. One row per org-impacting event so an
+   admin can answer 'who did what, when' for compliance reviews
+   (security audits, contract renewals, internal HR investigations).
+   Stored flat in /auditLogs and filtered by orgId because flat
+   collections are easier to administer than per-org subcollections
+   when we eventually add retention / export jobs. */
+export type AuditLogEventType =
+  | "organization.created"
+  | "organization.member_joined"
+  | "organization.member_left"
+  | "organization.slack_updated"
+  | "room.created";
+
+export type AuditLogRecord = {
+  id: string;
+  orgId: string;
+  type: AuditLogEventType;
+  actorUid: string;
+  actorName: string;
+  /* Human-readable description of *what* was acted on — room name,
+     org name, joining member name, etc. Free-form so the row reads
+     well in the dashboard without admins having to interpret IDs. */
+  target: string;
+  /* Optional small payload for richer rendering / future filtering
+     (e.g. the room visibility, the slack toggle values). Kept JSON-
+     friendly; never put credentials or personal logs here. */
+  payload?: Record<string, string | number | boolean>;
+  createdAt: string;
+};
+
+export async function recordAuditLog(
+  db: Firestore,
+  entry: Omit<AuditLogRecord, "id" | "createdAt"> & { id?: string; createdAt?: string },
+): Promise<void> {
+  const id = entry.id || crypto.randomUUID();
+  const createdAt = entry.createdAt || new Date().toISOString();
+  const record: AuditLogRecord = {
+    id,
+    orgId: entry.orgId,
+    type: entry.type,
+    actorUid: entry.actorUid,
+    actorName: entry.actorName,
+    target: entry.target,
+    payload: entry.payload,
+    createdAt,
+  };
+  try {
+    await setDoc(doc(db, "auditLogs", id), {
+      ...record,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    // Audit-log failures must never break the underlying user
+    // action. Log at info level so observability has the trail
+    // even if the write was rejected by rules / offline / quota.
+    console.info("audit log write skipped", entry.type, error);
+  }
+}
+
+export async function listAuditLogs(
+  db: Firestore,
+  orgId: string,
+  limitTo = 100,
+): Promise<AuditLogRecord[]> {
+  // Single equality + client-side sort. Sorting via orderBy would
+  // require a composite index; for the dashboard's expected log
+  // depth (≤100 entries), the client-side sort is fine.
+  const snapshot = await getDocs(query(collection(db, "auditLogs"), where("orgId", "==", orgId)));
+  const all = snapshot.docs.map((item) => {
+    const data = item.data() as Record<string, unknown>;
+    const type =
+      data.type === "organization.created" ||
+      data.type === "organization.member_joined" ||
+      data.type === "organization.member_left" ||
+      data.type === "organization.slack_updated" ||
+      data.type === "room.created"
+        ? (data.type as AuditLogEventType)
+        : ("organization.created" as AuditLogEventType);
+    return {
+      id: typeof data.id === "string" ? data.id : item.id,
+      orgId: typeof data.orgId === "string" ? data.orgId : orgId,
+      type,
+      actorUid: typeof data.actorUid === "string" ? data.actorUid : "",
+      actorName: typeof data.actorName === "string" ? data.actorName : "Developer",
+      target: typeof data.target === "string" ? data.target : "",
+      payload: typeof data.payload === "object" && data.payload !== null
+        ? (data.payload as Record<string, string | number | boolean>)
+        : undefined,
+      createdAt: typeof data.createdAt === "string" ? data.createdAt : new Date().toISOString(),
+    } satisfies AuditLogRecord;
+  });
+  return all
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, limitTo);
+}
+
 export async function updateOrganizationSlack(
   db: Firestore,
   orgId: string,
   settings: OrganizationSlackSettings,
+  actor: { uid: string; name: string } | null = null,
 ) {
   await setDoc(
     doc(db, "organizations", orgId),
@@ -357,6 +454,21 @@ export async function updateOrganizationSlack(
     },
     { merge: true },
   );
+  if (actor) {
+    await recordAuditLog(db, {
+      orgId,
+      type: "organization.slack_updated",
+      actorUid: actor.uid,
+      actorName: actor.name,
+      target: settings.slackWebhookUrl ? "Slack 連携を更新" : "Slack 連携を解除",
+      payload: {
+        roomJoins: settings.slackEvents.roomJoins,
+        recruitments: settings.slackEvents.recruitments,
+        dailyDigest: settings.slackEvents.dailyDigest,
+        hasWebhook: Boolean(settings.slackWebhookUrl),
+      },
+    });
+  }
 }
 
 export type OrganizationInviteRecord = {
@@ -372,6 +484,7 @@ export type OrganizationInviteRecord = {
 export async function createOrganization(
   db: Firestore,
   ownerUid: string,
+  ownerName: string,
   name: string,
 ): Promise<OrganizationRecord> {
   const id = crypto.randomUUID();
@@ -383,11 +496,13 @@ export async function createOrganization(
     createdAt,
   };
 
-  // Two writes are kept separate (not in a transaction) so the rule
-  // checks don't have to bridge collections — the org write proves
-  // ownerUid == self, the user write proves the orgId is the one we
-  // just created. If the second write fails the user can retry
-  // joining via the org id; the org doc itself is durable.
+  // Three writes, kept separate (not in a transaction) so the rule
+  // checks don't have to bridge collections. Order matters:
+  //   1. org doc       — rule wants ownerUid == self
+  //   2. user doc      — sets organizationId so step 3's audit
+  //                       rule can verify membership
+  //   3. audit log     — relies on users/{uid}.organizationId
+  //                       matching the entry's orgId
   await setDoc(doc(db, "organizations", id), {
     ...record,
     updatedAt: serverTimestamp(),
@@ -401,6 +516,13 @@ export async function createOrganization(
     },
     { merge: true },
   );
+  await recordAuditLog(db, {
+    orgId: id,
+    type: "organization.created",
+    actorUid: ownerUid,
+    actorName: ownerName,
+    target: record.name,
+  });
 
   return record;
 }
@@ -429,11 +551,29 @@ export async function loadOrganization(
   };
 }
 
-export async function leaveOrganization(db: Firestore, uid: string) {
+export async function leaveOrganization(
+  db: Firestore,
+  uid: string,
+  actor: { name: string; orgId: string; orgName: string } | null = null,
+) {
   // Owners can't simply walk away — they'd orphan the org. Caller is
   // responsible for blocking the action; this function just clears
   // the user-side fields. (Future: a Cloud Function will transfer
   // ownership when an owner leaves; for now we forbid in the UI.)
+  //
+  // The audit log entry is written BEFORE the user doc clear so the
+  // membership check in the auditLogs rule still passes — once the
+  // organizationId is null the user could no longer record their own
+  // departure.
+  if (actor) {
+    await recordAuditLog(db, {
+      orgId: actor.orgId,
+      type: "organization.member_left",
+      actorUid: uid,
+      actorName: actor.name,
+      target: actor.orgName,
+    });
+  }
   await setDoc(
     doc(db, "users", uid),
     {
@@ -521,11 +661,14 @@ export async function acceptOrganizationInvite(
   db: Firestore,
   token: string,
   uid: string,
+  actorName: string = "Developer",
 ): Promise<OrganizationRecord> {
   // Transaction: read invite + org, validate, append uid to usedBy,
   // update user's organizationId. Keeps the maxUses cap honest under
-  // concurrent claims.
-  return runTransaction(db, async (transaction) => {
+  // concurrent claims. The audit log write happens *after* the
+  // transaction succeeds so the auditLogs rule's get(users/{uid})
+  // check finds the freshly-set organizationId.
+  const result = await runTransaction(db, async (transaction) => {
     const inviteRef = doc(db, "organizationInvites", token);
     const inviteSnap = await transaction.get(inviteRef);
     if (!inviteSnap.exists()) {
@@ -568,4 +711,14 @@ export async function acceptOrganizationInvite(
       createdAt: orgData.createdAt || new Date().toISOString(),
     };
   });
+
+  await recordAuditLog(db, {
+    orgId: result.id,
+    type: "organization.member_joined",
+    actorUid: uid,
+    actorName: actorName,
+    target: result.name,
+  });
+
+  return result;
 }

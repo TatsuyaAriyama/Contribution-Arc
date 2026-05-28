@@ -52,15 +52,18 @@ import {
   createOrganizationInvite,
   deleteStudyLogFromCloud,
   leaveOrganization,
+  listAuditLogs,
   listOrganizationMembers,
   loadOrganization,
   migrateStudyLogsToCloud,
+  recordAuditLog,
   saveGithubActivitySummary,
   saveStudyLogToCloud,
   saveUserProgressToCloud,
   saveWorkspaceSessionToCloud,
   subscribeStudyLogsFromCloud,
   updateOrganizationSlack,
+  type AuditLogRecord,
   type OrganizationMemberRecord,
 } from "./services/cloudData";
 import { isValidSlackWebhookUrl, postToSlackWebhook } from "./services/slack";
@@ -3563,6 +3566,12 @@ function App() {
   const [slackDraftDailyDigest, setSlackDraftDailyDigest] = useState<boolean>(false);
   const [slackSaveState, setSlackSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [slackSaveMessage, setSlackSaveMessage] = useState<string>("");
+  // Audit log state — Phase 5. Tab switcher between members and
+  // audit, plus a separate loading flag so the two queries can fire
+  // independently.
+  const [orgAdminTab, setOrgAdminTab] = useState<"members" | "audit">("members");
+  const [orgAuditLogs, setOrgAuditLogs] = useState<AuditLogRecord[]>([]);
+  const [isLoadingAuditLogs, setIsLoadingAuditLogs] = useState<boolean>(false);
   // Records the token we've already attempted to auto-claim so a
   // re-render after the successful accept doesn't fire the call a
   // second time.
@@ -3711,7 +3720,7 @@ function App() {
     if (autoJoinAttemptedRef.current === orgInviteToken) return;
     autoJoinAttemptedRef.current = orgInviteToken;
     const token = orgInviteToken;
-    void acceptOrganizationInvite(db, token, currentUser.uid)
+    void acceptOrganizationInvite(db, token, currentUser.uid, playerName || currentUser.displayName || "Developer")
       .then((org) => {
         setCurrentOrganization(org);
         setOrgInviteToken("");
@@ -8048,7 +8057,7 @@ function App() {
     setIsOrgWorking(true);
     setOrgError("");
     try {
-      const org = await createOrganization(db, currentUser.uid, name);
+      const org = await createOrganization(db, currentUser.uid, playerName, name);
       setCurrentOrganization(org);
       setNewOrgName("");
       showToast(`組織「${org.name}」を作成しました`, { kind: "success" });
@@ -8103,7 +8112,11 @@ function App() {
     setIsOrgWorking(true);
     setOrgError("");
     try {
-      await leaveOrganization(db, currentUser.uid);
+      await leaveOrganization(db, currentUser.uid, {
+        name: playerName,
+        orgId: currentOrganization.id,
+        orgName: currentOrganization.name,
+      });
       setCurrentOrganization(null);
       showToast("組織から退出しました", { kind: "success" });
     } catch (error) {
@@ -8123,6 +8136,8 @@ function App() {
     setIsOrgAdminOpen(true);
     setIsSettingsOpen(false);
     setOrgAdminError("");
+    setOrgAdminTab("members");
+    setOrgAuditLogs([]);
     // Seed Slack editor state from the current org snapshot so the
     // form reflects what's actually persisted, not stale values from
     // a previous open.
@@ -8144,6 +8159,31 @@ function App() {
     }
   };
 
+  /* Audit log fetch — lazy. Only fires when the admin clicks the
+     監査ログ tab, so opening the modal doesn't pay for two queries
+     up front. listAuditLogs sorts client-side; cap of 100 keeps it
+     bounded for the dashboard view. */
+  const handleLoadAuditLogs = async () => {
+    if (!currentOrganization) return;
+    setIsLoadingAuditLogs(true);
+    setOrgAdminError("");
+    try {
+      const logs = await listAuditLogs(db, currentOrganization.id, 100);
+      setOrgAuditLogs(logs);
+    } catch (error) {
+      console.warn("List audit logs failed", error);
+      setOrgAdminError("監査ログを読み込めませんでした。");
+    } finally {
+      setIsLoadingAuditLogs(false);
+    }
+  };
+  // Touch recordAuditLog so the TypeScript "unused import" check
+  // is happy even though the call sites use it via dynamic dispatch
+  // from the helpers above. (recordAuditLog IS used at the room
+  // create site below; this comment is just to document why the
+  // import lives at the top of the file alongside listAuditLogs.)
+  void recordAuditLog;
+
   /* Persist the Slack webhook + per-event toggles. The save merges
      onto the existing org doc; once it succeeds we also refresh the
      local currentOrganization mirror so downstream event hooks (room
@@ -8160,14 +8200,19 @@ function App() {
     setSlackSaveState("saving");
     setSlackSaveMessage("");
     try {
-      await updateOrganizationSlack(db, currentOrganization.id, {
-        slackWebhookUrl: trimmedUrl,
-        slackEvents: {
-          roomJoins: slackDraftRoomJoins,
-          recruitments: slackDraftRecruitments,
-          dailyDigest: slackDraftDailyDigest,
+      await updateOrganizationSlack(
+        db,
+        currentOrganization.id,
+        {
+          slackWebhookUrl: trimmedUrl,
+          slackEvents: {
+            roomJoins: slackDraftRoomJoins,
+            recruitments: slackDraftRecruitments,
+            dailyDigest: slackDraftDailyDigest,
+          },
         },
-      });
+        currentUser ? { uid: currentUser.uid, name: playerName } : null,
+      );
       setCurrentOrganization((prev) =>
         prev
           ? {
@@ -8370,6 +8415,20 @@ function App() {
       .catch((error) => {
         console.info("Workspace room create cloud sync skipped.", error);
       });
+
+    // Audit-log org-scoped room creations. We deliberately skip the
+    // log for public rooms — they aren't org-affecting events and
+    // would bloat the org log with personal experiments.
+    if (currentOrganization && resolvedVisibility === "org") {
+      void recordAuditLog(db, {
+        orgId: currentOrganization.id,
+        type: "room.created",
+        actorUid: currentUser.uid,
+        actorName: playerName,
+        target: room.name,
+        payload: { visibility: "org" },
+      });
+    }
     setSelectedRoomId(room.id);
     setProfileMember(null);
     setProfileUser(null);
@@ -10528,6 +10587,34 @@ function App() {
               );
             })()}
 
+            <div className="org-admin-tabs" role="tablist" aria-label="ビュー切替">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={orgAdminTab === "members"}
+                className={orgAdminTab === "members" ? "is-active" : ""}
+                onClick={() => setOrgAdminTab("members")}
+              >
+                メンバー
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={orgAdminTab === "audit"}
+                className={orgAdminTab === "audit" ? "is-active" : ""}
+                onClick={() => {
+                  setOrgAdminTab("audit");
+                  if (orgAuditLogs.length === 0 && !isLoadingAuditLogs) {
+                    void handleLoadAuditLogs();
+                  }
+                }}
+              >
+                監査ログ
+              </button>
+            </div>
+
+            {orgAdminTab === "members" ? (
+            <>
             <div className="org-admin-toolbar">
               <button
                 type="button"
@@ -10622,6 +10709,80 @@ function App() {
                 </tbody>
               </table>
             </div>
+            </>
+            ) : (
+              <div className="org-admin-audit">
+                <div className="org-admin-toolbar">
+                  <button
+                    type="button"
+                    className="org-admin-secondary"
+                    onClick={handleLoadAuditLogs}
+                    disabled={isLoadingAuditLogs}
+                  >
+                    {isLoadingAuditLogs ? "更新中…" : "再読み込み"}
+                  </button>
+                </div>
+                <div className="org-admin-table-scroll">
+                  <table className="org-admin-table">
+                    <thead>
+                      <tr>
+                        <th>日時</th>
+                        <th>イベント</th>
+                        <th>対象</th>
+                        <th>実行者</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orgAuditLogs.length === 0 && !isLoadingAuditLogs ? (
+                        <tr>
+                          <td colSpan={4} className="org-admin-empty">
+                            記録されたイベントはまだありません。
+                          </td>
+                        </tr>
+                      ) : null}
+                      {orgAuditLogs.map((log) => {
+                        const at = new Date(log.createdAt);
+                        const atLabel = Number.isFinite(at.getTime())
+                          ? at.toLocaleString("ja-JP", {
+                              month: "2-digit",
+                              day: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "—";
+                        const eventLabel =
+                          log.type === "organization.created"
+                            ? "組織を作成"
+                            : log.type === "organization.member_joined"
+                              ? "メンバーが参加"
+                              : log.type === "organization.member_left"
+                                ? "メンバーが退出"
+                                : log.type === "organization.slack_updated"
+                                  ? "Slack設定を更新"
+                                  : log.type === "room.created"
+                                    ? "ルームを作成"
+                                    : log.type;
+                        return (
+                          <tr key={log.id}>
+                            <td className="org-admin-audit-time">{atLabel}</td>
+                            <td>
+                              <span className={`org-admin-audit-type type-${log.type.replace(".", "-")}`}>
+                                {eventLabel}
+                              </span>
+                            </td>
+                            <td>{log.target || "—"}</td>
+                            <td>{log.actorName}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="org-admin-foot">
+                  追記専用の台帳です。ログは編集・削除できません。最大100件まで表示。
+                </p>
+              </div>
+            )}
 
             <section className="org-admin-slack" aria-label="Slack連携">
               <header className="org-admin-slack-head">
