@@ -3437,6 +3437,11 @@ function App() {
   const [studyAmount, setStudyAmount] = useState("1");
   const [studyUnit, setStudyUnit] = useState<"hours" | "minutes">("hours");
   const [studyColor, setStudyColor] = useState(studyColorOptions[0].value);
+  /* Phase 10c: Learning Item ごとのインライン「他の時間…」入力. null
+     なら閉, それ以外なら開いてるカードの id. 文字列入力なので空白や
+     0 の場合は記録ボタンを無効化する. */
+  const [learningQuickLogOpenId, setLearningQuickLogOpenId] = useState<string | null>(null);
+  const [learningQuickLogCustomMinutes, setLearningQuickLogCustomMinutes] = useState("");
   const [selectedStudyDay, setSelectedStudyDay] = useState(dayLabels[(new Date().getDay() + 6) % 7]);
   const [selectedArcDayKey, setSelectedArcDayKey] = useState<string | null>(null);
   const [hoveredArcCell, setHoveredArcCell] = useState<
@@ -6312,6 +6317,36 @@ function App() {
   const pendingJoinRoom = pendingJoinRoomId
     ? allWorkspaceRooms.find((room) => room.id === pendingJoinRoomId)
     : null;
+  /* Phase 10c: ワンタップで Learning Item に時間を記録する.
+     `記録する` 画面の各カードから直接呼ばれる。これまでは Profile
+     画面の手動フォーム経由でしか時間を残せなかったので、`記録する`
+     タブに来た目的（=記録）が完了せず、毎回 Profile まで降りる必要
+     があった。同じ StudyLog 形状で保存するので、集計・グラフ・EXP
+     は既存ルートと完全に整合する。 */
+  const handleLearningQuickLog = (item: LearningItem, minutes: number) => {
+    if (!currentUser) return;
+    const safeMinutes = Math.round(minutes);
+    if (!Number.isFinite(safeMinutes) || safeMinutes <= 0) return;
+    const nextLog: StudyLog = {
+      id: crypto.randomUUID(),
+      subject: item.name,
+      minutes: safeMinutes,
+      createdAt: new Date().toISOString(),
+      color: item.color,
+      learningItemId: item.id,
+    };
+    setStudyLogs((logs) => [...logs, nextLog]);
+    void saveStudyLogToCloud(db, currentUser.uid, nextLog, {
+      earnedExp: Math.round(safeMinutes * 1.25),
+      source: "learning-quick",
+    }).catch((error) => {
+      console.error("Quick study log save failed.", error);
+    });
+    // 控えめなフィードバック. 煽らない・派手にしない — MEMORY の
+    // デザイン方針(Linear/Arc 系) に合わせる.
+    showToast(`+${formatStudyTimeJa(safeMinutes)} ${item.name}`, { kind: "success" });
+  };
+
   const handleStudySubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -12460,7 +12495,7 @@ function App() {
             <div>
               <p className="card-kicker">Learning Items</p>
               <h2>{t("記録する")}</h2>
-              <small>{t("学習対象を登録しておくと、ログ入力時にブレずに集計できる。")}</small>
+              <small>{t("カードのチップから直接時間を残せます。詳細な記録はプロフィール画面の学習ログから。")}</small>
             </div>
             <button type="button" className="learning-add-button" onClick={() => openLearningEditorForCreate("")}>
               + {t("追加")}
@@ -12623,58 +12658,149 @@ function App() {
                   const sparklineMax = sparkline
                     ? sparkline.reduce((acc, value) => (value > acc ? value : acc), 0)
                     : 0;
+                  /* Phase 10c: カードを <button> から <article> へ.
+                     ボタンの入れ子は無効な HTML なので、ヘッダ部分は
+                     編集を開く <button>、フッタはクイック記録の
+                     チップ群、と二つの操作領域に分ける. アーカイブ
+                     カードでは記録チップを出さない(再利用させない
+                     ためにアーカイブする意図を尊重). */
+                  const isQuickLogOpen = learningQuickLogOpenId === item.id;
+                  const customMinutesValue = Number(learningQuickLogCustomMinutes);
+                  const canSubmitCustom =
+                    Number.isFinite(customMinutesValue) && customMinutesValue > 0;
+                  const closeQuickLog = () => {
+                    setLearningQuickLogOpenId(null);
+                    setLearningQuickLogCustomMinutes("");
+                  };
+                  const submitCustomQuickLog = () => {
+                    if (!canSubmitCustom) return;
+                    handleLearningQuickLog(item, customMinutesValue);
+                    closeQuickLog();
+                  };
                   return (
-                    <button
-                      type="button"
+                    <article
                       key={item.id}
                       className="learning-card"
                       style={{ "--learning-card-color": item.color } as CSSProperties}
-                      onClick={() => openLearningEditorForEdit(item)}
                     >
-                      <div className="learning-card-head">
-                        {isBook ? (
-                          <span className="learning-card-badge" aria-hidden="true">
-                            📕
+                      <button
+                        type="button"
+                        className="learning-card-trigger"
+                        onClick={() => openLearningEditorForEdit(item)}
+                        aria-label={t("{name}の設定", { name: item.name })}
+                      >
+                        <div className="learning-card-head">
+                          {isBook ? (
+                            <span className="learning-card-badge" aria-hidden="true">
+                              📕
+                            </span>
+                          ) : null}
+                          <strong>{item.name}</strong>
+                        </div>
+                        <div className="learning-card-meta">
+                          <span>{t("累計")} {totalLabel}</span>
+                          <span
+                            className={`learning-card-last${isFreshToday ? " is-fresh" : ""}${
+                              !lastTs ? " is-untouched" : ""
+                            }`}
+                          >
+                            {lastLabel}
                           </span>
+                          {item.archived ? <span className="learning-card-archived">{t("アーカイブ")}</span> : null}
+                        </div>
+                        {sparkline && sparklineMax > 0 ? (
+                          <div className="learning-card-spark" aria-hidden="true">
+                            {sparkline.map((value, dayIndex) => {
+                              const heightPercent = sparklineMax > 0 ? (value / sparklineMax) * 100 : 0;
+                              return (
+                                <span
+                                  key={dayIndex}
+                                  className={`learning-card-spark-bar${value > 0 ? " has-value" : ""}${
+                                    dayIndex === 6 ? " is-today" : ""
+                                  }`}
+                                  style={{ height: `${Math.max(value > 0 ? 18 : 6, heightPercent)}%` }}
+                                />
+                              );
+                            })}
+                          </div>
                         ) : null}
-                        <strong>{item.name}</strong>
-                      </div>
-                      <div className="learning-card-meta">
-                        <span>{t("累計")} {totalLabel}</span>
-                        <span
-                          className={`learning-card-last${isFreshToday ? " is-fresh" : ""}${
-                            !lastTs ? " is-untouched" : ""
-                          }`}
-                        >
-                          {lastLabel}
-                        </span>
-                        {item.archived ? <span className="learning-card-archived">{t("アーカイブ")}</span> : null}
-                      </div>
-                      {sparkline && sparklineMax > 0 ? (
-                        <div className="learning-card-spark" aria-hidden="true">
-                          {sparkline.map((value, dayIndex) => {
-                            const heightPercent = sparklineMax > 0 ? (value / sparklineMax) * 100 : 0;
-                            return (
-                              <span
-                                key={dayIndex}
-                                className={`learning-card-spark-bar${value > 0 ? " has-value" : ""}${
-                                  dayIndex === 6 ? " is-today" : ""
-                                }`}
-                                style={{ height: `${Math.max(value > 0 ? 18 : 6, heightPercent)}%` }}
-                              />
-                            );
-                          })}
-                        </div>
+                        {hasProgress ? (
+                          <div className="learning-card-progress" aria-label={`${progressPercent}%`}>
+                            <span style={{ width: `${progressPercent}%` }} />
+                            <small>
+                              {item.currentPages || 0}/{item.totalPages}p
+                            </small>
+                          </div>
+                        ) : null}
+                      </button>
+                      {!item.archived ? (
+                        isQuickLogOpen ? (
+                          <div className="learning-card-quicklog is-custom" role="group" aria-label={t("時間を指定して記録")}>
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              min="1"
+                              step="1"
+                              value={learningQuickLogCustomMinutes}
+                              autoFocus
+                              onChange={(event) => setLearningQuickLogCustomMinutes(event.target.value)}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") {
+                                  event.preventDefault();
+                                  submitCustomQuickLog();
+                                } else if (event.key === "Escape") {
+                                  event.preventDefault();
+                                  closeQuickLog();
+                                }
+                              }}
+                              placeholder="45"
+                              aria-label={t("記録する分数")}
+                            />
+                            <span className="learning-card-quicklog-unit">{t("分")}</span>
+                            <button
+                              type="button"
+                              className="learning-card-quicklog-submit"
+                              disabled={!canSubmitCustom}
+                              onClick={submitCustomQuickLog}
+                            >
+                              {t("記録")}
+                            </button>
+                            <button
+                              type="button"
+                              className="learning-card-quicklog-cancel"
+                              onClick={closeQuickLog}
+                              aria-label={t("閉じる")}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="learning-card-quicklog" role="group" aria-label={t("クイック記録")}>
+                            {[15, 30, 60].map((minutes) => (
+                              <button
+                                key={minutes}
+                                type="button"
+                                className="learning-card-quicklog-chip"
+                                onClick={() => handleLearningQuickLog(item, minutes)}
+                              >
+                                +{minutes < 60 ? `${minutes}m` : `${minutes / 60}h`}
+                              </button>
+                            ))}
+                            <button
+                              type="button"
+                              className="learning-card-quicklog-chip is-more"
+                              onClick={() => {
+                                setLearningQuickLogOpenId(item.id);
+                                setLearningQuickLogCustomMinutes("");
+                              }}
+                              aria-label={t("他の時間を指定して記録")}
+                            >
+                              …
+                            </button>
+                          </div>
+                        )
                       ) : null}
-                      {hasProgress ? (
-                        <div className="learning-card-progress" aria-label={`${progressPercent}%`}>
-                          <span style={{ width: `${progressPercent}%` }} />
-                          <small>
-                            {item.currentPages || 0}/{item.totalPages}p
-                          </small>
-                        </div>
-                      ) : null}
-                    </button>
+                    </article>
                   );
                 })}
               </div>
