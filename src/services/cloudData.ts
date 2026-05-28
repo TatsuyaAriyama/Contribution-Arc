@@ -359,6 +359,7 @@ export type AuditLogEventType =
   | "organization.created"
   | "organization.member_joined"
   | "organization.member_left"
+  | "organization.member_removed"
   | "organization.slack_updated"
   | "organization.owner_transferred"
   | "room.created";
@@ -912,4 +913,201 @@ export async function acceptOrganizationInvite(
   });
 
   return result;
+}
+
+/* Admin removes a member from the org (Phase 8). Only the org owner
+   can call this; the rule at /users/{uid} validates that the caller
+   is the owner of the target's current org and that ONLY the three
+   org-membership fields change. The target's personal data
+   (study logs, posts, etc.) is unaffected — removal is just the
+   tenant tie, not data deletion. */
+export async function removeOrganizationMember(
+  db: Firestore,
+  orgId: string,
+  targetUid: string,
+  actor: { uid: string; name: string },
+  target: { name: string; previousRole?: "owner" | "admin" | "member" },
+): Promise<void> {
+  await setDoc(
+    doc(db, "users", targetUid),
+    {
+      organizationId: null,
+      organizationName: null,
+      organizationRole: null,
+    },
+    { merge: true },
+  );
+  await recordAuditLog(db, {
+    orgId,
+    type: "organization.member_removed",
+    actorUid: actor.uid,
+    actorName: actor.name,
+    target: target.name,
+    payload: target.previousRole ? { previousRole: target.previousRole } : undefined,
+  });
+}
+
+/* Aggregate every Firestore document owned by the calling user into
+   a single JSON blob suitable for download. Used by the "個人データ
+   をエクスポート" button — satisfies 個人情報保護法 / GDPR data
+   subject access rights without requiring a backend. */
+export type UserDataExport = {
+  exportedAt: string;
+  uid: string;
+  user: Record<string, unknown> | null;
+  posts: Record<string, unknown>[];
+  studyLogs: Record<string, unknown>[];
+  dailyReports: Record<string, unknown>[];
+  learningItems: Record<string, unknown>[];
+  workspaceSessions: Record<string, unknown>[];
+  workspaceRecruitments: Record<string, unknown>[];
+  achievements: Record<string, unknown>[];
+  githubActivities: Record<string, unknown>[];
+  friendRequests: Record<string, unknown>[];
+  username: string;
+};
+
+async function fetchCollectionByUserField(
+  db: Firestore,
+  collectionPath: string,
+  field: string,
+  uid: string,
+): Promise<Record<string, unknown>[]> {
+  const snapshot = await getDocs(query(collection(db, collectionPath), where(field, "==", uid)));
+  return snapshot.docs.map((item) => ({ id: item.id, ...(item.data() as Record<string, unknown>) }));
+}
+
+export async function exportUserData(
+  db: Firestore,
+  uid: string,
+  userId: string,
+): Promise<UserDataExport> {
+  const [userSnap, posts, studyLogs, dailyReports, learningItems, sessions, recruitments, achievements, githubActivities] =
+    await Promise.all([
+      getDoc(doc(db, "users", uid)),
+      fetchCollectionByUserField(db, "posts", "userId", uid),
+      fetchCollectionByUserField(db, "studyLogs", "userId", uid),
+      fetchCollectionByUserField(db, "dailyReports", "userId", uid),
+      fetchCollectionByUserField(db, "learningItems", "userId", uid),
+      fetchCollectionByUserField(db, "workspaceSessions", "userId", uid),
+      fetchCollectionByUserField(db, "workspaceRecruitments", "userId", uid),
+      fetchCollectionByUserField(db, "achievements", "userId", uid),
+      fetchCollectionByUserField(db, "githubActivities", "userId", uid),
+    ]);
+
+  // Friend requests live on either side of the relationship; fetch
+  // both and dedupe by id.
+  const fromMe = await fetchCollectionByUserField(db, "friendRequests", "fromUid", uid);
+  const toMe = await fetchCollectionByUserField(db, "friendRequests", "toUid", uid);
+  const seenIds = new Set<string>();
+  const friendRequests = [...fromMe, ...toMe].filter((row) => {
+    const id = row.id as string;
+    if (seenIds.has(id)) return false;
+    seenIds.add(id);
+    return true;
+  });
+
+  return {
+    exportedAt: new Date().toISOString(),
+    uid,
+    user: userSnap.exists() ? (userSnap.data() as Record<string, unknown>) : null,
+    posts,
+    studyLogs,
+    dailyReports,
+    learningItems,
+    workspaceSessions: sessions,
+    workspaceRecruitments: recruitments,
+    achievements,
+    githubActivities,
+    friendRequests,
+    username: userId,
+  };
+}
+
+/* Cascade-delete every doc owned by the user, then the user doc
+   itself, then the username reservation. Deletes are batched (up
+   to 450 ops per batch to stay under Firestore's 500-op limit with
+   headroom). Each collection's allow-delete rule already restricts
+   to the owner, so a regression in client code cannot delete
+   somebody else's data through this helper. */
+async function deleteCollectionByUserField(
+  db: Firestore,
+  collectionPath: string,
+  field: string,
+  uid: string,
+): Promise<number> {
+  const snapshot = await getDocs(query(collection(db, collectionPath), where(field, "==", uid)));
+  if (snapshot.empty) return 0;
+  const batches: Array<ReturnType<typeof writeBatch>> = [];
+  let current = writeBatch(db);
+  let opsInCurrent = 0;
+  for (const item of snapshot.docs) {
+    current.delete(item.ref);
+    opsInCurrent += 1;
+    if (opsInCurrent >= 450) {
+      batches.push(current);
+      current = writeBatch(db);
+      opsInCurrent = 0;
+    }
+  }
+  if (opsInCurrent > 0) batches.push(current);
+  for (const batch of batches) {
+    await batch.commit();
+  }
+  return snapshot.size;
+}
+
+export type DeleteAccountResult = {
+  deletedCounts: Record<string, number>;
+};
+
+export async function deleteUserAccount(
+  db: Firestore,
+  uid: string,
+  userId: string,
+): Promise<DeleteAccountResult> {
+  // Order matters: collections before users. Username reservation
+  // is removed last because losing the user doc first would already
+  // be visible as "deleted" to anyone scanning the search index.
+  const deletedCounts: Record<string, number> = {};
+  deletedCounts.studyLogs = await deleteCollectionByUserField(db, "studyLogs", "userId", uid);
+  deletedCounts.workspaceSessions = await deleteCollectionByUserField(
+    db,
+    "workspaceSessions",
+    "userId",
+    uid,
+  );
+  deletedCounts.dailyReports = await deleteCollectionByUserField(db, "dailyReports", "userId", uid);
+  deletedCounts.learningItems = await deleteCollectionByUserField(db, "learningItems", "userId", uid);
+  deletedCounts.workspaceRecruitments = await deleteCollectionByUserField(
+    db,
+    "workspaceRecruitments",
+    "userId",
+    uid,
+  );
+  deletedCounts.achievements = await deleteCollectionByUserField(db, "achievements", "userId", uid);
+  deletedCounts.githubActivities = await deleteCollectionByUserField(
+    db,
+    "githubActivities",
+    "userId",
+    uid,
+  );
+  deletedCounts.posts = await deleteCollectionByUserField(db, "posts", "userId", uid);
+  const fromCount = await deleteCollectionByUserField(db, "friendRequests", "fromUid", uid);
+  const toCount = await deleteCollectionByUserField(db, "friendRequests", "toUid", uid);
+  deletedCounts.friendRequests = fromCount + toCount;
+
+  if (userId) {
+    try {
+      await deleteDoc(doc(db, "usernames", userId));
+      deletedCounts.username = 1;
+    } catch {
+      deletedCounts.username = 0;
+    }
+  }
+
+  await deleteDoc(doc(db, "users", uid));
+  deletedCounts.user = 1;
+
+  return { deletedCounts };
 }

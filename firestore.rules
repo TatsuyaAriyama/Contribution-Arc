@@ -24,14 +24,43 @@ service cloud.firestore {
       // `!("email" in ...)` check below is defense in depth that blocks
       // the field from being written even if client code regresses.
       allow read: if signedIn();
-      allow create, update: if isOwner(uid)
+      allow create: if isOwner(uid)
         && validUserId(request.resource.data.userId)
         && request.resource.data.uid == uid
         && request.resource.data.displayName is string
         && request.resource.data.searchName is string
         && request.resource.data.following is list
         && !("email" in request.resource.data);
-      allow delete: if false;
+      // Update is allowed under two distinct paths:
+      //   (a) Self-update: the user editing their own profile.
+      //       Full validation suite applies.
+      //   (b) Admin removal (Phase 8): the owner of the org the
+      //       target currently belongs to may clear ONLY the three
+      //       org-membership fields. They cannot reassign the user
+      //       to a different org, cannot touch displayName / avatar
+      //       / following, and cannot escalate roles. This is the
+      //       "an employee left the company" path.
+      allow update: if (
+        isOwner(uid)
+        && validUserId(request.resource.data.userId)
+        && request.resource.data.uid == uid
+        && request.resource.data.displayName is string
+        && request.resource.data.searchName is string
+        && request.resource.data.following is list
+        && !("email" in request.resource.data)
+      ) || (
+        resource.data.organizationId is string
+        && get(/databases/$(database)/documents/organizations/$(resource.data.organizationId)).data.ownerUid == request.auth.uid
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(["organizationId", "organizationName", "organizationRole"])
+        && request.resource.data.organizationId == null
+      );
+      // Phase 8: self-delete is required for 個人情報保護法 / GDPR
+      // data-subject deletion rights. The client is responsible for
+      // cascading the user's own posts / logs / etc. before calling
+      // this — but each of those collections already restricts
+      // delete to the owner, so a user can fully erase themselves
+      // from the client without admin intervention.
+      allow delete: if isOwner(uid);
     }
 
     match /usernames/{userId} {

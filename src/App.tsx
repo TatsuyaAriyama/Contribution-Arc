@@ -67,6 +67,9 @@ import {
   updateOrganizationDomains,
   findOrganizationsByEmailDomain,
   joinOrganizationByDomain,
+  removeOrganizationMember,
+  exportUserData,
+  deleteUserAccount,
   type AuditLogRecord,
   type OrganizationMemberRecord,
   type OrganizationRecord,
@@ -3586,6 +3589,15 @@ function App() {
   const [domainDraft, setDomainDraft] = useState<string>("");
   const [domainSaveState, setDomainSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [domainSaveMessage, setDomainSaveMessage] = useState<string>("");
+  // Personal data management — Phase 8. Export status is purely
+  // UI-feedback (the file download happens via blob URL). Delete
+  // requires a two-step confirmation: the user has to type their
+  // userId before the cascade runs.
+  const [isExportingData, setIsExportingData] = useState<boolean>(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState<boolean>(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState<boolean>(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState<string>("");
+  const [deleteError, setDeleteError] = useState<string>("");
   // Records the token we've already attempted to auto-claim so a
   // re-render after the successful accept doesn't fire the call a
   // second time.
@@ -8267,6 +8279,112 @@ function App() {
     }
   };
 
+  /* Admin removes a member from the org — Phase 8. Confirms before
+     execution; on success refreshes the cached members list so the
+     row drops out immediately. Self-removal is blocked in the UI
+     so the owner can't accidentally orphan themselves. */
+  const handleRemoveMember = async (target: OrganizationMemberRecord) => {
+    if (!currentUser || !currentOrganization) return;
+    if (currentOrganization.ownerUid !== currentUser.uid) return;
+    if (target.uid === currentUser.uid) return;
+    if (target.organizationRole === "owner") return;
+    const confirmed = window.confirm(
+      `${target.displayName} を「${currentOrganization.name}」から除名します。除名後、本人の組織限定ルームは見えなくなります。本人のアカウントとログは残ります。よろしいですか？`,
+    );
+    if (!confirmed) return;
+    setOrgAdminError("");
+    try {
+      await removeOrganizationMember(
+        db,
+        currentOrganization.id,
+        target.uid,
+        { uid: currentUser.uid, name: playerName },
+        { name: target.displayName, previousRole: target.organizationRole },
+      );
+      // Re-pull the members list to drop the removed row.
+      try {
+        const members = await listOrganizationMembers(db, currentOrganization.id);
+        setOrgMembers(members);
+      } catch {
+        /* the row will refresh on next admin open */
+      }
+      showToast(`${target.displayName} を除名しました`, { kind: "success" });
+    } catch (error) {
+      console.warn("Remove member failed", error);
+      setOrgAdminError("除名に失敗しました。Firestore のルール権限を確認してください。");
+    }
+  };
+
+  /* Personal data export — Phase 8. Bundle all user-owned Firestore
+     documents into a single JSON file and trigger a browser
+     download. Satisfies 個人情報保護法 / GDPR data-subject access
+     rights without a backend. */
+  const handleExportPersonalData = async () => {
+    if (!currentUser || isExportingData) return;
+    setIsExportingData(true);
+    try {
+      const data = await exportUserData(db, currentUser.uid, userId);
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: "application/json;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      const dateKey = new Date().toISOString().slice(0, 10);
+      anchor.download = `contribution-arc-data-${userId || currentUser.uid}-${dateKey}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+      showToast("個人データをダウンロードしました", { kind: "success" });
+    } catch (error) {
+      console.warn("Export user data failed", error);
+      showToast("エクスポートに失敗しました", { kind: "error" });
+    } finally {
+      setIsExportingData(false);
+    }
+  };
+
+  /* Two-step account deletion — Phase 8. First click opens the
+     confirmation modal; the user has to type their userId to
+     unlock the destructive button. We leave the org first (writing
+     the audit log for departure), then cascade-delete every owned
+     document, then sign out. */
+  const handleDeleteAccount = async () => {
+    if (!currentUser || isDeletingAccount) return;
+    if (deleteConfirmText.trim() !== (userId || currentUser.uid)) {
+      setDeleteError("確認のため、上のユーザーIDをそのまま入力してください。");
+      return;
+    }
+    setIsDeletingAccount(true);
+    setDeleteError("");
+    try {
+      // If still in an org, leave it first so the audit row records
+      // a clean departure. Owner accounts must transfer ownership
+      // before deletion — UI guards against that case.
+      if (currentOrganization && currentOrganization.ownerUid !== currentUser.uid) {
+        try {
+          await leaveOrganization(db, currentUser.uid, {
+            name: playerName,
+            orgId: currentOrganization.id,
+            orgName: currentOrganization.name,
+          });
+        } catch (error) {
+          console.warn("Leave org before delete failed", error);
+        }
+      }
+      await deleteUserAccount(db, currentUser.uid, userId);
+      await signOut(auth);
+      setIsDeleteConfirmOpen(false);
+      setDeleteConfirmText("");
+      showToast("アカウントを削除しました", { kind: "success" });
+    } catch (error) {
+      console.warn("Delete account failed", error);
+      setDeleteError("削除に失敗しました。ネットワークまたは権限を確認のうえ、再度お試しください。");
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
+
   /* Ownership transfer — Phase 6. Owner picks a member, confirms,
      and the org doc + both user docs flip atomically inside a
      Firestore transaction. After the transaction returns we
@@ -10664,6 +10782,77 @@ function App() {
         </div>
       ) : null}
 
+      {isDeleteConfirmOpen ? (
+        <div
+          className="settings-modal-backdrop"
+          role="presentation"
+          onClick={() => {
+            if (!isDeletingAccount) setIsDeleteConfirmOpen(false);
+          }}
+        >
+          <section
+            className="settings-modal delete-account-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-account-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div>
+              <p className="card-kicker">Danger zone</p>
+              <h2 id="delete-account-title">アカウントを削除しますか？</h2>
+              <p className="delete-account-copy">
+                以下のデータが全て削除されます：プロフィール、投稿、学習ログ、
+                日報、Learning Item、作業セッション、募集履歴、GitHub 連携、
+                フレンドリクエスト。組織からは退出し、組織内のあなたのメンバーシップ
+                記録は監査ログに「退出」として残ります（個人特定可能なログ本体は
+                削除されます）。
+                <br />
+                <strong>この操作は取り消せません。</strong>
+              </p>
+            </div>
+
+            <div className="delete-account-confirm">
+              <label>
+                <span>続行するには、あなたのユーザーID「{userId || currentUser?.uid}」を入力してください</span>
+                <input
+                  value={deleteConfirmText}
+                  onChange={(event) => {
+                    setDeleteConfirmText(event.target.value);
+                    if (deleteError) setDeleteError("");
+                  }}
+                  placeholder={userId || currentUser?.uid || ""}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </label>
+              {deleteError ? <p className="delete-account-error">{deleteError}</p> : null}
+            </div>
+
+            <div className="settings-actions">
+              <button
+                type="button"
+                className="settings-secondary"
+                onClick={() => setIsDeleteConfirmOpen(false)}
+                disabled={isDeletingAccount}
+              >
+                やめる
+              </button>
+              <button
+                type="button"
+                className="settings-data-delete settings-primary"
+                onClick={handleDeleteAccount}
+                disabled={
+                  isDeletingAccount ||
+                  deleteConfirmText.trim() !== (userId || currentUser?.uid || "")
+                }
+              >
+                {isDeletingAccount ? "削除中…" : "本当に削除する"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
       {isOrgAdminOpen && currentOrganization ? (
         <div className="settings-modal-backdrop" role="presentation" onClick={() => setIsOrgAdminOpen(false)}>
           <section
@@ -10865,14 +11054,24 @@ function App() {
                             <td className="org-admin-actions-cell">
                               {member.uid !== currentUser?.uid &&
                               member.organizationRole !== "owner" ? (
-                                <button
-                                  type="button"
-                                  className="org-admin-transfer"
-                                  onClick={() => handleTransferOwnership(member)}
-                                  title="このメンバーにオーナーを譲渡"
-                                >
-                                  オーナー譲渡
-                                </button>
+                                <div className="org-admin-actions-row">
+                                  <button
+                                    type="button"
+                                    className="org-admin-transfer"
+                                    onClick={() => handleTransferOwnership(member)}
+                                    title="このメンバーにオーナーを譲渡"
+                                  >
+                                    オーナー譲渡
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="org-admin-remove"
+                                    onClick={() => handleRemoveMember(member)}
+                                    title="このメンバーを組織から除名"
+                                  >
+                                    除名
+                                  </button>
+                                </div>
                               ) : null}
                             </td>
                           ) : null}
@@ -11324,6 +11523,51 @@ function App() {
                     </div>
                   )}
                   {orgError ? <p className="settings-org-error">{t(orgError)}</p> : null}
+                </div>
+              ) : null}
+
+              {/* Personal data management — Phase 8. Export covers
+                  個人情報保護法 / GDPR data-subject access rights;
+                  account deletion covers the right to be forgotten.
+                  Hidden during onboarding because we don't want to
+                  show a delete button to a user who hasn't even
+                  finished setting up their profile yet. */}
+              {!isOnboardingSettings ? (
+                <div className="settings-data-panel" role="group" aria-label="個人データ管理">
+                  <div className="settings-data-head">
+                    <span>個人データ管理</span>
+                  </div>
+                  <p className="settings-org-copy">
+                    あなたの学習ログ・投稿・組織メンバーシップなどを JSON で
+                    一括ダウンロードできます。アカウント削除は元に戻せません。
+                  </p>
+                  <div className="settings-data-actions">
+                    <button
+                      type="button"
+                      className="settings-data-export"
+                      onClick={handleExportPersonalData}
+                      disabled={isExportingData}
+                    >
+                      {isExportingData ? "エクスポート中…" : "データをエクスポート"}
+                    </button>
+                    <button
+                      type="button"
+                      className="settings-data-delete"
+                      onClick={() => {
+                        if (currentOrganization?.ownerUid === currentUser?.uid) {
+                          window.alert(
+                            "オーナーは削除できません。Admin ダッシュボードからオーナーを譲渡してから削除してください。",
+                          );
+                          return;
+                        }
+                        setIsDeleteConfirmOpen(true);
+                        setDeleteConfirmText("");
+                        setDeleteError("");
+                      }}
+                    >
+                      アカウントを削除
+                    </button>
+                  </div>
                 </div>
               ) : null}
 
