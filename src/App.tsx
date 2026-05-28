@@ -12200,21 +12200,40 @@ function App() {
             todayMidnight.setHours(0, 0, 0, 0);
             const dayMs = 24 * 60 * 60 * 1000;
             const sparkStartMs = todayMidnight.getTime() - 6 * dayMs;
+            // Resolve a log to its Learning Item via TWO paths so we
+            // count both flavours of historical data:
+            //   (a) Modern logs carry learningItemId — the canonical
+            //       link set at save time.
+            //   (b) Older or free-typed logs only carry `subject`
+            //       (no learningItemId), but the user can still mean
+            //       a known item — match case-insensitively by name.
+            // Without (b), manual entries typed before the item was
+            // created, or room-task strings that didn't match at exit
+            // time, silently fall out of the totals. Matches the same
+            // fallback pattern used by getSubjectSummary / getStudySegments.
+            const itemIdByLowerName = new Map<string, string>();
+            const knownItemIds = new Set<string>();
+            learningItems.forEach((item) => {
+              knownItemIds.add(item.id);
+              const key = item.name.trim().toLowerCase();
+              if (key && !itemIdByLowerName.has(key)) itemIdByLowerName.set(key, item.id);
+            });
             studyLogs.forEach((log) => {
-              if (!log.learningItemId) return;
-              totalsByItem.set(
-                log.learningItemId,
-                (totalsByItem.get(log.learningItemId) || 0) + log.minutes,
-              );
+              const targetId =
+                log.learningItemId && knownItemIds.has(log.learningItemId)
+                  ? log.learningItemId
+                  : itemIdByLowerName.get((log.subject || "").trim().toLowerCase());
+              if (!targetId) return;
+              totalsByItem.set(targetId, (totalsByItem.get(targetId) || 0) + log.minutes);
               const ts = new Date(log.createdAt).getTime();
               if (!Number.isFinite(ts)) return;
-              const prevLast = lastLoggedByItem.get(log.learningItemId) || 0;
-              if (ts > prevLast) lastLoggedByItem.set(log.learningItemId, ts);
+              const prevLast = lastLoggedByItem.get(targetId) || 0;
+              if (ts > prevLast) lastLoggedByItem.set(targetId, ts);
               if (ts >= sparkStartMs) {
                 const dayIndex = Math.min(6, Math.max(0, Math.floor((ts - sparkStartMs) / dayMs)));
-                const arr = sparklineByItem.get(log.learningItemId) || new Array(7).fill(0);
+                const arr = sparklineByItem.get(targetId) || new Array(7).fill(0);
                 arr[dayIndex] += log.minutes;
-                sparklineByItem.set(log.learningItemId, arr);
+                sparklineByItem.set(targetId, arr);
               }
             });
 
