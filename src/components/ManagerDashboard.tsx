@@ -8,9 +8,17 @@ export interface ManagerDashboardProps {
   currentUser: Partial<OrganizationMemberRecord>;
   /** Organization name — used to label the CSV export file. */
   organizationName?: string;
+  /** Whether the org has a Slack webhook configured. Controls the
+   *  visibility / enabled state of the "Send to Slack" digest button. */
+  hasSlackWebhook?: boolean;
+  /** Send the weekly digest to the org's configured Slack channel.
+   *  Resolves with an error string on failure, undefined on success. */
+  onSendSlackDigest?: () => Promise<string | undefined>;
   /** Callback when a member is clicked for detail view. */
   onMemberSelect?: (member: OrganizationMemberRecord) => void;
 }
+
+type DigestSendState = "idle" | "sending" | "sent" | "error";
 
 /** Escape a single CSV cell. Wraps in double-quotes when the cell
  *  contains a comma, quote, or newline; doubles internal quotes per
@@ -78,10 +86,14 @@ export function ManagerDashboard({
   teamMembers,
   currentUser,
   organizationName,
+  hasSlackWebhook,
+  onSendSlackDigest,
   onMemberSelect,
 }: ManagerDashboardProps) {
   const [timePeriod, setTimePeriod] = useState<TimePeriod>("weekly");
   const [searchQuery, setSearchQuery] = useState("");
+  const [digestState, setDigestState] = useState<DigestSendState>("idle");
+  const [digestMessage, setDigestMessage] = useState<string>("");
 
   // Sanitize the org name into a filename-safe slug. Keeps Japanese
   // letters readable (most OSes accept them in filenames now) but
@@ -96,6 +108,32 @@ export function ManagerDashboard({
     const filename = `contribution-arc-${slug}-${today}.csv`;
     const csv = buildMembersCsv(teamMembers);
     downloadCsv(filename, csv);
+  };
+
+  /* Send the weekly digest to the org's Slack channel. The actual
+     payload + POST happens in the parent (App.tsx) so this component
+     stays free of Firestore + Slack service deps; we just orchestrate
+     the UI state machine. */
+  const handleSendDigest = async () => {
+    if (!onSendSlackDigest || digestState === "sending") return;
+    setDigestState("sending");
+    setDigestMessage("");
+    try {
+      const error = await onSendSlackDigest();
+      if (error) {
+        setDigestState("error");
+        setDigestMessage(error);
+      } else {
+        setDigestState("sent");
+        setDigestMessage("送信しました");
+        // Drop back to idle after a few seconds so the button can be
+        // pressed again without a page refresh.
+        setTimeout(() => setDigestState("idle"), 3200);
+      }
+    } catch (err) {
+      setDigestState("error");
+      setDigestMessage(err instanceof Error ? err.message : "送信に失敗しました");
+    }
   };
 
   // Filter members by search query (name or userId)
@@ -185,6 +223,28 @@ export function ManagerDashboard({
           <p className="manager-subtitle">{currentUser.displayName} のチーム</p>
         </div>
         <div className="manager-header-actions">
+          {hasSlackWebhook && onSendSlackDigest ? (
+            <div className="manager-digest-wrap">
+              <button
+                type="button"
+                className="manager-export-button"
+                onClick={handleSendDigest}
+                disabled={teamMembers.length === 0 || digestState === "sending"}
+                aria-label="チーム学習サマリーをSlackに送信"
+              >
+                {digestState === "sending"
+                  ? "送信中…"
+                  : digestState === "sent"
+                    ? "Slackに送信済み"
+                    : "Slackにサマリー送信"}
+              </button>
+              {digestState === "error" && digestMessage ? (
+                <span className="manager-digest-error" role="alert">
+                  {digestMessage}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
           <button
             type="button"
             className="manager-export-button"

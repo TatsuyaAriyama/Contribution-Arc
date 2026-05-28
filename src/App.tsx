@@ -72,6 +72,7 @@ import {
   type OrganizationRecord,
 } from "./services/cloudData";
 import { isValidSlackWebhookUrl, postToSlackWebhook } from "./services/slack";
+import { buildWeeklyDigestPayload } from "./services/teamDigest";
 import {
   deleteLearningItemFromCloud,
   saveLearningItemToCloud,
@@ -13271,6 +13272,25 @@ function App() {
                   contributionCount: 0,
                 }}
                 organizationName={currentOrganization.name}
+                hasSlackWebhook={
+                  !!currentOrganization.slackWebhookUrl &&
+                  isValidSlackWebhookUrl(currentOrganization.slackWebhookUrl)
+                }
+                onSendSlackDigest={async () => {
+                  const webhookUrl = currentOrganization.slackWebhookUrl;
+                  if (!webhookUrl || !isValidSlackWebhookUrl(webhookUrl)) {
+                    return "Slackウェブフックが設定されていません";
+                  }
+                  const payload = buildWeeklyDigestPayload({
+                    organizationName: currentOrganization.name,
+                    members: orgMembers,
+                  });
+                  const result = await postToSlackWebhook(webhookUrl, payload);
+                  if (!result.ok) {
+                    return `Slack送信に失敗: ${result.error || "unknown"}`;
+                  }
+                  return undefined;
+                }}
                 onMemberSelect={(member) => {
                   // For now, clicking a member just shows their profile
                   // In a future phase, this could open a detail view
