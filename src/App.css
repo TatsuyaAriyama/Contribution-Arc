@@ -9185,191 +9185,93 @@
    itself replaces the old separate float/sway pair. Vertical bob plus
    a ±3° rotation makes the whole sprite feel airborne instead of
    stuck to a single point. */
+/* Ghost — boxy spectre that matches the default character's blocky
+   aesthetic. Same --actor-color tint, same inset "window" detail,
+   but with a 3-lobe wavy hem at the bottom instead of legs, and a
+   soft hover animation. The cute chibi parts (hat, arms, mouth, dot
+   eyes) used previously are hidden — this is the minimal block-world
+   reading of "ghost", not an anime sticker. */
 .actor-sprite.shape-ghost {
+  /* clip-path defines the silhouette; border-radius is ignored when
+     a clip-path is applied so all corner shaping happens in the
+     polygon itself. */
   border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+  background: var(--actor-color);
+  box-shadow: none; /* clip-path strips box-shadow; aura is added via ::after */
   overflow: visible;
   animation: workspace-ghost-float 4.2s ease-in-out infinite;
+  clip-path: polygon(
+    /* rounded top-left corner (approximated with 4 vertices) */
+    0% 12%, 3% 5%, 8% 1%, 14% 0%,
+    /* top edge → rounded top-right corner */
+    86% 0%, 92% 1%, 97% 5%, 100% 12%,
+    /* right edge down to wavy hem */
+    100% 72%,
+    /* 3-lobe wavy hem (left→right) */
+    92% 84%, 83% 96%, 75% 84%,
+    66% 96%, 58% 84%, 50% 96%,
+    42% 84%, 34% 96%, 25% 84%,
+    17% 96%, 8% 84%,
+    /* back up the left edge */
+    0% 72%
+  );
 }
 
+/* Soft color-tinted aura behind the body. Sits at z-index -1 so it
+   reads as ambient glow without darkening any sibling elements. */
 .actor-sprite.shape-ghost::after {
   content: "";
   position: absolute;
-  z-index: 0;
-  inset: -14px -10px -6px -10px;
+  z-index: -1;
+  inset: -10px -8px -4px -8px;
   background: var(--actor-color);
-  opacity: 0.32;
-  filter: blur(14px);
+  opacity: 0.22;
+  filter: blur(12px);
   pointer-events: none;
-  border-radius: 50% 50% 45% 45%;
+  border-radius: 14px;
 }
 
-.actor-sprite.shape-ghost::before {
-  content: "";
+/* Inset "window" — same as default character, but positioned slightly
+   higher so it doesn't bleed into the wavy hem. Translucent surface
+   tint so the underlying actor-color shows through. */
+.actor-sprite.shape-ghost .sprite-body {
   position: absolute;
-  z-index: 1;
-  inset: -4px -3px -2px -3px;
-  background:
-    /* Subtle top sheen so the body reads volumetric, not flat */
-    radial-gradient(
-      ellipse 60% 32% at 50% 22%,
-      rgba(255, 255, 255, 1) 0%,
-      rgba(248, 250, 252, 1) 60%,
-      rgba(232, 238, 244, 1) 100%
-    );
-  clip-path: polygon(
-    50% 0%,
-    62% 1%, 74% 3.5%, 84% 8.5%, 91% 16%, 96% 26%, 99% 38%, 100% 50%,
-    100% 76%,
-    96% 86%, 88% 95%, 78% 100%,
-    70% 92%, 62% 98%, 50% 90%, 38% 98%, 30% 92%,
-    22% 100%, 12% 95%, 4% 86%, 0% 76%,
-    0% 50%, 1% 38%, 4% 26%, 9% 16%, 16% 8.5%, 26% 3.5%, 38% 1%
-  );
-  filter:
-    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.6))
-    drop-shadow(0 8px 14px rgba(0, 0, 0, 0.18));
+  inset: 9px 9px 18px 9px;
+  border-radius: 3px;
+  background: rgba(var(--surface-rgb), 0.22);
 }
 
-.actor-sprite.shape-ghost .sprite-body,
+/* Hide every decorative element the old chibi-ghost used. The new
+   silhouette doesn't carry a face, arms, or a hat — it's pure form,
+   matching the abstract reading of the default character. */
+.actor-sprite.shape-ghost .sprite-eye,
 .actor-sprite.shape-ghost .sprite-leg,
-.actor-sprite.shape-ghost .sprite-tail {
+.actor-sprite.shape-ghost .sprite-tail,
+.actor-sprite.shape-ghost .sprite-ghost-hat,
+.actor-sprite.shape-ghost .sprite-ghost-arm,
+.actor-sprite.shape-ghost .sprite-ghost-mouth {
   display: none;
 }
 
-/* Cute round dot eyes — no catchlight, no oval. Matches the chibi
-   reference image. */
-.actor-sprite.shape-ghost .sprite-eye {
-  position: absolute;
-  top: 44%;
-  z-index: 4;
-  width: 9%;
-  height: 12%;
-  border-radius: 50%;
-  background: #1a1a1a;
-  box-shadow: none;
-}
-
-.actor-sprite.shape-ghost .sprite-eye-left {
-  left: 30%;
-}
-
-.actor-sprite.shape-ghost .sprite-eye-right {
-  right: 30%;
-}
-
-/* Wavy `〜` mouth rendered as an inline SVG so the curves stay crisp
-   at any scale. Centered below the eyes. */
-.actor-sprite.shape-ghost .sprite-ghost-mouth {
-  position: absolute;
-  z-index: 4;
-  top: 60%;
-  left: 50%;
-  width: 36%;
-  height: 12%;
-  transform: translateX(-50%);
-  pointer-events: none;
-  overflow: visible;
-}
-
-/* Side arm nubs — small white rounded stubs poking out the body.
-   Slightly offset downward so they sit at "waist" level relative to
-   the face. Tilted outward to read as little hands. */
-.actor-sprite.shape-ghost .sprite-ghost-arm {
-  position: absolute;
-  z-index: 2;
-  top: 58%;
-  width: 10px;
-  height: 9px;
-  border-radius: 60% 60% 60% 60% / 50% 50% 80% 80%;
-  background: #fff;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.12));
-}
-
-.actor-sprite.shape-ghost .sprite-ghost-arm-left {
-  left: -7px;
-  transform: rotate(-28deg);
-}
-
-.actor-sprite.shape-ghost .sprite-ghost-arm-right {
-  right: -7px;
-  transform: rotate(28deg);
-}
-
-/* Tilted silk top hat — three stacked elements (crown + brim + band)
-   give it a real silhouette with a visible side. Sits on the right
-   side of the head and rocks slightly through the float animation. */
-.actor-sprite.shape-ghost .sprite-ghost-hat {
-  position: absolute;
-  z-index: 5;
-  top: -16px;
-  right: 1px;
-  width: 22px;
-  height: 22px;
-  transform: rotate(18deg);
-  transform-origin: 50% 100%;
-  pointer-events: none;
-}
-
-.actor-sprite.shape-ghost .sprite-ghost-hat-crown {
-  position: absolute;
-  top: 0;
-  left: 4px;
-  width: 14px;
-  height: 16px;
-  border-radius: 3px 3px 1px 1px;
-  background: linear-gradient(180deg, #5b3924 0%, #432516 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    inset -2px 0 0 rgba(0, 0, 0, 0.25);
-}
-
-.actor-sprite.shape-ghost .sprite-ghost-hat-brim {
-  position: absolute;
-  top: 14px;
-  left: 0;
-  width: 22px;
-  height: 4px;
-  border-radius: 4px;
-  background: linear-gradient(180deg, #4a2a18 0%, #2f1a0e 100%);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-}
-
-.actor-sprite.shape-ghost .sprite-ghost-hat-band {
-  position: absolute;
-  top: 11px;
-  left: 4px;
-  width: 14px;
-  height: 2.5px;
-  background: #2a160c;
-}
-
-/* When ghost shape is combined with the legacy .is-tsuta tone,
-   the ghost silhouette wins. Hide tsuta's sprout and override its
-   rounded-square body so only the ghost outline is visible. */
+/* Tsuta + ghost combo: ghost silhouette wins, hide tsuta's sprout. */
 .actor-sprite.shape-ghost.is-tsuta {
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+  background: var(--actor-color);
 }
 
 .actor-sprite.shape-ghost.is-tsuta svg.sprite-sprout {
   display: none;
 }
 
-/* Combined bob + roll. The vertical lift sells the airborne feel;
-   the ±3° roll keeps the sprite from looking pinned. Whole-sprite
-   transform means the hat / arms / mouth all rock together, like
-   the figure is one floating object instead of separately animated
-   parts. */
+/* Gentle hover — no rotation, just a small vertical bob. Rotation
+   would clash with the boxy aesthetic; a quiet float keeps the
+   character feeling weightless without anime-ing it up. */
 @keyframes workspace-ghost-float {
   0%,
   100% {
-    transform: translateY(0) rotate(-2.5deg);
+    transform: translateY(0);
   }
   50% {
-    transform: translateY(-6px) rotate(2.5deg);
+    transform: translateY(-3px);
   }
 }
 
@@ -22072,5 +21974,130 @@ a[role="button"],
   .org-admin-metric strong {
     font-size: 16px;
   }
+}
+
+/* ─── First-login language selection ──────────────────────────────
+   Modal-style overlay that appears once on the first sign-in, before
+   the existing welcome screen. Matches the visual language of
+   .onboarding-welcome (blurred backdrop, soft surface card) so the
+   onboarding flow feels continuous when JA users move on to the
+   typing-style welcome card. */
+.onboarding-language-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(var(--surface-rgb), 0.82), rgba(var(--surface-rgb), 0.48) 24rem, transparent 40rem),
+    rgba(7, 16, 13, 0.72);
+  backdrop-filter: blur(18px);
+}
+
+.onboarding-language-card {
+  display: grid;
+  gap: 18px;
+  width: min(520px, 100%);
+  padding: clamp(28px, 5vw, 44px);
+  border: 1px solid rgba(var(--surface-rgb), 0.58);
+  border-radius: 26px;
+  background:
+    linear-gradient(180deg, rgba(var(--surface-rgb), 0.96), rgba(var(--surface-rgb), 0.88)),
+    var(--surface);
+  box-shadow:
+    0 36px 120px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(var(--surface-rgb), 0.95);
+  text-align: center;
+}
+
+.onboarding-language-card h1 {
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(22px, 3.4vw, 28px);
+  font-weight: 760;
+  line-height: 1.2;
+}
+
+.onboarding-language-lead {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.onboarding-language-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.onboarding-language-option {
+  display: grid;
+  gap: 4px;
+  padding: 14px 12px;
+  border: 1px solid rgba(var(--ink-rgb, 31, 32, 36), 0.12);
+  border-radius: 14px;
+  background: rgba(var(--surface-rgb), 0.6);
+  color: var(--ink);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+}
+
+.onboarding-language-option:hover {
+  border-color: var(--green);
+  background: rgba(var(--surface-rgb), 0.86);
+}
+
+.onboarding-language-option.is-active {
+  border-color: var(--green);
+  background: rgba(var(--green-rgb, 91, 154, 117), 0.12);
+  box-shadow: 0 0 0 2px rgba(var(--green-rgb, 91, 154, 117), 0.18);
+}
+
+.onboarding-language-option-native {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.onboarding-language-option-english {
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.onboarding-language-cta {
+  margin-top: 6px;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 12px;
+  background: var(--green, #5b9a75);
+  color: #fff;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+
+.onboarding-language-cta:hover {
+  background: var(--green-strong, #4f8a68);
+}
+
+.onboarding-language-cta:active {
+  transform: translateY(1px);
+}
+
+/* Settings-panel language toggle — variant of .settings-theme-toggle
+   that lets buttons grow to fit longer labels ("English", "Japanese"). */
+.settings-theme-toggle.settings-language-toggle {
+  flex-wrap: wrap;
+}
+
+.settings-theme-toggle.settings-language-toggle button {
+  flex: 1 1 auto;
+  min-width: 96px;
 }
 

@@ -105,6 +105,12 @@ import { ToastHost } from "./components/ToastHost";
 import { IOSInstallHint } from "./components/IOSInstallHint";
 import { resetAllTutorials } from "./services/tutorial";
 import { showToast } from "./services/toast";
+import { useTranslation } from "./i18n/LanguageContext";
+import {
+  LANGUAGE_LABELS,
+  SUPPORTED_LANGUAGES,
+  type Language,
+} from "./i18n/translations";
 import "./App.css";
 
 declare global {
@@ -266,6 +272,9 @@ type UserProfile = {
   githubUsername?: string;
   contributionCount?: number;
   lastSyncedAt?: string;
+  /* Preferred UI language. Defaults to "ja" when missing for
+     backward compatibility with pre-i18n accounts. */
+  language?: Language;
 };
 
 type FriendRequestStatus = "pending" | "accepted";
@@ -406,7 +415,13 @@ type Organization = {
 type OrganizationRole = "owner" | "admin" | "member";
 
 
-type OnboardingStep = "idle" | "welcome" | "settings" | "firstPost";
+type OnboardingStep = "idle" | "language" | "welcome" | "settings" | "firstPost";
+
+function getSafeLanguage(value: unknown): Language {
+  return typeof value === "string" && (SUPPORTED_LANGUAGES as string[]).includes(value)
+    ? (value as Language)
+    : "ja";
+}
 
 type RoomCreateState = "idle" | "saving" | "saved" | "offline";
 
@@ -1352,6 +1367,7 @@ function normalizeUserProfile(uid: string, data: Partial<UserProfile>): UserProf
     githubUsername: data.githubUsername || "",
     contributionCount: data.contributionCount || 0,
     lastSyncedAt: data.lastSyncedAt || "",
+    language: getSafeLanguage(data.language),
   };
 }
 
@@ -3335,6 +3351,7 @@ function LoginScreen() {
 }
 
 function App() {
+  const { language, setLanguage, t } = useTranslation();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   // Forces a re-render after operations that mutate the Firebase User in
@@ -3972,7 +3989,10 @@ function App() {
         let resolvedUserId = savedUserId || "";
         if (!snapshot.exists()) {
           if (!resolvedUserId) {
-            setOnboardingStep("welcome");
+            // Brand-new account: start with language selection so
+            // every subsequent onboarding screen is rendered in the
+            // user's chosen language.
+            setOnboardingStep("language");
           } else if (!savedOnboardingComplete) {
             safeSetLocalStorage(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
           }
@@ -3980,6 +4000,12 @@ function App() {
         }
 
         const profile = normalizeUserProfile(currentUser.uid, snapshot.data() as Partial<UserProfile>);
+        // Adopt the stored language preference. Existing accounts
+        // without a `language` field fall back to "ja" via
+        // getSafeLanguage in the normalizer.
+        if (profile.language) {
+          setLanguage(profile.language);
+        }
         resolvedUserId = profile.userId || resolvedUserId;
         setUserId(resolvedUserId);
         setDraftUserId(resolvedUserId);
@@ -4037,18 +4063,22 @@ function App() {
             setOnboardingStep("firstPost");
             setCurrentView("home");
           }
+        } else if (!profile.language) {
+          // Profile exists but has no language and no userId — treat
+          // as fresh onboarding starting from language selection.
+          setOnboardingStep("language");
         } else {
           setOnboardingStep("welcome");
         }
       })
       .catch(() => {
         if (!savedUserId) {
-          setOnboardingStep("welcome");
+          setOnboardingStep("language");
         } else if (!savedOnboardingComplete) {
           safeSetLocalStorage(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
         }
       });
-  }, [currentUser]);
+  }, [currentUser, setLanguage]);
 
   useEffect(() => {
     if (!currentUser || onboardingStep !== "welcome") {
@@ -6914,6 +6944,27 @@ function App() {
     }
   };
 
+  // Persist the chosen language to Firestore (best-effort) and advance
+  // onboarding past the language picker into the welcome step. Used by
+  // the first-login onboarding flow only — settings-panel language
+  // changes go through handleSettingsSubmit / setLanguage directly.
+  const completeLanguageOnboarding = async (chosen: Language) => {
+    setLanguage(chosen);
+    if (currentUser) {
+      try {
+        await setDoc(
+          doc(db, "users", currentUser.uid),
+          { language: chosen, updatedAt: serverTimestamp() },
+          { merge: true },
+        );
+      } catch (error) {
+        // Non-fatal — language is also cached in localStorage by setLanguage.
+        console.warn("Could not save language preference to Firestore", error);
+      }
+    }
+    setOnboardingStep("welcome");
+  };
+
   const handleSettingsSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -7015,6 +7066,7 @@ function App() {
                 githubUsername,
                 contributionCount: outputStats.contributions,
                 lastSyncedAt: new Date().toISOString(),
+                language,
                 ...(userSnapshot.exists() ? {} : { createdAt: serverTimestamp() }),
                 updatedAt: serverTimestamp(),
               },
@@ -9486,12 +9538,45 @@ function App() {
         </div>
       ) : null}
 
+      {onboardingStep === "language" ? (
+        <div className="onboarding-language-backdrop" role="dialog" aria-modal="true" aria-labelledby="onboarding-language-title">
+          <section className="onboarding-language-card">
+            <p className="card-kicker">Contribution Arc</p>
+            <h1 id="onboarding-language-title">{t("言語を選択")}</h1>
+            <p className="onboarding-language-lead">
+              {t("アプリで使う言語を選んでください。後から設定で変更できます。")}
+            </p>
+            <div className="onboarding-language-options">
+              {SUPPORTED_LANGUAGES.map((lang) => (
+                <button
+                  key={lang}
+                  type="button"
+                  className={`onboarding-language-option${language === lang ? " is-active" : ""}`}
+                  onClick={() => setLanguage(lang)}
+                  aria-pressed={language === lang}
+                >
+                  <span className="onboarding-language-option-native">{LANGUAGE_LABELS[lang].native}</span>
+                  <span className="onboarding-language-option-english">{LANGUAGE_LABELS[lang].english}</span>
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="onboarding-language-cta"
+              onClick={() => completeLanguageOnboarding(language)}
+            >
+              {t("この言語で続ける")}
+            </button>
+          </section>
+        </div>
+      ) : null}
+
       {onboardingStep === "welcome" ? (
         <div className="onboarding-welcome" role="status" aria-live="polite">
           <section>
             <p className="card-kicker">Contribution Arc</p>
-            <h1>{onboardingMessage}</h1>
-            <span>最初にあなたのプロフィールを整えます。</span>
+            <h1>{t("ようこそContribution Arcへ")}</h1>
+            <span>{t("最初にあなたのプロフィールを整えます。")}</span>
           </section>
         </div>
       ) : null}
@@ -9509,7 +9594,7 @@ function App() {
             className={currentView === "home" ? "is-active" : ""}
             onClick={() => setCurrentView("home")}
           >
-            ホーム
+            {t("ホーム")}
           </button>
           {/* 作業部屋を「ホームの直後」=動線上で必ず通る位置に移動。
               在室者がいるときは小さなドットとカウントを添えて、
@@ -9524,11 +9609,11 @@ function App() {
             {activeMembers.length > 0 ? (
               <span className="topbar-presence-dot" aria-hidden="true" />
             ) : null}
-            <span className="workspace-tab-label">作業部屋</span>
+            <span className="workspace-tab-label">{t("作業部屋")}</span>
             {activeMembers.length > 0 ? (
               <span
                 className="topbar-presence-count"
-                aria-label={`現在 ${activeMembers.length} 人が作業中`}
+                aria-label={t("現在 {count} 人が作業中", { count: activeMembers.length })}
               >
                 · {activeMembers.length}
               </span>
@@ -9539,21 +9624,21 @@ function App() {
             className={currentView === "learning" ? "is-active" : ""}
             onClick={() => setCurrentView("learning")}
           >
-            記録する
+            {t("記録する")}
           </button>
           <button
             type="button"
             className={currentView === "daily" ? "is-active" : ""}
             onClick={() => setCurrentView("daily")}
           >
-            日報
+            {t("日報")}
           </button>
         </nav>
 
         <div className="topbar-context">
           {todayStudyMinutes > 0 ? (
             <span className="topbar-today">
-              今日 {formatStudyTimeJa(todayStudyMinutes)} 学習
+              {t("今日 {duration} 学習", { duration: formatStudyTimeJa(todayStudyMinutes) })}
             </span>
           ) : null}
         </div>
@@ -9562,7 +9647,11 @@ function App() {
           <button
             type="button"
             className="topbar-icon-button topbar-shop-button"
-            aria-label={`ショップ${coins > 0 ? ` (${coins.toLocaleString()} Arc)` : ""}`}
+            aria-label={
+              coins > 0
+                ? t("ショップ ({coins} Arc)", { coins: coins.toLocaleString() })
+                : t("ショップ")
+            }
             onClick={() => {
               setCurrentView("shop");
               setIsFriendsPopoverOpen(false);
@@ -9831,7 +9920,7 @@ function App() {
             <button
               type="button"
               className={`user-menu-button${isUserMenuOpen ? " open" : ""}`}
-              aria-label="アカウントメニュー"
+              aria-label={t("アカウントメニュー")}
               aria-expanded={isUserMenuOpen}
               onClick={() => setIsUserMenuOpen((prev) => !prev)}
             >
@@ -9849,9 +9938,9 @@ function App() {
                   </span>
                   <span>
                     <strong>{playerName}</strong>
-                    <small>@{userId || "未設定"}</small>
+                    <small>@{userId || t("未設定")}</small>
                     {currentUser?.email ? (
-                      <small className="user-menu-email" title="サインイン中のアカウント">
+                      <small className="user-menu-email" title={t("サインイン中のアカウント")}>
                         {currentUser.email}
                       </small>
                     ) : null}
@@ -9880,7 +9969,7 @@ function App() {
                       strokeLinecap="round"
                     />
                   </svg>
-                  <span>プロフィール</span>
+                  <span>{t("プロフィール")}</span>
                 </button>
                 <button
                   type="button"
@@ -9891,7 +9980,7 @@ function App() {
                   }}
                 >
                   <SettingsIcon />
-                  <span>設定</span>
+                  <span>{t("設定")}</span>
                 </button>
                 <button
                   type="button"
@@ -9907,7 +9996,7 @@ function App() {
                   }}
                 >
                   <span aria-hidden="true">↻</span>
-                  <span>チュートリアルをもう一度</span>
+                  <span>{t("チュートリアルをもう一度")}</span>
                 </button>
                 <div className="user-menu-separator" aria-hidden="true" />
                 <button
@@ -9919,7 +10008,7 @@ function App() {
                     signOut(auth);
                   }}
                 >
-                  ログアウト
+                  {t("ログアウト")}
                 </button>
               </div>
             ) : null}
@@ -10616,10 +10705,10 @@ function App() {
           >
             <div>
               <p className="card-kicker">{isOnboardingSettings ? "Welcome Setup" : "Settings"}</p>
-              <h2 id="settings-title">プロフィール設定</h2>
+              <h2 id="settings-title">{t("プロフィール設定")}</h2>
               {isOnboardingSettings ? (
                 <p className="onboarding-settings-copy">
-                  Contribution Arcで使う名前とユーザーIDを設定してください。ユーザーIDはフレンド申請やプロフィール表示に使います。
+                  {t("Contribution Arcで使う名前とユーザーIDを設定してください。ユーザーIDはフレンド申請やプロフィール表示に使います。")}
                 </p>
               ) : null}
             </div>
@@ -10631,12 +10720,12 @@ function App() {
                 </span>
                 <div className="settings-avatar-actions">
                   <label>
-                    写真を選択
+                    {t("写真を選択")}
                     <input type="file" accept="image/*" onChange={handleAvatarChange} />
                   </label>
                   {playerAvatar ? (
                     <button type="button" onClick={handleAvatarRemove}>
-                      削除
+                      {t("削除")}
                     </button>
                   ) : null}
                 </div>
@@ -10644,7 +10733,7 @@ function App() {
 
               <div className="settings-character-color-panel">
                 <div className="settings-character-color-head">
-                  <span>分身キャラクター</span>
+                  <span>{t("分身キャラクター")}</span>
                   <ProfileCharacterPreview
                     color={playerCharacterColor}
                     variant="simple"
@@ -10653,8 +10742,8 @@ function App() {
                 </div>
 
                 <div className="character-customize-section compact">
-                  <p className="character-customize-section-label">シルエット</p>
-                  <div className="character-shape-grid compact" aria-label="キャラクターの形">
+                  <p className="character-customize-section-label">{t("シルエット")}</p>
+                  <div className="character-shape-grid compact" aria-label={t("キャラクターの形")}>
                     {characterShapeOptions.map((option) => {
                       const isLocked = !ownedCharacterShapes.includes(option.value);
                       return (
@@ -10704,8 +10793,8 @@ function App() {
                 </div>
 
                 <div className="character-customize-section compact">
-                  <p className="character-customize-section-label">カラー</p>
-                  <div className="character-color-grid compact" aria-label="分身カラー">
+                  <p className="character-customize-section-label">{t("カラー")}</p>
+                  <div className="character-color-grid compact" aria-label={t("分身カラー")}>
                     {characterColorOptions.map((color) => (
                       <button
                         type="button"
@@ -10729,12 +10818,12 @@ function App() {
                   users see only the "組織を作成" form; org members
                   see the org name + role + invite button + leave. */}
               {!isOnboardingSettings ? (
-                <div className="settings-org-panel" role="group" aria-label="組織">
+                <div className="settings-org-panel" role="group" aria-label={t("組織")}>
                   <div className="settings-org-head">
-                    <span>組織</span>
+                    <span>{t("組織")}</span>
                     {currentOrganization ? (
                       <span className="settings-org-role">
-                        {currentOrganization.ownerUid === currentUser?.uid ? "オーナー" : "メンバー"}
+                        {currentOrganization.ownerUid === currentUser?.uid ? t("オーナー") : t("メンバー")}
                       </span>
                     ) : null}
                   </div>
@@ -10742,7 +10831,7 @@ function App() {
                     <div className="settings-org-current">
                       <strong>{currentOrganization.name}</strong>
                       <p className="settings-org-copy">
-                        組織限定のルームを作って、社内・チーム内だけで一緒に作業できます。
+                        {t("組織限定のルームを作って、社内・チーム内だけで一緒に作業できます。")}
                       </p>
                       <div className="settings-org-actions">
                         <button
@@ -10751,7 +10840,7 @@ function App() {
                           onClick={handleCreateOrgInvite}
                           disabled={isOrgWorking}
                         >
-                          招待リンクをコピー
+                          {t("招待リンクをコピー")}
                         </button>
                         {currentOrganization.ownerUid === currentUser?.uid ? (
                           <button
@@ -10759,7 +10848,7 @@ function App() {
                             className="settings-org-admin"
                             onClick={handleOpenOrgAdmin}
                           >
-                            メンバー一覧 / Admin
+                            {t("メンバー一覧 / Admin")}
                           </button>
                         ) : null}
                         {currentOrganization.ownerUid !== currentUser?.uid ? (
@@ -10769,7 +10858,7 @@ function App() {
                             onClick={handleLeaveOrganization}
                             disabled={isOrgWorking}
                           >
-                            退出
+                            {t("退出")}
                           </button>
                         ) : null}
                       </div>
@@ -10777,8 +10866,7 @@ function App() {
                   ) : (
                     <div className="settings-org-create">
                       <p className="settings-org-copy">
-                        会社やチームで使う場合は、組織を作って招待リンクで仲間を招きます。
-                        組織限定のルームで他社や他チームから見えない作業空間が作れます。
+                        {t("会社やチームで使う場合は、組織を作って招待リンクで仲間を招きます。組織限定のルームで他社や他チームから見えない作業空間が作れます。")}
                       </p>
                       <div className="settings-org-create-row">
                         <input
@@ -10787,26 +10875,43 @@ function App() {
                             setNewOrgName(event.target.value);
                             if (orgError) setOrgError("");
                           }}
-                          placeholder="例: Acme Inc."
+                          placeholder={t("例: Acme Inc.")}
                           maxLength={64}
-                          aria-label="組織名"
+                          aria-label={t("組織名")}
                         />
                         <button
                           type="button"
                           onClick={handleCreateOrganization}
                           disabled={isOrgWorking}
                         >
-                          作成
+                          {t("作成")}
                         </button>
                       </div>
                     </div>
                   )}
-                  {orgError ? <p className="settings-org-error">{orgError}</p> : null}
+                  {orgError ? <p className="settings-org-error">{t(orgError)}</p> : null}
                 </div>
               ) : null}
 
-              <div className="settings-theme-panel" role="group" aria-label="テーマ">
-                <span className="settings-theme-label">テーマ</span>
+              <div className="settings-theme-panel" role="group" aria-label={t("言語")}>
+                <span className="settings-theme-label">{t("言語")}</span>
+                <div className="settings-theme-toggle settings-language-toggle">
+                  {SUPPORTED_LANGUAGES.map((lang) => (
+                    <button
+                      key={lang}
+                      type="button"
+                      className={language === lang ? "active" : ""}
+                      onClick={() => setLanguage(lang)}
+                      aria-pressed={language === lang}
+                    >
+                      {LANGUAGE_LABELS[lang].native}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="settings-theme-panel" role="group" aria-label={t("テーマ")}>
+                <span className="settings-theme-label">{t("テーマ")}</span>
                 <div className="settings-theme-toggle">
                   <button
                     type="button"
@@ -10814,7 +10919,7 @@ function App() {
                     onClick={() => setTheme("dark")}
                     aria-pressed={theme === "dark"}
                   >
-                    ダーク
+                    {t("ダーク")}
                   </button>
                   <button
                     type="button"
@@ -10822,14 +10927,14 @@ function App() {
                     onClick={() => setTheme("light")}
                     aria-pressed={theme === "light"}
                   >
-                    ライト
+                    {t("ライト")}
                   </button>
                 </div>
               </div>
 
-              <div className="settings-zoom-panel" role="group" aria-label="表示サイズ">
+              <div className="settings-zoom-panel" role="group" aria-label={t("表示サイズ")}>
                 <div className="settings-zoom-head">
-                  <span className="settings-theme-label">表示サイズ</span>
+                  <span className="settings-theme-label">{t("表示サイズ")}</span>
                   <span className="settings-zoom-value" aria-live="polite">
                     {Math.round(uiScale * 100)}%
                   </span>
@@ -10843,7 +10948,7 @@ function App() {
                         Math.max(UI_SCALE_MIN, Math.round((v - 0.05) * 100) / 100),
                       )
                     }
-                    aria-label="表示を小さくする"
+                    aria-label={t("表示を小さくする")}
                     disabled={uiScale <= UI_SCALE_MIN + 1e-6}
                   >
                     −
@@ -10856,7 +10961,7 @@ function App() {
                     step={0.05}
                     value={uiScale}
                     onChange={(event) => setUiScale(parseFloat(event.target.value))}
-                    aria-label="表示サイズスライダー"
+                    aria-label={t("表示サイズスライダー")}
                   />
                   <button
                     type="button"
@@ -10866,7 +10971,7 @@ function App() {
                         Math.min(UI_SCALE_MAX, Math.round((v + 0.05) * 100) / 100),
                       )
                     }
-                    aria-label="表示を大きくする"
+                    aria-label={t("表示を大きくする")}
                     disabled={uiScale >= UI_SCALE_MAX - 1e-6}
                   >
                     ＋
@@ -10875,18 +10980,18 @@ function App() {
               </div>
 
               <label>
-                <span>ユーザーネーム</span>
+                <span>{t("ユーザーネーム")}</span>
                 <input
                   value={draftUserName}
                   onChange={(event) => setDraftUserName(event.target.value)}
-                  placeholder="表示したい名前"
+                  placeholder={t("表示したい名前")}
                   maxLength={24}
                   autoFocus
                 />
               </label>
 
               <label>
-                <span>ユーザーID</span>
+                <span>{t("ユーザーID")}</span>
                 <input
                   value={draftUserId}
                   onChange={(event) => setDraftUserId(event.target.value.toLowerCase())}
@@ -10894,19 +10999,19 @@ function App() {
                   maxLength={30}
                   required
                 />
-                {isOnboardingSettings ? <small>小文字の半角英数字、_、. が使えます。</small> : null}
+                {isOnboardingSettings ? <small>{t("小文字の半角英数字、_、. が使えます。")}</small> : null}
               </label>
 
               {!isOnboardingSettings ? (
                 <fieldset className="desktop-notification-settings">
-                  <legend>Mac通知</legend>
+                  <legend>{t("Mac通知")}</legend>
                   {([
                     ["dailyLog", "日報通知"],
                     ["post", "投稿通知"],
                     ["friendRequest", "フレンド申請通知"],
                   ] as const).map(([key, label]) => (
                     <label key={key}>
-                      <span>{label}</span>
+                      <span>{t(label)}</span>
                       <input
                         type="checkbox"
                         checked={desktopNotificationSettings[key]}
@@ -10920,7 +11025,7 @@ function App() {
                     </label>
                   ))}
                   <label>
-                    <span>通知音</span>
+                    <span>{t("通知音")}</span>
                     <input
                       type="checkbox"
                       checked={desktopNotificationSettings.sound}
@@ -10934,7 +11039,7 @@ function App() {
                   </label>
                   <div className="notification-sound-control">
                     <div>
-                      <span>通知音量</span>
+                      <span>{t("通知音量")}</span>
                       <small>{Math.round(desktopNotificationSettings.soundVolume * 100)}%</small>
                     </div>
                     <input
@@ -10958,21 +11063,21 @@ function App() {
                     disabled={!desktopNotificationSettings.sound || desktopNotificationSettings.soundVolume <= 0}
                     onClick={handleNotificationSoundTest}
                   >
-                    通知音をテスト
+                    {t("通知音をテスト")}
                   </button>
                 </fieldset>
               ) : null}
 
-              {settingsError ? <p className="settings-error">{settingsError}</p> : null}
+              {settingsError ? <p className="settings-error">{t(settingsError)}</p> : null}
 
               <div className="settings-actions">
                 {!isOnboardingSettings ? (
                   <button type="button" className="settings-secondary" onClick={() => setIsSettingsOpen(false)}>
-                    Cancel
+                    {t("キャンセル")}
                   </button>
                 ) : null}
                 <button type="submit" className="settings-primary" disabled={isSavingSettings}>
-                  {isSavingSettings ? "Saving..." : isOnboardingSettings ? "Contribution Arcを始める" : "Save"}
+                  {isSavingSettings ? t("保存中…") : isOnboardingSettings ? t("Contribution Arcを始める") : t("保存")}
                 </button>
               </div>
             </form>

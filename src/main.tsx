@@ -2,12 +2,15 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { AppErrorBoundary } from "./AppErrorBoundary";
+import { LanguageProvider } from "./i18n/LanguageContext";
 import "./index.css";
 
 createRoot(document.getElementById("root") as HTMLElement).render(
   <StrictMode>
     <AppErrorBoundary>
-      <App />
+      <LanguageProvider>
+        <App />
+      </LanguageProvider>
     </AppErrorBoundary>
   </StrictMode>
 );
