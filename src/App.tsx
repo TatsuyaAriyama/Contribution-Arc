@@ -75,7 +75,16 @@ import {
   type OrganizationMemberRecord,
   type OrganizationRecord,
 } from "./services/cloudData";
-import { isValidSlackWebhookUrl, postToSlackWebhook } from "./services/slack";
+import {
+  buildBreakStartedBlocks,
+  buildDailyDigestBlocks,
+  buildPostBlocks,
+  buildRecruitmentBlocks,
+  buildRoomJoinBlocks,
+  buildRoomLeaveBlocks,
+  isValidSlackWebhookUrl,
+  postToSlackWebhook,
+} from "./services/slack";
 import { buildWeeklyDigestPayload } from "./services/teamDigest";
 import {
   deleteLearningItemFromCloud,
@@ -441,7 +450,10 @@ type Organization = {
   slackWebhookUrl?: string;
   slackEvents?: {
     roomJoins?: boolean;
+    roomLeaves?: boolean;
+    breakStarted?: boolean;
     recruitments?: boolean;
+    posts?: boolean;
     dailyDigest?: boolean;
   };
   autoJoinDomains?: string[];
@@ -3623,7 +3635,10 @@ function App() {
   // button. Initialised when the admin modal opens.
   const [slackDraftUrl, setSlackDraftUrl] = useState<string>("");
   const [slackDraftRoomJoins, setSlackDraftRoomJoins] = useState<boolean>(false);
+  const [slackDraftRoomLeaves, setSlackDraftRoomLeaves] = useState<boolean>(false);
+  const [slackDraftBreakStarted, setSlackDraftBreakStarted] = useState<boolean>(false);
   const [slackDraftRecruitments, setSlackDraftRecruitments] = useState<boolean>(false);
+  const [slackDraftPosts, setSlackDraftPosts] = useState<boolean>(false);
   const [slackDraftDailyDigest, setSlackDraftDailyDigest] = useState<boolean>(false);
   const [slackSaveState, setSlackSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [slackSaveMessage, setSlackSaveMessage] = useState<string>("");
@@ -6589,6 +6604,20 @@ function App() {
       // easy to miss the visual update. The toast confirms the send so
       // the user doesn't second-guess whether their tap landed.
       showToast("投稿しました", { kind: "success" });
+
+      // Phase 9: mirror the post to Slack if the org opted in.
+      if (
+        currentOrganization?.slackWebhookUrl &&
+        currentOrganization.slackEvents?.posts
+      ) {
+        void postToSlackWebhook(
+          currentOrganization.slackWebhookUrl,
+          buildPostBlocks(
+            { name: playerName, meta: `Lv ${levelState.level}` },
+            text,
+          ),
+        );
+      }
     } catch (error) {
       setPostError(
         getFirestoreErrorMessage(
@@ -8052,9 +8081,14 @@ function App() {
     ) {
       const room = allWorkspaceRooms.find((item) => item.id === roomId);
       const roomName = room?.name || "作業部屋";
-      void postToSlackWebhook(currentOrganization.slackWebhookUrl, {
-        text: `:wave: *${playerName}* が *${roomName}* に入室しました（${nextTask}）`,
-      });
+      void postToSlackWebhook(
+        currentOrganization.slackWebhookUrl,
+        buildRoomJoinBlocks(
+          { name: playerName, meta: `Lv ${levelState.level} · ${studyStreak}日連続` },
+          roomName,
+          nextTask,
+        ),
+      );
     }
   };
 
@@ -8084,6 +8118,23 @@ function App() {
     if (!member) {
       resetWorkspacePresence();
       return;
+    }
+
+    // Slack room-leave notification (Phase 9). Captured BEFORE the
+    // close call so we still have stayMinutes from the member entry.
+    if (
+      currentOrganization?.slackWebhookUrl &&
+      currentOrganization.slackEvents?.roomLeaves
+    ) {
+      const stayMinutes = getWorkspaceActiveMinutes(member, Date.now());
+      void postToSlackWebhook(
+        currentOrganization.slackWebhookUrl,
+        buildRoomLeaveBlocks(
+          { name: playerName, meta: `Lv ${levelState.level} · ${studyStreak}日連続` },
+          selectedRoom.name,
+          formatStayTime(stayMinutes),
+        ),
+      );
     }
 
     closeWorkspaceSession(selectedRoom.id);
@@ -8188,10 +8239,17 @@ function App() {
           hour: "2-digit",
           minute: "2-digit",
         });
-        const messageLine = message ? `\n> ${message}` : "";
-        void postToSlackWebhook(currentOrganization.slackWebhookUrl, {
-          text: `:loudspeaker: *${playerName}* が *${selectedRoom.name}* で募集中（${task}・${duration}分・開始 ${startAtLabel}）${messageLine}`,
-        });
+        void postToSlackWebhook(
+          currentOrganization.slackWebhookUrl,
+          buildRecruitmentBlocks(
+            { name: playerName, meta: `Lv ${levelState.level} · ${studyStreak}日連続` },
+            selectedRoom.name,
+            task,
+            duration,
+            startAtLabel,
+            message,
+          ),
+        );
       }
     } catch (error) {
       console.warn("Failed to create recruitment", error);
@@ -8244,6 +8302,24 @@ function App() {
     if (message === "今日はReactやります") {
       setWorkspaceTask("React");
       setStudySubject("React");
+    }
+
+    // Phase 9: notify Slack on transition INTO the on-break state.
+    // We compare against the previous member status so cycling
+    // 休憩 → 休憩 doesn't fire twice.
+    if (
+      nextStatus === "on-break" &&
+      currentPresence?.status !== "on-break" &&
+      currentOrganization?.slackWebhookUrl &&
+      currentOrganization.slackEvents?.breakStarted
+    ) {
+      void postToSlackWebhook(
+        currentOrganization.slackWebhookUrl,
+        buildBreakStartedBlocks(
+          { name: playerName, meta: `Lv ${levelState.level}` },
+          selectedRoom.name,
+        ),
+      );
     }
 
     setCustomRooms((rooms) =>
@@ -8426,7 +8502,10 @@ function App() {
     // a previous open.
     setSlackDraftUrl(currentOrganization.slackWebhookUrl || "");
     setSlackDraftRoomJoins(Boolean(currentOrganization.slackEvents?.roomJoins));
+    setSlackDraftRoomLeaves(Boolean(currentOrganization.slackEvents?.roomLeaves));
+    setSlackDraftBreakStarted(Boolean(currentOrganization.slackEvents?.breakStarted));
     setSlackDraftRecruitments(Boolean(currentOrganization.slackEvents?.recruitments));
+    setSlackDraftPosts(Boolean(currentOrganization.slackEvents?.posts));
     setSlackDraftDailyDigest(Boolean(currentOrganization.slackEvents?.dailyDigest));
     setSlackSaveState("idle");
     setSlackSaveMessage("");
@@ -8747,7 +8826,10 @@ function App() {
           slackWebhookUrl: trimmedUrl,
           slackEvents: {
             roomJoins: slackDraftRoomJoins,
+            roomLeaves: slackDraftRoomLeaves,
+            breakStarted: slackDraftBreakStarted,
             recruitments: slackDraftRecruitments,
+            posts: slackDraftPosts,
             dailyDigest: slackDraftDailyDigest,
           },
         },
@@ -8760,7 +8842,10 @@ function App() {
               slackWebhookUrl: trimmedUrl || undefined,
               slackEvents: {
                 roomJoins: slackDraftRoomJoins,
+                roomLeaves: slackDraftRoomLeaves,
+                breakStarted: slackDraftBreakStarted,
                 recruitments: slackDraftRecruitments,
+                posts: slackDraftPosts,
                 dailyDigest: slackDraftDailyDigest,
               },
             }
@@ -8820,15 +8905,20 @@ function App() {
       .slice()
       .sort((a, b) => (b.effortExp || 0) - (a.effortExp || 0))
       .slice(0, 5)
-      .map((m, idx) => `${idx + 1}. *${m.displayName}* — Effort ${m.effortExp.toLocaleString()} / ストリーク ${m.streak}日`)
-      .join("\n");
-    const text = [
-      `:bar_chart: *${currentOrganization.name}* の日次サマリー`,
-      `メンバー: ${orgMembers.length}人 / Effort合計 ${totalEffort.toLocaleString()} / Output合計 ${totalOutput.toLocaleString()} / Contributions ${totalContributions.toLocaleString()}`,
-      "",
-      topMembers || "_まだ活動がありません。_",
-    ].join("\n");
-    const result = await postToSlackWebhook(currentOrganization.slackWebhookUrl, { text });
+      .map((m) => ({ name: m.displayName, effort: m.effortExp, streak: m.streak }));
+    const result = await postToSlackWebhook(
+      currentOrganization.slackWebhookUrl,
+      buildDailyDigestBlocks(
+        currentOrganization.name,
+        {
+          memberCount: orgMembers.length,
+          totalEffort,
+          totalOutput,
+          totalContributions,
+        },
+        topMembers,
+      ),
+    );
     if (result.ok) {
       setSlackSaveState("saved");
       setSlackSaveMessage("日次サマリーを送信しました。");
@@ -11501,6 +11591,28 @@ function App() {
                     <small>メンバーが作業部屋に入った時</small>
                   </div>
                 </label>
+                <label className={`org-admin-slack-toggle ${slackDraftRoomLeaves ? "is-on" : ""}`}>
+                  <input
+                    type="checkbox"
+                    checked={slackDraftRoomLeaves}
+                    onChange={(event) => setSlackDraftRoomLeaves(event.target.checked)}
+                  />
+                  <div>
+                    <strong>退室通知</strong>
+                    <small>メンバーが退出した時（滞在時間付き）</small>
+                  </div>
+                </label>
+                <label className={`org-admin-slack-toggle ${slackDraftBreakStarted ? "is-on" : ""}`}>
+                  <input
+                    type="checkbox"
+                    checked={slackDraftBreakStarted}
+                    onChange={(event) => setSlackDraftBreakStarted(event.target.checked)}
+                  />
+                  <div>
+                    <strong>休憩開始</strong>
+                    <small>メンバーが休憩に入った時</small>
+                  </div>
+                </label>
                 <label className={`org-admin-slack-toggle ${slackDraftRecruitments ? "is-on" : ""}`}>
                   <input
                     type="checkbox"
@@ -11510,6 +11622,17 @@ function App() {
                   <div>
                     <strong>募集通知</strong>
                     <small>メンバーが募集を出した時</small>
+                  </div>
+                </label>
+                <label className={`org-admin-slack-toggle ${slackDraftPosts ? "is-on" : ""}`}>
+                  <input
+                    type="checkbox"
+                    checked={slackDraftPosts}
+                    onChange={(event) => setSlackDraftPosts(event.target.checked)}
+                  />
+                  <div>
+                    <strong>投稿通知</strong>
+                    <small>メンバーがフィードに投稿した時</small>
                   </div>
                 </label>
                 <label className={`org-admin-slack-toggle ${slackDraftDailyDigest ? "is-on" : ""}`}>

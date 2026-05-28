@@ -70,3 +70,193 @@ export async function postToSlackWebhook(
     };
   }
 }
+
+/* =================================================================
+   Block Kit message builders — Phase 9.
+
+   Slack accepts a structured `blocks` array alongside the fallback
+   `text` field. Blocks render with proper hierarchy (heading row,
+   body, context strip) and are clickable in mobile/desktop Slack
+   without truncation, which raw text is not. Every helper here
+   returns the SlackEventPayload shape so callers can pass directly
+   to postToSlackWebhook().
+
+   The fallback `text` is always populated — Slack still uses it for
+   notification previews, screen readers, and any client that
+   doesn't support Block Kit (older Slack clients, some 3rd party
+   integrations).
+   ================================================================= */
+
+type ActorMeta = {
+  name: string;
+  /* Optional human-readable line shown in the context strip below
+     the main message. Examples: "Lv 12 · ストリーク 5日". */
+  meta?: string;
+  /* Optional emoji prefix for the heading line (':wave:', ':bookmark:'). */
+  emoji?: string;
+};
+
+function contextElements(meta?: string) {
+  if (!meta) return undefined;
+  return [
+    {
+      type: "mrkdwn",
+      text: meta,
+    },
+  ];
+}
+
+export function buildRoomJoinBlocks(actor: ActorMeta, roomName: string, task: string): SlackEventPayload {
+  const fallback = `${actor.emoji || ":wave:"} *${actor.name}* が *${roomName}* に入室（${task}）`;
+  return {
+    text: fallback,
+    blocks: [
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: fallback },
+      },
+      ...(actor.meta
+        ? [
+            {
+              type: "context",
+              elements: contextElements(actor.meta),
+            },
+          ]
+        : []),
+    ],
+  };
+}
+
+export function buildRoomLeaveBlocks(actor: ActorMeta, roomName: string, stayLabel: string): SlackEventPayload {
+  const fallback = `${actor.emoji || ":door:"} *${actor.name}* が *${roomName}* を退室（滞在 ${stayLabel}）`;
+  return {
+    text: fallback,
+    blocks: [
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: fallback },
+      },
+      ...(actor.meta
+        ? [
+            {
+              type: "context",
+              elements: contextElements(actor.meta),
+            },
+          ]
+        : []),
+    ],
+  };
+}
+
+export function buildBreakStartedBlocks(actor: ActorMeta, roomName: string): SlackEventPayload {
+  const fallback = `${actor.emoji || ":coffee:"} *${actor.name}* が *${roomName}* で休憩中`;
+  return {
+    text: fallback,
+    blocks: [
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: fallback },
+      },
+    ],
+  };
+}
+
+export function buildRecruitmentBlocks(
+  actor: ActorMeta,
+  roomName: string,
+  task: string,
+  duration: number,
+  startAtLabel: string,
+  message: string,
+): SlackEventPayload {
+  const fallback = `${actor.emoji || ":loudspeaker:"} *${actor.name}* が *${roomName}* で募集中（${task}・${duration}分・開始 ${startAtLabel}）`;
+  const sections: Array<Record<string, unknown>> = [
+    {
+      type: "section",
+      text: { type: "mrkdwn", text: fallback },
+    },
+  ];
+  if (message) {
+    sections.push({
+      type: "section",
+      text: { type: "mrkdwn", text: `> ${message}` },
+    });
+  }
+  if (actor.meta) {
+    sections.push({
+      type: "context",
+      elements: contextElements(actor.meta),
+    });
+  }
+  return { text: fallback, blocks: sections };
+}
+
+export function buildPostBlocks(actor: ActorMeta, postText: string): SlackEventPayload {
+  // Truncate the post body so a 280-char wall doesn't take over the
+  // Slack channel — anyone interested can click through to the app.
+  const truncated = postText.length > 140 ? `${postText.slice(0, 140)}…` : postText;
+  const fallback = `${actor.emoji || ":memo:"} *${actor.name}* が記録を投稿しました`;
+  return {
+    text: fallback,
+    blocks: [
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: fallback },
+      },
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: `> ${truncated.replace(/\n/g, "\n> ")}` },
+      },
+      ...(actor.meta
+        ? [
+            {
+              type: "context",
+              elements: contextElements(actor.meta),
+            },
+          ]
+        : []),
+    ],
+  };
+}
+
+export function buildDailyDigestBlocks(
+  orgName: string,
+  metrics: {
+    memberCount: number;
+    totalEffort: number;
+    totalOutput: number;
+    totalContributions: number;
+  },
+  topMembers: Array<{ name: string; effort: number; streak: number }>,
+): SlackEventPayload {
+  const headline = `:bar_chart: *${orgName}* の日次サマリー`;
+  const summaryLine = `メンバー *${metrics.memberCount}* 人 · Effort *${metrics.totalEffort.toLocaleString()}* · Output *${metrics.totalOutput.toLocaleString()}* · Contributions *${metrics.totalContributions.toLocaleString()}*`;
+  const rankingLines = topMembers
+    .slice(0, 5)
+    .map((m, idx) => `${idx + 1}. *${m.name}* — Effort ${m.effort.toLocaleString()} / ${m.streak}日連続`)
+    .join("\n");
+  const fallback = `${headline}\n${summaryLine}`;
+  return {
+    text: fallback,
+    blocks: [
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: headline },
+      },
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: summaryLine },
+      },
+      {
+        type: "divider",
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: rankingLines || "_今日はまだ活動がありません。_",
+        },
+      },
+    ],
+  };
+}
