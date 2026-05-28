@@ -13112,6 +13112,7 @@ function App() {
                   lastSyncedAt: new Date().toISOString(),
                   contributionCount: 0,
                 }}
+                organizationName={currentOrganization.name}
                 onMemberSelect={(member) => {
                   // For now, clicking a member just shows their profile
                   // In a future phase, this could open a detail view

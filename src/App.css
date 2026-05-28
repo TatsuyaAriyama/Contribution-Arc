@@ -22605,6 +22605,14 @@ a[role="button"],
   font-weight: 900;
 }
 
+.manager-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
 .manager-title {
   margin: 0;
   font-size: 28px;
@@ -22616,6 +22624,35 @@ a[role="button"],
   margin: 0;
   font-size: 14px;
   color: var(--muted);
+}
+
+.manager-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.manager-export-button {
+  padding: 8px 14px;
+  border: 1px solid rgba(var(--ink-rgb, 31, 32, 36), 0.16);
+  border-radius: 8px;
+  background: rgba(var(--surface-rgb), 0.8);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+
+.manager-export-button:hover:not(:disabled) {
+  background: var(--surface);
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.manager-export-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .manager-stats-grid {

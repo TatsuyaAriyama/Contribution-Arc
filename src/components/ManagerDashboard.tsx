@@ -6,8 +6,70 @@ export interface ManagerDashboardProps {
   teamMembers: OrganizationMemberRecord[];
   /** Current logged-in user (the manager). */
   currentUser: Partial<OrganizationMemberRecord>;
+  /** Organization name — used to label the CSV export file. */
+  organizationName?: string;
   /** Callback when a member is clicked for detail view. */
   onMemberSelect?: (member: OrganizationMemberRecord) => void;
+}
+
+/** Escape a single CSV cell. Wraps in double-quotes when the cell
+ *  contains a comma, quote, or newline; doubles internal quotes per
+ *  RFC 4180. We always quote string columns to keep things predictable
+ *  for Excel / Sheets / Numbers when names contain commas. */
+function csvCell(value: string | number): string {
+  const s = String(value ?? "");
+  if (/[",\n\r]/.test(s)) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
+
+/** Build the CSV body for a given member list. Headers are Japanese
+ *  so the file lands readable in Excel without manual relabeling for
+ *  L&D reports — the target user is the HR/manager, not engineers. */
+function buildMembersCsv(members: OrganizationMemberRecord[]): string {
+  const header = [
+    "表示名",
+    "ユーザーID",
+    "ロール",
+    "レベル",
+    "学習時間（時間）",
+    "アウトプットEXP",
+    "ストリーク（日）",
+    "コミット数",
+    "最終同期日時",
+  ];
+
+  const rows = members.map((m) => [
+    csvCell(m.displayName),
+    csvCell(m.userId),
+    csvCell(m.organizationRole),
+    csvCell(m.level || 0),
+    csvCell(Math.round((m.effortExp || 0) / 60)),
+    csvCell(m.outputExp || 0),
+    csvCell(m.streak || 0),
+    csvCell(m.contributionCount || 0),
+    csvCell(m.lastSyncedAt || ""),
+  ].join(","));
+
+  return [header.join(","), ...rows].join("\r\n");
+}
+
+/** Trigger a browser download of the given CSV text. Prepends a UTF-8
+ *  BOM so Excel on Windows opens Japanese characters correctly without
+ *  the user having to re-import with the right encoding. */
+function downloadCsv(filename: string, csv: string): void {
+  const BOM = "\uFEFF";
+  const blob = new Blob([BOM + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  // Defer revoke so Safari has time to start the download.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 type TimePeriod = "daily" | "weekly" | "monthly";
@@ -15,10 +77,26 @@ type TimePeriod = "daily" | "weekly" | "monthly";
 export function ManagerDashboard({
   teamMembers,
   currentUser,
+  organizationName,
   onMemberSelect,
 }: ManagerDashboardProps) {
   const [timePeriod, setTimePeriod] = useState<TimePeriod>("weekly");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Sanitize the org name into a filename-safe slug. Keeps Japanese
+  // letters readable (most OSes accept them in filenames now) but
+  // strips slashes / quotes / control chars that break downloads.
+  const handleExportCsv = () => {
+    if (teamMembers.length === 0) return;
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const slug = (organizationName || "team")
+      .replace(/[\\/:*?"<>|\x00-\x1f]/g, "")
+      .replace(/\s+/g, "-")
+      .slice(0, 40) || "team";
+    const filename = `contribution-arc-${slug}-${today}.csv`;
+    const csv = buildMembersCsv(teamMembers);
+    downloadCsv(filename, csv);
+  };
 
   // Filter members by search query (name or userId)
   const filteredMembers = useMemo(() => {
@@ -61,6 +139,17 @@ export function ManagerDashboard({
         <div>
           <h2 className="manager-title">チーム学習ダッシュボード</h2>
           <p className="manager-subtitle">{currentUser.displayName} のチーム</p>
+        </div>
+        <div className="manager-header-actions">
+          <button
+            type="button"
+            className="manager-export-button"
+            onClick={handleExportCsv}
+            disabled={teamMembers.length === 0}
+            aria-label="メンバー一覧をCSVでダウンロード"
+          >
+            CSVをダウンロード
+          </button>
         </div>
       </section>
 
