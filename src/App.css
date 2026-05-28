@@ -22613,6 +22613,46 @@ a[role="button"],
   flex-wrap: wrap;
 }
 
+/* Domain-match variant of the home teams ribbon (Phase 7). Same
+   shape but tinted green so the user reads it as "this is for
+   you" rather than the generic pitch. */
+.home-teams-ribbon.is-domain-match {
+  background:
+    radial-gradient(120% 80% at 0% 0%, rgba(31, 111, 74, 0.18), transparent 60%),
+    var(--surface);
+  border-color: rgba(31, 111, 74, 0.32);
+}
+
+.home-teams-ribbon.is-domain-match .home-teams-ribbon-icon {
+  background: rgba(31, 111, 74, 0.18);
+}
+
+.home-domain-discovery {
+  display: grid;
+  gap: 8px;
+}
+
+/* Textarea variant of the slack URL field — for the domain
+   whitelist editor inside the admin modal. */
+.org-admin-slack-field textarea {
+  min-height: 80px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 13px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.org-admin-slack-field textarea:focus {
+  outline: none;
+  border-color: rgba(31, 111, 74, 0.4);
+  box-shadow: var(--ring-focus);
+}
+
 .manager-title {
   margin: 0;
   font-size: 28px;

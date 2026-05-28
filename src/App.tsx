@@ -64,8 +64,12 @@ import {
   subscribeStudyLogsFromCloud,
   transferOrganizationOwnership,
   updateOrganizationSlack,
+  updateOrganizationDomains,
+  findOrganizationsByEmailDomain,
+  joinOrganizationByDomain,
   type AuditLogRecord,
   type OrganizationMemberRecord,
+  type OrganizationRecord,
 } from "./services/cloudData";
 import { isValidSlackWebhookUrl, postToSlackWebhook } from "./services/slack";
 import {
@@ -415,6 +419,7 @@ type Organization = {
     recruitments?: boolean;
     dailyDigest?: boolean;
   };
+  autoJoinDomains?: string[];
 };
 
 type OrganizationRole = "owner" | "admin" | "member";
@@ -3573,6 +3578,13 @@ function App() {
   const [orgAdminTab, setOrgAdminTab] = useState<"members" | "audit">("members");
   const [orgAuditLogs, setOrgAuditLogs] = useState<AuditLogRecord[]>([]);
   const [isLoadingAuditLogs, setIsLoadingAuditLogs] = useState<boolean>(false);
+  // Domain auto-join — Phase 7. discoveredOrgs holds any orgs that
+  // have opted in for the current user's email domain. domainDraft
+  // is the comma/newline-separated edit field in the admin modal.
+  const [discoveredOrgs, setDiscoveredOrgs] = useState<OrganizationRecord[]>([]);
+  const [domainDraft, setDomainDraft] = useState<string>("");
+  const [domainSaveState, setDomainSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [domainSaveMessage, setDomainSaveMessage] = useState<string>("");
   // Records the token we've already attempted to auto-claim so a
   // re-render after the successful accept doesn't fire the call a
   // second time.
@@ -8148,6 +8160,9 @@ function App() {
     setSlackDraftDailyDigest(Boolean(currentOrganization.slackEvents?.dailyDigest));
     setSlackSaveState("idle");
     setSlackSaveMessage("");
+    setDomainDraft((currentOrganization.autoJoinDomains || []).join("\n"));
+    setDomainSaveState("idle");
+    setDomainSaveMessage("");
     setIsLoadingOrgMembers(true);
     try {
       const members = await listOrganizationMembers(db, currentOrganization.id);
@@ -8157,6 +8172,97 @@ function App() {
       setOrgAdminError("メンバー一覧を読み込めませんでした。再度お試しください。");
     } finally {
       setIsLoadingOrgMembers(false);
+    }
+  };
+
+  /* Auto-join domain discovery (Phase 7). Fires when the user is
+     signed in, has an email address, and isn't already in an org.
+     Surfaces any orgs that have whitelisted the user's email domain
+     so they can one-tap join without an invite link. The query is
+     cheap (array-contains on a top-level field, single equality)
+     so we re-run it on signin / when the user lands without an org. */
+  useEffect(() => {
+    if (!currentUser?.email || currentOrganization) {
+      setDiscoveredOrgs([]);
+      return;
+    }
+    const domain = currentUser.email.split("@")[1]?.toLowerCase().trim();
+    if (!domain) return;
+    let cancelled = false;
+    void findOrganizationsByEmailDomain(db, domain)
+      .then((orgs) => {
+        if (!cancelled) setDiscoveredOrgs(orgs);
+      })
+      .catch((error) => {
+        console.info("Domain auto-join discovery skipped.", error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser?.email, currentOrganization]);
+
+  /* One-tap domain join from the home discovery ribbon. */
+  const handleJoinByDomain = async (org: OrganizationRecord) => {
+    if (!currentUser?.email || isOrgWorking) return;
+    const domain = currentUser.email.split("@")[1]?.toLowerCase().trim();
+    if (!domain) return;
+    setIsOrgWorking(true);
+    setOrgError("");
+    try {
+      const joined = await joinOrganizationByDomain(
+        db,
+        org.id,
+        currentUser.uid,
+        domain,
+        playerName,
+      );
+      setCurrentOrganization(joined);
+      setDiscoveredOrgs([]);
+      showToast(`「${joined.name}」に参加しました`, { kind: "success" });
+    } catch (error) {
+      const code = (error as Error)?.message || "";
+      const message =
+        code === "ORG_NOT_FOUND"
+          ? "組織が見つかりませんでした。"
+          : code === "DOMAIN_NOT_ALLOWED"
+            ? "このドメインからの自動参加は許可されていません。"
+            : "参加に失敗しました。再度お試しください。";
+      setOrgError(message);
+    } finally {
+      setIsOrgWorking(false);
+    }
+  };
+
+  /* Domain whitelist editor — Phase 7. Owner-only in the admin
+     modal. Accepts newline / comma-separated domains and persists
+     the validated, deduped subset. */
+  const handleSaveDomainSettings = async () => {
+    if (!currentOrganization) return;
+    const list = domainDraft
+      .split(/[\n,]/)
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+    setDomainSaveState("saving");
+    setDomainSaveMessage("");
+    try {
+      await updateOrganizationDomains(
+        db,
+        currentOrganization.id,
+        list,
+        currentUser ? { uid: currentUser.uid, name: playerName } : null,
+      );
+      // Re-load org from cloud to capture the normalised list.
+      const refreshed = await loadOrganization(db, currentOrganization.id);
+      if (refreshed) {
+        setCurrentOrganization(refreshed);
+        setDomainDraft((refreshed.autoJoinDomains || []).join("\n"));
+      }
+      setDomainSaveState("saved");
+      setDomainSaveMessage(list.length > 0 ? `${list.length}件のドメインを保存しました。` : "ドメイン自動参加を解除しました。");
+    } catch (error) {
+      console.warn("Save domain settings failed", error);
+      setDomainSaveState("error");
+      setDomainSaveMessage("保存に失敗しました。");
     }
   };
 
@@ -10963,6 +11069,58 @@ function App() {
               ) : null}
             </section>
 
+            {/* Domain auto-join — Phase 7. Lets the owner whitelist
+                one or more email domains; users with matching emails
+                see a one-tap join CTA on home. Stored on the org
+                doc; queried by signed-in users via array-contains. */}
+            <section className="org-admin-slack" aria-label="ドメイン自動参加">
+              <header className="org-admin-slack-head">
+                <div>
+                  <p className="card-kicker">Domain auto-join</p>
+                  <h3>ドメイン自動参加</h3>
+                </div>
+              </header>
+              <p className="org-admin-slack-copy">
+                許可するメールドメインを 1 行 1 件で入力します。該当ドメインの
+                Google アカウントでサインインしたユーザーは、招待リンクなしで
+                組織に参加できます（任意 / オフのままでも招待リンクは使えます）。
+              </p>
+              <label className="org-admin-slack-field">
+                <span>許可ドメイン</span>
+                <textarea
+                  value={domainDraft}
+                  onChange={(event) => {
+                    setDomainDraft(event.target.value);
+                    if (domainSaveState !== "idle") {
+                      setDomainSaveState("idle");
+                      setDomainSaveMessage("");
+                    }
+                  }}
+                  rows={3}
+                  placeholder={"acme.com\nacme.jp"}
+                  spellCheck={false}
+                />
+              </label>
+              <div className="org-admin-slack-actions">
+                <button
+                  type="button"
+                  className="org-admin-primary"
+                  onClick={handleSaveDomainSettings}
+                  disabled={domainSaveState === "saving"}
+                >
+                  {domainSaveState === "saving" ? "保存中…" : "保存"}
+                </button>
+              </div>
+              {domainSaveMessage ? (
+                <p
+                  className={`org-admin-slack-message ${domainSaveState === "error" ? "is-error" : "is-info"}`}
+                  role="status"
+                >
+                  {domainSaveMessage}
+                </p>
+              ) : null}
+            </section>
+
             <p className="org-admin-foot">
               個別の学習ログ・投稿内容は admin にも表示しません。投資の可視化のみが目的です。
             </p>
@@ -13152,12 +13310,38 @@ function App() {
         />
       ) : null}
 
+      {/* Domain auto-join discovery (Phase 7). When the user's email
+          domain matches an existing org's autoJoinDomains list, we
+          surface a one-tap join CTA *above* the generic Teams pitch
+          ribbon — they already have a destination, no need to read
+          the marketing. Falls back to the Teams ribbon when no match. */}
+      {!currentOrganization && discoveredOrgs.length > 0 ? (
+        <div className="home-domain-discovery">
+          {discoveredOrgs.map((org) => (
+            <button
+              type="button"
+              key={org.id}
+              className="home-teams-ribbon is-domain-match"
+              onClick={() => handleJoinByDomain(org)}
+              disabled={isOrgWorking}
+            >
+              <span className="home-teams-ribbon-icon" aria-hidden="true">🏢</span>
+              <span className="home-teams-ribbon-copy">
+                <strong>{org.name} に参加する</strong>
+                <small>あなたのメールドメインが許可されています — タップで参加</small>
+              </span>
+              <span className="home-teams-ribbon-arrow" aria-hidden="true">→</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       {/* Discovery ribbon for the B2B surface. Sits near the top of
           the home view so any signed-in user (and anyone we share a
           screenshot with) sees a clear path into the Teams pitch.
           Hidden when the user is already inside an org — at that
           point the ribbon would just be noise. */}
-      {!currentOrganization ? (
+      {!currentOrganization && discoveredOrgs.length === 0 ? (
         <button
           type="button"
           className="home-teams-ribbon"
