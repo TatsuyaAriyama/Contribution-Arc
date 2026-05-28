@@ -51,7 +51,7 @@
       "package.json"
     ],
     "directories": {
-      "output": "release",
+      "output": "/tmp/contribution-arc-release",
       "buildResources": "build"
     },
     "afterPack": "build/afterPack.cjs",

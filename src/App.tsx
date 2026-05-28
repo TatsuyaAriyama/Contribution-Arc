@@ -8907,45 +8907,41 @@ function App() {
           <div className="contribution-arc-head-title">
             <p className="card-kicker">Contribution Arc</p>
             <strong>
-              {Math.round(contributionArc.totalMinutes / 60)}時間 学習
+              {t("{hours}時間 学習", { hours: Math.round(contributionArc.totalMinutes / 60) })}
               {githubContributionArc ? ` · ${githubContributionArc.total} commit` : ""}
             </strong>
             <span>
-              直近13週
+              {t("直近13週")}
               {" · "}
-              {contributionArc.activeDays}日学習
-              {githubContributionArc ? ` / ${githubContributionArc.activeDays}日コミット` : ""}
+              {t("{days}日学習", { days: contributionArc.activeDays })}
+              {githubContributionArc ? ` / ${githubContributionArc.activeDays}${t("日コミット")}` : ""}
             </span>
           </div>
-          <div className="contribution-arc-stats" aria-label="学習サマリ">
+          <div className="contribution-arc-stats" aria-label={t("学習サマリ")}>
             <div
               className="arc-stat"
               data-tooltip={
                 contributionArc.lastWeekMinutes > 0
-                  ? `先週比 ${
-                      contributionArc.thisWeekMinutes - contributionArc.lastWeekMinutes >= 0 ? "+" : ""
-                    }${formatStudyTimeJa(
-                      Math.abs(contributionArc.thisWeekMinutes - contributionArc.lastWeekMinutes),
-                    )}`
-                  : "先週の記録はまだありません"
+                  ? t("先週比 {diff}", { diff: (contributionArc.thisWeekMinutes - contributionArc.lastWeekMinutes >= 0 ? "+" : "") + formatStudyTimeJa(Math.abs(contributionArc.thisWeekMinutes - contributionArc.lastWeekMinutes)) })
+                  : t("先週の記録はまだありません")
               }
             >
-              <small>今週</small>
+              <small>{t("今週")}</small>
               <strong>{formatStudyTimeJa(contributionArc.thisWeekMinutes)}</strong>
             </div>
-            <div className="arc-stat" data-tooltip="連続して記録した最長期間">
-              <small>最長連続</small>
-              <strong>{contributionArc.longestStreak}日</strong>
+            <div className="arc-stat" data-tooltip={t("連続して記録した最長期間")}>
+              <small>{t("最長連続")}</small>
+              <strong>{contributionArc.longestStreak}{t("日")}</strong>
             </div>
             <div
               className="arc-stat"
               data-tooltip={
                 contributionArc.topMonthMinutes > 0
-                  ? `合計 ${formatStudyTimeJa(contributionArc.topMonthMinutes)}`
-                  : "まだ記録なし"
+                  ? t("合計 {minutes}", { minutes: formatStudyTimeJa(contributionArc.topMonthMinutes) })
+                  : t("まだ記録なし")
               }
             >
-              <small>最も学んだ月</small>
+              <small>{t("最も学んだ月")}</small>
               <strong>{contributionArc.topMonthLabel || "—"}</strong>
             </div>
           </div>
@@ -8956,9 +8952,10 @@ function App() {
           <div
             className="contribution-arc-grid"
             role="img"
-            aria-label={`直近13週: ${contributionArc.activeDays}日学習${
-              githubContributionArc ? ` · ${githubContributionArc.activeDays}日コミット` : ""
-            }`}
+            aria-label={t("直近13週: {days}日学習{commit}", {
+              days: contributionArc.activeDays,
+              commit: githubContributionArc ? ` · ${githubContributionArc.activeDays}${t("日コミット")}` : ""
+            })}
           >
             <div className="contribution-arc-track">
             {contributionArcCurvePath ? (
@@ -8988,13 +8985,13 @@ function App() {
                       {hoveredArcCell.day.date.getMonth() + 1}/{hoveredArcCell.day.date.getDate()}
                     </strong>
                     <span>
-                      {["日", "月", "火", "水", "木", "金", "土"][hoveredArcCell.day.date.getDay()]}曜
+                      {[t("日"), t("月"), t("火"), t("水"), t("木"), t("金"), t("土")][hoveredArcCell.day.date.getDay()]}{t("曜")}
                     </span>
                   </div>
                   {hasStudy ? (
                     <>
                       <p className="contribution-arc-tooltip-total">
-                        {formatStudyTimeJa(hoveredArcCell.day.minutes)} 学習
+                        {formatStudyTimeJa(hoveredArcCell.day.minutes)} {t("学習")}
                       </p>
                       <ul className="contribution-arc-tooltip-list">
                         {hoveredArcDayLogs.slice(0, 4).map((log) => (
@@ -9006,7 +9003,7 @@ function App() {
                         ))}
                         {hoveredArcDayLogs.length > 4 ? (
                           <li className="contribution-arc-tooltip-more">
-                            ほか {hoveredArcDayLogs.length - 4} 件
+                            {t("ほか {count} 件", { count: hoveredArcDayLogs.length - 4 })}
                           </li>
                         ) : null}
                       </ul>
@@ -9024,7 +9021,7 @@ function App() {
                     </p>
                   ) : null}
                   {!hasStudy && !hasCommits ? (
-                    <p className="contribution-arc-tooltip-empty">記録なし</p>
+                    <p className="contribution-arc-tooltip-empty">{t("記録なし")}</p>
                   ) : null}
                 </div>
               );
@@ -9046,9 +9043,9 @@ function App() {
                   ) as 0 | 1 | 2 | 3 | 4;
                   const ariaParts: string[] = [];
                   if (day.minutes > 0) ariaParts.push(formatStudyTime(day.minutes));
-                  if (commitCount > 0) ariaParts.push(`${commitCount}コミット`);
-                  const ariaLabel = `${day.date.getMonth() + 1}月${day.date.getDate()}日 ${
-                    ariaParts.length > 0 ? ariaParts.join(" / ") : "記録なし"
+                  if (commitCount > 0) ariaParts.push(`${commitCount}${t("コミット")}`);
+                  const ariaLabel = `${day.date.getMonth() + 1}${t("月")}${day.date.getDate()}${t("日")} ${
+                    ariaParts.length > 0 ? ariaParts.join(" / ") : t("記録なし")
                   }`;
                   return (
                     <button
@@ -9744,7 +9741,7 @@ function App() {
                     ))
                   ) : (
                     <div className="topbar-popover-empty">
-                      <p>フレンドを招待して、一緒に学びを積み上げよう</p>
+                      <p>{t("フレンドを招待して、一緒に学びを積み上げよう")}</p>
                       <button
                         type="button"
                         onClick={() => {
@@ -9752,7 +9749,7 @@ function App() {
                           setIsFriendsPopoverOpen(false);
                         }}
                       >
-                        フレンドを招待する
+                        {t("フレンドを招待する")}
                       </button>
                     </div>
                   )}
@@ -9814,7 +9811,7 @@ function App() {
                       </button>
                     ))
                   ) : (
-                    <p className="topbar-popover-empty-text">今は静かです。誰かの記録が始まるとここに流れます。</p>
+                    <p className="topbar-popover-empty-text">{t("今は静かです。誰かの記録が始まるとここに流れます。")}</p>
                   )}
                 </div>
               </section>
@@ -9824,7 +9821,7 @@ function App() {
             type="button"
             className="user-search-button"
             onClick={() => setIsSearchOpen(true)}
-            aria-label="ユーザー検索を開く"
+            aria-label={t("ユーザーを探す")}
           >
             <span aria-hidden="true" />
             <strong>Search</strong>
@@ -9834,7 +9831,7 @@ function App() {
             <button
               type="button"
               className={hasUnreadNotifications ? "notification-button has-unread" : "notification-button"}
-              aria-label={`お知らせ${unreadNotificationCount > 0 ? ` ${unreadNotificationCount}件の未読` : ""}`}
+              aria-label={`${t("お知らせ")}${unreadNotificationCount > 0 ? ` ${unreadNotificationCount}${t("件の未読")}` : ""}`}
               aria-expanded={isNotificationsOpen}
               onClick={handleNotificationsToggle}
             >
@@ -11229,13 +11226,13 @@ function App() {
             <TutorialHint
               uid={currentUser.uid}
               feature="daily"
-              title="日報 — 1日のはじまりと締めくくり"
-              body="その日の計画と振り返りを残すと、明日の自分への布石になります。"
+              title={t("日報 — 1日のはじまりと締めくくり")}
+              body={t("その日の計画と振り返りを残すと、明日の自分への布石になります。")}
               bullets={[
-                "「計画」欄に朝の予定を、「振り返り」欄に夜の感想を書きます",
-                "保存は自動。書きかけのまま画面を離れても消えません",
-                "他の人の日報もここから読めて、刺激を受けられます",
-                "編集できるのは当日と前日まで(過去の自分に向き合うため)",
+                t("「計画」欄に朝の予定を、「振り返り」欄に夜の感想を書きます"),
+                t("保存は自動。書きかけのまま画面を離れても消えません"),
+                t("他の人の日報もここから読めて、刺激を受けられます"),
+                t("編集できるのは当日と前日まで(過去の自分に向き合うため)"),
               ]}
             />
           ) : null}
@@ -11245,7 +11242,7 @@ function App() {
                 <p className="card-kicker">Daily Report</p>
               </div>
               <label>
-                <span>日付</span>
+                <span>{t("日付")}</span>
                 <input
                   type="date"
                   value={selectedDailyDate}
@@ -11255,17 +11252,17 @@ function App() {
             </div>
 
             {!canEditSelectedDailyReport ? (
-              <p className="daily-edit-note">日報の編集は当日または1日前までです。</p>
+              <p className="daily-edit-note">{t("日報の編集は当日または1日前までです。")}</p>
             ) : null}
 
             <div className="daily-editor-form">
               <form className="daily-entry-card" onSubmit={(event) => handleDailyReportSectionSubmit(event, "plan")}>
                 <label>
-                  <span>今日やること</span>
+                  <span>{t("今日やること")}</span>
                   <textarea
                     value={dailyPlanDraft}
                     onChange={(event) => setDailyPlanDraft(event.target.value)}
-                    placeholder="今日進める業務、確認すること、優先順位など"
+                    placeholder={t("今日進める業務、確認すること、優先順位など")}
                     rows={7}
                     disabled={!canEditSelectedDailyReport}
                   />
@@ -11273,7 +11270,7 @@ function App() {
 
                 <div className="daily-editor-actions">
                   <button type="submit" disabled={isSavingDailyReport || !canEditSelectedDailyReport}>
-                    {isSavingDailyReport ? "保存中" : selectedDailyReport?.plan ? "今日やることを更新" : "今日やることを送信"}
+                    {isSavingDailyReport ? t("保存中") : selectedDailyReport?.plan ? t("今日やることを更新") : t("今日やることを送信")}
                   </button>
                 </div>
               </form>
@@ -11283,11 +11280,11 @@ function App() {
                 onSubmit={(event) => handleDailyReportSectionSubmit(event, "reflection")}
               >
                 <label>
-                  <span>振り返り</span>
+                  <span>{t("振り返り")}</span>
                   <textarea
                     value={dailyReflectionDraft}
                     onChange={(event) => setDailyReflectionDraft(event.target.value)}
-                    placeholder="できたこと、詰まったこと、明日に回すことなど"
+                    placeholder={t("できたこと、詰まったこと、明日に回すことなど")}
                     rows={7}
                     disabled={!canEditSelectedDailyReport}
                   />
@@ -11295,7 +11292,7 @@ function App() {
 
                 <div className="daily-editor-actions">
                   <button type="submit" disabled={isSavingDailyReport || !canEditSelectedDailyReport}>
-                    {isSavingDailyReport ? "保存中" : selectedDailyReport?.reflection ? "振り返りを更新" : "振り返りを送信"}
+                    {isSavingDailyReport ? t("保存中") : selectedDailyReport?.reflection ? t("振り返りを更新") : t("振り返りを送信")}
                   </button>
                 </div>
               </form>
@@ -11308,9 +11305,9 @@ function App() {
               <p className="card-kicker">History</p>
               <strong>{filteredDailyReports.length}/{dailyReports.length} days</strong>
             </div>
-            <div className="daily-history-filters" aria-label="過去の日報を絞り込む">
+            <div className="daily-history-filters" aria-label={t("過去の日報を絞り込む")}>
               <label>
-                <span>日付</span>
+                <span>{t("日付")}</span>
                 <input
                   type="date"
                   value={dailyHistoryDateFilter}
@@ -11318,12 +11315,12 @@ function App() {
                 />
               </label>
               <label>
-                <span>検索</span>
+                <span>{t("検索")}</span>
                 <input
                   type="search"
                   value={dailyHistorySearch}
                   onChange={(event) => setDailyHistorySearch(event.target.value)}
-                  placeholder="本文・日付から探す"
+                  placeholder={t("本文・日付から探す")}
                 />
               </label>
               {dailyHistoryDateFilter || dailyHistorySearch ? (
@@ -11334,7 +11331,7 @@ function App() {
                     setDailyHistorySearch("");
                   }}
                 >
-                  クリア
+                  {t("クリア")}
                 </button>
               ) : null}
             </div>
@@ -11347,26 +11344,26 @@ function App() {
                   >
                     <button type="button" onClick={() => handleDailyDateChange(report.date)}>
                       <strong>{formatDailyDate(report.date)}</strong>
-                      <span>{report.plan || "今日やることは未入力"}</span>
-                      <small>{report.reflection ? "振り返り済み" : "振り返り未入力"}</small>
+                      <span>{report.plan || t("今日やることは未入力")}</span>
+                      <small>{report.reflection ? t("振り返り済み") : t("振り返り未入力")}</small>
                     </button>
                     <button
                       type="button"
                       className="daily-delete-button"
                       onClick={() => handleDailyReportDelete(report)}
                     >
-                      削除
+                      {t("削除")}
                     </button>
                   </article>
                 ))
               ) : dailyReports.length > 0 ? (
-                <p>一致する日報はありません。</p>
+                <p>{t("一致する日報はありません。")}</p>
               ) : (
-                <p>まだ日報はありません。</p>
+                <p>{t("まだ日報はありません。")}</p>
               )}
             </div>
 
-            <div className="daily-shared-feed" aria-label="みんなの日報">
+            <div className="daily-shared-feed" aria-label={t("みんなの日報")}>
               <div className="daily-history-head">
                 <p className="card-kicker">Team Daily</p>
                 <strong>{visibleSharedDailyReports.length}</strong>
@@ -11386,7 +11383,7 @@ function App() {
                           type="button"
                           className="daily-shared-card-trigger"
                           onClick={() => setExpandedDailyReport(report)}
-                          aria-label={`${displayName}の${formatDailyDate(report.date)}の日報を開く`}
+                          aria-label={t("{name}の{date}の日報を開く", { name: displayName, date: formatDailyDate(report.date) })}
                         >
                           <div>
                             <ProfileCharacterPreview
@@ -11400,13 +11397,13 @@ function App() {
                           </div>
                           {report.plan ? (
                             <p className="daily-shared-section">
-                              <strong>今日やること</strong>
+                              <strong>{t("今日やること")}</strong>
                               <span>{report.plan}</span>
                             </p>
                           ) : null}
                           {report.reflection ? (
                             <p className="daily-shared-section">
-                              <strong>振り返り</strong>
+                              <strong>{t("振り返り")}</strong>
                               <span>{report.reflection}</span>
                             </p>
                           ) : null}
@@ -11417,7 +11414,7 @@ function App() {
                             className="daily-delete-button"
                             onClick={() => handleDailyReportDelete(report)}
                           >
-                            削除
+                            {t("削除")}
                           </button>
                         ) : null}
                       </article>
@@ -11425,7 +11422,7 @@ function App() {
                   })}
                 </div>
               ) : (
-                <p className="daily-shared-empty">共有された日報はまだありません。</p>
+                <p className="daily-shared-empty">{t("共有された日報はまだありません。")}</p>
               )}
             </div>
           </aside>
@@ -11433,7 +11430,7 @@ function App() {
       ) : currentView === "learning" ? (
         <motion.section
           className="learning-screen"
-          aria-label="記録する"
+          aria-label={t("記録する")}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={SPRING_SNAPPY}
@@ -11442,24 +11439,24 @@ function App() {
             <TutorialHint
               uid={currentUser.uid}
               feature="learning"
-              title="記録する — 学びの時間を積み上げる中心"
-              body="勉強・読書・アウトプットの時間を残すと、ホームのグラフに反映されます。"
+              title={t("記録する — 学びの時間を積み上げる中心")}
+              body={t("勉強・読書・アウトプットの時間を残すと、ホームのグラフに反映されます。")}
               bullets={[
-                "「学習対象」をジャンルと色で登録(例: React=青、英語=橙)",
-                "時間を入力すると、その分だけ Effort EXP が貯まります",
-                "ページ数を持つ本タイプは「現在ページ / 総ページ」も追えます",
-                "使わなくなった対象はアーカイブ。記録は残ります",
+                t("「学習対象」をジャンルと色で登録(例: React=青、英語=橙)"),
+                t("時間を入力すると、その分だけ Effort EXP が貯まります"),
+                t("ページ数を持つ本タイプは「現在ページ / 総ページ」も追えます"),
+                t("使わなくなった対象はアーカイブ。記録は残ります"),
               ]}
             />
           ) : null}
           <header className="learning-header">
             <div>
               <p className="card-kicker">Learning Items</p>
-              <h2>📚 記録する</h2>
-              <small>学習対象を登録しておくと、ログ入力時にブレずに集計できる。</small>
+              <h2>📚 {t("記録する")}</h2>
+              <small>{t("学習対象を登録しておくと、ログ入力時にブレずに集計できる。")}</small>
             </div>
             <button type="button" className="learning-add-button" onClick={() => openLearningEditorForCreate("")}>
-              + 追加
+              + {t("追加")}
             </button>
           </header>
 
@@ -11467,9 +11464,9 @@ function App() {
             <div className="learning-tabs" role="tablist">
               {(
                 [
-                  { value: "all" as const, label: "すべて" },
-                  { value: "book" as const, label: "書籍" },
-                  { value: "archived" as const, label: "アーカイブ" },
+                  { value: "all" as const, label: t("すべて") },
+                  { value: "book" as const, label: t("書籍") },
+                  { value: "archived" as const, label: t("アーカイブ") },
                 ]
               ).map((tab) => (
                 <button
@@ -11486,7 +11483,7 @@ function App() {
             <input
               className="learning-search"
               type="search"
-              placeholder="名前で検索"
+              placeholder={t("名前で検索")}
               value={learningSearchQuery}
               onChange={(event) => setLearningSearchQuery(event.target.value)}
             />
@@ -11560,9 +11557,9 @@ function App() {
               const showSuggestions = learningCategoryTab === "all" && !lowerQuery;
               return (
                 <div className="learning-empty">
-                  <p>学習対象を追加して、学習時間を記録しよう。</p>
+                  <p>{t("学習対象を追加して、学習時間を記録しよう。")}</p>
                   {showSuggestions ? (
-                    <div className="learning-empty-suggestions" aria-label="よく使われる学習対象">
+                    <div className="learning-empty-suggestions" aria-label={t("よく使われる学習対象")}>
                       {["React", "TypeScript", "英語", "読書", "アルゴリズム"].map((name) => (
                         <button
                           key={name}
@@ -11576,7 +11573,7 @@ function App() {
                     </div>
                   ) : null}
                   <button type="button" className="learning-add-button" onClick={() => openLearningEditorForCreate("")}>
-                    + 追加
+                    + {t("追加")}
                   </button>
                 </div>
               );
@@ -11617,7 +11614,7 @@ function App() {
                         <strong>{item.name}</strong>
                       </div>
                       <div className="learning-card-meta">
-                        <span>累計 {totalLabel}</span>
+                        <span>{t("累計")} {totalLabel}</span>
                         <span
                           className={`learning-card-last${isFreshToday ? " is-fresh" : ""}${
                             !lastTs ? " is-untouched" : ""
@@ -11625,7 +11622,7 @@ function App() {
                         >
                           {lastLabel}
                         </span>
-                        {item.archived ? <span className="learning-card-archived">アーカイブ</span> : null}
+                        {item.archived ? <span className="learning-card-archived">{t("アーカイブ")}</span> : null}
                       </div>
                       {sparkline && sparklineMax > 0 ? (
                         <div className="learning-card-spark" aria-hidden="true">
@@ -11824,19 +11821,19 @@ function App() {
             <TutorialHint
               uid={currentUser.uid}
               feature="profile"
-              title="プロフィール — あなたの足跡と設定"
-              body="積み上げの累計と、見た目・連携の設定をここでまとめます。"
+              title={t("プロフィール — あなたの足跡と設定")}
+              body={t("積み上げの累計と、見た目・連携の設定をここでまとめます。")}
               bullets={[
-                "キャラクターの色を変えて、作業部屋での自分を識別しやすく",
-                "GitHub を連携すると、commit が学習グラフに重なります",
-                "「決意」欄に短い宣言を書いておくと、毎日の起動時に思い出せます",
-                "あなたのユーザーID (@xxx) は他の人があなたを検索する手掛かり",
+                t("キャラクターの色を変えて、作業部屋での自分を識別しやすく"),
+                t("GitHub を連携すると、commit が学習グラフに重なります"),
+                t("「決意」欄に短い宣言を書いておくと、毎日の起動時に思い出せます"),
+                t("あなたのユーザーID (@xxx) は他の人があなたを検索する手掛かり"),
               ]}
             />
           ) : null}
           <div className="profile-topbar">
             <button type="button" onClick={handleProfileBack}>
-              ← ホーム
+              ← {t("ホーム")}
             </button>
           </div>
 
@@ -11853,13 +11850,13 @@ function App() {
                   <article className="card hours-card weekly-card is-compact">
                     <div className="section-heading compact">
                       <div>
-                        <p className="card-kicker">学習ログ</p>
-                        <p className="study-total">今週 {formatStudyTimeJa(totalWeeklyMinutes)}</p>
+                        <p className="card-kicker">{t("学習ログ")}</p>
+                        <p className="study-total">{t("今週")} {formatStudyTimeJa(totalWeeklyMinutes)}</p>
                       </div>
-                      <span className="soft-pill">7日間</span>
+                      <span className="soft-pill">{t("7日間")}</span>
                     </div>
 
-                    <div className="bar-chart" aria-label="直近7日間の学習時間">
+                    <div className="bar-chart" aria-label={t("直近7日間の学習時間")}>
                       {weeklyStudyHours.map((item, index) => {
                         const segments = getStudySegments(item.logs, learningItems);
 
@@ -11882,7 +11879,7 @@ function App() {
                                 setSelectedStudyDay(item.day);
                               }
                             }}
-                            aria-label={`${item.day}曜日の学習詳細を表示`}
+                            aria-label={t("{day}曜日の学習詳細を表示", { day: t(item.day) })}
                           >
                             <div
                               className="bar-shell"
@@ -11933,14 +11930,14 @@ function App() {
                             <div className="bar-tooltip" role="tooltip">
                               <div>
                                 <strong>
-                                  {item.dateLabel}（{item.day}）
+                                  {item.dateLabel}（{t(item.day)}）
                                 </strong>
-                                <span>{formatStudyTimeJa(item.totalMinutes)} 学習</span>
+                                <span>{formatStudyTimeJa(item.totalMinutes)} {t("学習")}</span>
                               </div>
                               <p>{getSubjectSummary(item.logs)}</p>
                               <small>+{Math.round(item.hours * 80)} EXP</small>
                             </div>
-                            <strong>{item.day}</strong>
+                            <strong>{t(item.day)}</strong>
                             <small>{item.totalMinutes > 0 ? formatStudyTime(item.totalMinutes) : "0h"}</small>
                           </div>
                         );
@@ -11950,7 +11947,7 @@ function App() {
                     <div className="progress-console">
                       <form className="study-form" onSubmit={handleStudySubmit}>
                         <label className="study-subject-field">
-                          <span>学習内容</span>
+                          <span>{t("学習内容")}</span>
                           {(() => {
                             const activeItems = learningItems.filter((item) => !item.archived);
                             const recentItemIds: string[] = [];
@@ -12208,13 +12205,13 @@ function App() {
             <TutorialHint
               uid={currentUser.uid}
               feature="workspace"
-              title="作業部屋 — 同じ時間に手を動かす場所"
-              body="通話なしで、気配だけを共有しながら集中作業ができる空間です。"
+              title={t("作業部屋 — 同じ時間に手を動かす場所")}
+              body={t("通話なしで、気配だけを共有しながら集中作業ができる空間です。")}
               bullets={[
-                "「今やってること」を入力 → 入室すると 2D 部屋にあなたのキャラが現れます",
-                "他の人のキャラをタップするとプロフィールが見られます",
-                "「📣 募集する」で同じ時間に集まる仲間を呼べます",
-                "退室すると今回の作業時間が記録され、EXP として加算されます",
+                t("「今やってること」を入力 → 入室すると 2D 部屋にあなたのキャラが現れます"),
+                t("他の人のキャラをタップするとプロフィールが見られます"),
+                t("「📣 募集する」で同じ時間に集まる仲間を呼べます"),
+                t("退室すると今回の作業時間が記録され、EXP として加算されます"),
               ]}
             />
           ) : null}
@@ -12228,7 +12225,7 @@ function App() {
             <div className="workspace-heading">
               <div>
                 <p className="card-kicker">Silent Workspace</p>
-                <p>通話も雑談も主役にしない。同じ時間に手を動かしている気配だけを共有します。</p>
+                <p>{t("通話も雑談も主役にしない。同じ時間に手を動かしている気配だけを共有します。")}</p>
               </div>
               <span className="workspace-live-pill">quiet presence</span>
             </div>
@@ -12236,7 +12233,7 @@ function App() {
             <div className="workspace-layout">
               {/* Compact room selector — pills along the top so the
                   character map below gets the full canvas. */}
-              <div className="workspace-room-strip" aria-label="Workspace rooms">
+              <div className="workspace-room-strip" aria-label={t("作業部屋")}>
                 <form
                   className="workspace-room-create"
                   onSubmit={(event) => {
@@ -12253,9 +12250,9 @@ function App() {
                         setRoomCreateMessage("");
                       }
                     }}
-                    placeholder="新しい場所"
+                    placeholder={t("新しい場所を作る")}
                     maxLength={32}
-                    aria-label="Roomを作成"
+                    aria-label={t("作業部屋を作成")}
                     onKeyDown={(event) => {
                       if (event.nativeEvent.isComposing) {
                         return;
@@ -12274,7 +12271,7 @@ function App() {
                     <div
                       className="workspace-room-create-visibility"
                       role="radiogroup"
-                      aria-label="公開範囲"
+                      aria-label={t("公開範囲")}
                     >
                       <button
                         type="button"
@@ -12283,7 +12280,7 @@ function App() {
                         className={newRoomVisibility === "public" ? "is-active" : ""}
                         onClick={() => setNewRoomVisibility("public")}
                       >
-                        公開
+                        {t("公開")}
                       </button>
                       <button
                         type="button"
@@ -12292,14 +12289,14 @@ function App() {
                         className={newRoomVisibility === "org" ? "is-active" : ""}
                         onClick={() => setNewRoomVisibility("org")}
                       >
-                        {currentOrganization.name}のみ
+                        {currentOrganization.name}{t("のみ")}
                       </button>
                     </div>
                   ) : null}
-                  <button type="submit">作成</button>
+                  <button type="submit">{t("作成")}</button>
                 </form>
 
-                <div className="workspace-room-pills" role="tablist" aria-label="作業部屋一覧">
+                <div className="workspace-room-pills" role="tablist" aria-label={t("作業部屋")}>
                   {allWorkspaceRooms.map((room) => {
                     const isActiveRoom = room.id === selectedRoom?.id;
                     const roomMembers = room.activeMembers || [];
@@ -12325,16 +12322,16 @@ function App() {
                           {room.visibility === "org" ? (
                             <span
                               className="workspace-room-pill-org"
-                              aria-label="組織限定"
-                              title="組織限定ルーム"
+                              aria-label={t("組織限定")}
+                              title={t("組織限定ルーム")}
                             >
                               🔒
                             </span>
                           ) : null}
                         </span>
                         <span className="workspace-room-pill-meta">
-                          {roomMembers.length}人 · {Math.round(room.totalMinutes / 60)}h
-                          {isJoinedRoom ? <em>入室中</em> : null}
+                          {roomMembers.length}{t("人")} · {Math.round(room.totalMinutes / 60)}h
+                          {isJoinedRoom ? <em>{t("入室中")}</em> : null}
                         </span>
                       </button>
                     );
@@ -12650,13 +12647,13 @@ function App() {
         <TutorialHint
           uid={currentUser.uid}
           feature="home"
-          title="ホーム — あなたの学習を一望できる場所"
-          body="積み上げの全体像と、いま仲間が何をしているかをまとめて見られます。"
+          title={t("ホーム — あなたの学習を一望できる場所")}
+          body={t("積み上げの全体像と、いま仲間が何をしているかをまとめて見られます。")}
           bullets={[
-            "13週間のコントリビューショングラフで毎日の取り組みを可視化",
-            "今週の学習時間・最長連続日数・ジャンル分布をひと目で",
-            "GitHub を連携すると commit もこのグラフに合流します",
-            "下の「みんなの記録」「日報」もここから流れてきます",
+            t("13週間のコントリビューショングラフで毎日の取り組みを可視化"),
+            t("今週の学習時間・最長連続日数・ジャンル分布をひと目で"),
+            t("GitHub を連携すると commit もこのグラフに合流します"),
+            t("下の「みんなの記録」「日報」もここから流れてきます"),
           ]}
         />
       ) : null}
@@ -12676,22 +12673,22 @@ function App() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8, height: 0, marginBottom: 0 }}
               transition={{ duration: 0.24, ease: "easeOut" }}
-              aria-label="今日の予定を立てる"
+              aria-label={t("今日の予定を立てる")}
             >
               <div className="daily-plan-prompt-head">
                 <div>
                   <p className="card-kicker">TODAY</p>
-                  <strong>おはよう。今日は何をやる？</strong>
+                  <strong>{t("おはよう。今日は何をやる？")}</strong>
                   <small>{formatDailyDate(currentLearnerDate)}</small>
                 </div>
                 <button
                   type="button"
                   className="daily-plan-prompt-skip"
                   onClick={handleDailyPromptDismiss}
-                  aria-label="今日は書かずに進む"
-                  data-tooltip="今日は書かずに進む"
+                  aria-label={t("今日は書かずに進む")}
+                  data-tooltip={t("今日は書かずに進む")}
                 >
-                  スキップ
+                  {t("スキップ")}
                 </button>
               </div>
               <form
@@ -12706,7 +12703,7 @@ function App() {
                     setDailyPromptDraft(event.target.value);
                     setDailyPromptError("");
                   }}
-                  placeholder="例: DDIA Ch.7 を読み切る"
+                  placeholder={t("例: DDIA Ch.7 を読み切る")}
                   rows={2}
                   maxLength={400}
                 />
@@ -12715,7 +12712,7 @@ function App() {
                     <span className="daily-plan-prompt-error">{dailyPromptError}</span>
                   ) : (
                     <span className="daily-plan-prompt-hint">
-                      日報の「今日やること」として保存される。短くてもOK。
+                      {t("日報の「今日やること」として保存される。短くてもOK。")}
                     </span>
                   )}
                   <button
@@ -12723,7 +12720,7 @@ function App() {
                     className="daily-plan-prompt-save"
                     disabled={isSavingDailyPrompt || !dailyPromptDraft.trim()}
                   >
-                    {isSavingDailyPrompt ? "保存中" : "今日を始める"}
+                    {isSavingDailyPrompt ? t("保存中") : t("今日を始める")}
                   </button>
                 </div>
               </form>
@@ -12736,12 +12733,12 @@ function App() {
         <div className="overview-stack">
           <article className="card daily-today-card">
             <div>
-              <p className="card-kicker">今日の日報</p>
-              <strong>{todayDailyReport?.plan ? "今日やることあり" : "今日やることは未入力"}</strong>
-              <span>{todayDailyReport?.reflection ? "振り返り済み" : "振り返りを記録"}</span>
+              <p className="card-kicker">{t("今日の日報")}</p>
+              <strong>{todayDailyReport?.plan ? t("今日やることあり") : t("今日やることは未入力")}</strong>
+              <span>{todayDailyReport?.reflection ? t("振り返り済み") : t("振り返りを記録")}</span>
             </div>
             <button type="button" onClick={() => setCurrentView("daily")}>
-              日報を書く
+              {t("日報を書く")}
             </button>
           </article>
           {/* Workspace summary card — 在室者が居るときは「気配アバター」を
@@ -12754,20 +12751,20 @@ function App() {
           >
             <div>
               <p className="card-kicker">Silent Workspace</p>
-              <strong>{selectedRoom?.name || "作業部屋"}</strong>
+              <strong>{selectedRoom?.name || t("作業部屋")}</strong>
               <span>
                 {isInSelectedRoom
-                  ? `入室中 ${currentStayMinutes > 0 ? formatStayTime(currentStayMinutes) : ""}`
+                  ? t("入室中") + (currentStayMinutes > 0 ? ` ${formatStayTime(currentStayMinutes)}` : "")
                   : activeMembers.length > 0
-                    ? `今 ${activeMembers.length} 人が作業中`
-                    : "今は静かです"}
+                    ? t("今 {count} 人が作業中", { count: activeMembers.length })
+                    : t("今は静かです")}
               </span>
             </div>
             {activeMembers.length > 0 && !isInSelectedRoom ? (
               <div
                 className="workspace-summary-presence"
                 aria-hidden="true"
-                title={`${activeMembers.length} 人が作業中`}
+                title={t("現在 {count} 人が作業中", { count: activeMembers.length })}
               >
                 {activeMembers.slice(0, 4).map((member, index) => (
                   <span
@@ -12793,10 +12790,10 @@ function App() {
             ) : null}
             <button type="button" onClick={() => setCurrentView("workspace")}>
               {isInSelectedRoom
-                ? "作業部屋へ戻る"
+                ? t("作業部屋へ戻る")
                 : activeMembers.length > 0
-                  ? "見てみる"
-                  : "作業部屋へ"}
+                  ? t("見てみる")
+                  : t("作業部屋へ")}
             </button>
           </article>
         </div>
@@ -12830,12 +12827,12 @@ function App() {
             type="button"
             className={currentView === "home" ? "is-active" : ""}
             onClick={() => setCurrentView("home")}
-            aria-label="ホーム"
+            aria-label={t("ホーム")}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M4 11.5 12 5l8 6.5V20a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
             </svg>
-            <span>ホーム</span>
+            <span>{t("ホーム")}</span>
           </button>
           {/* 作業部屋を中央CTAの隣（左）に配置。親指の自然な到達位置に
               置くことで、入室への摩擦を下げる。在室者ドット + 数字も
@@ -12848,8 +12845,8 @@ function App() {
             onClick={() => setCurrentView("workspace")}
             aria-label={
               activeMembers.length > 0
-                ? `作業部屋 — 現在 ${activeMembers.length} 人が作業中`
-                : "作業部屋"
+                ? t("作業部屋 — 現在 {count} 人が作業中", { count: activeMembers.length })
+                : t("作業部屋")
             }
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -12860,7 +12857,7 @@ function App() {
               <span className="mobile-tab-presence-dot" aria-hidden="true" />
             ) : null}
             <span>
-              作業部屋
+              {t("作業部屋")}
               {activeMembers.length > 0 ? (
                 <span className="mobile-tab-presence-count" aria-hidden="true">
                   {" "}
