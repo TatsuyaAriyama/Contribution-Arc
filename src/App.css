@@ -24009,50 +24009,14 @@ a[role="button"],
   white-space: nowrap;
 }
 
-.quicklog-popover-row-chips {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.quicklog-popover-chip {
-  padding: 4px 10px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--bg);
-  color: var(--muted);
-  font: inherit;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  transition: border-color 120ms ease-out, color 120ms ease-out,
-    transform 120ms ease-out;
-}
-
-.quicklog-popover-chip:hover {
-  border-color: var(--learning-card-color, var(--ink));
-  color: var(--learning-card-color, var(--ink));
-}
-
-.quicklog-popover-chip:active {
-  transform: scale(0.96);
-}
-
-.quicklog-popover-chip.is-more {
-  padding: 4px 8px;
-  font-size: 13px;
-  letter-spacing: 0;
-}
-
-.quicklog-popover-row-custom {
+.quicklog-popover-row-input {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
-.quicklog-popover-row-custom input[type="number"] {
-  width: 64px;
+.quicklog-popover-row-input input[type="number"] {
+  width: 60px;
   padding: 4px 8px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -24060,9 +24024,11 @@ a[role="button"],
   color: var(--ink);
   font: inherit;
   font-size: 13px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
-.quicklog-popover-row-custom input[type="number"]:focus {
+.quicklog-popover-row-input input[type="number"]:focus {
   outline: none;
   border-color: var(--learning-card-color, var(--ink));
 }
@@ -24082,26 +24048,12 @@ a[role="button"],
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
+  transition: opacity 120ms ease-out;
 }
 
 .quicklog-popover-submit:disabled {
   cursor: not-allowed;
-  opacity: 0.4;
-}
-
-.quicklog-popover-cancel {
-  padding: 2px 6px;
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  font: inherit;
-  font-size: 14px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.quicklog-popover-cancel:hover {
-  color: var(--ink);
+  opacity: 0.35;
 }
 
 .quicklog-popover-empty {

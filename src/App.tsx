@@ -3459,8 +3459,11 @@ function App() {
      タップで時間を残せるようにする. 同じ popover 内で各 Learning Item
      の「他の時間…」をインライン展開できる. */
   const [isQuickLogPopoverOpen, setIsQuickLogPopoverOpen] = useState(false);
-  const [quickLogPopoverCustomId, setQuickLogPopoverCustomId] = useState<string | null>(null);
-  const [quickLogPopoverCustomMinutes, setQuickLogPopoverCustomMinutes] = useState("");
+  /* 各 Learning Item ごとに記入中の分数 (string) を保持する. プリセット
+     チップは廃止し、最初から数値入力欄を表示してそのまま打ち込める
+     ようにした (チップ → 「他の時間…」 と段階を踏ませる方が逆に遅い、
+     という指摘を受けての変更). */
+  const [quickLogMinutesById, setQuickLogMinutesById] = useState<Record<string, string>>({});
   const [selectedStudyDay, setSelectedStudyDay] = useState(dayLabels[(new Date().getDay() + 6) % 7]);
   const [selectedArcDayKey, setSelectedArcDayKey] = useState<string | null>(null);
   const [hoveredArcCell, setHoveredArcCell] = useState<
@@ -5897,15 +5900,13 @@ function App() {
   }, [studyLogs, learningItems]);
 
   const openQuickLogPopover = useCallback(() => {
-    setQuickLogPopoverCustomId(null);
-    setQuickLogPopoverCustomMinutes("");
+    setQuickLogMinutesById({});
     setIsQuickLogPopoverOpen(true);
   }, []);
 
   const closeQuickLogPopover = useCallback(() => {
     setIsQuickLogPopoverOpen(false);
-    setQuickLogPopoverCustomId(null);
-    setQuickLogPopoverCustomMinutes("");
+    setQuickLogMinutesById({});
   }, []);
   // Most-time-spent subject of today's logs — used as the share-image label.
   const todayTopSubject = useMemo(() => {
@@ -14589,13 +14590,12 @@ function App() {
             ) : (
               <ul className="quicklog-popover-list">
                 {quickLogRecentItems.map((item) => {
-                  const isCustomOpen = quickLogPopoverCustomId === item.id;
-                  const customMinutes = Number(quickLogPopoverCustomMinutes);
-                  const canSubmitCustom =
-                    Number.isFinite(customMinutes) && customMinutes > 0;
-                  const submitCustom = () => {
-                    if (!canSubmitCustom) return;
-                    handleLearningQuickLog(item, customMinutes);
+                  const raw = quickLogMinutesById[item.id] ?? "";
+                  const minutes = Number(raw);
+                  const canSubmit = Number.isFinite(minutes) && minutes > 0;
+                  const submit = () => {
+                    if (!canSubmit) return;
+                    handleLearningQuickLog(item, minutes);
                     closeQuickLogPopover();
                   };
                   return (
@@ -14608,78 +14608,38 @@ function App() {
                         <i aria-hidden="true" />
                         <strong>{item.name}</strong>
                       </span>
-                      {isCustomOpen ? (
-                        <span className="quicklog-popover-row-custom">
-                          <input
-                            type="number"
-                            inputMode="numeric"
-                            min="1"
-                            step="1"
-                            value={quickLogPopoverCustomMinutes}
-                            autoFocus
-                            onChange={(event) => setQuickLogPopoverCustomMinutes(event.target.value)}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter") {
-                                event.preventDefault();
-                                submitCustom();
-                              } else if (event.key === "Escape") {
-                                event.preventDefault();
-                                setQuickLogPopoverCustomId(null);
-                                setQuickLogPopoverCustomMinutes("");
-                              }
-                            }}
-                            placeholder="45"
-                            aria-label={t("記録する分数")}
-                          />
-                          <span className="quicklog-popover-unit">{t("分")}</span>
-                          <button
-                            type="button"
-                            className="quicklog-popover-submit"
-                            disabled={!canSubmitCustom}
-                            onClick={submitCustom}
-                          >
-                            {t("記録")}
-                          </button>
-                          <button
-                            type="button"
-                            className="quicklog-popover-cancel"
-                            onClick={() => {
-                              setQuickLogPopoverCustomId(null);
-                              setQuickLogPopoverCustomMinutes("");
-                            }}
-                            aria-label={t("戻る")}
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ) : (
-                        <span className="quicklog-popover-row-chips">
-                          {[15, 30, 60].map((minutes) => (
-                            <button
-                              key={minutes}
-                              type="button"
-                              className="quicklog-popover-chip"
-                              onClick={() => {
-                                handleLearningQuickLog(item, minutes);
-                                closeQuickLogPopover();
-                              }}
-                            >
-                              +{minutes < 60 ? `${minutes}m` : `${minutes / 60}h`}
-                            </button>
-                          ))}
-                          <button
-                            type="button"
-                            className="quicklog-popover-chip is-more"
-                            onClick={() => {
-                              setQuickLogPopoverCustomId(item.id);
-                              setQuickLogPopoverCustomMinutes("");
-                            }}
-                            aria-label={t("他の時間を指定して記録")}
-                          >
-                            …
-                          </button>
-                        </span>
-                      )}
+                      <span className="quicklog-popover-row-input">
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          min="1"
+                          step="1"
+                          value={raw}
+                          onChange={(event) =>
+                            setQuickLogMinutesById((prev) => ({
+                              ...prev,
+                              [item.id]: event.target.value,
+                            }))
+                          }
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              submit();
+                            }
+                          }}
+                          placeholder="45"
+                          aria-label={`${item.name} ${t("記録する分数")}`}
+                        />
+                        <span className="quicklog-popover-unit">{t("分")}</span>
+                        <button
+                          type="button"
+                          className="quicklog-popover-submit"
+                          disabled={!canSubmit}
+                          onClick={submit}
+                        >
+                          {t("記録")}
+                        </button>
+                      </span>
                     </li>
                   );
                 })}
