@@ -9921,7 +9921,46 @@
   background: transparent;
   box-shadow: none;
   overflow: visible;
-  animation: workspace-ghost-float 4.2s ease-in-out infinite;
+}
+
+/* Motion lives on the inner SVG groups (not the sprite) so it never
+   fights the per-context sprite transform, and so the resting position
+   is whatever each context's static rule sets. Three layers, each on a
+   slightly different period, so the loops never line up and the spectre
+   reads as alive instead of a picture being slid up and down:
+     .ghost-bob   — vertical bob + squash-&-stretch (weightless float)
+     .ghost-sway  — slow pendulum lean from the tail
+     .ghost-eye   — occasional blink
+     .ghost-aura  — a faint breathing halo
+   Profile/preview contexts pin the ghost's resting transform to none so
+   the float reads from the same centered spot it always did. */
+.profile-character-preview .actor-sprite.shape-ghost {
+  transform: none;
+}
+
+.actor-sprite.shape-ghost .ghost-bob {
+  transform-box: fill-box;
+  transform-origin: 50% 88%;
+  animation: ghost-bob 3.1s ease-in-out infinite;
+  will-change: transform;
+}
+
+.actor-sprite.shape-ghost .ghost-sway {
+  transform-box: fill-box;
+  transform-origin: 50% 96%;
+  animation: ghost-sway 5.7s ease-in-out infinite;
+}
+
+.actor-sprite.shape-ghost .ghost-eye {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ghost-blink 6.7s ease-in-out infinite;
+}
+
+.actor-sprite.shape-ghost .ghost-aura {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ghost-aura-breathe 3.1s ease-in-out infinite;
 }
 
 /* Track the parent .actor-sprite box instead of a fixed pixel size.
@@ -9993,19 +10032,65 @@
   fill: #33231a;
 }
 
-/* Gentle vertical bob — keeps the spectre feeling weightless. */
-@keyframes workspace-ghost-float {
+/* Vertical bob with squash-&-stretch: at the top of the rise the body
+   stretches tall and thin, settling into a slight squash at the bottom —
+   the classic weightless-float read. Units are % of the group's own box
+   (transform-box: fill-box) so the amplitude scales with the sprite. */
+@keyframes ghost-bob {
   0%,
   100% {
-    transform: translateY(0);
+    transform: translateY(2.5%) scaleX(1.03) scaleY(0.97);
   }
   50% {
-    transform: translateY(-3px);
+    transform: translateY(-5.5%) scaleX(0.975) scaleY(1.035);
+  }
+}
+
+/* Slow pendulum lean, pivoting from the tail. */
+@keyframes ghost-sway {
+  0%,
+  100% {
+    transform: rotate(-2.2deg);
+  }
+  50% {
+    transform: rotate(2.2deg);
+  }
+}
+
+/* Quick blink near the end of the cycle — eyes are open the vast
+   majority of the time. */
+@keyframes ghost-blink {
+  0%,
+  90%,
+  100% {
+    transform: scaleY(1);
+  }
+  94% {
+    transform: scaleY(0.08);
+  }
+  97% {
+    transform: scaleY(1);
+  }
+}
+
+/* Faint breathing halo, synced to the bob period. */
+@keyframes ghost-aura-breathe {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.32;
+    transform: scale(1.04);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .actor-sprite.shape-ghost {
+  .actor-sprite.shape-ghost .ghost-bob,
+  .actor-sprite.shape-ghost .ghost-sway,
+  .actor-sprite.shape-ghost .ghost-eye,
+  .actor-sprite.shape-ghost .ghost-aura {
     animation: none;
   }
 }

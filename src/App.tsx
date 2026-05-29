@@ -2087,21 +2087,31 @@ const ghostSvgMarkup = (
     aria-hidden="true"
     focusable="false"
   >
+    {/* Steady halo stays put behind while the body floats over it, so
+        the ghost reads as lifting off its own glow (adds depth). */}
     <ellipse className="ghost-aura" cx="62" cy="78" rx="52" ry="54" />
-    {/* Arm nubs drawn before the body so their roots tuck behind it */}
-    <path className="ghost-arm" d="M18 86 q-12 2 -16 9 q9 1 17 -2 Z" />
-    <path className="ghost-arm" d="M110 86 q12 2 16 9 q-9 1 -17 -2 Z" />
-    <path
-      className="ghost-body"
-      d="M64 14 C40 14 18 32 17 60 C16 74 16 86 19 98 C21 107 24 116 31 116 C37 116 39 108 45 108 C51 108 53 118 60 118 C66 118 68 107 75 109 C90 113 104 120 116 108 C124 100 121 86 112 88 C106 89 106 96 100 94 C109 86 113 73 112 60 C110 32 88 14 64 14 Z"
-    />
-    <ellipse className="ghost-eye" cx="48" cy="64" rx="5.2" ry="7.4" />
-    <ellipse className="ghost-eye" cx="78" cy="64" rx="5.2" ry="7.4" />
-    <path className="ghost-mouth" d="M52 80 q4 -6 8 0 t8 0" />
-    <g className="ghost-hat" transform="rotate(20 96 30)">
-      <path className="ghost-hat-brim" d="M80 40 h36 v5 h-36 Z" />
-      <path className="ghost-hat-crown" d="M88 14 h20 v26 h-20 Z" />
-      <rect className="ghost-hat-band" x="88" y="33" width="20" height="4" />
+    {/* Two nested groups carry the motion (see App.css): .ghost-sway is a
+        slow pendulum, .ghost-bob a faster bob with squash-&-stretch.
+        Defining the motion on <g> wrappers keeps it in SVG user units,
+        so it scales with the sprite in every context. */}
+    <g className="ghost-sway">
+      <g className="ghost-bob">
+        {/* Arm nubs drawn before the body so their roots tuck behind it */}
+        <path className="ghost-arm" d="M18 86 q-12 2 -16 9 q9 1 17 -2 Z" />
+        <path className="ghost-arm" d="M110 86 q12 2 16 9 q-9 1 -17 -2 Z" />
+        <path
+          className="ghost-body"
+          d="M64 14 C40 14 18 32 17 60 C16 74 16 86 19 98 C21 107 24 116 31 116 C37 116 39 108 45 108 C51 108 53 118 60 118 C66 118 68 107 75 109 C90 113 104 120 116 108 C124 100 121 86 112 88 C106 89 106 96 100 94 C109 86 113 73 112 60 C110 32 88 14 64 14 Z"
+        />
+        <ellipse className="ghost-eye" cx="48" cy="64" rx="5.2" ry="7.4" />
+        <ellipse className="ghost-eye" cx="78" cy="64" rx="5.2" ry="7.4" />
+        <path className="ghost-mouth" d="M52 80 q4 -6 8 0 t8 0" />
+        <g className="ghost-hat" transform="rotate(20 96 30)">
+          <path className="ghost-hat-brim" d="M80 40 h36 v5 h-36 Z" />
+          <path className="ghost-hat-crown" d="M88 14 h20 v26 h-20 Z" />
+          <rect className="ghost-hat-band" x="88" y="33" width="20" height="4" />
+        </g>
+      </g>
     </g>
   </svg>
 );
