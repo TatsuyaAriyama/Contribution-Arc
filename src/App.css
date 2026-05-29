@@ -9815,10 +9815,12 @@
 }
 
 /* ── Focus ring ──────────────────────────────────────────────────
-   A pomodoro-style halo lying flat on the ground at the actor's feet.
-   The conic-gradient sweep is driven by `--focus-progress` (0..1) and
-   masked into a thin ring. Tilted on the X axis so it reads as a circle
-   drawn on the floor rather than a flat disc facing the camera. */
+   A calm session halo lying flat on the ground at the actor's feet.
+   It fills clockwise from the top (`from -90deg`) over a single 12-hour
+   session — empty at join, one full revolution at 12h. The conic-gradient
+   sweep is driven by `--focus-progress` (0..1) and masked into a thin ring.
+   Tilted on the X axis so it reads as a circle drawn on the floor rather
+   than a flat disc facing the camera. */
 .actor-focus-ring {
   position: absolute;
   top: 33px;
@@ -9840,42 +9842,10 @@
   z-index: 0;
 }
 
-/* Deeper focus (50min+): bolder, fully opaque ring. */
-.actor-focus-ring.is-deep {
-  opacity: 0.78;
-  width: 62px;
-  height: 62px;
-  margin-left: -31px;
-  top: 31px;
-}
-
 /* On break: dim, desaturated, and frozen at its current fill. */
 .actor-focus-ring.is-paused {
   opacity: 0.22;
   filter: grayscale(1);
-}
-
-/* Cycle completion: a quiet swell of light. */
-.actor-focus-ring.is-pulsing {
-  animation: actor-focus-pulse 1.8s ease-out infinite;
-}
-
-@keyframes actor-focus-pulse {
-  0%,
-  100% {
-    opacity: 0.55;
-    transform: perspective(140px) rotateX(60deg) scale(1);
-  }
-  50% {
-    opacity: 0.95;
-    transform: perspective(140px) rotateX(60deg) scale(1.14);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .actor-focus-ring.is-pulsing {
-    animation: none;
-  }
 }
 
 /* ── Milestone monuments (記念碑) ─────────────────────────────────

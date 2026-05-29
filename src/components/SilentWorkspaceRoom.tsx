@@ -193,19 +193,16 @@ function getActorStayLabel(member: RoomActor) {
   return restMinutes > 0 ? `${hours}h ${restMinutes}m` : `${hours}h`;
 }
 
-/* Focus-ring state for an actor. The ring fills over a 25-minute pomodoro
-   cycle and glows briefly each time a cycle (25 / 50 / 75 … min) completes.
-   `--focus-progress` (0..1) drives the conic-gradient fill in CSS. */
+/* Focus-ring state for an actor. The ring fills clockwise over a single
+   12-hour session: it starts empty (no color) when the actor joins and
+   reaches a full revolution after 12 hours of active focus, then holds at
+   full rather than wrapping back to empty. `--focus-progress` (0..1)
+   drives the conic-gradient fill in CSS. */
 function getActorFocusRing(member: RoomActor) {
   const active = getActorActiveMinutes(member);
-  const cycleLength = 25;
-  const cycles = Math.floor(active / cycleLength);
-  const within = active % cycleLength;
-  const progress = within / cycleLength;
-  // Pulse in the minute right after a cycle completes (within < 1) once at
-  // least one cycle is done, or as the ring is about to top off.
-  const justCompleted = cycles >= 1 && (within < 1 || within >= cycleLength - 1);
-  return { progress, cycles, isPulsing: justCompleted };
+  const cycleLength = 12 * 60; // 12 hours, one full revolution
+  const progress = Math.min(1, active / cycleLength);
+  return { progress };
 }
 
 export function SilentWorkspaceRoom({
@@ -281,13 +278,14 @@ export function SilentWorkspaceRoom({
     return () => window.clearInterval(id);
   }, [members]);
   // Slow tick so the focus rings keep filling as minutes accrue even when
-  // nothing else re-renders the stage. 20s is plenty for a 25-min ring and
+  // nothing else re-renders the stage. The ring now spans 12 hours, so each
+  // 1% is ~7 minutes — a 60s tick is far finer than the eye can resolve and
   // costs almost nothing; only runs while there's at least one member.
   const [ringTick, setRingTick] = useState(0);
   void ringTick;
   useEffect(() => {
     if (members.length === 0) return;
-    const id = window.setInterval(() => setRingTick((t) => t + 1), 20000);
+    const id = window.setInterval(() => setRingTick((t) => t + 1), 60000);
     return () => window.clearInterval(id);
   }, [members.length]);
   const presetSlots = [...presetMessages, "", "", "", "", "", ""].slice(0, 6);
@@ -618,20 +616,19 @@ export function SilentWorkspaceRoom({
                 })()}
                 {member.status === "on-break" ? <span className="actor-rest-mark" aria-hidden="true">Zz</span> : null}
                 {(() => {
-                  // Focus ring: a pomodoro-style progress halo at the
-                  // actor's feet. Hidden only for a member who just joined
-                  // and is already on break with no accrued focus.
+                  // Focus ring: a calm 12-hour session progress halo at the
+                  // actor's feet. Fills clockwise from the top, empty at join.
+                  // Hidden only for a member who just joined and is already on
+                  // break with no accrued focus.
                   const ring = getActorFocusRing(member);
-                  if (ring.progress <= 0 && ring.cycles === 0 && member.status === "on-break") {
+                  if (ring.progress <= 0 && member.status === "on-break") {
                     return null;
                   }
                   return (
                     <span
                       className={[
                         "actor-focus-ring",
-                        ring.isPulsing && member.status !== "on-break" ? "is-pulsing" : "",
                         member.status === "on-break" ? "is-paused" : "",
-                        ring.cycles >= 2 ? "is-deep" : "",
                       ]
                         .filter(Boolean)
                         .join(" ")}
