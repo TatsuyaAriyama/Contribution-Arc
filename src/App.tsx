@@ -11378,7 +11378,10 @@ function App() {
               onClick={(event) => event.stopPropagation()}
             >
               <header className="daily-detail-modal-head">
-                <ProfileCharacterPreview color={report.characterColor || characterColorOptions[0].value} />
+                <ProfileCharacterPreview
+                  color={report.characterColor || characterColorOptions[0].value}
+                  variant="simple"
+                />
                 <div>
                   <p className="card-kicker">Daily Report</p>
                   <h2 id="daily-detail-modal-title">{displayName}</h2>
