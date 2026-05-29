@@ -104,6 +104,7 @@ import {
 } from "./components/feed/WorkspaceRecruitmentFeedCard";
 import {
   fetchPostRepliesOnce,
+  fetchRepliesForPosts,
   savePostToCloud,
   savePostReplyToCloud,
   subscribePostsFromCloud,
@@ -476,7 +477,7 @@ type RoomCreateState = "idle" | "saving" | "saved" | "offline";
 
 type NotificationItem = {
   id: string;
-  type: "dailyLog" | "post" | "friendRequest";
+  type: "dailyLog" | "post" | "friendRequest" | "reply";
   title: string;
   body: string;
   createdAt: string;
@@ -487,6 +488,7 @@ type NotificationItem = {
 type DesktopNotificationSettings = {
   dailyLog: boolean;
   post: boolean;
+  reply: boolean;
   friendRequest: boolean;
   sound: boolean;
   soundVolume: number;
@@ -740,6 +742,7 @@ const defaultWorkspacePresetMessages = [
 const defaultDesktopNotificationSettings: DesktopNotificationSettings = {
   dailyLog: true,
   post: true,
+  reply: true,
   friendRequest: true,
   sound: true,
   soundVolume: 0.35,
@@ -750,6 +753,7 @@ const notificationSoundSources = {
   default: `${import.meta.env.BASE_URL}sounds/notification-soft.mp3`,
   dailyLog: `${import.meta.env.BASE_URL}sounds/notification-soft.mp3`,
   post: `${import.meta.env.BASE_URL}sounds/notification-soft.mp3`,
+  reply: `${import.meta.env.BASE_URL}sounds/notification-soft.mp3`,
   friendRequest: `${import.meta.env.BASE_URL}sounds/notification-soft.mp3`,
 } as const;
 const workspaceActorSlots = [
@@ -4614,15 +4618,44 @@ function App() {
     };
   }, [currentUser]);
 
-  // Fetch replies once on sign-in. Realtime sync is not needed here;
-  // optimistic updates keep local state current after the user posts a reply.
+  // Fetch replies for every visible post whenever the post list
+  // changes. Previously this used a single collection-group query
+  // which silently failed without an explicit Firestore index — so
+  // replies vanished on every reload. The per-post helper has no
+  // such requirement and is fast in practice because the queries
+  // run in parallel. Optimistic updates inside handlePostReplySubmit
+  // keep the local state ahead of the cloud round-trip so the user
+  // never sees a delay.
+  //
+  // The fetch is keyed by the post-id signature so it doesn't fire
+  // on irrelevant post-record updates (likes, etc.) — only when the
+  // visible set of posts actually changes.
+  const visiblePostIdsKey = useMemo(
+    () =>
+      posts
+        .map((post) => post.id)
+        .filter(Boolean)
+        .sort()
+        .join(","),
+    [posts],
+  );
   useEffect(() => {
     if (!currentUser) return;
-
-    void fetchPostRepliesOnce(db, (error) => {
+    const postIds = visiblePostIdsKey ? visiblePostIdsKey.split(",") : [];
+    if (postIds.length === 0) {
+      setPostReplies([]);
+      return;
+    }
+    let cancelled = false;
+    void fetchRepliesForPosts(db, postIds, (error) => {
       console.info("Post reply fetch skipped.", error);
-    }).then(setPostReplies);
-  }, [currentUser]);
+    }).then((replies) => {
+      if (!cancelled) setPostReplies(replies);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser, visiblePostIdsKey]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
@@ -6340,6 +6373,46 @@ function App() {
       );
     });
 
+    // Reply notifications — fire when someone else replies to one
+    // of the current user's own posts. Map post.userId once up front
+    // so the per-reply check stays O(1). Uses the same
+    // seenNotificationKeysRef + isRecentEnough guard as the other
+    // event types: historical replies (loaded on app start) are
+    // marked seen but never pushed, so the user isn't spam-notified
+    // for stuff from before the session began.
+    if (postReplies.length > 0) {
+      const ownPostIds = new Set(
+        posts.filter((post) => post.userId === currentUserUid).map((post) => post.id),
+      );
+      const postLookup = new Map(posts.map((post) => [post.id, post]));
+      postReplies.forEach((reply) => {
+        if (reply.userId === currentUserUid) return;
+        if (!ownPostIds.has(reply.postId)) return;
+        const notificationId = `reply:${reply.id}`;
+        if (seenNotificationKeysRef.current.has(notificationId)) return;
+        if (!isRecentEnough(reply.createdAt)) {
+          seenNotificationKeysRef.current.add(notificationId);
+          return;
+        }
+        const parentPost = postLookup.get(reply.postId);
+        const parentPreview = parentPost?.text
+          ? parentPost.text.slice(0, 30) + (parentPost.text.length > 30 ? "…" : "")
+          : "あなたの投稿";
+        pushAppNotification(
+          {
+            id: notificationId,
+            type: "reply",
+            title: `${reply.username || "Developer"}が返信`,
+            body: `${reply.text.slice(0, 120)}\n― ${parentPreview}`,
+            createdAt: reply.createdAt,
+            read: false,
+            sourceUserId: reply.userId,
+          },
+          desktopNotificationSettings.reply,
+        );
+      });
+    }
+
     friendRequests
       .filter((request) => request.direction === "incoming" && request.status === "pending")
       .forEach((request) => {
@@ -6376,6 +6449,7 @@ function App() {
     isWorkspaceLoaded,
     notifiableUserIds,
     posts,
+    postReplies,
     pushAppNotification,
     visibleSharedDailyReports,
   ]);
