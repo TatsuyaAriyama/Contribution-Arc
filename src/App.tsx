@@ -126,6 +126,7 @@ import { ShareToXModal } from "./components/ShareToXModal";
 import { TutorialHint } from "./components/TutorialHint";
 import { ToastHost } from "./components/ToastHost";
 import { IOSInstallHint } from "./components/IOSInstallHint";
+import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 import {
   DailyMentionTextarea,
   type MentionCandidate,
@@ -14662,6 +14663,7 @@ function App() {
       ) : null}
       <ToastHost />
       <IOSInstallHint />
+      <PWAInstallPrompt />
     </motion.main>
     </MotionConfig>
   );

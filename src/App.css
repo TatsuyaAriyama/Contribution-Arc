@@ -21426,6 +21426,115 @@ a[role="button"],
   }
 }
 
+/* Chromium "Add to home screen" prompt. Same bottom-sheet anatomy as
+   `.ios-install-hint` but adds a primary CTA because beforeinstallprompt
+   actually drives an install dialog — we don't just need to teach the
+   user, we need a button that fires `prompt()`. Mounted by
+   PWAInstallPrompt.tsx, which guards visibility (event captured, not
+   already installed, cooldown). */
+.pwa-install-prompt {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  z-index: 220;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 14px 14px 16px;
+  border-radius: 18px;
+  background: rgba(var(--surface-rgb), 0.94);
+  backdrop-filter: blur(22px) saturate(1.08);
+  -webkit-backdrop-filter: blur(22px) saturate(1.08);
+  box-shadow:
+    0 10px 32px rgba(0, 0, 0, 0.18),
+    0 1px 0 rgba(var(--ink-rgb), 0.06) inset;
+  color: var(--ink);
+  animation: ios-install-hint-in 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (min-width: 721px) {
+  /* Desktop Chrome / Edge — bottom-right toast, capped width so it
+     doesn't span the whole viewport. */
+  .pwa-install-prompt {
+    left: auto;
+    right: 24px;
+    bottom: 24px;
+    max-width: 380px;
+  }
+}
+
+.pwa-install-prompt-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.pwa-install-prompt-body strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--ink-strong);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.pwa-install-prompt-body p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.pwa-install-prompt-actions {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pwa-install-prompt-dismiss {
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pwa-install-prompt-dismiss:hover {
+  color: var(--ink);
+  background: rgba(var(--ink-rgb), 0.06);
+}
+
+.pwa-install-prompt-cta {
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--ink-strong);
+  color: var(--surface);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: opacity 120ms ease-out, transform 120ms ease-out;
+}
+
+.pwa-install-prompt-cta:hover {
+  opacity: 0.9;
+}
+
+.pwa-install-prompt-cta:active {
+  transform: scale(0.97);
+}
+
+.pwa-install-prompt-cta:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 /* iOS Safari auto-zooms on focus when an input's computed font-size is
    below 16px. Many form fields across the app sit at 12–15px for a
    denser desktop layout — bump them up at phone widths so the focus
