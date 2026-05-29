@@ -16357,6 +16357,73 @@ function App() {
             </button>
           </article>
         </div>
+        {/* 最近の積み上げ（あしあと）— hero-grid の右カラムは長らく空いて
+            いて、左下に大きな余白を生んでいた。右ペインの FEED が「みんな」
+            を担うので、ホーム左は「あなた」で一貫させる。自分の直近の
+            学習ログ(studyLogs)を静かに振り返る縦タイムライン。煽らない・
+            低彩度・ストリークや順位は出さない (MEMORY のデザイン方針)。
+            既存 state の再利用なので新規 Firestore 読み取りは発生しない。 */}
+        <article className="card home-footprints-card" aria-label={t("最近の積み上げ")}>
+          <div className="home-footprints-head">
+            <div>
+              <p className="card-kicker">{t("あしあと")}</p>
+              <strong>{t("最近の積み上げ")}</strong>
+            </div>
+            <button type="button" onClick={() => setCurrentView("learning")}>
+              {t("記録する")}
+            </button>
+          </div>
+          {(() => {
+            const todayMidnight = new Date();
+            todayMidnight.setHours(0, 0, 0, 0);
+            const dayMs = 24 * 60 * 60 * 1000;
+            const footprints = [...studyLogs]
+              .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+              .slice(0, 6);
+            if (footprints.length === 0) {
+              return (
+                <div className="home-footprints-empty">
+                  <p>{t("まだ記録がありません。最初の積み上げを残してみましょう。")}</p>
+                  <button type="button" onClick={() => setCurrentView("learning")}>
+                    {t("学習を記録する")}
+                  </button>
+                </div>
+              );
+            }
+            return (
+              <ol className="home-footprints-list">
+                {footprints.map((log, index) => {
+                  const ts = new Date(log.createdAt).getTime();
+                  const whenLabel = Number.isFinite(ts)
+                    ? formatLearningLastLogged(ts, todayMidnight.getTime(), dayMs)
+                    : "";
+                  return (
+                    <motion.li
+                      key={log.id}
+                      className="home-footprint-item"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1], delay: index * 0.05 }}
+                    >
+                      <span
+                        className="home-footprint-dot"
+                        style={{ background: log.color || "rgba(31,111,74,0.7)" }}
+                        aria-hidden="true"
+                      />
+                      <div className="home-footprint-body">
+                        <strong>{log.subject}</strong>
+                        <span>{formatStudyTimeJa(log.minutes)}</span>
+                      </div>
+                      {whenLabel ? (
+                        <small className="home-footprint-when">{whenLabel}</small>
+                      ) : null}
+                    </motion.li>
+                  );
+                })}
+              </ol>
+            );
+          })()}
+        </article>
       </section>
 
       </motion.div>

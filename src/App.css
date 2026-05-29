@@ -2578,6 +2578,167 @@
   grid-template-rows: minmax(0, 1fr);
 }
 
+/* 最近の積み上げ（あしあと）— hero-grid の右カラム(1fr)を埋める静かな
+   縦タイムライン。低彩度・余白重視で FEED と競合しないトーンに。 */
+.home-footprints-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+  min-height: 100%;
+}
+
+.home-footprints-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.home-footprints-head .card-kicker {
+  margin: 0 0 2px;
+}
+
+.home-footprints-head strong {
+  font-size: 15px;
+  font-weight: 850;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+}
+
+.home-footprints-head button {
+  flex-shrink: 0;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid rgba(31, 111, 74, 0.16);
+  border-radius: 999px;
+  background: rgba(var(--surface-rgb), 0.86);
+  color: var(--green);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 850;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.home-footprints-head button:hover {
+  border-color: rgba(31, 111, 74, 0.3);
+  background: rgba(var(--tint-soft-rgb), 0.48);
+}
+
+.home-footprints-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-footprint-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 4px 9px 0;
+}
+
+/* 点と点をつなぐ細い縦線でタイムライン感を出す（最後の項目は省く） */
+.home-footprint-item::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: calc(50% + 7px);
+  width: 1px;
+  height: calc(100% - 14px);
+  background: rgba(var(--ink-rgb), 0.1);
+}
+
+.home-footprint-item:last-child::before {
+  display: none;
+}
+
+.home-footprint-dot {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 3px rgba(var(--surface-rgb), 0.92);
+}
+
+.home-footprint-body {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.home-footprint-body strong {
+  font-size: 13px;
+  font-weight: 750;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-footprint-body span {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(var(--ink-rgb), 0.5);
+}
+
+.home-footprint-when {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(var(--ink-rgb), 0.42);
+}
+
+.home-footprints-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 4px 8px;
+}
+
+.home-footprints-empty p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(var(--ink-rgb), 0.55);
+}
+
+.home-footprints-empty button {
+  min-height: 34px;
+  padding: 0 16px;
+  border: 1px solid rgba(31, 111, 74, 0.18);
+  border-radius: 999px;
+  background: rgba(var(--tint-soft-rgb), 0.42);
+  color: var(--green);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 850;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.home-footprints-empty button:hover {
+  border-color: rgba(31, 111, 74, 0.32);
+  background: rgba(var(--tint-soft-rgb), 0.6);
+}
+
+/* 狭い画面では hero-grid が 1 カラムに畳まれる。タイムラインは
+   そのまま縦に積めば自然に収まる。 */
+@media (max-width: 720px) {
+  .home-footprints-card {
+    min-height: auto;
+  }
+}
+
 .status-card,
 .map-card,
 .hours-card,
