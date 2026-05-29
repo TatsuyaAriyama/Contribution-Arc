@@ -15017,6 +15017,8 @@ function App() {
         transition={SPRING_SNAPPY}
       >
 
+      {contributionArcCardSection}
+
       {currentUser ? (
         <TutorialHint
           uid={currentUser.uid}
@@ -15076,8 +15078,6 @@ function App() {
           <span className="home-teams-ribbon-arrow" aria-hidden="true">→</span>
         </button>
       ) : null}
-
-      {contributionArcCardSection}
 
       <AnimatePresence initial={false}>
         {(() => {
