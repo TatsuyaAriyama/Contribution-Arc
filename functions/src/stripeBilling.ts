@@ -197,7 +197,10 @@ async function applySubscription(sub: Stripe.Subscription): Promise<void> {
 }
 
 export const stripeWebhook = onRequest(
-  { secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET], region: REGION },
+  // Stripe からの通知は未認証の外部 POST。署名(STRIPE_WEBHOOK_SECRET)で
+  // 本物か検証するので、Cloud Run 側は誰でも到達できる public にする。
+  // これが無いと IAM レベルで 403 になり Stripe の通知が届かない。
+  { secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET], region: REGION, invoker: "public" },
   async (req, res) => {
     const sig = req.headers["stripe-signature"];
     if (!sig) {
