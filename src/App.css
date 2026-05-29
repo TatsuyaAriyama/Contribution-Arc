@@ -10266,29 +10266,37 @@
   font-size: 10px;
 }
 
-/* Shape picker (profile + settings) — only two options today, so
-   each tile stretches to fill its row and uses a horizontal layout
-   (swatch + label) for easier reading. */
+/* Shape picker (profile + settings) — card tiles. Each tile shows the
+   character silhouette on a small gridded "stage" (mirrors the large
+   preview's look) above a name + one-line flavour tagline, so the
+   picker reads as "preview the actual character" rather than a list of
+   colour chips. */
 .character-shape-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
   gap: 10px;
 }
 
-.character-shape-grid button {
+.character-shape-grid.compact {
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+}
+
+.shape-tile {
+  position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
-  min-height: 64px;
-  padding: 12px 16px;
+  padding: 14px 12px 12px;
   border: 1px solid rgba(var(--ink-rgb), 0.08);
-  border-radius: 16px;
+  border-radius: 18px;
   background: rgba(var(--surface-rgb), 0.86);
   color: var(--ink);
   cursor: pointer;
   font: inherit;
+  text-align: center;
   transition:
     transform 0.16s ease,
     border-color 0.16s ease,
@@ -10296,58 +10304,143 @@
     box-shadow 0.16s ease;
 }
 
-.character-shape-grid button:hover,
-.character-shape-grid button.active {
-  transform: translateY(-1px);
-  border-color: rgba(31, 111, 74, 0.22);
-  background: var(--surface);
-  box-shadow: 0 16px 34px rgba(var(--ink-rgb), 0.07);
+.character-shape-grid.compact .shape-tile {
+  padding: 12px 10px 10px;
+  gap: 8px;
+  border-radius: 16px;
 }
 
-/* Active = clearly selected. Stronger accent ring + tinted background so
-   the chosen shape reads at a glance, especially on mobile where the
-   user might not notice a 0.18-opacity outline. */
-.character-shape-grid button.active {
-  border-color: rgba(31, 111, 74, 0.55);
-  background: rgba(31, 111, 74, 0.08);
+.shape-tile:hover {
+  transform: translateY(-2px);
+  border-color: rgba(31, 111, 74, 0.22);
+  background: var(--surface);
+  box-shadow: 0 16px 34px rgba(var(--ink-rgb), 0.08);
+}
+
+/* Active = clearly selected. Accent ring + tinted background + the
+   corner check badge so the chosen shape reads at a glance. */
+.shape-tile.active {
+  border-color: rgba(31, 111, 74, 0.5);
+  background: rgba(31, 111, 74, 0.06);
   box-shadow:
-    0 0 0 2px rgba(31, 111, 74, 0.45),
+    0 0 0 2px rgba(31, 111, 74, 0.4),
     0 18px 36px rgba(var(--ink-rgb), 0.09);
   outline: none;
 }
 
-.character-shape-grid.compact button {
-  min-height: 56px;
-  padding: 10px 14px;
-  gap: 10px;
+/* Mini preview stage — gridded backdrop echoing .profile-character-
+   preview so the silhouette feels "staged", not pasted on. */
+.shape-tile-stage {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1 / 1;
   border-radius: 14px;
+  background:
+    linear-gradient(90deg, rgba(var(--ink-rgb), 0.04) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(var(--ink-rgb), 0.035) 1px, transparent 1px),
+    radial-gradient(circle at 50% 22%, rgba(var(--surface-rgb), 0.92), transparent 2.4rem),
+    rgba(var(--ink-rgb), 0.015);
+  background-size: 14px 14px, 14px 14px, auto, auto;
+  box-shadow: inset 0 1px 0 rgba(var(--surface-rgb), 0.7);
 }
 
-.character-shape-grid small {
-  max-width: 100%;
+.shape-tile.active .shape-tile-stage {
+  background:
+    linear-gradient(90deg, rgba(31, 111, 74, 0.06) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(31, 111, 74, 0.05) 1px, transparent 1px),
+    radial-gradient(circle at 50% 22%, rgba(var(--surface-rgb), 0.95), transparent 2.4rem),
+    rgba(31, 111, 74, 0.03);
+  background-size: 14px 14px, 14px 14px, auto, auto;
+}
+
+.shape-tile-text {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+}
+
+/* Name = a prominent kanji glyph + a small romaji accent, shown as
+   "宵 Yoi". The kanji carries the identity, romaji aids reading and
+   gives it a refined bilingual feel. */
+.shape-tile-name {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 5px;
+  color: var(--ink-strong);
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1.05;
+}
+
+.shape-tile-romaji {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: none;
+}
+
+.shape-tile.active .shape-tile-romaji {
+  color: var(--green);
+}
+
+.shape-tile-tag {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
   overflow: hidden;
-  color: inherit;
-  font-size: 13px;
-  font-weight: 850;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.character-shape-grid.compact small {
-  font-size: 12px;
+.character-shape-grid.compact .shape-tile-name {
+  font-size: 16px;
+}
+
+.character-shape-grid.compact .shape-tile-tag {
+  font-size: 10.5px;
+}
+
+/* Corner badge: green check when selected, neutral lock when the
+   shape is shop-locked. */
+.shape-tile-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.shape-tile-badge.is-check {
+  background: var(--green);
+  color: #fff;
+  font-weight: 900;
+  box-shadow: 0 2px 6px rgba(31, 111, 74, 0.4);
+}
+
+.shape-tile-badge.is-lock {
+  background: rgba(var(--ink-rgb), 0.08);
 }
 
 .character-shape-swatch {
   position: relative;
   display: block;
   flex: 0 0 auto;
-  width: 28px;
-  height: 28px;
+  width: 46px;
+  height: 46px;
 }
 
 .character-shape-grid.compact .character-shape-swatch {
-  width: 24px;
-  height: 24px;
+  width: 40px;
+  height: 40px;
 }
 
 .character-shape-swatch.shape-default {
@@ -22513,26 +22606,16 @@ a[role="button"],
 /* Locked shape pickers in settings — overlay a soft veil and a lock
    icon, keep the click target alive so it can shuttle the user to
    the shop. Avoid graying out so the silhouette stays recognizable. */
-.character-shape-grid button.is-locked {
-  position: relative;
-  opacity: 0.78;
+.shape-tile.is-locked {
+  opacity: 0.82;
 }
 
-.character-shape-grid button.is-locked:hover {
+.shape-tile.is-locked:hover {
   opacity: 1;
 }
 
-.character-shape-grid button.is-locked .character-shape-swatch {
-  filter: grayscale(0.35);
-}
-
-.character-shape-lock {
-  position: absolute;
-  top: 6px;
-  right: 8px;
-  font-size: 11px;
-  line-height: 1;
-  opacity: 0.7;
+.shape-tile.is-locked .character-shape-swatch {
+  filter: grayscale(0.4);
 }
 
 @media (max-width: 560px) {
