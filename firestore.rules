@@ -63,6 +63,18 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).changedKeys().hasOnly(["teamName"])
         && request.resource.data.teamName is string
         && request.resource.data.teamName.size() <= 40
+      ) || (
+        // 組織作成フロー (createOrganization の 2 番目の書き込み):
+        // ユーザーが「自分が作成した org」に自分のメンバーシップ
+        // (organizationId / organizationName / organizationRole) を
+        // 付与する。アタッチ先 org の ownerUid == 自分 を get() で
+        // 確認するので、他人の org には参加できない（権限昇格不可）。
+        // プロフィール項目 (searchName / following 等) の完全性に
+        // 依存しないため、旧データのユーザーでも組織を作成できる。
+        isOwner(uid)
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(["organizationId", "organizationName", "organizationRole"])
+        && request.resource.data.organizationId is string
+        && get(/databases/$(database)/documents/organizations/$(request.resource.data.organizationId)).data.ownerUid == request.auth.uid
       );
       // Phase 8: self-delete is required for 個人情報保護法 / GDPR
       // data-subject deletion rights. The client is responsible for
