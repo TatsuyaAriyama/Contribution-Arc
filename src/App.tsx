@@ -13799,8 +13799,38 @@ function App() {
                 className="daily-entry-card"
                 onSubmit={(event) => handleDailyReportSectionSubmit(event, "reflection")}
               >
+                <div className="daily-entry-label-row">
+                  <span className="daily-entry-label">{t("振り返り")}</span>
+                </div>
+                {/* 今日やることの箇条書きを振り返り欄の上部に再掲する。
+                    やること編集側は完了で斜線になるが、ここでは斜線を出さず
+                    チェック状態（項目チェック）のみを示し、書きながら各項目を
+                    見返せるようにする。下書きの内容をそのまま参照するので、
+                    保存前・記入中でもライブで表示される。 */}
+                {(() => {
+                  const recapItems = dailyPlanItemsDraft.filter(
+                    (item) => item.text.trim().length > 0,
+                  );
+                  if (recapItems.length === 0) {
+                    return null;
+                  }
+                  return (
+                    <ul className="reflection-recap" aria-label={t("今日やること")}>
+                      {recapItems.map((item) => (
+                        <li key={item.id} className="reflection-recap-row">
+                          <span
+                            className={`reflection-recap-box${item.done ? " is-checked" : ""}`}
+                            aria-hidden="true"
+                          >
+                            {item.done ? "✓" : ""}
+                          </span>
+                          <span className="reflection-recap-text">{item.text}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  );
+                })()}
                 <label>
-                  <span>{t("振り返り")}</span>
                   <DailyMentionTextarea
                     value={dailyReflectionDraft}
                     onChange={setDailyReflectionDraft}

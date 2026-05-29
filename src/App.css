@@ -5189,6 +5189,53 @@
   text-decoration-color: rgba(var(--ink-rgb), 0.4);
 }
 
+/* 振り返り欄に再掲する「今日やること」の読み取り専用リスト。
+   やること編集側は完了で斜線になるが、ここでは斜線を出さずチェック状態
+   （項目チェック）だけを示し、本文は読みやすいまま残す。 */
+.reflection-recap {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reflection-recap-row {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  align-items: start;
+  gap: 8px;
+  padding: 2px;
+}
+
+.reflection-recap-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+  border: 1.5px solid rgba(var(--ink-rgb), 0.28);
+  border-radius: 4px;
+  background: transparent;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.reflection-recap-box.is-checked {
+  border-color: var(--green);
+  background: var(--green);
+}
+
+.reflection-recap-text {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
 .plan-checklist-carry {
   display: inline-flex;
   align-items: center;
