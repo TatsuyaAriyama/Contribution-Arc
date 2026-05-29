@@ -2,7 +2,6 @@ import {
   arrayRemove,
   arrayUnion,
   collection,
-  collectionGroup,
   doc,
   getDocs,
   increment,
@@ -131,28 +130,78 @@ export async function fetchPostRepliesOnce(
   db: Firestore,
   onError: (error: unknown) => void,
 ): Promise<ContributionReplyRecord[]> {
-  const repliesQuery = query(collectionGroup(db, "replies"), orderBy("createdAt", "desc"), limit(80));
+  // Legacy collection-group entry point. Kept exported because
+  // the symbol may still be imported elsewhere, but it intentionally
+  // does NOT fan out to subcollections any more — that path needed
+  // a per-collection-group index that was never deployed, so it
+  // failed silently and dropped every reply on reload. Use
+  // `fetchRepliesForPosts(db, postIds)` instead; this stub returns
+  // an empty array so existing callers do not crash.
+  void db;
+  void onError;
+  return [];
+}
 
-  try {
-    const snapshot = await getDocs(repliesQuery);
-    const replies = snapshot.docs.map((item) => {
-      const data = item.data();
-      return {
-        id: item.id,
-        postId: readString(data.postId),
-        userId: readString(data.userId),
-        username: readString(data.username, "Developer"),
-        avatar: readString(data.avatar),
-        characterColor: readString(data.characterColor, "#1f6f4a"),
-        text: readString(data.text),
-        createdAt: readCreatedAt(data.createdAt),
-      };
-    });
-    return replies.filter((reply) => reply.postId && reply.userId && reply.text.trim());
-  } catch (error) {
-    onError(error);
-    return [];
-  }
+/* Per-post reply fetch (Phase 10 bugfix).
+
+   Previously the app pulled replies via a single
+   `collectionGroup("replies")` query with `orderBy("createdAt")`.
+   That kind of query requires a dedicated collection-group index
+   to be enabled in Firestore; without it, every fetch threw and
+   we swallowed the error, returning []. The visible symptom was
+   exactly what the user reported: write a reply, see it locally,
+   reload the page → every reply disappears.
+
+   The fix is to drop the collection-group query and instead pull
+   each visible post's replies subcollection in parallel. A single-
+   field orderBy on a *named* subcollection works with no extra
+   index. Cost: N small queries (N == visible posts, capped at 40
+   by subscribePostsFromCloud) per fetch; in practice that's
+   indistinguishable from one round-trip thanks to Firestore's
+   request pipelining. */
+export async function fetchRepliesForPosts(
+  db: Firestore,
+  postIds: string[],
+  onError: (error: unknown) => void,
+): Promise<ContributionReplyRecord[]> {
+  if (postIds.length === 0) return [];
+  const uniquePostIds = Array.from(new Set(postIds.filter(Boolean)));
+  const groups = await Promise.all(
+    uniquePostIds.map(async (postId) => {
+      try {
+        const snapshot = await getDocs(
+          query(
+            collection(db, "posts", postId, "replies"),
+            orderBy("createdAt", "desc"),
+            limit(40),
+          ),
+        );
+        return snapshot.docs.map((item) => {
+          const data = item.data();
+          return {
+            id: item.id,
+            // Fall back to the path's postId when the stored field
+            // is missing on legacy docs.
+            postId: readString(data.postId, postId),
+            userId: readString(data.userId),
+            username: readString(data.username, "Developer"),
+            avatar: readString(data.avatar),
+            characterColor: readString(data.characterColor, "#1f6f4a"),
+            text: readString(data.text),
+            createdAt: readCreatedAt(data.createdAt),
+          } satisfies ContributionReplyRecord;
+        });
+      } catch (error) {
+        // Per-post failures shouldn't tank the whole fetch — most
+        // commonly this is a rules error on a single post.
+        onError(error);
+        return [] as ContributionReplyRecord[];
+      }
+    }),
+  );
+  return groups
+    .flat()
+    .filter((reply) => reply.postId && reply.userId && reply.text.trim());
 }
 
 export async function savePostReplyToCloud(db: Firestore, reply: ContributionReplyRecord) {
