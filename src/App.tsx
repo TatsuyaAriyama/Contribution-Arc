@@ -7710,6 +7710,37 @@ function App() {
     setCurrentView("profile");
   };
 
+  // Tapping a reply opens the replier's profile — same resolution path as
+  // the post author (own profile → cached workspace profile → minimal
+  // fallback built from the reply's denormalized author fields).
+  const handleReplyAuthorOpen = (reply: ContributionReplyRecord) => {
+    if (reply.userId === currentUserUid) {
+      setProfileMember(null);
+      setProfileUser(null);
+      setCurrentView("profile");
+      return;
+    }
+
+    const profile = workspaceProfiles[reply.userId];
+    if (profile) {
+      handleUserProfileOpen(profile);
+      return;
+    }
+
+    setProfileMember(null);
+    setProfileUser({
+      uid: reply.userId,
+      userId: reply.userId,
+      displayName: reply.username,
+      photoURL: reply.avatar,
+      searchName: reply.username.toLowerCase(),
+      following: [],
+      followers: [],
+      characterColor: reply.characterColor,
+    });
+    setCurrentView("profile");
+  };
+
   const useLatestStudyLogAsPost = () => {
     const latestLog = [...studyLogs]
       .filter((log) => !log.id.startsWith("seed-"))
@@ -10282,8 +10313,23 @@ function App() {
         <div className="post-reply-area">
           {visibleReplies.length > 0 ? (
             <div className="post-reply-list">
-              {visibleReplies.map((reply) => (
-                <article key={reply.id} className="post-reply-item">
+              {visibleReplies.map((reply, index) => (
+                <motion.button
+                  type="button"
+                  key={reply.id}
+                  className="post-reply-item"
+                  onClick={() => handleReplyAuthorOpen(reply)}
+                  aria-label={`${reply.username}のプロフィールを開く`}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: 0.34,
+                    ease: [0.16, 1, 0.3, 1],
+                    delay: index * 0.07,
+                  }}
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.97 }}
+                >
                   {(() => {
                     const look = resolveAuthorAppearance(
                       reply.userId,
@@ -10296,7 +10342,7 @@ function App() {
                     <strong>{reply.username}</strong>
                     <span>{reply.text}</span>
                   </p>
-                </article>
+                </motion.button>
               ))}
               {replies.length > visibleReplies.length ? <small>ほか {replies.length - visibleReplies.length} 件</small> : null}
             </div>

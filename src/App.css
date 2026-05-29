@@ -4325,9 +4325,30 @@
   grid-template-columns: 28px minmax(0, 1fr);
   align-items: start;
   gap: 8px;
+  width: 100%;
   padding: 7px 8px;
+  border: 1px solid transparent;
   border-radius: 14px;
   background: rgba(var(--surface-rgb), 0.68);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.post-reply-item:hover {
+  border-color: rgba(31, 111, 74, 0.22);
+  background: rgba(var(--surface-rgb), 0.92);
+  box-shadow: 0 10px 24px rgba(var(--ink-rgb), 0.08);
+}
+
+.post-reply-item:focus-visible {
+  outline: none;
+  border-color: rgba(31, 111, 74, 0.4);
+  box-shadow: 0 0 0 3px rgba(31, 111, 74, 0.16);
 }
 
 .post-reply-item .profile-character-preview {
