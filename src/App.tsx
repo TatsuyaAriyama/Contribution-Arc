@@ -862,13 +862,12 @@ const defaultKnowledgeLinks: KnowledgeLink[] = [
 
 const characterOptions: CharacterOption[] = [
   {
-    id: "tsuta",
-    name: "ツタ",
-    englishName: "Tsuta",
+    id: "simple",
+    name: "アバター",
+    englishName: "Avatar",
     label: "初期解放キャラクター",
-    concept:
-      "繋がりながら、ゆっくり伸びていく蔦の精霊。学習を積み重ねるたびに、新しい葉が芽吹く。",
-    evolution: "ツタ → 若葉 → 蔓 → 群生",
+    concept: "角丸ボディに小さな足。学習の積み重ねを静かに見守る、シンプルな相棒。",
+    evolution: "",
   },
 ];
 
@@ -2043,21 +2042,17 @@ function getStudyLogPostVerb(subject: string) {
   return "学習しました";
 }
 
-// variant:
-//   "tsuta"  — default. Body + sprout (cotyledons) + eyes + legs.
-//   "simple" — body + inner highlight (sprite-body) + legs. No sprout, no eyes.
-//              Used in the daily-feed avatar chips where the user wants
-//              a minimal silhouette ("葉っぱなし・目なし") matching the
-//              workspace-room representation of the character.
+// The main character: a rounded blocky body + inner highlight (sprite-body)
+// + two short legs. No sprout, no eyes — a minimal silhouette that matches
+// the workspace-room representation of the character. The "ghost" and "owl"
+// shapes (driven by the `shape` prop) render their own distinct silhouettes.
 function ProfileCharacterPreview({
   color,
-  variant = "tsuta",
   shape = "default",
 }: {
   color?: string;
-  variant?: "tsuta" | "simple";
   /* When set to "ghost" the preview switches to the soul shape
-     (no legs, no sprout, wavy hem, floating). Other shapes can be
+     (no legs, wavy hem, floating). Other shapes can be
      added here in the future. */
   shape?: CharacterShape;
 }) {
@@ -2066,13 +2061,13 @@ function ProfileCharacterPreview({
   const isCustomShape = isGhost || isOwl;
   return (
     <div
-      className={`profile-character-preview${variant === "simple" ? " is-simple" : ""}${
+      className={`profile-character-preview${
         isGhost ? " is-ghost" : ""
       }${isOwl ? " is-owl" : ""}`}
       style={{ "--actor-color": color || characterColorOptions[0].value } as CSSProperties}
       aria-hidden="true"
     >
-      <span className={`actor-sprite deep shape-${shape} ${isCustomShape ? "" : "is-tsuta"}`}>
+      <span className={`actor-sprite deep shape-${shape} ${isCustomShape ? "" : "is-blocky"}`}>
         {isOwl ? (
           <>
             <span className="sprite-head">
@@ -2116,29 +2111,6 @@ function ProfileCharacterPreview({
                 strokeLinejoin="round"
               />
             </svg>
-          </>
-        ) : variant === "tsuta" ? (
-          <>
-            <svg
-              className="sprite-sprout"
-              viewBox="0 0 24 30"
-              aria-hidden="true"
-              focusable="false"
-            >
-              <path
-                d="M10 30 Q 6 18 12 7"
-                stroke="#2f4a35"
-                strokeWidth="1.6"
-                fill="none"
-                strokeLinecap="round"
-              />
-              <ellipse cx="8" cy="6.5" rx="4.6" ry="3" fill="#8db090" transform="rotate(-28 8 6.5)" />
-              <ellipse cx="15" cy="5.5" rx="4.6" ry="3" fill="#8db090" transform="rotate(28 15 5.5)" />
-            </svg>
-            <span className="sprite-eye sprite-eye-left" />
-            <span className="sprite-eye sprite-eye-right" />
-            <span className="sprite-leg sprite-leg-left" />
-            <span className="sprite-leg sprite-leg-right" />
           </>
         ) : (
           <>
@@ -9618,7 +9590,7 @@ function App() {
         key={post.id}
       >
         <button type="button" className="log-post-author" onClick={() => handlePostAuthorOpen(post)}>
-          <ProfileCharacterPreview color={post.characterColor} variant="simple" />
+          <ProfileCharacterPreview color={post.characterColor} />
           <span>
             <strong>{post.username}</strong>
             <small>{formatPostTime(post.createdAt)}</small>
@@ -9735,7 +9707,7 @@ function App() {
             <div className="post-reply-list">
               {visibleReplies.map((reply) => (
                 <article key={reply.id} className="post-reply-item">
-                  <ProfileCharacterPreview color={reply.characterColor} variant="simple" />
+                  <ProfileCharacterPreview color={reply.characterColor} />
                   <p>
                     <strong>{reply.username}</strong>
                     <span>{reply.text}</span>
@@ -9838,7 +9810,7 @@ function App() {
         <header className="member-profile-hero">
           <ProfileCharacterPreview
             color={memberProfile.characterColor}
-            variant="simple"
+           
             shape={memberProfile.characterShape}
           />
           <div className="member-profile-identity">
@@ -9930,7 +9902,7 @@ function App() {
         <header className="member-profile-hero">
           <ProfileCharacterPreview
             color={profile.characterColor}
-            variant="simple"
+           
             shape={profile.characterShape}
           />
           <div className="member-profile-identity">
@@ -10454,7 +10426,7 @@ function App() {
           aria-label="投稿を作成"
         >
           <form className="log-composer" onSubmit={handlePostSubmit}>
-            <ProfileCharacterPreview color={playerCharacterColor} variant="simple" />
+            <ProfileCharacterPreview color={playerCharacterColor} />
             <div>
               <textarea
                 value={postDraft}
@@ -11380,7 +11352,7 @@ function App() {
               <header className="daily-detail-modal-head">
                 <ProfileCharacterPreview
                   color={report.characterColor || characterColorOptions[0].value}
-                  variant="simple"
+                 
                 />
                 <div>
                   <p className="card-kicker">Daily Report</p>
@@ -12223,7 +12195,7 @@ function App() {
                   <span>{t("分身キャラクター")}</span>
                   <ProfileCharacterPreview
                     color={playerCharacterColor}
-                    variant="simple"
+                   
                     shape={playerCharacterShape}
                   />
                 </div>
@@ -12973,7 +12945,7 @@ function App() {
                           <div>
                             <ProfileCharacterPreview
                               color={report.characterColor || characterColorOptions[0].value}
-                              variant="simple"
+                             
                             />
                             <span>
                               <strong>{displayName}</strong>
@@ -13435,7 +13407,7 @@ function App() {
             </div>
 
             <form className="log-composer" onSubmit={handlePostSubmit}>
-              <ProfileCharacterPreview color={playerCharacterColor} variant="simple" />
+              <ProfileCharacterPreview color={playerCharacterColor} />
               <div>
                 <textarea
                   value={postDraft}
@@ -13809,7 +13781,7 @@ function App() {
                       </div>
                       <ProfileCharacterPreview
                         color={playerCharacterColor}
-                        variant="simple"
+                       
                         shape={playerCharacterShape}
                       />
                     </div>
@@ -14654,7 +14626,7 @@ function App() {
                     <div className="shop-product-preview">
                       <ProfileCharacterPreview
                         color={playerCharacterColor}
-                        variant="simple"
+                       
                         shape={item.shape}
                       />
                     </div>
