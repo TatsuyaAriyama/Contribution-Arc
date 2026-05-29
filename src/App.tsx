@@ -3763,6 +3763,15 @@ function App() {
   const [openMonumentId, setOpenMonumentId] = useState<string | null>(null);
   const [determination, setDetermination] = useState("");
   const [draftDetermination, setDraftDetermination] = useState("");
+  // Flips true only once the account-load `getDoc` has settled (any
+  // outcome). The periodic profile-sync effect gates its cloud write on
+  // this so the *pre-hydration* profile state — which, on a returning
+  // device whose localStorage `determination` was written under a stale
+  // scope, can be empty even though `userId` is already set — never gets
+  // flushed back to Firestore and clobbers the saved 決意. Without this
+  // gate the sync could write determination:"" before the cloud value
+  // loaded, wiping it; the user's edit then "reverts" on the next reload.
+  const [isProfileHydrated, setIsProfileHydrated] = useState(false);
   const [playerAvatar, setPlayerAvatar] = useState("");
   const [playerCharacterColor, setPlayerCharacterColor] = useState(characterColorOptions[0].value);
   const [playerCharacterShape, setPlayerCharacterShape] = useState<CharacterShape>("default");
@@ -4237,6 +4246,10 @@ function App() {
     // Fresh account load: allow the cloud profile to hydrate the avatar.
     // Any in-session pick re-locks this via chooseCharacterColor/Shape.
     characterChoiceLockedRef.current = false;
+    // Block the profile-sync write until the cloud profile has loaded, so
+    // the pre-hydration state can't flush a stale/empty determination back
+    // to Firestore. Re-enabled in the getDoc `.finally` below.
+    setIsProfileHydrated(false);
 
     const savedUserId = window.localStorage.getItem(`contribution-arc-user-id-${currentUser.uid}`);
     const accountScope = getAccountStorageScope(currentUser.uid, savedUserId || "");
@@ -4476,6 +4489,12 @@ function App() {
         } else if (!savedOnboardingComplete) {
           safeSetLocalStorage(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
         }
+      })
+      // Cloud profile has settled (loaded, absent, or errored) — from here
+      // the profile-sync effect may safely write, including the determination
+      // we just hydrated from cloud/localStorage.
+      .finally(() => {
+        setIsProfileHydrated(true);
       });
   }, [currentUser, setLanguage]);
 
@@ -7869,7 +7888,10 @@ function App() {
     };
     const userProgressSignature = JSON.stringify(userProgressPayload);
 
-    if (lastSyncedUserProgressRef.current !== userProgressSignature) {
+    // Wait for the cloud profile to hydrate before writing. Flushing the
+    // pre-hydration payload could clobber a saved determination with the
+    // empty/stale value held before getDoc resolved.
+    if (isProfileHydrated && lastSyncedUserProgressRef.current !== userProgressSignature) {
       lastSyncedUserProgressRef.current = userProgressSignature;
       void saveUserProgressToCloud(db, {
         ...userProgressPayload,
@@ -7907,6 +7929,7 @@ function App() {
     following,
     githubId,
     githubUsername,
+    isProfileHydrated,
     isWorkspaceLoaded,
     levelState.level,
     outputExp,
