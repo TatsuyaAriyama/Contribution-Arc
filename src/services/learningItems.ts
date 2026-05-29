@@ -2,17 +2,14 @@ import {
   collection,
   deleteDoc,
   doc,
-  onSnapshot,
+  getDocs,
   query,
   serverTimestamp,
   setDoc,
   where,
   type Firestore,
   type QuerySnapshot,
-  type Unsubscribe,
 } from "firebase/firestore";
-
-import { guardedOnSnapshot } from "./firebaseGuard";
 
 export type LearningCategory = "book" | "stack";
 
@@ -56,42 +53,45 @@ function readCreatedAt(value: unknown) {
   return new Date().toISOString();
 }
 
-export function subscribeLearningItemsFromCloud(
+function mapLearningItemDocs(snapshot: QuerySnapshot, userId: string): LearningItemRecord[] {
+  return snapshot.docs
+    .map((entry) => {
+      const data = entry.data();
+      const totalPages = readNumber(data.totalPages);
+      const currentPages = readNumber(data.currentPages);
+      return {
+        id: entry.id,
+        userId: readString(data.userId, userId),
+        name: readString(data.name, "未設定"),
+        category: readCategory(data.category),
+        color: readString(data.color, "#888"),
+        totalPages,
+        currentPages,
+        archived: Boolean(data.archived),
+        createdAt: readCreatedAt(data.createdAt),
+        updatedAt: readCreatedAt(data.updatedAt),
+      } satisfies LearningItemRecord;
+    })
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+}
+
+/**
+ * One-time fetch of the signed-in user's learning items.
+ *
+ * Learning items are only ever edited by their owner, and every local
+ * mutation (add / edit / archive / delete) already updates React state
+ * optimistically before writing to Firestore. A live `onSnapshot` would
+ * therefore only echo back changes the client already applied — pure
+ * read cost for no UX gain — so we read once on load instead. Cross-device
+ * edits surface on the next reload, which is acceptable for solo-owned data.
+ */
+export async function fetchLearningItemsFromCloud(
   db: Firestore,
   userId: string,
-  onChange: (items: LearningItemRecord[]) => void,
-  onError: (error: unknown) => void,
-): Unsubscribe {
+): Promise<LearningItemRecord[]> {
   const itemsQuery = query(collection(db, "learningItems"), where("userId", "==", userId));
-
-  return guardedOnSnapshot<QuerySnapshot>(
-    `learningItems:${userId}`,
-    (next, err) => onSnapshot(itemsQuery, next, err),
-    (snapshot) => {
-      const items = snapshot.docs
-        .map((entry) => {
-          const data = entry.data();
-          const totalPages = readNumber(data.totalPages);
-          const currentPages = readNumber(data.currentPages);
-          return {
-            id: entry.id,
-            userId: readString(data.userId, userId),
-            name: readString(data.name, "未設定"),
-            category: readCategory(data.category),
-            color: readString(data.color, "#888"),
-            totalPages,
-            currentPages,
-            archived: Boolean(data.archived),
-            createdAt: readCreatedAt(data.createdAt),
-            updatedAt: readCreatedAt(data.updatedAt),
-          } satisfies LearningItemRecord;
-        })
-        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-
-      onChange(items);
-    },
-    (error) => onError(error),
-  );
+  const snapshot = await getDocs(itemsQuery);
+  return mapLearningItemDocs(snapshot, userId);
 }
 
 export async function saveLearningItemToCloud(db: Firestore, item: LearningItemRecord) {

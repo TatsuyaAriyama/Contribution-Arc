@@ -93,8 +93,8 @@ import {
 import { buildWeeklyDigestPayload } from "./services/teamDigest";
 import {
   deleteLearningItemFromCloud,
+  fetchLearningItemsFromCloud,
   saveLearningItemToCloud,
-  subscribeLearningItemsFromCloud,
 } from "./services/learningItems";
 import {
   cancelRecruitmentInCloud,
@@ -4462,18 +4462,25 @@ function App() {
       return;
     }
 
-    const unsubscribe = subscribeLearningItemsFromCloud(
-      db,
-      currentUser.uid,
-      (cloudItems) => {
-        setLearningItems(cloudItems);
-      },
-      (error) => {
-        console.info("Learning items cloud sync skipped.", error);
-      },
-    );
+    // One-time fetch instead of a live subscription: learning items are
+    // owner-only and every local mutation already updates state
+    // optimistically, so a realtime listener would just re-read data the
+    // client already has. `cancelled` guards against a late resolve writing
+    // into an unmounted / switched-account tree.
+    let cancelled = false;
+    void fetchLearningItemsFromCloud(db, currentUser.uid)
+      .then((cloudItems) => {
+        if (!cancelled) {
+          setLearningItems(cloudItems);
+        }
+      })
+      .catch((error) => {
+        console.info("Learning items cloud fetch skipped.", error);
+      });
 
-    return () => unsubscribe();
+    return () => {
+      cancelled = true;
+    };
   }, [currentUser, isWorkspaceLoaded]);
 
   useEffect(() => {
