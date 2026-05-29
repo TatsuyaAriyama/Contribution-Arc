@@ -16310,7 +16310,7 @@ function App() {
             }`}
           >
             <div>
-              <p className="card-kicker">Silent Workspace</p>
+              <p className="card-kicker">{t("作業部屋")}</p>
               <strong>{selectedRoom?.name || t("作業部屋")}</strong>
               <span>
                 {isInSelectedRoom
