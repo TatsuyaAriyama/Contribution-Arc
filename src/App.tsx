@@ -3763,6 +3763,7 @@ function App() {
   const [newRoomVisibility, setNewRoomVisibility] = useState<"public" | "org">("public");
   const [roomCreateState, setRoomCreateState] = useState<RoomCreateState>("idle");
   const [roomCreateMessage, setRoomCreateMessage] = useState("");
+  const [isRefreshingLobby, setIsRefreshingLobby] = useState(false);
   const [editingRoomId, setEditingRoomId] = useState("");
   const [editingRoomName, setEditingRoomName] = useState("");
   const [workspaceTask, setWorkspaceTask] = useState("");
@@ -3884,6 +3885,12 @@ function App() {
     rooms: [],
     legacyRooms: [],
   });
+  // True once the lobby (all-rooms) snapshot has been fetched for the current
+  // workspace-open session. Reset when the user leaves the workspace view so
+  // re-entering pulls a fresh lobby. While inside the workspace, the lobby is
+  // only refreshed when the user presses the manual refresh button — there is
+  // no live all-rooms subscription anymore.
+  const lobbyFetchedRef = useRef(false);
   const didRequestStudyLogMigrationRef = useRef(false);
   const didRequestDailyReportMigrationRef = useRef(false);
   const seenNotificationKeysRef = useRef<Set<string>>(new Set());
@@ -5304,11 +5311,24 @@ function App() {
     }
 
     lastSyncedWorkspaceRoomsRef.current = serializedRoomText;
-    serializedRooms.forEach((room) => {
-      void saveWorkspaceRoomToCloud(room, currentUser.uid).catch((error) => {
-        console.info("Workspace room cloud sync skipped.", error);
+    // Only push back rooms the user actually owns or is present in. The lobby
+    // copy of *other* rooms is now a static snapshot (fetched on open / manual
+    // refresh), so writing those back could regress another room's
+    // server-side metadata (e.g. roll totalMinutes backwards) with our stale
+    // copy. saveWorkspaceRoomToCloud already protects other members via a
+    // transaction, but room-level fields come from the local payload — so we
+    // simply don't write rooms we have no business owning.
+    serializedRooms
+      .filter(
+        (room) =>
+          room.createdBy === currentUser.uid ||
+          (room.activeMembers || []).some((member) => member.userId === currentUser.uid),
+      )
+      .forEach((room) => {
+        void saveWorkspaceRoomToCloud(room, currentUser.uid).catch((error) => {
+          console.info("Workspace room cloud sync skipped.", error);
+        });
       });
-    });
   }, [currentUser, customRooms, isWorkspaceLoaded, userId]);
 
   useEffect(() => {
@@ -5408,160 +5428,219 @@ function App() {
     setCustomRooms((rooms) => cleanWorkspacePresenceForUser(rooms, currentUser.uid, workspaceNow));
   }, [currentUser, isWorkspaceLoaded, workspaceNow]);
 
-  useEffect(() => {
-    // Cost control: the workspaceRooms / legacyWorkspaceRooms collections are
-    // subscribed *without* a where/limit filter — every doc fans out to every
-    // listener. Keeping this live on every screen turned out to dominate
-    // Firestore reads (the 2026-05-26 usage spike), so we only subscribe when
-    // the user is actually looking at the workspace. Other views render from
-    // whatever customRooms / workspaceProfiles snapshot was last in memory,
-    // which is fine — presence freshness only matters inside the workspace
-    // itself. The legacy collection is migrated out as it arrives, so missing
-    // a few seconds of legacy snapshots while on another view is a non-issue.
-    if (!currentUser || !isWorkspaceLoaded || !isPageVisible || currentView !== "workspace") {
+  // Merge whatever is currently in `remoteWorkspaceRoomsRef` (the last lobby
+  // fetch + the live snapshot of the room the user is in) into `customRooms`.
+  // Hoisted out of the old all-rooms subscription effect so the manual refresh
+  // button and the single-room live subscription can both drive it.
+  const applyRemoteRooms = useCallback(() => {
+    if (!currentUser) {
       return;
     }
+    const remoteRoomMap = new Map<string, WorkspaceRoom>();
 
-    const applyRemoteRooms = () => {
-      const remoteRoomMap = new Map<string, WorkspaceRoom>();
+    remoteWorkspaceRoomsRef.current.legacyRooms.forEach((room) => {
+      remoteRoomMap.set(room.id, room);
+    });
+    remoteWorkspaceRoomsRef.current.rooms.forEach((room) => {
+      remoteRoomMap.set(room.id, room);
+    });
 
-      remoteWorkspaceRoomsRef.current.legacyRooms.forEach((room) => {
-        remoteRoomMap.set(room.id, room);
-      });
-      remoteWorkspaceRoomsRef.current.rooms.forEach((room) => {
-        remoteRoomMap.set(room.id, room);
-      });
+    const remoteRooms = Array.from(remoteRoomMap.values());
+    const remoteRoomIds = new Set(remoteRooms.map((room) => room.id));
 
-      const remoteRooms = Array.from(remoteRoomMap.values());
-      const remoteRoomIds = new Set(remoteRooms.map((room) => room.id));
+    remoteRooms
+      .filter((room) => isLegacyWorkspaceRoom(room) && room.createdBy === currentUser.uid)
+      .forEach((room) => {
+        if (cleanedLegacyWorkspaceRoomsRef.current.has(room.id)) {
+          return;
+        }
 
-      remoteRooms
-        .filter((room) => isLegacyWorkspaceRoom(room) && room.createdBy === currentUser.uid)
-        .forEach((room) => {
-          if (cleanedLegacyWorkspaceRoomsRef.current.has(room.id)) {
-            return;
-          }
-
-          cleanedLegacyWorkspaceRoomsRef.current.add(room.id);
-          void deleteDoc(doc(db, workspaceRoomsCollectionName, room.id)).catch((error) => {
-            console.info("Legacy room cleanup skipped.", error);
-          });
-          void deleteDoc(doc(db, legacyWorkspaceRoomsCollectionName, room.id)).catch((error) => {
-            console.info("Legacy workspace room cleanup skipped.", error);
-          });
+        cleanedLegacyWorkspaceRoomsRef.current.add(room.id);
+        void deleteDoc(doc(db, workspaceRoomsCollectionName, room.id)).catch((error) => {
+          console.info("Legacy room cleanup skipped.", error);
         });
+        void deleteDoc(doc(db, legacyWorkspaceRoomsCollectionName, room.id)).catch((error) => {
+          console.info("Legacy workspace room cleanup skipped.", error);
+        });
+      });
 
-      remoteRooms.forEach((room) => {
-        const pendingRoom = pendingWorkspaceRoomsRef.current.get(room.id);
-        if (pendingRoom && getSerializedWorkspaceRoomText(pendingRoom) === getSerializedWorkspaceRoomText(room)) {
-          pendingWorkspaceRoomsRef.current.delete(room.id);
+    remoteRooms.forEach((room) => {
+      const pendingRoom = pendingWorkspaceRoomsRef.current.get(room.id);
+      if (pendingRoom && getSerializedWorkspaceRoomText(pendingRoom) === getSerializedWorkspaceRoomText(room)) {
+        pendingWorkspaceRoomsRef.current.delete(room.id);
+      }
+    });
+
+    setCustomRooms((currentRooms) => {
+      // Per-room merge: we used to *drop* a remote room update
+      // entirely if we still had a pending local write for it, which
+      // meant two users actively working in the same room would each
+      // keep filtering out the other's updates — bubbles, position,
+      // status, everything — until their own write debounce settled.
+      // The fix is to splice instead of replace: take the remote
+      // room as the base (so other members' freshly-arrived bubbles
+      // come through), then graft ONLY the current user's local
+      // self-member on top so our in-flight edits don't snap back.
+      const finalRoomMap = new Map<string, WorkspaceRoom>();
+
+      remoteRooms.forEach((remoteRoom) => {
+        const pendingLocal = pendingWorkspaceRoomsRef.current.get(remoteRoom.id);
+        if (!pendingLocal) {
+          finalRoomMap.set(remoteRoom.id, remoteRoom);
+          return;
+        }
+        const localSelf = pendingLocal.activeMembers.find(
+          (member) => member.userId === currentUser.uid,
+        );
+        const remoteOthers = remoteRoom.activeMembers.filter(
+          (member) => member.userId !== currentUser.uid,
+        );
+        const mergedMembers = localSelf
+          ? [...remoteOthers, localSelf]
+          : remoteOthers;
+        finalRoomMap.set(
+          remoteRoom.id,
+          normalizeWorkspaceRoom({ ...remoteRoom, activeMembers: mergedMembers }),
+        );
+      });
+
+      // Pending locally-created rooms that haven't synced yet still
+      // belong in the merge.
+      pendingWorkspaceRoomsRef.current.forEach((pendingLocal, roomId) => {
+        if (!finalRoomMap.has(roomId)) {
+          finalRoomMap.set(roomId, pendingLocal);
         }
       });
 
-      setCustomRooms((currentRooms) => {
-        // Per-room merge: we used to *drop* a remote room update
-        // entirely if we still had a pending local write for it, which
-        // meant two users actively working in the same room would each
-        // keep filtering out the other's updates — bubbles, position,
-        // status, everything — until their own write debounce settled.
-        // The fix is to splice instead of replace: take the remote
-        // room as the base (so other members' freshly-arrived bubbles
-        // come through), then graft ONLY the current user's local
-        // self-member on top so our in-flight edits don't snap back.
-        const finalRoomMap = new Map<string, WorkspaceRoom>();
-
-        remoteRooms.forEach((remoteRoom) => {
-          const pendingLocal = pendingWorkspaceRoomsRef.current.get(remoteRoom.id);
-          if (!pendingLocal) {
-            finalRoomMap.set(remoteRoom.id, remoteRoom);
-            return;
-          }
-          const localSelf = pendingLocal.activeMembers.find(
-            (member) => member.userId === currentUser.uid,
-          );
-          const remoteOthers = remoteRoom.activeMembers.filter(
-            (member) => member.userId !== currentUser.uid,
-          );
-          const mergedMembers = localSelf
-            ? [...remoteOthers, localSelf]
-            : remoteOthers;
-          finalRoomMap.set(
-            remoteRoom.id,
-            normalizeWorkspaceRoom({ ...remoteRoom, activeMembers: mergedMembers }),
-          );
-        });
-
-        // Pending locally-created rooms that haven't synced yet still
-        // belong in the merge.
-        pendingWorkspaceRoomsRef.current.forEach((pendingLocal, roomId) => {
-          if (!finalRoomMap.has(roomId)) {
-            finalRoomMap.set(roomId, pendingLocal);
-          }
-        });
-
-        // Rooms that only exist locally (e.g. offline edits) stay
-        // as-is until they sync.
-        currentRooms.forEach((room) => {
-          if (!finalRoomMap.has(room.id) && !remoteRoomIds.has(room.id)) {
-            finalRoomMap.set(room.id, room);
-          }
-        });
-
-        const nextRooms = cleanWorkspacePresenceForUser(
-          seedWorkspaceRooms(Array.from(finalRoomMap.values())),
-          currentUser.uid,
-          Date.now(),
-        );
-
-        // The merged customRooms already reflect everything we'd write
-        // back (our local self + the remote other-members). Suppress
-        // the next sync-effect run so we don't burn a redundant write
-        // just to push the data we just merged in.
-        isApplyingRemoteRoomsRef.current = true;
-        lastSyncedWorkspaceRoomsRef.current = JSON.stringify(serializeWorkspaceRooms(nextRooms));
-        setSelectedRoomId((currentRoomId) =>
-          nextRooms.some((room) => room.id === currentRoomId) ? currentRoomId : nextRooms[0]?.id || "",
-        );
-
-        return nextRooms;
+      // Rooms that only exist locally (e.g. offline edits) — and rooms
+      // that were in the previous lobby snapshot but aren't in the
+      // current merge source (because the single-room live subscription
+      // only refreshes the active room) — stay as-is until the next
+      // lobby refresh. This keeps the lobby list stable between manual
+      // refreshes instead of collapsing to just the active room.
+      currentRooms.forEach((room) => {
+        if (!finalRoomMap.has(room.id) && !remoteRoomIds.has(room.id)) {
+          finalRoomMap.set(room.id, room);
+        }
       });
-    };
 
-    const readRoomsSnapshot = (snapshot: { docs: Array<{ id: string; data: () => unknown }> }) =>
+      const nextRooms = cleanWorkspacePresenceForUser(
+        seedWorkspaceRooms(Array.from(finalRoomMap.values())),
+        currentUser.uid,
+        Date.now(),
+      );
+
+      // The merged customRooms already reflect everything we'd write
+      // back (our local self + the remote other-members). Suppress
+      // the next sync-effect run so we don't burn a redundant write
+      // just to push the data we just merged in.
+      isApplyingRemoteRoomsRef.current = true;
+      lastSyncedWorkspaceRoomsRef.current = JSON.stringify(serializeWorkspaceRooms(nextRooms));
+      setSelectedRoomId((currentRoomId) =>
+        nextRooms.some((room) => room.id === currentRoomId) ? currentRoomId : nextRooms[0]?.id || "",
+      );
+
+      return nextRooms;
+    });
+  }, [currentUser]);
+
+  const readRoomsSnapshot = useCallback(
+    (snapshot: { docs: Array<{ id: string; data: () => unknown }> }) =>
       snapshot.docs.map((item) =>
         normalizeWorkspaceRoom({
           ...((item.data() as Partial<WorkspaceRoom>) || {}),
           id: item.id,
         } as WorkspaceRoom),
-      );
+      ),
+    [],
+  );
 
-    const unsubscribeRooms = onSnapshot(
-      collection(db, workspaceRoomsCollectionName),
-      (snapshot) => {
-        remoteWorkspaceRoomsRef.current.rooms = readRoomsSnapshot(snapshot);
+  // Cost control: we no longer hold a live subscription on the entire
+  // workspaceRooms / legacyWorkspaceRooms collections (that fan-out dominated
+  // Firestore reads — the 2026-05-26 spike). Instead the lobby list of *other*
+  // rooms is fetched once when the workspace opens and thereafter only when the
+  // user presses the refresh button; the room the user is actually in stays
+  // live via a single-document subscription below.
+  const refreshLobbyRooms = useCallback(async () => {
+    if (!currentUser) {
+      return;
+    }
+    try {
+      const [modernSnap, legacySnap] = await Promise.all([
+        getDocs(collection(db, workspaceRoomsCollectionName)),
+        getDocs(collection(db, legacyWorkspaceRoomsCollectionName)),
+      ]);
+      remoteWorkspaceRoomsRef.current.rooms = readRoomsSnapshot(modernSnap);
+      remoteWorkspaceRoomsRef.current.legacyRooms = readRoomsSnapshot(legacySnap);
+      applyRemoteRooms();
+    } catch (error) {
+      console.info("Workspace lobby fetch skipped.", error);
+    }
+  }, [currentUser, readRoomsSnapshot, applyRemoteRooms]);
+
+  // Manual lobby refresh: the only way (besides the initial open) to pull a
+  // fresh list of other rooms. Wraps refreshLobbyRooms with a short loading
+  // state so the button can show progress.
+  const handleManualLobbyRefresh = useCallback(async () => {
+    if (isRefreshingLobby) {
+      return;
+    }
+    setIsRefreshingLobby(true);
+    try {
+      await refreshLobbyRooms();
+    } finally {
+      setIsRefreshingLobby(false);
+    }
+  }, [isRefreshingLobby, refreshLobbyRooms]);
+
+  // Lobby: fetch the all-rooms snapshot once per workspace-open session. The
+  // ref guard prevents re-fetching on tab visibility toggles; leaving the
+  // workspace resets it so re-entering pulls a fresh lobby.
+  useEffect(() => {
+    if (!currentUser || !isWorkspaceLoaded || currentView !== "workspace") {
+      lobbyFetchedRef.current = false;
+      return;
+    }
+    if (lobbyFetchedRef.current) {
+      return;
+    }
+    lobbyFetchedRef.current = true;
+    void refreshLobbyRooms();
+  }, [currentUser, isWorkspaceLoaded, currentView, refreshLobbyRooms]);
+
+  // Active room: keep ONLY the room the user is currently in live. This is the
+  // single remaining realtime room subscription, so other members' moves and
+  // bubbles still appear instantly while we avoid subscribing to every room.
+  useEffect(() => {
+    if (!currentUser || !isWorkspaceLoaded || !isPageVisible || currentView !== "workspace" || !selectedRoomId) {
+      return;
+    }
+    const unsubscribe = onSnapshot(
+      doc(db, workspaceRoomsCollectionName, selectedRoomId),
+      (snap) => {
+        if (!snap.exists()) {
+          return;
+        }
+        const liveRoom = normalizeWorkspaceRoom({
+          ...((snap.data() as Partial<WorkspaceRoom>) || {}),
+          id: snap.id,
+        } as WorkspaceRoom);
+        const rooms = remoteWorkspaceRoomsRef.current.rooms;
+        const index = rooms.findIndex((room) => room.id === liveRoom.id);
+        if (index >= 0) {
+          rooms[index] = liveRoom;
+        } else {
+          rooms.push(liveRoom);
+        }
         applyRemoteRooms();
       },
       (error) => {
-        console.info("Workspace room realtime sync skipped.", error);
+        console.info("Workspace active-room realtime sync skipped.", error);
       },
     );
 
-    const unsubscribeLegacyRooms = onSnapshot(
-      collection(db, legacyWorkspaceRoomsCollectionName),
-      (snapshot) => {
-        remoteWorkspaceRoomsRef.current.legacyRooms = readRoomsSnapshot(snapshot);
-        applyRemoteRooms();
-      },
-      (error) => {
-        console.info("Legacy workspace room realtime sync skipped.", error);
-      },
-    );
-
-    return () => {
-      unsubscribeRooms();
-      unsubscribeLegacyRooms();
-    };
-  }, [currentUser, isWorkspaceLoaded, isPageVisible, currentView]);
+    return () => unsubscribe();
+  }, [currentUser, isWorkspaceLoaded, isPageVisible, currentView, selectedRoomId, applyRemoteRooms]);
 
   useEffect(() => {
     if (!currentUser) {
@@ -14559,6 +14638,25 @@ function App() {
                   ) : null}
                   <button type="submit">{t("作成")}</button>
                 </form>
+
+                {/* Manual lobby refresh: the other-rooms list is fetched once
+                    when the workspace opens and never auto-updates afterwards
+                    (Firestore cost control). This is the only way to pull a
+                    fresh snapshot without leaving and re-entering. */}
+                <div className="workspace-room-refresh">
+                  <button
+                    type="button"
+                    className="workspace-room-refresh-button"
+                    onClick={() => {
+                      void handleManualLobbyRefresh();
+                    }}
+                    disabled={isRefreshingLobby}
+                    aria-label={t("一覧を更新")}
+                  >
+                    <span aria-hidden="true">↻</span>
+                    {isRefreshingLobby ? t("更新中…") : t("一覧を更新")}
+                  </button>
+                </div>
 
                 <div className="workspace-room-pills" role="tablist" aria-label={t("作業部屋")}>
                   {allWorkspaceRooms.map((room) => {

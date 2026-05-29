@@ -8745,6 +8745,39 @@
   background: var(--green);
 }
 
+.workspace-room-refresh {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.workspace-room-refresh-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+  transition: color 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.workspace-room-refresh-button:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+.workspace-room-refresh-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
 .workspace-room-pills {
   display: flex;
   flex: 1 1 auto;
