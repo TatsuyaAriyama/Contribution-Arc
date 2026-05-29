@@ -118,6 +118,7 @@ import {
   readPersistentItems,
 } from "./services/persistentCache";
 import { fetchGithubContributions, type GithubContributions } from "./services/githubContributions";
+import { computeStudyStreak } from "./services/studyStreak";
 import { type AppView, type FriendPreview, type LiveActivity } from "./components/PremiumNavigation";
 import { SilentWorkspaceRoom, type RoomActivityItem } from "./components/SilentWorkspaceRoom";
 import { ArcPurchasePanel } from "./components/ArcPurchasePanel";
@@ -6131,6 +6132,29 @@ function App() {
   const selectedDailyReport = dailyReports.find((report) => report.date === selectedDailyDate) || null;
   const currentLearnerDate = getLearnerDate(new Date(feedNowTick));
   const todayDailyReport = dailyReports.find((report) => report.date === currentLearnerDate) || null;
+
+  /* 平日連続記録(ストリーク)。学習記録・日報・GitHub のいずれかが
+     ある平日を連結して数える(土日は対象外・猶予なし)。既存データの
+     集計のみで、新規 onSnapshot や write は無し。dailyReports は他人の
+     共有日報も含むので自分の userId に絞る. */
+  const weekdayStreak = useMemo(() => {
+    const active = new Set<string>();
+    for (const log of studyLogs) {
+      const d = new Date(log.createdAt);
+      if (!Number.isNaN(d.getTime())) active.add(getLearnerDate(d));
+    }
+    const uid = currentUser?.uid;
+    for (const report of dailyReports) {
+      if (uid && report.userId !== uid) continue;
+      if (report.date) active.add(report.date);
+    }
+    if (githubContributions) {
+      for (const day of githubContributions.days) {
+        if (day.count > 0) active.add(day.date);
+      }
+    }
+    return computeStudyStreak(active, currentLearnerDate);
+  }, [studyLogs, dailyReports, githubContributions, currentUser?.uid, currentLearnerDate]);
   const canEditSelectedDailyReport = canEditDailyReportDate(selectedDailyDate);
   /* Candidate pool for @mentions inside the daily editor. We surface
      org members first — in the B2B context they're the people you
@@ -10429,6 +10453,27 @@ function App() {
                 : t("記録")}
             </span>
           </button>
+          {/* 平日連続記録. 煽らず静かに数字だけ出す. 0 のときは何も
+              出さない(プレッシャーにしない). 今日まだ未記録なら淡く,
+              記録済みなら少しだけ濃く. 土日は数字を据え置きで「対象外」を
+              ツールチップで補足. */}
+          {weekdayStreak.current > 0 ? (
+            <span
+              className={`topbar-streak${weekdayStreak.todayCounts ? " is-active" : ""}`}
+              title={
+                weekdayStreak.todayIsWeekend
+                  ? t("平日連続記録 {n}日(土日は対象外)", { n: String(weekdayStreak.current) })
+                  : weekdayStreak.todayCounts
+                    ? t("平日連続記録 {n}日 — 今日も記録済み", { n: String(weekdayStreak.current) })
+                    : t("平日連続記録 {n}日 — 今日はまだ記録なし", { n: String(weekdayStreak.current) })
+              }
+              aria-label={t("平日連続記録 {n}日", { n: String(weekdayStreak.current) })}
+            >
+              <span className="topbar-streak-dot" aria-hidden="true" />
+              <span className="topbar-streak-num">{weekdayStreak.current}</span>
+              <span className="topbar-streak-unit">{t("日")}</span>
+            </span>
+          ) : null}
         </div>
 
         <div className="user-session">

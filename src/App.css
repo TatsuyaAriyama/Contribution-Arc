@@ -11553,6 +11553,61 @@
   font-feature-settings: "tnum" 1;
 }
 
+/* クイック記録ピルとストリークを横並びにする(この topbar-context だけ).
+   他用途の .topbar-context(grid でカードを縦積み)には影響させない. */
+.topbar-context:has(.topbar-quicklog) {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 平日連続記録の控えめバッジ. 低彩度・小サイズ. 炎アイコンや
+   バッジ色は使わず、点 + 数字 + 「日」だけ. 煽らないトーン. */
+.topbar-streak {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(var(--ink-rgb), 0.04);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  cursor: default;
+  user-select: none;
+}
+
+.topbar-streak.is-active {
+  color: var(--ink);
+  background: rgba(var(--ink-rgb), 0.07);
+}
+
+.topbar-streak-dot {
+  align-self: center;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.45;
+}
+
+.topbar-streak.is-active .topbar-streak-dot {
+  opacity: 0.85;
+}
+
+.topbar-streak-num {
+  font-feature-settings: "tnum" 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.topbar-streak-unit {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
 .premium-dashboard-header .user-search-button {
   position: relative;
   min-width: 168px;
