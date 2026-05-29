@@ -9910,107 +9910,82 @@
    itself replaces the old separate float/sway pair. Vertical bob plus
    a ±3° rotation makes the whole sprite feel airborne instead of
    stuck to a single point. */
-/* Ghost — boxy spectre that matches the default character's blocky
-   aesthetic. Same --actor-color tint, same inset "window" detail,
-   but with a 3-lobe wavy hem at the bottom instead of legs, and a
-   soft hover animation. The cute chibi parts (hat, arms, mouth, dot
-   eyes) used previously are hidden — this is the minimal block-world
-   reading of "ghost", not an anime sticker. */
+/* Ghost — kawaii white spectre, rendered as an inline SVG (.ghost-svg)
+   so the dark line-art outline and the draped tail-curl stay crisp at
+   any size. The body is white with a dark outline; the player's
+   --actor-color shows only as a soft aura behind, so per-user identity
+   survives without tinting the spectre itself. Deliberately drawn a
+   touch smaller than the default character. */
 .actor-sprite.shape-ghost {
-  /* clip-path defines the silhouette; border-radius is ignored when
-     a clip-path is applied so all corner shaping happens in the
-     polygon itself. */
   border-radius: 0;
-  /* Pale spectral body — an off-white wash carrying a faint trace of
-     the player's --actor-color, so it reads instantly as a ghost while
-     still hinting at each user's hue. */
-  background:
-    linear-gradient(180deg, rgba(249, 248, 252, 0.85), rgba(245, 243, 250, 0.7)),
-    var(--actor-color);
-  /* clip-path strips box-shadow, so the soft floating shadow is drawn
-     with a drop-shadow filter that follows the silhouette. */
+  background: transparent;
   box-shadow: none;
-  filter: drop-shadow(0 5px 6px rgba(15, 12, 24, 0.18));
   overflow: visible;
   animation: workspace-ghost-float 4.2s ease-in-out infinite;
-  clip-path: polygon(
-    /* rounded top-left corner (approximated with 4 vertices) */
-    0% 12%, 3% 5%, 8% 1%, 14% 0%,
-    /* top edge → rounded top-right corner */
-    86% 0%, 92% 1%, 97% 5%, 100% 12%,
-    /* right edge down to wavy hem */
-    100% 72%,
-    /* 3-lobe wavy hem (left→right) */
-    92% 84%, 83% 96%, 75% 84%,
-    66% 96%, 58% 84%, 50% 96%,
-    42% 84%, 34% 96%, 25% 84%,
-    17% 96%, 8% 84%,
-    /* back up the left edge */
-    0% 72%
-  );
 }
 
-/* Soft glossy sheen across the top of the dome — gives the pale body
-   an ethereal, slightly translucent sheen without adding chroma. */
-.actor-sprite.shape-ghost::after {
-  content: "";
+.actor-sprite.shape-ghost .ghost-svg {
   position: absolute;
-  inset: 3px 7px auto 7px;
-  height: 8px;
-  background: radial-gradient(120% 100% at 50% 0%, rgba(255, 255, 255, 0.7), transparent 72%);
-  pointer-events: none;
-}
-
-/* The ghost wears a face (eyes + mouth) instead of the default
-   character's rectangular window, so the window is dropped here. */
-.actor-sprite.shape-ghost .sprite-body {
-  display: none;
-}
-
-/* Keep the chibi accessories (legs, tail, top hat, arm nubs) hidden —
-   the minimal spectre only carries a quiet face. */
-.actor-sprite.shape-ghost .sprite-leg,
-.actor-sprite.shape-ghost .sprite-tail,
-.actor-sprite.shape-ghost .sprite-ghost-hat,
-.actor-sprite.shape-ghost .sprite-ghost-arm {
-  display: none;
-}
-
-/* Two soft dark eyes — the core of the お化け reading. Plump ovals in
-   dark plum so they sit calmly against the pale body. */
-.actor-sprite.shape-ghost .sprite-eye {
-  display: block;
-  position: absolute;
-  top: 11px;
-  width: 5.5px;
-  height: 7.5px;
-  border-radius: 50%;
-  background: #2a2036;
-}
-
-.actor-sprite.shape-ghost .sprite-eye-left {
-  left: 12px;
-}
-
-.actor-sprite.shape-ghost .sprite-eye-right {
-  right: 12px;
-}
-
-/* Small wavy mouth, centered below the eyes and clear of the hem. */
-.actor-sprite.shape-ghost .sprite-ghost-mouth {
-  display: block;
-  position: absolute;
+  top: 50%;
   left: 50%;
-  bottom: 15px;
-  width: 15px;
-  height: 5px;
-  transform: translateX(-50%);
+  width: 44px;
+  height: 48px;
+  transform: translate(-50%, -52%);
   overflow: visible;
 }
 
-/* Gentle hover — no rotation, just a small vertical bob. Rotation
-   would clash with the boxy aesthetic; a quiet float keeps the
-   character feeling weightless without anime-ing it up. */
+/* Soft per-user color halo behind the body. */
+.actor-sprite.shape-ghost .ghost-aura {
+  fill: var(--actor-color);
+  opacity: 0.26;
+}
+
+/* White body + arm nubs with the dark line-art outline. */
+.actor-sprite.shape-ghost .ghost-body,
+.actor-sprite.shape-ghost .ghost-arm {
+  fill: #fcfbf9;
+  stroke: #43332b;
+  stroke-width: 6;
+  stroke-linejoin: round;
+}
+
+.actor-sprite.shape-ghost .ghost-arm {
+  stroke-width: 5;
+}
+
+.actor-sprite.shape-ghost .ghost-eye {
+  fill: #2a2036;
+}
+
+.actor-sprite.shape-ghost .ghost-mouth {
+  fill: none;
+  stroke: #2a2036;
+  stroke-width: 3.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Tilted silk top hat — brim, crown, and band. */
+.actor-sprite.shape-ghost .ghost-hat-brim,
+.actor-sprite.shape-ghost .ghost-hat-crown {
+  stroke: #33231a;
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+
+.actor-sprite.shape-ghost .ghost-hat-brim {
+  fill: #4a3326;
+}
+
+.actor-sprite.shape-ghost .ghost-hat-crown {
+  fill: #5b3e2c;
+}
+
+.actor-sprite.shape-ghost .ghost-hat-band {
+  fill: #33231a;
+}
+
+/* Gentle vertical bob — keeps the spectre feeling weightless. */
 @keyframes workspace-ghost-float {
   0%,
   100% {
@@ -10021,46 +9996,8 @@
   }
 }
 
-.workspace-actor:not(.is-resting) .actor-sprite.shape-ghost .sprite-eye {
-  animation: workspace-ghost-eye-life 18s ease-in-out infinite;
-  transform-origin: 50% 50%;
-}
-
-.workspace-actor:not(.is-resting):nth-child(2n) .actor-sprite.shape-ghost .sprite-eye {
-  animation-delay: -9s;
-}
-
-.workspace-actor:not(.is-resting):nth-child(3n + 1) .actor-sprite.shape-ghost .sprite-eye {
-  animation-delay: -6s;
-}
-
-@keyframes workspace-ghost-eye-life {
-  /* Baseline pose holds for most of the cycle */
-  0%,
-  28%,
-  35%,
-  60%,
-  78%,
-  100% {
-    transform: scaleY(1) translateX(0);
-  }
-  /* Quick blink around 30% */
-  30%,
-  32% {
-    transform: scaleY(0.1) translateX(0);
-  }
-  /* Glance left then right around 65-75% */
-  65% {
-    transform: scaleY(1) translateX(-2px);
-  }
-  72% {
-    transform: scaleY(1) translateX(2px);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .actor-sprite.shape-ghost,
-  .workspace-actor:not(.is-resting) .actor-sprite.shape-ghost .sprite-eye {
+  .actor-sprite.shape-ghost {
     animation: none;
   }
 }

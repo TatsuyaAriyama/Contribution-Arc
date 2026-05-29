@@ -2118,34 +2118,29 @@ function ProfileCharacterPreview({
             <span className="sprite-leg sprite-leg-right" />
           </>
         ) : isGhost ? (
-          <>
-            <span className="sprite-body" />
-            <span className="sprite-eye sprite-eye-left" />
-            <span className="sprite-eye sprite-eye-right" />
-            <span className="sprite-tail" />
-            <span className="sprite-ghost-hat" aria-hidden="true">
-              <span className="sprite-ghost-hat-crown" />
-              <span className="sprite-ghost-hat-brim" />
-              <span className="sprite-ghost-hat-band" />
-            </span>
-            <span className="sprite-ghost-arm sprite-ghost-arm-left" />
-            <span className="sprite-ghost-arm sprite-ghost-arm-right" />
-            <svg
-              className="sprite-ghost-mouth"
-              viewBox="0 0 24 8"
-              aria-hidden="true"
-              focusable="false"
-            >
-              <path
-                d="M2 4 Q 6 0.5 10 4 T 18 4 L 22 4"
-                stroke="#2a2036"
-                strokeWidth="1.8"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </>
+          <svg
+            className="ghost-svg"
+            viewBox="0 0 128 140"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <ellipse className="ghost-aura" cx="62" cy="78" rx="52" ry="54" />
+            {/* Arm nubs drawn before the body so their roots tuck behind it */}
+            <path className="ghost-arm" d="M18 86 q-12 2 -16 9 q9 1 17 -2 Z" />
+            <path className="ghost-arm" d="M110 86 q12 2 16 9 q-9 1 -17 -2 Z" />
+            <path
+              className="ghost-body"
+              d="M64 14 C40 14 18 32 17 60 C16 74 16 86 19 98 C21 107 24 116 31 116 C37 116 39 108 45 108 C51 108 53 118 60 118 C66 118 68 107 75 109 C90 113 104 120 116 108 C124 100 121 86 112 88 C106 89 106 96 100 94 C109 86 113 73 112 60 C110 32 88 14 64 14 Z"
+            />
+            <ellipse className="ghost-eye" cx="48" cy="64" rx="5.2" ry="7.4" />
+            <ellipse className="ghost-eye" cx="78" cy="64" rx="5.2" ry="7.4" />
+            <path className="ghost-mouth" d="M52 80 q4 -6 8 0 t8 0" />
+            <g className="ghost-hat" transform="rotate(20 96 30)">
+              <path className="ghost-hat-brim" d="M80 40 h36 v5 h-36 Z" />
+              <path className="ghost-hat-crown" d="M88 14 h20 v26 h-20 Z" />
+              <rect className="ghost-hat-band" x="88" y="33" width="20" height="4" />
+            </g>
+          </svg>
         ) : (
           <>
             <span className="sprite-body" />
