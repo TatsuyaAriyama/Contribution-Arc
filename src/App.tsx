@@ -636,7 +636,7 @@ const studyColorOptions = [
 // フクロウ broke immersion):
 //   灯 Tomo — 灯。そばに灯る、はじまりの相棒（the blocky origin builder;
 //             Tomo doubles as 友 = friend）
-//   朧 Horo  — 朧。おぼろげに漂う、もう一人のあなた（the floating soul）
+//   朧 Oboro — 朧。おぼろげに漂う、もう一人のあなた（the floating soul）
 //   宵 Yoi   — 宵。夜更けを見守る、夜型のお供（the nocturnal owl）
 const characterShapeOptions: {
   value: CharacterShape;
@@ -657,7 +657,7 @@ const characterShapeOptions: {
   {
     value: "ghost",
     name: "朧",
-    romaji: "Horo",
+    romaji: "Oboro",
     tagline: "ふわりと漂う魂",
     intro: "輪郭をほどいて漂う、もう一人のあなた。",
   },
@@ -684,7 +684,7 @@ type ShapeShopItem = {
 const shapeShopCatalog: ShapeShopItem[] = [
   {
     shape: "ghost",
-    name: "朧 Horo",
+    name: "朧 Oboro",
     tagline: "ふわりと漂う魂",
     description: "脚のない魂のシルエット。作業部屋の片隅でふわりと漂う、もう一人のあなた。",
     price: 500,
@@ -2076,6 +2076,36 @@ function getStudyLogPostVerb(subject: string) {
   return "学習しました";
 }
 
+// Shared ghost (朧 / Oboro) artwork. Drawn once as an inline SVG so the
+// dark line-art outline + draped tail-curl stay crisp at any size, and
+// reused everywhere the ghost appears (profile preview, shape picker
+// swatches) so they always read as the exact same character.
+const ghostSvgMarkup = (
+  <svg
+    className="ghost-svg"
+    viewBox="0 0 128 140"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <ellipse className="ghost-aura" cx="62" cy="78" rx="52" ry="54" />
+    {/* Arm nubs drawn before the body so their roots tuck behind it */}
+    <path className="ghost-arm" d="M18 86 q-12 2 -16 9 q9 1 17 -2 Z" />
+    <path className="ghost-arm" d="M110 86 q12 2 16 9 q-9 1 -17 -2 Z" />
+    <path
+      className="ghost-body"
+      d="M64 14 C40 14 18 32 17 60 C16 74 16 86 19 98 C21 107 24 116 31 116 C37 116 39 108 45 108 C51 108 53 118 60 118 C66 118 68 107 75 109 C90 113 104 120 116 108 C124 100 121 86 112 88 C106 89 106 96 100 94 C109 86 113 73 112 60 C110 32 88 14 64 14 Z"
+    />
+    <ellipse className="ghost-eye" cx="48" cy="64" rx="5.2" ry="7.4" />
+    <ellipse className="ghost-eye" cx="78" cy="64" rx="5.2" ry="7.4" />
+    <path className="ghost-mouth" d="M52 80 q4 -6 8 0 t8 0" />
+    <g className="ghost-hat" transform="rotate(20 96 30)">
+      <path className="ghost-hat-brim" d="M80 40 h36 v5 h-36 Z" />
+      <path className="ghost-hat-crown" d="M88 14 h20 v26 h-20 Z" />
+      <rect className="ghost-hat-band" x="88" y="33" width="20" height="4" />
+    </g>
+  </svg>
+);
+
 // The main character: a rounded blocky body + inner highlight (sprite-body)
 // + two short legs. No sprout, no eyes — a minimal silhouette that matches
 // the workspace-room representation of the character. The "ghost" and "owl"
@@ -2118,29 +2148,7 @@ function ProfileCharacterPreview({
             <span className="sprite-leg sprite-leg-right" />
           </>
         ) : isGhost ? (
-          <svg
-            className="ghost-svg"
-            viewBox="0 0 128 140"
-            aria-hidden="true"
-            focusable="false"
-          >
-            <ellipse className="ghost-aura" cx="62" cy="78" rx="52" ry="54" />
-            {/* Arm nubs drawn before the body so their roots tuck behind it */}
-            <path className="ghost-arm" d="M18 86 q-12 2 -16 9 q9 1 17 -2 Z" />
-            <path className="ghost-arm" d="M110 86 q12 2 16 9 q-9 1 -17 -2 Z" />
-            <path
-              className="ghost-body"
-              d="M64 14 C40 14 18 32 17 60 C16 74 16 86 19 98 C21 107 24 116 31 116 C37 116 39 108 45 108 C51 108 53 118 60 118 C66 118 68 107 75 109 C90 113 104 120 116 108 C124 100 121 86 112 88 C106 89 106 96 100 94 C109 86 113 73 112 60 C110 32 88 14 64 14 Z"
-            />
-            <ellipse className="ghost-eye" cx="48" cy="64" rx="5.2" ry="7.4" />
-            <ellipse className="ghost-eye" cx="78" cy="64" rx="5.2" ry="7.4" />
-            <path className="ghost-mouth" d="M52 80 q4 -6 8 0 t8 0" />
-            <g className="ghost-hat" transform="rotate(20 96 30)">
-              <path className="ghost-hat-brim" d="M80 40 h36 v5 h-36 Z" />
-              <path className="ghost-hat-crown" d="M88 14 h20 v26 h-20 Z" />
-              <rect className="ghost-hat-band" x="88" y="33" width="20" height="4" />
-            </g>
-          </svg>
+          ghostSvgMarkup
         ) : (
           <>
             <span className="sprite-body" />
@@ -8737,7 +8745,12 @@ function App() {
       showToast(`組織「${org.name}」を作成しました`, { kind: "success" });
     } catch (error) {
       console.warn("Create org failed", error);
-      setOrgError("組織を作成できませんでした。時間をおいて再度お試しください。");
+      // 原因切り分けのため、Firestore のエラーコード/メッセージを画面に出す。
+      const code = (error as { code?: string })?.code;
+      const message = (error as { message?: string })?.message;
+      setOrgError(
+        `組織を作成できませんでした。[${code ?? "unknown"}] ${message ?? ""}`.trim(),
+      );
     } finally {
       setIsOrgWorking(false);
     }
@@ -12502,6 +12515,8 @@ function App() {
                                   <span className="swatch-owl-foot swatch-owl-foot-left" />
                                   <span className="swatch-owl-foot swatch-owl-foot-right" />
                                 </>
+                              ) : option.value === "ghost" ? (
+                                ghostSvgMarkup
                               ) : null}
                             </span>
                           </span>
@@ -14220,6 +14235,8 @@ function App() {
                                       <span className="swatch-owl-foot swatch-owl-foot-left" />
                                       <span className="swatch-owl-foot swatch-owl-foot-right" />
                                     </>
+                                  ) : option.value === "ghost" ? (
+                                    ghostSvgMarkup
                                   ) : null}
                                 </span>
                               </span>

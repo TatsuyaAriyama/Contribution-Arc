@@ -9940,30 +9940,32 @@
   overflow: visible;
 }
 
-/* Soft per-user color halo behind the body. */
-.actor-sprite.shape-ghost .ghost-aura {
+/* Soft per-user color halo behind the body. Scoped to .ghost-svg (not
+   .actor-sprite) so the exact same artwork also styles the shape-picker
+   swatch, which renders the SVG without the .actor-sprite wrapper. */
+.ghost-svg .ghost-aura {
   fill: var(--actor-color);
   opacity: 0.26;
 }
 
 /* White body + arm nubs with the dark line-art outline. */
-.actor-sprite.shape-ghost .ghost-body,
-.actor-sprite.shape-ghost .ghost-arm {
+.ghost-svg .ghost-body,
+.ghost-svg .ghost-arm {
   fill: #fcfbf9;
   stroke: #43332b;
   stroke-width: 6;
   stroke-linejoin: round;
 }
 
-.actor-sprite.shape-ghost .ghost-arm {
+.ghost-svg .ghost-arm {
   stroke-width: 5;
 }
 
-.actor-sprite.shape-ghost .ghost-eye {
+.ghost-svg .ghost-eye {
   fill: #2a2036;
 }
 
-.actor-sprite.shape-ghost .ghost-mouth {
+.ghost-svg .ghost-mouth {
   fill: none;
   stroke: #2a2036;
   stroke-width: 3.4;
@@ -9972,22 +9974,22 @@
 }
 
 /* Tilted silk top hat — brim, crown, and band. */
-.actor-sprite.shape-ghost .ghost-hat-brim,
-.actor-sprite.shape-ghost .ghost-hat-crown {
+.ghost-svg .ghost-hat-brim,
+.ghost-svg .ghost-hat-crown {
   stroke: #33231a;
   stroke-width: 3;
   stroke-linejoin: round;
 }
 
-.actor-sprite.shape-ghost .ghost-hat-brim {
+.ghost-svg .ghost-hat-brim {
   fill: #4a3326;
 }
 
-.actor-sprite.shape-ghost .ghost-hat-crown {
+.ghost-svg .ghost-hat-crown {
   fill: #5b3e2c;
 }
 
-.actor-sprite.shape-ghost .ghost-hat-band {
+.ghost-svg .ghost-hat-band {
   fill: #33231a;
 }
 
@@ -10459,33 +10461,20 @@
 }
 
 .character-shape-swatch.shape-ghost {
-  /* Mirrors the in-stage ghost: 32-point smooth 3-lobe silhouette with
-     a soft top highlight and a subtle bottom shading so the picker
-     preview actually reads as the same character. */
-  background:
-    radial-gradient(
-      ellipse 64% 36% at 50% 18%,
-      rgba(255, 255, 255, 0.3) 0%,
-      rgba(255, 255, 255, 0) 64%
-    ),
-    radial-gradient(
-      ellipse 90% 30% at 50% 96%,
-      rgba(0, 0, 0, 0.2) 0%,
-      rgba(0, 0, 0, 0) 68%
-    ),
-    var(--actor-color, #1f6f4a);
-  clip-path: polygon(
-    50% 0%,
-    62% 1%, 74% 3.5%, 84% 8.5%, 91% 16%, 96% 26%, 99% 38%, 100% 50%,
-    100% 78%,
-    97% 86%, 92% 92%, 86% 96%, 80% 98%,
-    74% 95%, 70% 90%, 65% 88%,
-    60% 90%, 55% 95%, 50% 98%, 45% 95%, 40% 90%,
-    35% 88%, 30% 90%, 26% 95%, 20% 98%,
-    14% 96%, 8% 92%, 3% 86%, 0% 78%,
-    0% 50%, 1% 38%, 4% 26%, 9% 16%, 16% 8.5%, 26% 3.5%, 38% 1%
-  );
-  filter: drop-shadow(0 4px 6px rgba(var(--ink-rgb), 0.15));
+  /* Render the same inline-SVG spectre as the profile preview so the
+     picker reads as the exact same character (was previously a separate
+     purple clip-path blob that didn't match). */
+  background: transparent;
+}
+
+.character-shape-swatch.shape-ghost .ghost-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: scale(1.08);
+  transform-origin: center;
+  overflow: visible;
 }
 
 /* Owl swatch — egg-shaped body with two large amber eyes, a small
