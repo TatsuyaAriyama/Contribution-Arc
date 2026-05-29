@@ -12933,6 +12933,15 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 24px;
     align-items: start;
+    transition: grid-template-columns 220ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* User collapsed the FEED. The right pane is unmounted (see the
+     gate in App.tsx) so the layout drops to a single column and the
+     left pane reclaims the full width. transition above smooths the
+     column swap so the swap doesn't pop. */
+  .two-pane-shell.is-feed-collapsed {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   /* Right pane = independent scroll column. It's sticky at top: 92px
