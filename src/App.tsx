@@ -4247,11 +4247,20 @@ function App() {
         // mid-wearing a non-owned shape, snap them back to "default".
         const ADMIN_EMAIL = "ari.initx@gmail.com";
         const isAdmin = (currentUser.email || "").toLowerCase() === ADMIN_EMAIL;
+        // Honor the shapes the player actually owns. `ownedCharacterShapes`
+        // is written to the profile only on purchase (see the shop), and is
+        // already validated/deduped by normalizeUserProfile, so trusting it
+        // here lets a bought silhouette survive a reload. The previous code
+        // filtered this down to ["default"] on every load, which not only
+        // snapped the equipped shape back to default but, via the write-back
+        // effect, erased the purchase server-side too. Admins keep the full
+        // set. The currently-equipped shape is folded in so a freshly
+        // selected/purchased shape is never momentarily treated as unowned.
         const loadedOwned = profile.ownedCharacterShapes || ["default"];
+        const loadedShape = getSafeCharacterShape(profile.characterShape || savedCharacterShape || "default");
         const resolvedOwned: CharacterShape[] = isAdmin
           ? [...CHARACTER_SHAPES]
-          : Array.from(new Set<CharacterShape>(["default", ...loadedOwned.filter((shape) => shape === "default")]));
-        const loadedShape = getSafeCharacterShape(profile.characterShape || savedCharacterShape || "default");
+          : Array.from(new Set<CharacterShape>(["default", ...loadedOwned, loadedShape]));
         const safeShape: CharacterShape = resolvedOwned.includes(loadedShape) ? loadedShape : "default";
         const grantedCoins = isAdmin ? Math.max(profile.coins || 0, 10000) : profile.coins || 0;
         setOwnedCharacterShapes(resolvedOwned);
@@ -7526,6 +7535,7 @@ function App() {
     openedWorkspaceGiftLevels,
     playerAvatar,
     playerCharacterColor,
+    playerCharacterShape,
     playerName,
     studyStreak,
     userId,
