@@ -10451,13 +10451,41 @@
   height: 40px;
 }
 
+/* Default swatch — mirrors the in-stage Tomo sprite: a rounded square
+   body with a brighter inner highlight square (rendered via the
+   ::before pseudo) and two black dot feet poking out below (drawn
+   from the ::after via two stacked radial-gradient bg layers). No
+   JSX change is needed; the tile already gives the swatch a stage
+   with breathing room below for the feet to sit on. */
 .character-shape-swatch.shape-default {
+  position: relative;
+  overflow: visible;
   border-radius: 8px;
   background: var(--actor-color, #1f6f4a);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
     0 0 0 1px rgba(var(--ink-rgb), 0.1),
     0 8px 14px rgba(var(--ink-rgb), 0.08);
+}
+
+.character-shape-swatch.shape-default::before {
+  content: "";
+  position: absolute;
+  inset: 22% 22% 22%;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.character-shape-swatch.shape-default::after {
+  content: "";
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: -18%;
+  height: 26%;
+  background:
+    radial-gradient(circle at 22% 50%, #09110e 0 38%, transparent 42%),
+    radial-gradient(circle at 78% 50%, #09110e 0 38%, transparent 42%);
 }
 
 .character-shape-swatch.shape-ghost {
