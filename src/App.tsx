@@ -4408,6 +4408,16 @@ function App() {
         setCoins(grantedCoins);
         setLastFeedRewardDate(profile.lastFeedRewardDate || "");
         setFeedRewardArcEarned(profile.feedRewardArcEarned || 0);
+        // Sync the GitHub login from the cloud profile so devices that
+        // never went through the OAuth popup (e.g. mobile after the user
+        // linked on desktop) still resolve the right username for the
+        // contribution fetch. Mirror it to this device's localStorage too,
+        // matching the cache key the sign-in path writes, so the render-time
+        // resolver picks it up without a code-path special case.
+        if (profile.githubUsername) {
+          setSyncedGithubUsername(profile.githubUsername);
+          safeSetLocalStorage(`ca:gh-login:${currentUser.uid}`, profile.githubUsername);
+        }
         // Hydrate the live org doc if the profile says we're a member.
         // Failure is non-fatal — the user still has the denormalized
         // org name from their profile and can retry from settings.
@@ -6135,6 +6145,14 @@ function App() {
   // kept around so the UI can render a non-fatal "取得できませんでした" hint.
   const [githubContributions, setGithubContributions] = useState<GithubContributions | null>(null);
   const [githubContributionsError, setGithubContributionsError] = useState<string | null>(null);
+  // GitHub login name mirrored from the cloud profile (users doc). The real
+  // login is captured at sign-in via getAdditionalUserInfo, but that only
+  // lands in *this device's* localStorage. On a second device (e.g. mobile
+  // after linking on PC) that cache is empty, so we'd fall back to the
+  // GitHub *display name* — which usually isn't the API-queryable login and
+  // makes the contribution fetch fail. Reading the login that PC persisted
+  // to Firestore lets every device resolve the same username.
+  const [syncedGithubUsername, setSyncedGithubUsername] = useState("");
   // Drives the "GitHub アカウントを連携" CTA shown in the contribution-arc
   // card for users signed in via email or Google. linkWithPopup attaches
   // the GitHub provider to the existing Firebase user, so they don't need
@@ -6348,8 +6366,13 @@ function App() {
       return "";
     }
   })();
-  const githubUsername =
-    githubLoginCached || githubProviderInfo?.displayName || (githubProviderInfo ? userId : "");
+  // Resolution order: this device's sign-in cache → the login synced from
+  // the cloud profile (covers a fresh device) → the GitHub display name →
+  // userId. Only resolve when the GitHub provider is actually linked so an
+  // unlinked account doesn't keep querying a stale synced login.
+  const githubUsername = githubProviderInfo
+    ? githubLoginCached || syncedGithubUsername || githubProviderInfo.displayName || userId
+    : "";
   // Lazy-fetch the user's public GitHub contribution grid as soon as we
   // know which login to query. The service handles its own 1h cache so
   // re-mounts (route changes, hot reloads) don't re-hit the endpoint.
