@@ -132,7 +132,18 @@ import {
   isBillingConfigured,
 } from "./services/billing";
 import { type AppView, type FriendPreview, type LiveActivity } from "./components/PremiumNavigation";
-import { SilentWorkspaceRoom, type RoomActivityItem } from "./components/SilentWorkspaceRoom";
+import {
+  SilentWorkspaceRoom,
+  type RoomActivityItem,
+  type FloorNoteMarker,
+  type MonumentMarker,
+} from "./components/SilentWorkspaceRoom";
+import {
+  subscribeFloorNotes,
+  saveFloorNote,
+  deleteFloorNote,
+  type FloorNoteRecord,
+} from "./services/floorNotes";
 import { ArcPurchasePanel } from "./components/ArcPurchasePanel";
 import { ManagerDashboard } from "./components/ManagerDashboard";
 import { ShareToXModal } from "./components/ShareToXModal";
@@ -2334,6 +2345,58 @@ function getRoomSessionExp(minutes: number) {
   return Math.max(20, Math.round((minutes / 60) * 80));
 }
 
+/* App-side monument record. Extends the marker the room component renders
+   with the data the detail popover needs (owner name + achievement). */
+type RoomMonument = MonumentMarker & { name: string; detail: string };
+
+/* Milestone tiers, highest-prestige first. Each member contributes at
+   most one monument (their top achievement) so the room floor stays
+   uncluttered. Derived live from the members' synced profiles — no extra
+   Firestore collection — so a stone appears whenever a qualifying member
+   is present and quietly fades when they leave. */
+const MONUMENT_TIERS: { test: (p: UserProfile) => boolean; icon: string; short: string }[] = [
+  { test: (p) => (p.streak ?? 0) >= 30, icon: "🔥", short: "30日連続ログイン" },
+  { test: (p) => (p.level ?? 0) >= 20, icon: "🏛️", short: "レベル20到達" },
+  { test: (p) => (p.contributionCount ?? 0) >= 1000, icon: "🌱", short: "累計1,000コントリビュート" },
+  { test: (p) => (p.level ?? 0) >= 10, icon: "⭐", short: "レベル10到達" },
+  { test: (p) => (p.streak ?? 0) >= 7, icon: "📅", short: "7日連続ログイン" },
+];
+
+function buildRoomMonuments(
+  members: WorkspaceMember[],
+  profiles: Record<string, UserProfile>,
+): RoomMonument[] {
+  const found: { id: string; name: string; icon: string; short: string; color: string }[] = [];
+  for (const member of members) {
+    const profile = profiles[member.userId];
+    if (!profile) continue;
+    const tier = MONUMENT_TIERS.find((entry) => entry.test(profile));
+    if (!tier) continue;
+    found.push({
+      id: `mon-${member.userId}-${tier.short}`,
+      name: member.name,
+      icon: tier.icon,
+      short: tier.short,
+      color: member.characterColor || member.color,
+    });
+  }
+
+  const top = found.slice(0, 6);
+  return top.map((monument, index) => ({
+    id: monument.id,
+    icon: monument.icon,
+    color: monument.color,
+    name: monument.name,
+    label: `${monument.name} さんの記念碑：${monument.short}`,
+    detail: monument.short,
+    // Line the stones up along the upper-middle of the room so they read
+    // as dedications rather than obstacles — kept clear of the top-left
+    // room overlay and the top-right chat log.
+    x: top.length <= 1 ? 50 : 36 + (index * 40) / (top.length - 1),
+    y: 12,
+  }));
+}
+
 function getStableHash(value: string) {
   return Array.from(value).reduce((hash, character) => {
     return (hash * 31 + character.charCodeAt(0)) >>> 0;
@@ -3677,6 +3740,27 @@ function App() {
   }, []);
   const [profileMember, setProfileMember] = useState<WorkspaceMember | null>(null);
   const [profileUser, setProfileUser] = useState<UserProfile | null>(null);
+  // In-stage compact profile popover (tapping another member's avatar in
+  // the workspace room). Kept separate from the full-screen profile view
+  // above so the room context stays visible behind the card.
+  const [roomMemberPanel, setRoomMemberPanel] = useState<WorkspaceMember | null>(null);
+  const [roomMemberPanelUser, setRoomMemberPanelUser] = useState<UserProfile | null>(null);
+  // Floor notes (置き手紙) + monuments (記念碑) popover state.
+  const [floorNotes, setFloorNotes] = useState<FloorNoteRecord[]>([]);
+  const [readFloorNoteIds, setReadFloorNoteIds] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem("ca:read-floor-notes");
+      return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+    } catch {
+      return new Set<string>();
+    }
+  });
+  const [openFloorNoteId, setOpenFloorNoteId] = useState<string | null>(null);
+  const [isComposingFloorNote, setIsComposingFloorNote] = useState(false);
+  const [floorNoteDraft, setFloorNoteDraft] = useState("");
+  const [floorNoteError, setFloorNoteError] = useState("");
+  const [isSavingFloorNote, setIsSavingFloorNote] = useState(false);
+  const [openMonumentId, setOpenMonumentId] = useState<string | null>(null);
   const [determination, setDetermination] = useState("");
   const [draftDetermination, setDraftDetermination] = useState("");
   const [playerAvatar, setPlayerAvatar] = useState("");
@@ -6449,6 +6533,36 @@ function App() {
           ],
         },
   );
+  const roomMonuments = buildRoomMonuments(resolvedVisibleMembers, workspaceProfiles);
+
+  // Subscribe to the selected room's floor notes while it's open. Cheap:
+  // a single onSnapshot over a tiny, capped subcollection, torn down when
+  // you leave the room or close it.
+  const selectedRoomNotesId = selectedRoom?.id || "";
+  useEffect(() => {
+    if (!currentUser || !selectedRoomNotesId) {
+      setFloorNotes([]);
+      return;
+    }
+    const unsubscribe = subscribeFloorNotes(
+      db,
+      selectedRoomNotesId,
+      (notes) => setFloorNotes(notes),
+      (error) => console.info("Floor notes sync skipped.", error),
+    );
+    return () => unsubscribe();
+  }, [currentUser, selectedRoomNotesId]);
+
+  const floorNoteMarkers: FloorNoteMarker[] = floorNotes.map((note) => ({
+    id: note.id,
+    name: note.name,
+    color: note.color,
+    x: note.x,
+    y: note.y,
+    isMine: note.userId === currentUserUid,
+    isUnread: note.userId !== currentUserUid && !readFloorNoteIds.has(note.id),
+  }));
+
   const roomActivityItems: RoomActivityItem[] = [
     ...resolvedVisibleMembers.map((member) => {
       const task = member.currentTask || member.building;
@@ -8335,6 +8449,121 @@ function App() {
       }
     }
     setCurrentView("profile");
+  };
+
+  // Dismiss every in-stage popover (profile / note / monument). Wired to
+  // the shared backdrop and to the cards' close buttons.
+  const handleCloseRoomPanels = () => {
+    setRoomMemberPanel(null);
+    setRoomMemberPanelUser(null);
+    setOpenFloorNoteId(null);
+    setIsComposingFloorNote(false);
+    setFloorNoteError("");
+    setOpenMonumentId(null);
+  };
+
+  // Tapping an avatar *inside the workspace room*. Other members open a
+  // compact in-stage profile card; tapping yourself still jumps to your
+  // full profile screen (there's nothing to "connect" with on yourself).
+  const handleRoomMemberTap = (member: WorkspaceMember) => {
+    if (member.userId === currentUser.uid) {
+      setProfileMember(null);
+      setProfileUser(null);
+      setCurrentView("profile");
+      return;
+    }
+    handleCloseRoomPanels();
+    setFriendMessage("");
+    setRoomMemberPanel(member);
+    setRoomMemberPanelUser(null);
+    if (!member.userId.startsWith("npc-")) {
+      void getDoc(doc(db, "users", member.userId))
+        .then((snapshot) => {
+          if (snapshot.exists()) {
+            setRoomMemberPanelUser(
+              normalizeUserProfile(member.userId, snapshot.data() as Partial<UserProfile>),
+            );
+          }
+        })
+        .catch((error) => {
+          console.info("Room member profile cloud load skipped.", error);
+        });
+    }
+  };
+
+  const markFloorNoteRead = (id: string) => {
+    setReadFloorNoteIds((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      try {
+        localStorage.setItem("ca:read-floor-notes", JSON.stringify(Array.from(next)));
+      } catch {
+        // localStorage unavailable (private mode) — unread state just
+        // won't persist across reloads, which is acceptable.
+      }
+      return next;
+    });
+  };
+
+  const handleComposeFloorNote = () => {
+    handleCloseRoomPanels();
+    setFloorNoteDraft("");
+    setFloorNoteError("");
+    setIsComposingFloorNote(true);
+  };
+
+  const handleFloorNoteOpen = (id: string) => {
+    handleCloseRoomPanels();
+    setOpenFloorNoteId(id);
+    markFloorNoteRead(id);
+  };
+
+  const handleSaveFloorNote = async () => {
+    if (!currentUser || !selectedRoom) return;
+    const text = floorNoteDraft.trim();
+    if (!text) {
+      setFloorNoteError("メッセージを入力してください。");
+      return;
+    }
+    setIsSavingFloorNote(true);
+    setFloorNoteError("");
+    const now = new Date();
+    const note: FloorNoteRecord = {
+      id: crypto.randomUUID(),
+      userId: currentUser.uid,
+      name: playerName,
+      color: playerCharacterColor,
+      // Drop it near where you're standing, nudged a little so multiple
+      // notes don't stack exactly on top of each other.
+      x: Math.min(92, Math.max(8, playerPosition.x + (Math.random() * 16 - 8))),
+      y: Math.min(86, Math.max(14, playerPosition.y + (Math.random() * 10 - 5))),
+      text: text.slice(0, 200),
+      createdAt: now.toISOString(),
+      expiresAt: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+    };
+    try {
+      await saveFloorNote(db, selectedRoom.id, note);
+      // Author has obviously "read" their own note.
+      markFloorNoteRead(note.id);
+      setIsComposingFloorNote(false);
+      setFloorNoteDraft("");
+    } catch (error) {
+      console.info("Floor note save failed.", error);
+      setFloorNoteError("置き手紙を残せませんでした。");
+    } finally {
+      setIsSavingFloorNote(false);
+    }
+  };
+
+  const handleDeleteFloorNote = async (id: string) => {
+    if (!selectedRoom) return;
+    try {
+      await deleteFloorNote(db, selectedRoom.id, id);
+    } catch (error) {
+      console.info("Floor note delete failed.", error);
+    }
+    handleCloseRoomPanels();
   };
 
   const handleRoomActivityOpen = (item: RoomActivityItem) => {
@@ -10250,6 +10479,141 @@ function App() {
 
         {friendMessage ? <p className="friend-message">{friendMessage}</p> : null}
         {recentLogsCard(member.userId)}
+      </article>
+    );
+  };
+
+  // Compact version of the member profile, shown as an in-stage popover
+  // when you tap another member's avatar in the workspace room. Same
+  // connection logic as memberProfileCard but trimmed to a glanceable
+  // card; a "詳細" button still opens the full profile screen.
+  const roomMemberCompactCard = (member: WorkspaceMember, cloudUser?: UserProfile | null) => {
+    const memberRoom =
+      allWorkspaceRooms.find((room) =>
+        room.activeMembers.some((item) => item.userId === member.userId),
+      ) || selectedRoom;
+    const elapsedMinutes = getElapsedMinutes(member.joinedAt, workspaceNow);
+    const memberProfile = workspaceMemberToProfile(member);
+    const liveProfile = cloudUser || workspaceProfiles[member.userId];
+    const previewColor = cloudUser?.characterColor || memberProfile.characterColor;
+    const previewShape = cloudUser?.characterShape || memberProfile.characterShape;
+    const liveLevel = typeof liveProfile?.level === "number" ? liveProfile.level : null;
+    const liveStreak = typeof liveProfile?.streak === "number" ? liveProfile.streak : 0;
+
+    const pendingOutgoingRequest = friendRequests.find(
+      (request) =>
+        request.profile.uid === memberProfile.uid &&
+        request.status === "pending" &&
+        request.direction === "outgoing",
+    );
+    const pendingIncomingRequest = friendRequests.find(
+      (request) =>
+        request.profile.uid === memberProfile.uid &&
+        request.status === "pending" &&
+        request.direction === "incoming",
+    );
+    const acceptedRequest = friendRequests.find(
+      (request) => request.profile.uid === memberProfile.uid && request.status === "accepted",
+    );
+    const isFriend =
+      friends.some((friend) => friend.uid === memberProfile.uid) || Boolean(acceptedRequest);
+    const hasPendingRequest = Boolean(pendingOutgoingRequest || pendingIncomingRequest);
+
+    const connectionLabel = isFriend
+      ? "つながっています"
+      : pendingIncomingRequest
+        ? "申請が届いています"
+        : pendingOutgoingRequest
+          ? "承認待ち"
+          : "未接続";
+    const connectionState = isFriend
+      ? "is-friend"
+      : hasPendingRequest
+        ? "is-pending"
+        : "is-stranger";
+
+    return (
+      <article className="room-member-card">
+        <button
+          type="button"
+          className="room-member-card-close"
+          onClick={handleCloseRoomPanels}
+          aria-label="閉じる"
+        >
+          ×
+        </button>
+        <div className="room-member-card-head">
+          <ProfileCharacterPreview color={previewColor} shape={previewShape} />
+          <div className="room-member-card-identity">
+            <h3>
+              {member.name}
+              {liveLevel && liveLevel > 1 ? (
+                <span className="player-level-badge">Lv.{liveLevel}</span>
+              ) : null}
+            </h3>
+            <small>@{memberProfile.userId}</small>
+            <div className="room-member-card-chips">
+              <span className={`room-member-card-status ${connectionState}`}>
+                <i />
+                {connectionLabel}
+              </span>
+              {liveStreak > 0 ? (
+                <span className="player-chip player-chip-streak">🔥 {liveStreak}日連続</span>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        <div className="room-member-card-now">
+          <div className="room-member-card-now-task">
+            <strong>
+              <i style={{ background: member.color }} />
+              {member.building}
+            </strong>
+            <small>
+              {memberRoom?.name || "Silent Workspace"}
+              {" · 滞在 "}
+              {formatStayTime(elapsedMinutes)}
+            </small>
+          </div>
+          <div className="room-member-card-now-exp">
+            <span>今日</span>
+            <strong>+{getRoomSessionExp(elapsedMinutes)} EXP</strong>
+          </div>
+        </div>
+
+        <div className="room-member-card-actions">
+          <button
+            type="button"
+            disabled={isFriend || hasPendingRequest}
+            onClick={() => handleFriendRequest(memberProfile)}
+          >
+            {isFriend
+              ? "フレンド"
+              : pendingIncomingRequest
+                ? "申請が届いています"
+                : pendingOutgoingRequest
+                  ? "申請中"
+                  : "フレンド申請"}
+          </button>
+          {pendingIncomingRequest ? (
+            <button type="button" onClick={() => handleFriendAccept(pendingIncomingRequest)}>
+              承認する
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="is-secondary"
+            onClick={() => {
+              handleCloseRoomPanels();
+              void handleMemberProfileOpen(member);
+            }}
+          >
+            詳細
+          </button>
+        </div>
+
+        {friendMessage ? <p className="room-member-card-message">{friendMessage}</p> : null}
       </article>
     );
   };
@@ -14797,8 +15161,131 @@ function App() {
                       canDeleteRoom={selectedRoom.createdBy === currentUser.uid}
                       isPlayerWalking={isPlayerWalking}
                       activityItems={roomActivityItems}
-                      onMemberOpen={handleMemberProfileOpen}
+                      onMemberOpen={handleRoomMemberTap}
                       onActivityOpen={handleRoomActivityOpen}
+                      selectedMemberId={roomMemberPanel?.userId ?? null}
+                      memberPanel={
+                        roomMemberPanel
+                          ? roomMemberCompactCard(roomMemberPanel, roomMemberPanelUser)
+                          : null
+                      }
+                      onPanelClose={handleCloseRoomPanels}
+                      floorNotes={floorNoteMarkers}
+                      onFloorNoteOpen={handleFloorNoteOpen}
+                      onComposeFloorNote={handleComposeFloorNote}
+                      canDropFloorNote={isInSelectedRoom}
+                      floorNotePanel={(() => {
+                        if (isComposingFloorNote) {
+                          return (
+                            <article className="room-note-card">
+                              <button
+                                type="button"
+                                className="room-member-card-close"
+                                onClick={handleCloseRoomPanels}
+                                aria-label="閉じる"
+                              >
+                                ×
+                              </button>
+                              <span className="room-note-card-kicker">✉ 置き手紙を残す</span>
+                              <textarea
+                                value={floorNoteDraft}
+                                onChange={(event) => {
+                                  setFloorNoteDraft(event.target.value);
+                                  if (floorNoteError) setFloorNoteError("");
+                                }}
+                                placeholder="次に来た人へのひとこと（例：明日の朝、レビューお願いします）"
+                                maxLength={200}
+                                autoFocus
+                              />
+                              {floorNoteError ? (
+                                <span className="room-note-card-time" style={{ color: "#c0392b" }}>
+                                  {floorNoteError}
+                                </span>
+                              ) : null}
+                              <div className="room-note-card-actions">
+                                <button
+                                  type="button"
+                                  className="is-ghost"
+                                  onClick={handleCloseRoomPanels}
+                                >
+                                  やめる
+                                </button>
+                                <button
+                                  type="button"
+                                  className="is-primary"
+                                  onClick={() => void handleSaveFloorNote()}
+                                  disabled={isSavingFloorNote || !floorNoteDraft.trim()}
+                                >
+                                  {isSavingFloorNote ? "残しています…" : "置く"}
+                                </button>
+                              </div>
+                            </article>
+                          );
+                        }
+                        if (openFloorNoteId) {
+                          const note = floorNotes.find((item) => item.id === openFloorNoteId);
+                          if (!note) return null;
+                          return (
+                            <article className="room-note-card">
+                              <button
+                                type="button"
+                                className="room-member-card-close"
+                                onClick={handleCloseRoomPanels}
+                                aria-label="閉じる"
+                              >
+                                ×
+                              </button>
+                              <span className="room-note-card-kicker">✉ 置き手紙</span>
+                              <span className="room-note-card-author">
+                                <i style={{ background: note.color || "var(--ink)" }} />
+                                {note.name}
+                              </span>
+                              <p className="room-note-card-body">{note.text}</p>
+                              <span className="room-note-card-time">
+                                {formatPostTime(note.createdAt)}・24時間で消えます
+                              </span>
+                              {note.userId === currentUserUid ? (
+                                <div className="room-note-card-actions">
+                                  <button
+                                    type="button"
+                                    className="is-danger"
+                                    onClick={() => void handleDeleteFloorNote(note.id)}
+                                  >
+                                    削除
+                                  </button>
+                                </div>
+                              ) : null}
+                            </article>
+                          );
+                        }
+                        return null;
+                      })()}
+                      monuments={roomMonuments}
+                      onMonumentOpen={(id) => {
+                        handleCloseRoomPanels();
+                        setOpenMonumentId(id);
+                      }}
+                      monumentPanel={(() => {
+                        if (!openMonumentId) return null;
+                        const monument = roomMonuments.find((m) => m.id === openMonumentId);
+                        if (!monument) return null;
+                        return (
+                          <article className="room-monument-card">
+                            <button
+                              type="button"
+                              className="room-member-card-close"
+                              onClick={handleCloseRoomPanels}
+                              aria-label="閉じる"
+                            >
+                              ×
+                            </button>
+                            <span className="room-monument-card-kicker">🏛️ 記念碑</span>
+                            <span className="room-monument-card-icon">{monument.icon}</span>
+                            <h3>{monument.name}</h3>
+                            <p>{monument.detail}</p>
+                          </article>
+                        );
+                      })()}
                       lastSessionLabel={
                         lastRoomSession
                           ? `+${lastRoomSession.exp} EXP / ${formatStayTime(lastRoomSession.minutes)}を記録`
