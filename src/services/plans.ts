@@ -36,7 +36,7 @@ export type PlanFeature =
   | "sla"; // SLA・専任カスタマーサクセス
 
 /** β期間中は全機能無料。正式課金開始時に false にする。 */
-export const BETA_ALL_FEATURES_FREE = true;
+export const BETA_ALL_FEATURES_FREE = false;
 
 export type PlanDef = {
   tier: PlanTier;
