@@ -630,10 +630,23 @@ const studyColorOptions = [
    - extending the CharacterShape type
    - adding the shape to CHARACTER_SHAPES (the runtime allow-list)
    - implementing `.actor-sprite.shape-<value>` styles in App.css */
-const characterShapeOptions: { value: CharacterShape; name: string }[] = [
-  { value: "default", name: "人型" },
-  { value: "ghost", name: "ゴースト" },
-  { value: "owl", name: "フクロウ" },
+// Character silhouettes. Named with a single evocative kanji + a romaji
+// reading (shown as "宵 Yoi") so they fit the quiet "積み上げる" world
+// instead of reading like dictionary labels (the old 人型 / ゴースト /
+// フクロウ broke immersion):
+//   灯 Tomo — 灯。そばに灯る、はじまりの相棒（the blocky origin builder;
+//             Tomo doubles as 友 = friend）
+//   朧 Horo  — 朧。おぼろげに漂う、もう一人のあなた（the floating soul）
+//   宵 Yoi   — 宵。夜更けを見守る、夜型のお供（the nocturnal owl）
+const characterShapeOptions: {
+  value: CharacterShape;
+  name: string;
+  romaji: string;
+  tagline: string;
+}[] = [
+  { value: "default", name: "灯", romaji: "Tomo", tagline: "そばに灯る相棒" },
+  { value: "ghost", name: "朧", romaji: "Horo", tagline: "ふわりと漂う魂" },
+  { value: "owl", name: "宵", romaji: "Yoi", tagline: "夜更けの番人" },
 ];
 
 // Shop catalog. "default" is intentionally not listed — every account
@@ -650,15 +663,15 @@ type ShapeShopItem = {
 const shapeShopCatalog: ShapeShopItem[] = [
   {
     shape: "ghost",
-    name: "ゴースト",
-    tagline: "Soul shape",
+    name: "朧 Horo",
+    tagline: "ふわりと漂う魂",
     description: "脚のない魂のシルエット。作業部屋の片隅でふわりと漂う、もう一人のあなた。",
     price: 500,
   },
   {
     shape: "owl",
-    name: "フクロウ",
-    tagline: "Night owl",
+    name: "宵 Yoi",
+    tagline: "夜更けの番人",
     description: "丸い頭に大きな琥珀の眼。深夜にひとり手を動かす時間のお供に。",
     price: 500,
   },
@@ -12354,11 +12367,12 @@ function App() {
                   <div className="character-shape-grid compact" aria-label={t("キャラクターの形")}>
                     {characterShapeOptions.map((option) => {
                       const isLocked = !ownedCharacterShapes.includes(option.value);
+                      const isActive = playerCharacterShape === option.value;
                       return (
                         <button
                           type="button"
                           key={option.value}
-                          className={`${playerCharacterShape === option.value ? "active " : ""}${
+                          className={`shape-tile ${isActive ? "active " : ""}${
                             isLocked ? "is-locked" : ""
                           }`}
                           onClick={() => {
@@ -12369,31 +12383,44 @@ function App() {
                               setPlayerCharacterShape(option.value);
                             }
                           }}
-                          title={isLocked ? `${option.name}（ショップで購入）` : option.name}
+                          title={isLocked ? `${option.name} ${option.romaji}（ショップで購入）` : `${option.name} ${option.romaji}`}
                           aria-label={
                             isLocked
-                              ? `${option.name}はショップで購入できます`
-                              : `${option.name}を選択`
+                              ? `${option.name} ${option.romaji}はショップで購入できます`
+                              : `${option.name} ${option.romaji}を選択`
                           }
+                          aria-pressed={isActive}
                         >
-                          <span
-                            className={`character-shape-swatch shape-${option.value}`}
-                            style={{ "--actor-color": playerCharacterColor } as CSSProperties}
-                          >
-                            {option.value === "owl" ? (
-                              <>
-                                <span className="swatch-owl-beak" />
-                                <span className="swatch-owl-foot swatch-owl-foot-left" />
-                                <span className="swatch-owl-foot swatch-owl-foot-right" />
-                              </>
-                            ) : null}
+                          <span className="shape-tile-stage" aria-hidden="true">
+                            <span
+                              className={`character-shape-swatch shape-${option.value}`}
+                              style={{ "--actor-color": playerCharacterColor } as CSSProperties}
+                            >
+                              {option.value === "owl" ? (
+                                <>
+                                  <span className="swatch-owl-beak" />
+                                  <span className="swatch-owl-foot swatch-owl-foot-left" />
+                                  <span className="swatch-owl-foot swatch-owl-foot-right" />
+                                </>
+                              ) : null}
+                            </span>
+                          </span>
+                          <span className="shape-tile-text">
+                            <strong className="shape-tile-name">
+                              {option.name}
+                              <span className="shape-tile-romaji">{option.romaji}</span>
+                            </strong>
+                            <small className="shape-tile-tag">{option.tagline}</small>
                           </span>
                           {isLocked ? (
-                            <span className="character-shape-lock" aria-hidden="true">
+                            <span className="shape-tile-badge is-lock" aria-hidden="true">
                               🔒
                             </span>
+                          ) : isActive ? (
+                            <span className="shape-tile-badge is-check" aria-hidden="true">
+                              ✓
+                            </span>
                           ) : null}
-                          <small>{option.name}</small>
                         </button>
                       );
                     })}
@@ -14046,11 +14073,12 @@ function App() {
                       <div className="character-shape-grid" aria-label="キャラクターの形">
                         {characterShapeOptions.map((option) => {
                           const isLocked = !ownedCharacterShapes.includes(option.value);
+                          const isActive = playerCharacterShape === option.value;
                           return (
                             <button
                               type="button"
                               key={option.value}
-                              className={`${playerCharacterShape === option.value ? "active " : ""}${
+                              className={`shape-tile ${isActive ? "active " : ""}${
                                 isLocked ? "is-locked" : ""
                               }`}
                               onClick={() => {
@@ -14060,31 +14088,44 @@ function App() {
                                   setPlayerCharacterShape(option.value);
                                 }
                               }}
-                              title={isLocked ? `${option.name}（ショップで購入）` : option.name}
+                              title={isLocked ? `${option.name} ${option.romaji}（ショップで購入）` : `${option.name} ${option.romaji}`}
                               aria-label={
                                 isLocked
-                                  ? `${option.name}はショップで購入できます`
-                                  : `${option.name}を選択`
+                                  ? `${option.name} ${option.romaji}はショップで購入できます`
+                                  : `${option.name} ${option.romaji}を選択`
                               }
+                              aria-pressed={isActive}
                             >
-                              <span
-                                className={`character-shape-swatch shape-${option.value}`}
-                                style={{ "--actor-color": playerCharacterColor } as CSSProperties}
-                              >
-                                {option.value === "owl" ? (
-                                  <>
-                                    <span className="swatch-owl-beak" />
-                                    <span className="swatch-owl-foot swatch-owl-foot-left" />
-                                    <span className="swatch-owl-foot swatch-owl-foot-right" />
-                                  </>
-                                ) : null}
+                              <span className="shape-tile-stage" aria-hidden="true">
+                                <span
+                                  className={`character-shape-swatch shape-${option.value}`}
+                                  style={{ "--actor-color": playerCharacterColor } as CSSProperties}
+                                >
+                                  {option.value === "owl" ? (
+                                    <>
+                                      <span className="swatch-owl-beak" />
+                                      <span className="swatch-owl-foot swatch-owl-foot-left" />
+                                      <span className="swatch-owl-foot swatch-owl-foot-right" />
+                                    </>
+                                  ) : null}
+                                </span>
+                              </span>
+                              <span className="shape-tile-text">
+                                <strong className="shape-tile-name">
+                                  {option.name}
+                                  <span className="shape-tile-romaji">{option.romaji}</span>
+                                </strong>
+                                <small className="shape-tile-tag">{option.tagline}</small>
                               </span>
                               {isLocked ? (
-                                <span className="character-shape-lock" aria-hidden="true">
+                                <span className="shape-tile-badge is-lock" aria-hidden="true">
                                   🔒
                                 </span>
+                              ) : isActive ? (
+                                <span className="shape-tile-badge is-check" aria-hidden="true">
+                                  ✓
+                                </span>
                               ) : null}
-                              <small>{option.name}</small>
                             </button>
                           );
                         })}
