@@ -13152,10 +13152,13 @@
   height: 20px;
 }
 
-/* Instant hover tooltip for the FEED open/close toggle. Native `title`
-   has a ~1s delay; this fades in immediately so the user knows what the
-   button does the moment they hover. Appears below the topbar button. */
-.topbar-feed-toggle[data-tooltip]::after {
+/* Instant hover tooltip for topbar icon buttons (and the notification
+   bell). Native `title` has a ~1s delay; this fades in immediately so
+   the user knows what each button does the moment they hover or focus
+   it. Appears below the button. Opt in per button via the data-tooltip
+   attribute. */
+.topbar-icon-button[data-tooltip]::after,
+.notification-button[data-tooltip]::after {
   content: attr(data-tooltip);
   position: absolute;
   top: calc(100% + 8px);
@@ -13177,19 +13180,33 @@
   z-index: 40;
 }
 
-[data-theme="dark"] .topbar-feed-toggle[data-tooltip]::after {
+[data-theme="dark"] .topbar-icon-button[data-tooltip]::after,
+[data-theme="dark"] .notification-button[data-tooltip]::after {
   background: rgba(255, 255, 255, 0.94);
   color: #000000;
 }
 
-.topbar-feed-toggle[data-tooltip]:hover::after,
-.topbar-feed-toggle[data-tooltip]:focus-visible::after {
+.topbar-icon-button[data-tooltip]:hover::after,
+.topbar-icon-button[data-tooltip]:focus-visible::after,
+.notification-button[data-tooltip]:hover::after,
+.notification-button[data-tooltip]:focus-visible::after {
   opacity: 1;
   transform: translate(-50%, 0);
 }
 
+/* When this button has opened a popover/panel (Friends / Live Activity /
+   Notifications), the panel drops down right below it — suppress the
+   tooltip so the two don't overlap. */
+.topbar-icon-button[data-tooltip][aria-expanded="true"]:hover::after,
+.topbar-icon-button[data-tooltip][aria-expanded="true"]:focus-visible::after,
+.notification-button[data-tooltip][aria-expanded="true"]:hover::after,
+.notification-button[data-tooltip][aria-expanded="true"]:focus-visible::after {
+  opacity: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .topbar-feed-toggle[data-tooltip]::after {
+  .topbar-icon-button[data-tooltip]::after,
+  .notification-button[data-tooltip]::after {
     transition: none;
   }
 }

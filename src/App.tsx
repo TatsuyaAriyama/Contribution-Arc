@@ -10730,7 +10730,7 @@ function App() {
               type="button"
               className="topbar-icon-button topbar-manager-button"
               aria-label="Manager Dashboard"
-              title="Manager Dashboard"
+              data-tooltip="Manager Dashboard"
               onClick={() => {
                 setCurrentView("manager");
                 setIsFriendsPopoverOpen(false);
@@ -10794,6 +10794,7 @@ function App() {
                 ? t("ショップ ({coins} Arc)", { coins: coins.toLocaleString() })
                 : t("ショップ")
             }
+            data-tooltip={t("ショップ")}
             onClick={() => {
               setCurrentView("shop");
               setIsFriendsPopoverOpen(false);
@@ -10828,6 +10829,7 @@ function App() {
               type="button"
               className={`topbar-icon-button${isFriendsPopoverOpen ? " is-open" : ""}`}
               aria-label={`Friends${sidebarFriends.length > 0 ? ` (${sidebarFriends.length})` : ""}`}
+              data-tooltip="Friends"
               aria-expanded={isFriendsPopoverOpen}
               onClick={() => {
                 setIsFriendsPopoverOpen((prev) => !prev);
@@ -10908,6 +10910,7 @@ function App() {
               type="button"
               className={`topbar-icon-button${isLivePopoverOpen ? " is-open" : ""}`}
               aria-label={`Live Activity${liveActivities.length > 0 ? ` (${liveActivities.length})` : ""}`}
+              data-tooltip="Live Activity"
               aria-expanded={isLivePopoverOpen}
               onClick={() => {
                 setIsLivePopoverOpen((prev) => !prev);
@@ -10977,6 +10980,7 @@ function App() {
               type="button"
               className={hasUnreadNotifications ? "notification-button has-unread" : "notification-button"}
               aria-label={`${t("お知らせ")}${unreadNotificationCount > 0 ? ` ${unreadNotificationCount}${t("件の未読")}` : ""}`}
+              data-tooltip={t("お知らせ")}
               aria-expanded={isNotificationsOpen}
               onClick={handleNotificationsToggle}
             >
