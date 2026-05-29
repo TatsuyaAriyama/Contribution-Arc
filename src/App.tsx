@@ -2138,8 +2138,8 @@ function ProfileCharacterPreview({
             >
               <path
                 d="M2 4 Q 6 0.5 10 4 T 18 4 L 22 4"
-                stroke="#3b2218"
-                strokeWidth="1.6"
+                stroke="#2a2036"
+                strokeWidth="1.8"
                 fill="none"
                 strokeLinecap="round"
                 strokeLinejoin="round"

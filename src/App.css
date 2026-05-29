@@ -9921,8 +9921,16 @@
      a clip-path is applied so all corner shaping happens in the
      polygon itself. */
   border-radius: 0;
-  background: var(--actor-color);
-  box-shadow: none; /* clip-path strips box-shadow; aura is added via ::after */
+  /* Pale spectral body — an off-white wash carrying a faint trace of
+     the player's --actor-color, so it reads instantly as a ghost while
+     still hinting at each user's hue. */
+  background:
+    linear-gradient(180deg, rgba(249, 248, 252, 0.85), rgba(245, 243, 250, 0.7)),
+    var(--actor-color);
+  /* clip-path strips box-shadow, so the soft floating shadow is drawn
+     with a drop-shadow filter that follows the silhouette. */
+  box-shadow: none;
+  filter: drop-shadow(0 5px 6px rgba(15, 12, 24, 0.18));
   overflow: visible;
   animation: workspace-ghost-float 4.2s ease-in-out infinite;
   clip-path: polygon(
@@ -9942,40 +9950,62 @@
   );
 }
 
-/* Soft color-tinted aura behind the body. Sits at z-index -1 so it
-   reads as ambient glow without darkening any sibling elements. */
+/* Soft glossy sheen across the top of the dome — gives the pale body
+   an ethereal, slightly translucent sheen without adding chroma. */
 .actor-sprite.shape-ghost::after {
   content: "";
   position: absolute;
-  z-index: -1;
-  inset: -10px -8px -4px -8px;
-  background: var(--actor-color);
-  opacity: 0.22;
-  filter: blur(12px);
+  inset: 3px 7px auto 7px;
+  height: 8px;
+  background: radial-gradient(120% 100% at 50% 0%, rgba(255, 255, 255, 0.7), transparent 72%);
   pointer-events: none;
-  border-radius: 14px;
 }
 
-/* Inset "window" — same as default character, but positioned slightly
-   higher so it doesn't bleed into the wavy hem. Translucent surface
-   tint so the underlying actor-color shows through. */
+/* The ghost wears a face (eyes + mouth) instead of the default
+   character's rectangular window, so the window is dropped here. */
 .actor-sprite.shape-ghost .sprite-body {
-  position: absolute;
-  inset: 9px 9px 18px 9px;
-  border-radius: 3px;
-  background: rgba(var(--surface-rgb), 0.22);
+  display: none;
 }
 
-/* Hide every decorative element the old chibi-ghost used. The new
-   silhouette doesn't carry a face, arms, or a hat — it's pure form,
-   matching the abstract reading of the default character. */
-.actor-sprite.shape-ghost .sprite-eye,
+/* Keep the chibi accessories (legs, tail, top hat, arm nubs) hidden —
+   the minimal spectre only carries a quiet face. */
 .actor-sprite.shape-ghost .sprite-leg,
 .actor-sprite.shape-ghost .sprite-tail,
 .actor-sprite.shape-ghost .sprite-ghost-hat,
-.actor-sprite.shape-ghost .sprite-ghost-arm,
-.actor-sprite.shape-ghost .sprite-ghost-mouth {
+.actor-sprite.shape-ghost .sprite-ghost-arm {
   display: none;
+}
+
+/* Two soft dark eyes — the core of the お化け reading. Plump ovals in
+   dark plum so they sit calmly against the pale body. */
+.actor-sprite.shape-ghost .sprite-eye {
+  display: block;
+  position: absolute;
+  top: 11px;
+  width: 5.5px;
+  height: 7.5px;
+  border-radius: 50%;
+  background: #2a2036;
+}
+
+.actor-sprite.shape-ghost .sprite-eye-left {
+  left: 12px;
+}
+
+.actor-sprite.shape-ghost .sprite-eye-right {
+  right: 12px;
+}
+
+/* Small wavy mouth, centered below the eyes and clear of the hem. */
+.actor-sprite.shape-ghost .sprite-ghost-mouth {
+  display: block;
+  position: absolute;
+  left: 50%;
+  bottom: 15px;
+  width: 15px;
+  height: 5px;
+  transform: translateX(-50%);
+  overflow: visible;
 }
 
 /* Gentle hover — no rotation, just a small vertical bob. Rotation
