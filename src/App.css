@@ -13152,6 +13152,48 @@
   height: 20px;
 }
 
+/* Instant hover tooltip for the FEED open/close toggle. Native `title`
+   has a ~1s delay; this fades in immediately so the user knows what the
+   button does the moment they hover. Appears below the topbar button. */
+.topbar-feed-toggle[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translate(-50%, -4px);
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.88);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
+  z-index: 40;
+}
+
+[data-theme="dark"] .topbar-feed-toggle[data-tooltip]::after {
+  background: rgba(255, 255, 255, 0.94);
+  color: #000000;
+}
+
+.topbar-feed-toggle[data-tooltip]:hover::after,
+.topbar-feed-toggle[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar-feed-toggle[data-tooltip]::after {
+    transition: none;
+  }
+}
+
 .topbar-icon-badge {
   position: absolute;
   top: -4px;

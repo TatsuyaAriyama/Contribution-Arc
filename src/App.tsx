@@ -10758,7 +10758,7 @@ function App() {
               className={`topbar-icon-button topbar-feed-toggle${isFeedOpen ? " is-open" : ""}`}
               aria-pressed={isFeedOpen}
               aria-label={isFeedOpen ? "フィードを閉じる" : "フィードを開く"}
-              title={isFeedOpen ? "フィードを閉じる" : "フィードを開く"}
+              data-tooltip={isFeedOpen ? "フィードを閉じる" : "フィードを開く"}
               onClick={() => setIsFeedOpen((prev) => !prev)}
             >
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
