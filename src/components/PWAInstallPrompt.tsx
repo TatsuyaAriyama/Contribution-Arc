@@ -14,8 +14,12 @@
  *   - The browser dispatched beforeinstallprompt (so the install is
  *     actually available — no point teasing it otherwise).
  *   - The app is NOT already running in standalone mode.
- *   - The user hasn't dismissed within the last 30 days.
+ *   - The user hasn't permanently dismissed it via the「後で」button.
  *   - The user hasn't already accepted the install in this profile.
+ *
+ * The banner keeps showing on every visit until the user explicitly
+ * taps「後で」(or installs the app). Dismissing the OS-level install
+ * dialog does NOT silence it — only the「後で」button does.
  *
  * We delay showing the banner ~3s after the event so first paint
  * doesn't get crowded by an install ask.
@@ -27,9 +31,8 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 };
 
-const DISMISS_KEY = "contribution-arc-pwa-install-dismissed-at";
+const DISMISS_KEY = "contribution-arc-pwa-install-dismissed";
 const ACCEPTED_KEY = "contribution-arc-pwa-install-accepted";
-const COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 const SHOW_DELAY_MS = 3000;
 
 function isStandalone(): boolean {
@@ -39,12 +42,9 @@ function isStandalone(): boolean {
   return false;
 }
 
-function recentlyDismissed(): boolean {
+function dismissedForever(): boolean {
   try {
-    const at = window.localStorage.getItem(DISMISS_KEY);
-    if (!at) return false;
-    const ts = Number(at);
-    return Number.isFinite(ts) && Date.now() - ts < COOLDOWN_MS;
+    return window.localStorage.getItem(DISMISS_KEY) === "1";
   } catch {
     return false;
   }
@@ -65,7 +65,7 @@ export function PWAInstallPrompt() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (isStandalone() || alreadyAccepted() || recentlyDismissed()) return;
+    if (isStandalone() || alreadyAccepted() || dismissedForever()) return;
 
     const handleEvent = (event: Event) => {
       // Block the default mini-infobar — we render our own banner so the
@@ -101,8 +101,9 @@ export function PWAInstallPrompt() {
   if (!visible || !deferred) return null;
 
   const dismiss = () => {
+    // 「後で」is the only thing that silences the banner permanently.
     try {
-      window.localStorage.setItem(DISMISS_KEY, String(Date.now()));
+      window.localStorage.setItem(DISMISS_KEY, "1");
     } catch {
       /* ignore */
     }
@@ -121,21 +122,23 @@ export function PWAInstallPrompt() {
         } catch {
           /* ignore */
         }
+        // Installed — hide and drop the captured event.
+        setVisible(false);
+        setDeferred(null);
       } else {
-        // Treat an explicit dismiss the same as our own close button —
-        // honour the cooldown so we don't badger the user.
-        try {
-          window.localStorage.setItem(DISMISS_KEY, String(Date.now()));
-        } catch {
-          /* ignore */
-        }
+        // The user dismissed the OS install dialog without installing.
+        // Per spec we can't re-prompt with the same event, but we do NOT
+        // silence our banner — it should reappear on the next visit so
+        // the only permanent opt-out remains the「後で」button.
+        setVisible(false);
+        setDeferred(null);
       }
     } catch {
       /* prompt() can throw if called twice — fail silently. */
-    } finally {
-      setBusy(false);
       setVisible(false);
       setDeferred(null);
+    } finally {
+      setBusy(false);
     }
   };
 
