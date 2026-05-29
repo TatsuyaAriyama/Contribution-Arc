@@ -9924,13 +9924,19 @@
   animation: workspace-ghost-float 4.2s ease-in-out infinite;
 }
 
+/* Track the parent .actor-sprite box instead of a fixed pixel size.
+   The sprite is resized per context (40x40 in profile/preview chips,
+   ~36x46–40x52 inside the 2D workspace), so a hard-coded px SVG that
+   fit the large settings preview overflowed the smaller workspace
+   sprite and broke the layout. Filling the parent + a slight upscale
+   keeps the spectre crisp and correctly sized everywhere. */
 .actor-sprite.shape-ghost .ghost-svg {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 44px;
-  height: 48px;
-  transform: translate(-50%, -52%);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: scale(1.12);
+  transform-origin: center;
   overflow: visible;
 }
 
