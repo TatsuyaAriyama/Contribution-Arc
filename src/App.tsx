@@ -3574,6 +3574,29 @@ function App() {
   });
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("idle");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  // FEED right-pane visibility. Defaults open (matches previous
+  // behaviour); the value is persisted to localStorage so a deliberate
+  // collapse survives reloads. Hidden entirely during the workspace
+  // view via an existing render gate, so this state only matters on
+  // the home / logs / daily / etc. surfaces.
+  const [isFeedOpen, setIsFeedOpen] = useState<boolean>(() => {
+    try {
+      const stored = window.localStorage.getItem("ca:feed-open");
+      return stored === null ? true : stored === "1";
+    } catch {
+      return true;
+    }
+  });
+  // Persist the FEED open/closed preference. Pure UI state, so it
+  // doesn't ride the Firestore user-profile sync — localStorage is
+  // sufficient and keeps the toggle responsive offline.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("ca:feed-open", isFeedOpen ? "1" : "0");
+    } catch {
+      /* localStorage may be blocked (private mode); ignore. */
+    }
+  }, [isFeedOpen]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [workspaceProfiles, setWorkspaceProfiles] = useState<Record<string, UserProfile>>({});
@@ -10752,6 +10775,45 @@ function App() {
             </button>
           ) : null}
 
+          {/* FEED open/close toggle. Hidden on the workspace view —
+              the right pane is already suppressed there because it
+              would compete with the immersive 2D stage. On every
+              other view this lets the user collapse the FEED to give
+              the main content the full canvas. */}
+          {currentView !== "workspace" ? (
+            <button
+              type="button"
+              className={`topbar-icon-button topbar-feed-toggle${isFeedOpen ? " is-open" : ""}`}
+              aria-pressed={isFeedOpen}
+              aria-label={isFeedOpen ? "フィードを閉じる" : "フィードを開く"}
+              title={isFeedOpen ? "フィードを閉じる" : "フィードを開く"}
+              onClick={() => setIsFeedOpen((prev) => !prev)}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <rect
+                  x="3"
+                  y="4"
+                  width="18"
+                  height="16"
+                  rx="2"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                />
+                <rect
+                  x="14"
+                  y="4"
+                  width="7"
+                  height="16"
+                  rx="2"
+                  fill={isFeedOpen ? "currentColor" : "none"}
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                />
+              </svg>
+            </button>
+          ) : null}
+
           <button
             type="button"
             className="topbar-icon-button topbar-shop-button"
@@ -12681,7 +12743,11 @@ function App() {
         </div>
       ) : null}
 
-      <div className="two-pane-shell">
+      <div
+        className={`two-pane-shell${
+          currentView !== "workspace" && !isFeedOpen ? " is-feed-collapsed" : ""
+        }`}
+      >
       <div className="two-pane-left">
 
       {currentView === "daily" ? (
@@ -14930,8 +14996,10 @@ function App() {
       {/* Workspace view fills the canvas with the 2D room and its own
           presence/chat tools — overlaying the global FEED next to it
           competes for attention, makes the desktop layout cramped, and
-          hides the room behind feed scroll on mobile. Hide it there. */}
-      {currentView !== "workspace" ? (
+          hides the room behind feed scroll on mobile. Hide it there.
+          On every other view the right pane respects the user's
+          isFeedOpen preference (default true, persisted to localStorage). */}
+      {currentView !== "workspace" && isFeedOpen ? (
         <aside className="two-pane-right" aria-label="フィード">
           {feedSection}
         </aside>
