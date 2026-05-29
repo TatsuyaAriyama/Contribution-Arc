@@ -24211,8 +24211,16 @@ a[role="button"],
 }
 
 .manager-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.manager-header-titles {
   display: grid;
-  gap: 8px;
+  gap: 4px;
 }
 
 .teams-plan li {
@@ -24860,33 +24868,299 @@ a[role="button"],
   text-align: right;
 }
 
-.manager-stat-card {
+/* ─── Solo-org invite nudge ──────────────────────────────────────── */
+.manager-invite-nudge {
   display: grid;
   gap: 6px;
-  padding: 14px;
+  padding: 16px 18px;
+  border: 1px dashed rgba(var(--ink-rgb, 31, 32, 36), 0.2);
+  border-radius: 12px;
+  background: rgba(var(--green-rgb, 31, 111, 74), 0.05);
+}
+
+.manager-invite-nudge strong {
+  font-size: 14px;
+  font-weight: 720;
+  color: var(--ink);
+}
+
+.manager-invite-nudge p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* ─── Engagement (team-health) bar ───────────────────────────────── */
+.manager-engagement-bar {
+  display: flex;
+  gap: 3px;
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.manager-engagement-seg {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  min-width: 6px;
+}
+
+.manager-engagement-seg.is-active {
+  background: var(--green);
+}
+
+.manager-engagement-seg.is-slowing {
+  background: var(--rare);
+}
+
+.manager-engagement-seg.is-dormant {
+  background: rgba(var(--ink-rgb, 31, 32, 36), 0.18);
+}
+
+.manager-engagement-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.manager-engagement-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.manager-engagement-legend strong {
+  color: var(--ink);
+  font-weight: 760;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Shared status dot — used in the legend and on each member row. */
+.manager-status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex: none;
+}
+
+.manager-status-dot.is-active {
+  background: var(--green);
+}
+
+.manager-status-dot.is-slowing {
+  background: var(--rare);
+}
+
+.manager-status-dot.is-dormant {
+  background: rgba(var(--ink-rgb, 31, 32, 36), 0.28);
+}
+
+/* ─── Follow-up list ─────────────────────────────────────────────── */
+.manager-followup-empty {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.manager-followup-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.manager-followup-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(var(--ink-rgb, 31, 32, 36), 0.04);
+  cursor: pointer;
+  transition: background 0.16s ease;
+}
+
+.manager-followup-item:hover,
+.manager-followup-item:focus-visible {
+  background: rgba(var(--accent-warm-rgb, 211, 87, 59), 0.1);
+  outline: none;
+}
+
+.manager-followup-name {
+  font-size: 13px;
+  font-weight: 680;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.manager-followup-reason {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--accent-warm);
+  white-space: nowrap;
+}
+
+/* ─── Per-team rollup ────────────────────────────────────────────── */
+.manager-team-rollup {
+  background: rgba(var(--surface-rgb), 0.6);
+}
+
+.manager-team-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.manager-team-row {
+  display: grid;
+  grid-template-columns: 120px 48px 1fr 48px 72px;
+  align-items: center;
+  gap: 12px;
+}
+
+.manager-team-name {
+  font-size: 13px;
+  font-weight: 680;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.manager-team-meta {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.manager-team-hours {
+  font-size: 12px;
+  font-weight: 720;
+  color: var(--ink);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.manager-team-rate {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .manager-team-row {
+    grid-template-columns: 1fr auto;
+    row-gap: 4px;
+  }
+
+  .manager-team-row .manager-bar-track {
+    grid-column: 1 / -1;
+    order: 5;
+  }
+
+  .manager-team-rate {
+    text-align: left;
+  }
+}
+
+/* ─── Member row badges + activity meta ──────────────────────────── */
+.manager-you-badge,
+.manager-role-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+
+.manager-you-badge {
+  background: rgba(var(--green-rgb, 31, 111, 74), 0.14);
+  color: var(--green);
+}
+
+.manager-role-badge {
+  background: rgba(var(--ink-rgb, 31, 32, 36), 0.07);
+  color: var(--muted);
+}
+
+.manager-member-meta-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.manager-member-last {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.manager-stat-card {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
   border: 1px solid rgba(var(--ink-rgb, 31, 32, 36), 0.12);
   border-radius: 12px;
   background: rgba(var(--surface-rgb), 0.6);
-  text-align: center;
+  text-align: left;
 }
 
 .manager-stat-label {
   font-size: 12px;
   font-weight: 600;
   color: var(--muted);
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
 }
 
 .manager-stat-value {
-  font-size: 20px;
+  font-size: 26px;
   font-weight: 780;
   color: var(--ink);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.manager-stat-unit {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-left: 2px;
+}
+
+.manager-stat-sub {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
 }
 
 .manager-controls {
   display: grid;
   gap: 12px;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 1fr auto auto;
   align-items: center;
 }
 
@@ -24894,37 +25168,6 @@ a[role="button"],
   .manager-controls {
     grid-template-columns: 1fr;
   }
-}
-
-.manager-period-selector {
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-  border: 1px solid rgba(var(--ink-rgb, 31, 32, 36), 0.12);
-  border-radius: 8px;
-  background: rgba(var(--surface-rgb), 0.4);
-}
-
-.manager-period-selector button {
-  flex: 1;
-  padding: 8px 12px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.18s, color 0.18s;
-}
-
-.manager-period-selector button:hover {
-  background: rgba(var(--surface-rgb), 0.6);
-}
-
-.manager-period-selector button.active {
-  background: rgba(var(--green-rgb, 91, 154, 117), 0.12);
-  color: var(--green);
 }
 
 .manager-search {
