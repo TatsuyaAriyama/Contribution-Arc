@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type ChangeEvent } from "react";
+import { useEffect, useState, type CSSProperties, type ChangeEvent, type ReactNode } from "react";
 
 export type RoomActivityItem = {
   id: string;
@@ -54,6 +54,30 @@ export type LearningItemSuggestion = {
   color: string;
 };
 
+/* A "置き手紙" left on the room floor. Positioned with x/y percentages
+   like actors. `isUnread` lights it up for members who haven't opened it
+   yet so the next person to enter notices it. */
+export type FloorNoteMarker = {
+  id: string;
+  name: string;
+  color?: string;
+  x: number;
+  y: number;
+  isUnread?: boolean;
+  isMine?: boolean;
+};
+
+/* A "記念碑" — a small stone standing in the room for a member's
+   milestone (study hours, level, streak). Persists as room history. */
+export type MonumentMarker = {
+  id: string;
+  x: number;
+  y: number;
+  icon: string;
+  label: string;
+  color?: string;
+};
+
 export type ActiveRecruitmentSummary = {
   stateLabel: string;
   joinedCount: number;
@@ -88,6 +112,27 @@ type SilentWorkspaceRoomProps = {
   activityItems: RoomActivityItem[];
   onMemberOpen: (member: RoomActor) => void;
   onActivityOpen: (item: RoomActivityItem) => void;
+  /* In-stage compact profile popover. When `selectedMemberId` matches a
+     member, `memberPanel` is rendered as a small card anchored near that
+     member's avatar (instead of navigating to the full profile screen).
+     `onMemberPanelClose` dismisses it; the backdrop calls it too. */
+  selectedMemberId?: string | null;
+  memberPanel?: ReactNode;
+  /* Floor notes ("置き手紙"): non-sync drops left on the room floor.
+     Tapping one opens it; the parent owns the open/compose state. */
+  floorNotes?: FloorNoteMarker[];
+  onFloorNoteOpen?: (noteId: string) => void;
+  onComposeFloorNote?: () => void;
+  canDropFloorNote?: boolean;
+  floorNotePanel?: ReactNode;
+  /* Milestone monuments ("記念碑"): small stones standing in the room
+     for members' achievements. Tapping one shows its detail. */
+  monuments?: MonumentMarker[];
+  onMonumentOpen?: (monumentId: string) => void;
+  monumentPanel?: ReactNode;
+  /* Shared dismiss for any of the in-stage popovers above (profile /
+     note / monument). The backdrop calls it. */
+  onPanelClose?: () => void;
   lastSessionLabel: string;
   totalLearnedLabel: string;
   contributionLabel: string;
@@ -116,21 +161,28 @@ function formatChatLogTime(atMs: number) {
   return `${Math.floor(diffHr / 24)}日前`;
 }
 
+/* Active focus minutes for an actor, excluding break time. Used both by
+   the stay label and the focus ring. */
+function getActorActiveMinutes(member: RoomActor) {
+  if (typeof member.accumulatedActiveMinutes === "number") {
+    const base = member.accumulatedActiveMinutes;
+    if (member.status === "on-break" || !member.activeStartedAt) {
+      return Math.max(0, Math.floor(base));
+    }
+    return Math.max(
+      0,
+      Math.floor(base + (Date.now() - new Date(member.activeStartedAt).getTime()) / 60000),
+    );
+  }
+  return Math.max(0, Math.floor((Date.now() - new Date(member.joinedAt).getTime()) / 60000));
+}
+
 function getActorStayLabel(member: RoomActor) {
   if (member.status === "on-break") {
     return "休憩中";
   }
 
-  const minutes =
-    typeof member.accumulatedActiveMinutes === "number"
-      ? Math.max(
-          1,
-          Math.floor(
-            member.accumulatedActiveMinutes +
-              (member.activeStartedAt ? (Date.now() - new Date(member.activeStartedAt).getTime()) / 60000 : 0),
-          ),
-        )
-      : Math.max(1, Math.floor((Date.now() - new Date(member.joinedAt).getTime()) / 60000));
+  const minutes = Math.max(1, getActorActiveMinutes(member));
   const hours = Math.floor(minutes / 60);
   const restMinutes = minutes % 60;
 
@@ -139,6 +191,21 @@ function getActorStayLabel(member: RoomActor) {
   }
 
   return restMinutes > 0 ? `${hours}h ${restMinutes}m` : `${hours}h`;
+}
+
+/* Focus-ring state for an actor. The ring fills over a 25-minute pomodoro
+   cycle and glows briefly each time a cycle (25 / 50 / 75 … min) completes.
+   `--focus-progress` (0..1) drives the conic-gradient fill in CSS. */
+function getActorFocusRing(member: RoomActor) {
+  const active = getActorActiveMinutes(member);
+  const cycleLength = 25;
+  const cycles = Math.floor(active / cycleLength);
+  const within = active % cycleLength;
+  const progress = within / cycleLength;
+  // Pulse in the minute right after a cycle completes (within < 1) once at
+  // least one cycle is done, or as the ring is about to top off.
+  const justCompleted = cycles >= 1 && (within < 1 || within >= cycleLength - 1);
+  return { progress, cycles, isPulsing: justCompleted };
 }
 
 export function SilentWorkspaceRoom({
@@ -163,6 +230,17 @@ export function SilentWorkspaceRoom({
   activityItems,
   onMemberOpen,
   onActivityOpen,
+  selectedMemberId = null,
+  memberPanel,
+  floorNotes = [],
+  onFloorNoteOpen,
+  onComposeFloorNote,
+  canDropFloorNote = false,
+  floorNotePanel,
+  monuments = [],
+  onMonumentOpen,
+  monumentPanel,
+  onPanelClose,
   lastSessionLabel,
   contributionLabel,
   learningItemSuggestions = [],
@@ -202,6 +280,16 @@ export function SilentWorkspaceRoom({
     const id = window.setInterval(() => setBubbleTick((t) => t + 1), 500);
     return () => window.clearInterval(id);
   }, [members]);
+  // Slow tick so the focus rings keep filling as minutes accrue even when
+  // nothing else re-renders the stage. 20s is plenty for a 25-min ring and
+  // costs almost nothing; only runs while there's at least one member.
+  const [ringTick, setRingTick] = useState(0);
+  void ringTick;
+  useEffect(() => {
+    if (members.length === 0) return;
+    const id = window.setInterval(() => setRingTick((t) => t + 1), 20000);
+    return () => window.clearInterval(id);
+  }, [members.length]);
   const presetSlots = [...presetMessages, "", "", "", "", "", ""].slice(0, 6);
   const visiblePresetMessages = presetSlots.map((message) => message.trim()).filter(Boolean);
   const currentMember = members.find((member) => member.userId === currentUserId);
@@ -529,6 +617,29 @@ export function SilentWorkspaceRoom({
                   return <span className="workspace-bubble">{member.bubble}</span>;
                 })()}
                 {member.status === "on-break" ? <span className="actor-rest-mark" aria-hidden="true">Zz</span> : null}
+                {(() => {
+                  // Focus ring: a pomodoro-style progress halo at the
+                  // actor's feet. Hidden only for a member who just joined
+                  // and is already on break with no accrued focus.
+                  const ring = getActorFocusRing(member);
+                  if (ring.progress <= 0 && ring.cycles === 0 && member.status === "on-break") {
+                    return null;
+                  }
+                  return (
+                    <span
+                      className={[
+                        "actor-focus-ring",
+                        ring.isPulsing && member.status !== "on-break" ? "is-pulsing" : "",
+                        member.status === "on-break" ? "is-paused" : "",
+                        ring.cycles >= 2 ? "is-deep" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                      style={{ "--focus-progress": ring.progress } as CSSProperties}
+                      aria-hidden="true"
+                    />
+                  );
+                })()}
                 <span className="actor-shadow" />
                 <span
                   className={`actor-sprite ${member.tone} shape-${member.characterShape || "default"}`}
@@ -594,6 +705,137 @@ export function SilentWorkspaceRoom({
               </button>
             );
           })}
+
+          {/* Milestone monuments — small stones standing in the room as a
+              quiet record of members' achievements. Rendered behind actors
+              via CSS z-index so they read as part of the scenery. */}
+          {monuments.map((monument) => (
+            <button
+              type="button"
+              key={monument.id}
+              className="workspace-monument"
+              style={
+                {
+                  "--actor-x": `${monument.x}%`,
+                  "--actor-y": `${monument.y}%`,
+                  "--actor-color": monument.color || "var(--ink)",
+                } as CSSProperties
+              }
+              onClick={() => onMonumentOpen?.(monument.id)}
+              aria-label={monument.label}
+            >
+              <span className="workspace-monument-stone" aria-hidden="true">
+                <span className="workspace-monument-icon">{monument.icon}</span>
+              </span>
+            </button>
+          ))}
+
+          {/* Floor notes — 置き手紙 left on the floor. Unread ones glow so
+              the next person to enter notices them. */}
+          {floorNotes.map((note) => (
+            <button
+              type="button"
+              key={note.id}
+              className={[
+                "workspace-floor-note",
+                note.isUnread ? "is-unread" : "",
+                note.isMine ? "is-mine" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              style={
+                {
+                  "--actor-x": `${note.x}%`,
+                  "--actor-y": `${note.y}%`,
+                  "--actor-color": note.color || "var(--ink)",
+                } as CSSProperties
+              }
+              onClick={() => onFloorNoteOpen?.(note.id)}
+              aria-label={`${note.name}さんの置き手紙`}
+            >
+              <span className="workspace-floor-note-icon" aria-hidden="true">
+                ✉
+              </span>
+            </button>
+          ))}
+
+          {/* In-stage compact profile popover. Anchored near the tapped
+              actor so the room context stays visible behind it. */}
+          {selectedMemberId && memberPanel
+            ? (() => {
+                const target = members.find((m) => m.userId === selectedMemberId);
+                const anchorX = target ? target.x : 50;
+                const anchorY = target ? target.y : 50;
+                return (
+                  <>
+                    <button
+                      type="button"
+                      className="workspace-popover-backdrop"
+                      aria-label="閉じる"
+                      onClick={onPanelClose}
+                    />
+                    <div
+                      className={[
+                        "workspace-stage-popover",
+                        "workspace-member-popover",
+                        anchorX > 55 ? "anchor-right" : "",
+                        anchorY < 42 ? "anchor-below" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                      style={
+                        {
+                          "--anchor-x": `${anchorX}%`,
+                          "--anchor-y": `${anchorY}%`,
+                        } as CSSProperties
+                      }
+                      role="dialog"
+                      aria-modal="true"
+                    >
+                      {memberPanel}
+                    </div>
+                  </>
+                );
+              })()
+            : null}
+
+          {/* Floor-note detail / compose popover (centered). */}
+          {floorNotePanel ? (
+            <>
+              <button
+                type="button"
+                className="workspace-popover-backdrop"
+                aria-label="閉じる"
+                onClick={onPanelClose}
+              />
+              <div
+                className="workspace-stage-popover workspace-note-popover is-centered"
+                role="dialog"
+                aria-modal="true"
+              >
+                {floorNotePanel}
+              </div>
+            </>
+          ) : null}
+
+          {/* Monument detail popover (centered). */}
+          {monumentPanel ? (
+            <>
+              <button
+                type="button"
+                className="workspace-popover-backdrop"
+                aria-label="閉じる"
+                onClick={onPanelClose}
+              />
+              <div
+                className="workspace-stage-popover workspace-monument-popover is-centered"
+                role="dialog"
+                aria-modal="true"
+              >
+                {monumentPanel}
+              </div>
+            </>
+          ) : null}
         </div>
 
         <div className={`preset-message-panel ${isPresetTrayOpen ? "is-open" : ""}`}>
@@ -612,6 +854,17 @@ export function SilentWorkspaceRoom({
               <span aria-hidden="true" />
               <strong>{isPresetTrayOpen ? "閉じる" : "定型文"}</strong>
             </button>
+            {canDropFloorNote && isJoined && onComposeFloorNote ? (
+              <button
+                type="button"
+                className="floor-note-drop-button"
+                onClick={onComposeFloorNote}
+                aria-label="置き手紙を残す"
+              >
+                <span aria-hidden="true">✉</span>
+                <strong>置き手紙</strong>
+              </button>
+            ) : null}
           </div>
 
           {isPresetTrayOpen ? (

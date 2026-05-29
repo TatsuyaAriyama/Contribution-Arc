@@ -9814,6 +9814,263 @@
   filter: blur(2px);
 }
 
+/* ── Focus ring ──────────────────────────────────────────────────
+   A pomodoro-style halo lying flat on the ground at the actor's feet.
+   The conic-gradient sweep is driven by `--focus-progress` (0..1) and
+   masked into a thin ring. Tilted on the X axis so it reads as a circle
+   drawn on the floor rather than a flat disc facing the camera. */
+.actor-focus-ring {
+  position: absolute;
+  top: 33px;
+  left: 50%;
+  width: 58px;
+  height: 58px;
+  margin-left: -29px;
+  border-radius: 50%;
+  transform: perspective(140px) rotateX(60deg);
+  background: conic-gradient(
+    from -90deg,
+    var(--actor-color) calc(var(--focus-progress, 0) * 360deg),
+    rgba(var(--ink-rgb), 0.08) 0
+  );
+  -webkit-mask: radial-gradient(closest-side, transparent 70%, #000 72%);
+  mask: radial-gradient(closest-side, transparent 70%, #000 72%);
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Deeper focus (50min+): bolder, fully opaque ring. */
+.actor-focus-ring.is-deep {
+  opacity: 0.78;
+  width: 62px;
+  height: 62px;
+  margin-left: -31px;
+  top: 31px;
+}
+
+/* On break: dim, desaturated, and frozen at its current fill. */
+.actor-focus-ring.is-paused {
+  opacity: 0.22;
+  filter: grayscale(1);
+}
+
+/* Cycle completion: a quiet swell of light. */
+.actor-focus-ring.is-pulsing {
+  animation: actor-focus-pulse 1.8s ease-out infinite;
+}
+
+@keyframes actor-focus-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: perspective(140px) rotateX(60deg) scale(1);
+  }
+  50% {
+    opacity: 0.95;
+    transform: perspective(140px) rotateX(60deg) scale(1.14);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .actor-focus-ring.is-pulsing {
+    animation: none;
+  }
+}
+
+/* ── Milestone monuments (記念碑) ─────────────────────────────────
+   Small stones standing in the room, behind the actors, as a record of
+   members' achievements. */
+.workspace-monument {
+  position: absolute;
+  left: var(--actor-x);
+  top: var(--actor-y);
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+}
+
+.workspace-monument-stone {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 36px;
+  border-radius: 12px 12px 6px 6px;
+  background: linear-gradient(
+    180deg,
+    rgba(var(--surface-rgb), 0.96),
+    rgba(var(--ink-rgb), 0.14)
+  );
+  border: 1px solid rgba(var(--ink-rgb), 0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(var(--surface-rgb), 0.9),
+    0 6px 12px rgba(var(--ink-rgb), 0.14);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.workspace-monument::after {
+  /* a small colored plaque at the base, tinted to the owner's color */
+  content: "";
+  position: absolute;
+  bottom: -3px;
+  width: 22px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--actor-color);
+  opacity: 0.5;
+}
+
+.workspace-monument-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.workspace-monument:hover .workspace-monument-stone,
+.workspace-monument:focus-visible .workspace-monument-stone {
+  transform: translateY(-3px);
+  box-shadow:
+    inset 0 1px 0 rgba(var(--surface-rgb), 0.9),
+    0 10px 18px rgba(var(--ink-rgb), 0.2);
+}
+
+/* ── Floor notes (置き手紙) ──────────────────────────────────────── */
+.workspace-floor-note {
+  position: absolute;
+  left: var(--actor-x);
+  top: var(--actor-y);
+  z-index: 3;
+  display: grid;
+  justify-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+}
+
+.workspace-floor-note-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 21px;
+  border-radius: 5px;
+  background: var(--actor-color);
+  color: #fff;
+  font-size: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 5px 10px rgba(var(--ink-rgb), 0.2);
+  transition: transform 0.18s ease;
+}
+
+.workspace-floor-note:hover .workspace-floor-note-icon,
+.workspace-floor-note:focus-visible .workspace-floor-note-icon {
+  transform: translateY(-2px) scale(1.06);
+}
+
+.workspace-floor-note.is-unread .workspace-floor-note-icon {
+  animation: floor-note-glow 2.2s ease-in-out infinite;
+}
+
+@keyframes floor-note-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 5px 10px rgba(var(--ink-rgb), 0.2),
+      0 0 0 0 rgba(245, 180, 80, 0);
+  }
+  50% {
+    box-shadow:
+      0 5px 10px rgba(var(--ink-rgb), 0.2),
+      0 0 16px 3px rgba(245, 180, 80, 0.75);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-floor-note.is-unread .workspace-floor-note-icon {
+    animation: none;
+    box-shadow:
+      0 5px 10px rgba(var(--ink-rgb), 0.2),
+      0 0 12px 2px rgba(245, 180, 80, 0.6);
+  }
+}
+
+/* ── In-stage popovers (profile / note / monument) ──────────────── */
+.workspace-popover-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  padding: 0;
+  border: 0;
+  background: rgba(var(--ink-rgb), 0.06);
+  cursor: default;
+  animation: workspace-popover-fade 0.18s ease;
+}
+
+@keyframes workspace-popover-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.workspace-stage-popover {
+  position: absolute;
+  z-index: 21;
+  animation: workspace-popover-rise 0.2s ease;
+}
+
+@keyframes workspace-popover-rise {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% - 6px));
+  }
+}
+
+.workspace-member-popover {
+  left: var(--anchor-x);
+  top: var(--anchor-y);
+  width: min(300px, 80vw);
+  transform: translate(-50%, calc(-100% - 18px));
+}
+
+.workspace-member-popover.anchor-below {
+  top: var(--anchor-y);
+  transform: translate(-50%, 34px);
+  animation: none;
+}
+
+.workspace-member-popover.anchor-right {
+  transform: translate(calc(-50% - 70px), calc(-100% - 18px));
+}
+
+.workspace-member-popover.anchor-right.anchor-below {
+  transform: translate(calc(-50% - 70px), 34px);
+}
+
+.workspace-stage-popover.is-centered {
+  left: 50%;
+  top: 50%;
+  width: min(330px, 84vw);
+  transform: translate(-50%, -50%);
+  animation: workspace-popover-pop 0.2s ease;
+}
+
+@keyframes workspace-popover-pop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -46%) scale(0.96);
+  }
+}
+
 .actor-sprite {
   position: relative;
   display: block;
@@ -10725,6 +10982,379 @@
   box-shadow:
     0 18px 42px rgba(var(--ink-rgb), 0.1),
     0 0 0 4px rgba(31, 111, 74, 0.05);
+}
+
+/* 置き手紙 drop button — sits beside the 定型文 toggle in the stage
+   footer. Same pill styling, with an envelope glyph. */
+.floor-note-drop-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid rgba(31, 111, 74, 0.14);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(var(--surface-rgb), 0.96), rgba(var(--surface-rgb), 0.84)),
+    var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 880;
+  box-shadow:
+    0 14px 34px rgba(var(--ink-rgb), 0.08),
+    inset 0 1px 0 rgba(var(--surface-rgb), 0.86);
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.floor-note-drop-button span {
+  font-size: 14px;
+}
+
+.floor-note-drop-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(31, 111, 74, 0.28);
+  box-shadow:
+    0 18px 42px rgba(var(--ink-rgb), 0.1),
+    0 0 0 4px rgba(31, 111, 74, 0.05);
+}
+
+/* ── Compact in-room profile card (shown in the stage popover) ──── */
+.room-member-card {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
+  background: var(--surface);
+  box-shadow:
+    0 24px 60px rgba(var(--ink-rgb), 0.16),
+    inset 0 1px 0 rgba(var(--surface-rgb), 0.9);
+}
+
+.room-member-card-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(var(--ink-rgb), 0.06);
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.room-member-card-close:hover {
+  background: rgba(var(--ink-rgb), 0.12);
+}
+
+.room-member-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.room-member-card-head .profile-character-preview {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  flex: 0 0 auto;
+}
+
+.room-member-card-identity {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.room-member-card-identity h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--ink-strong);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.room-member-card-identity small {
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.room-member-card-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.room-member-card-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+.room-member-card-status i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.room-member-card-status.is-friend {
+  background: rgba(31, 111, 74, 0.12);
+  color: var(--green);
+}
+
+.room-member-card-status.is-pending {
+  background: rgba(245, 180, 80, 0.16);
+  color: #b07b14;
+}
+
+.room-member-card-status.is-stranger {
+  background: rgba(var(--ink-rgb), 0.07);
+  color: var(--muted);
+}
+
+.room-member-card-now {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(var(--ink-rgb), 0.04);
+}
+
+.room-member-card-now-task {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.room-member-card-now-task strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 850;
+  color: var(--ink-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-member-card-now-task strong i {
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+  flex: 0 0 auto;
+}
+
+.room-member-card-now-task small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.room-member-card-now-exp {
+  text-align: right;
+  flex: 0 0 auto;
+}
+
+.room-member-card-now-exp span {
+  display: block;
+  font-size: 9.5px;
+  font-weight: 800;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.room-member-card-now-exp strong {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--green);
+}
+
+.room-member-card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.room-member-card-actions button {
+  flex: 1;
+  min-height: 38px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--green);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 850;
+  cursor: pointer;
+  transition: filter 0.18s ease;
+}
+
+.room-member-card-actions button:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.room-member-card-actions button:disabled {
+  background: rgba(var(--ink-rgb), 0.08);
+  color: var(--muted);
+  cursor: default;
+}
+
+.room-member-card-actions button.is-secondary {
+  background: rgba(var(--ink-rgb), 0.06);
+  color: var(--ink);
+}
+
+.room-member-card-message {
+  margin: 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--green);
+}
+
+/* ── Floor-note compose / detail card ──────────────────────────── */
+.room-note-card,
+.room-monument-card {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
+  background: var(--surface);
+  box-shadow:
+    0 24px 60px rgba(var(--ink-rgb), 0.16),
+    inset 0 1px 0 rgba(var(--surface-rgb), 0.9);
+}
+
+.room-note-card-kicker,
+.room-monument-card-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 850;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.room-note-card-author {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 850;
+  color: var(--ink-strong);
+}
+
+.room-note-card-author i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.room-note-card-body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.room-note-card-time {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.room-note-card textarea {
+  width: 100%;
+  min-height: 88px;
+  padding: 10px 12px;
+  border: 1px solid rgba(var(--ink-rgb), 0.12);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.room-note-card-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.room-note-card-actions button {
+  min-height: 38px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.room-note-card-actions .is-primary {
+  background: var(--green);
+  color: #fff;
+}
+
+.room-note-card-actions .is-primary:disabled {
+  background: rgba(var(--ink-rgb), 0.08);
+  color: var(--muted);
+  cursor: default;
+}
+
+.room-note-card-actions .is-ghost {
+  background: rgba(var(--ink-rgb), 0.06);
+  color: var(--ink);
+}
+
+.room-note-card-actions .is-danger {
+  background: rgba(214, 69, 69, 0.1);
+  color: #c0392b;
+}
+
+.room-monument-card-icon {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.room-monument-card h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--ink-strong);
+}
+
+.room-monument-card p {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--muted);
 }
 
 .seat-label-editor {

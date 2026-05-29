@@ -107,6 +107,27 @@ service cloud.firestore {
         && resource.data.createdBy == request.auth.uid;
       allow delete: if signedIn()
         && resource.data.createdBy == request.auth.uid;
+
+      // 置き手紙 (floor notes): short messages members leave on the room
+      // floor. Anyone signed in may read them (they're meant to be found
+      // by the next person to enter). Authors may create their own and
+      // delete their own; no edits. Text + coords are validated so a
+      // client regression can't write arbitrary documents.
+      match /notes/{noteId} {
+        allow read: if signedIn();
+        allow create: if signedIn()
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 200
+          && request.resource.data.x is number
+          && request.resource.data.y is number
+          && request.resource.data.createdAt is string
+          && request.resource.data.expiresAt is string;
+        allow update: if false;
+        allow delete: if signedIn()
+          && resource.data.userId == request.auth.uid;
+      }
     }
 
     match /rooms/{roomId} {
