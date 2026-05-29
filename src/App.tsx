@@ -14925,12 +14925,12 @@ function App() {
                 </span>
               </div>
               <p className="shop-feed-bonus-copy">
-                ログを 1 日 1 回投稿すると +50 Arc。累計 500 Arc までもらえます。
+                FEEDを 1 日 1 回投稿すると +50 Arc。累計 500 Arc までもらえます。
                 {feedRewardArcEarned >= 500
                   ? "上限に到達しました。ありがとうございます！"
                   : lastFeedRewardDate === todayDateKey
                     ? "今日の分は受け取り済み。明日また投稿してみてください。"
-                    : "今日はまだ受け取っていません。ログを投稿してみてください。"}
+                    : "今日はまだ受け取っていません。FEEDを投稿してみてください。"}
               </p>
               <div
                 className="shop-feed-bonus-bar"
