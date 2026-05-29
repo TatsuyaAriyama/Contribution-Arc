@@ -9502,7 +9502,10 @@ function App() {
     }));
   };
 
-  const playerStatusCard = (isInteractive = false) => (
+  const playerStatusCard = (isInteractive = false) => {
+    const hasGithub = Boolean(githubUsername || githubId);
+    const determinationText = determination?.trim() || "";
+    return (
     <article
       className={isInteractive ? "card status-card status-card-link" : "card status-card"}
       role={isInteractive ? "button" : undefined}
@@ -9522,11 +9525,52 @@ function App() {
     >
       <div className="card-kicker">Player Status</div>
       <div className="player-heading">
-        <span className="player-avatar">
-          {playerAvatar ? <img src={playerAvatar} alt="" /> : playerInitial}
+        <span className="player-avatar player-avatar-character">
+          {/* Show the user's chosen character silhouette here instead
+              of the bare photo / initial. The character is the user's
+              identity inside the workspace, so the status card should
+              reflect it. Photo (if uploaded) sits as a small inset
+              chip on the bottom-right. */}
+          <ProfileCharacterPreview
+            color={playerCharacterColor}
+            shape={playerCharacterShape}
+          />
+          {playerAvatar ? (
+            <span className="player-avatar-photo" aria-hidden="true">
+              <img src={playerAvatar} alt="" />
+            </span>
+          ) : null}
         </span>
-        <div>
-          <h2>{playerName} Lv.{levelState.level}</h2>
+        <div className="player-heading-text">
+          <h2>{playerName} <span className="player-level-badge">Lv.{levelState.level}</span></h2>
+          <div className="player-heading-chips">
+            {studyStreak > 0 ? (
+              <span className="player-chip player-chip-streak" title={`${studyStreak}日連続で学習中`}>
+                🔥 {studyStreak}日連続
+              </span>
+            ) : null}
+            {todayStudyMinutes > 0 ? (
+              <span className="player-chip player-chip-today">
+                今日 {formatStudyTimeJa(todayStudyMinutes)}
+              </span>
+            ) : null}
+            {currentOrganization ? (
+              <span className="player-chip player-chip-org" title={`${currentOrganization.name}所属`}>
+                🏢 {currentOrganization.name}
+              </span>
+            ) : null}
+            {hasGithub ? (
+              <span className="player-chip player-chip-github" title="GitHub 連携済み">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="11" height="11">
+                  <path
+                    fill="currentColor"
+                    d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.55v-2.04c-3.2.7-3.87-1.36-3.87-1.36-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.18-3.1-.12-.29-.51-1.46.11-3.04 0 0 .97-.31 3.18 1.18a11.06 11.06 0 0 1 5.79 0c2.21-1.5 3.18-1.18 3.18-1.18.62 1.58.23 2.75.12 3.04.74.81 1.18 1.84 1.18 3.1 0 4.43-2.7 5.4-5.27 5.68.41.36.78 1.06.78 2.13v3.15c0 .31.21.66.8.55C20.21 21.39 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z"
+                  />
+                </svg>
+                {githubUsername || "GitHub"}
+              </span>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -9567,8 +9611,25 @@ function App() {
           <span>PRs</span>
         </div>
       </div>
+
+      {/* Determination line. A one-sentence "what I'm aiming at"
+          declaration. Always present on the card (rendered as a
+          subtle quote block) so users keep their intention visible
+          every time they glance at status. Empty state nudges
+          editing. */}
+      <div className="player-determination">
+        <span>決意</span>
+        {determinationText ? (
+          <p>{determinationText}</p>
+        ) : (
+          <p className="player-determination-empty">
+            プロフィール設定で「決意」を一行書いておくと、起動時の合言葉になります。
+          </p>
+        )}
+      </div>
     </article>
-  );
+    );
+  };
 
   const postCard = (post: ContributionPostRecord, variant: "full" | "compact" = "full") => {
     const isLiked = post.likedUserIds.includes(currentUserUid);
@@ -9814,12 +9875,47 @@ function App() {
             shape={memberProfile.characterShape}
           />
           <div className="member-profile-identity">
-            <h2>{member.name}</h2>
-            <small>@{memberProfile.userId}</small>
-            <span className={`member-profile-status-chip ${connectionState}`}>
-              <i />
-              {connectionLabel}
-            </span>
+            {(() => {
+              const liveProfile = workspaceProfiles[member.userId];
+              const liveLevel = typeof liveProfile?.level === "number" ? liveProfile.level : null;
+              const liveStreak = typeof liveProfile?.streak === "number" ? liveProfile.streak : 0;
+              return (
+                <>
+                  <h2>
+                    {member.name}{" "}
+                    {liveLevel && liveLevel > 1 ? (
+                      <span className="player-level-badge">Lv.{liveLevel}</span>
+                    ) : null}
+                  </h2>
+                  <small>@{memberProfile.userId}</small>
+                  <div className="member-profile-chips">
+                    <span className={`member-profile-status-chip ${connectionState}`}>
+                      <i />
+                      {connectionLabel}
+                    </span>
+                    {liveStreak > 0 ? (
+                      <span className="player-chip player-chip-streak">🔥 {liveStreak}日連続</span>
+                    ) : null}
+                    {liveProfile?.githubUsername ? (
+                      <a
+                        className="player-chip player-chip-github player-chip-link"
+                        href={`https://github.com/${liveProfile.githubUsername}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="11" height="11">
+                          <path
+                            fill="currentColor"
+                            d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.55v-2.04c-3.2.7-3.87-1.36-3.87-1.36-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.18-3.1-.12-.29-.51-1.46.11-3.04 0 0 .97-.31 3.18 1.18a11.06 11.06 0 0 1 5.79 0c2.21-1.5 3.18-1.18 3.18-1.18.62 1.58.23 2.75.12 3.04.74.81 1.18 1.84 1.18 3.1 0 4.43-2.7 5.4-5.27 5.68.41.36.78 1.06.78 2.13v3.15c0 .31.21.66.8.55C20.21 21.39 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z"
+                          />
+                        </svg>
+                        {liveProfile.githubUsername}
+                      </a>
+                    ) : null}
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </header>
 
@@ -9897,6 +9993,19 @@ function App() {
         ? "is-pending"
         : "is-stranger";
 
+    // Pull the live profile snapshot (level / EXP / streak / GitHub
+     // username etc.) — the `profile` arg may carry only the public
+     // search-result fields, so we layer on whatever the workspace
+     // subscription has fetched so far. Falls back to the arg.
+    const liveProfile = workspaceProfiles[profile.uid] || profile;
+    const liveLevel = typeof liveProfile.level === "number" ? liveProfile.level : 1;
+    const liveStreak = typeof liveProfile.streak === "number" ? liveProfile.streak : 0;
+    const liveEffort = typeof liveProfile.effortExp === "number" ? liveProfile.effortExp : 0;
+    const liveOutput = typeof liveProfile.outputExp === "number" ? liveProfile.outputExp : 0;
+    const liveContribCount = typeof liveProfile.contributionCount === "number" ? liveProfile.contributionCount : 0;
+    const liveGithubUrl = liveProfile.githubUsername
+      ? `https://github.com/${liveProfile.githubUsername}`
+      : githubUrl;
     return (
       <article className="card member-profile-card friend-profile-card">
         <header className="member-profile-hero">
@@ -9906,14 +10015,50 @@ function App() {
             shape={profile.characterShape}
           />
           <div className="member-profile-identity">
-            <h2>{profile.displayName}</h2>
+            <h2>
+              {profile.displayName}{" "}
+              {liveLevel > 1 ? <span className="player-level-badge">Lv.{liveLevel}</span> : null}
+            </h2>
             <small>@{profile.userId}</small>
-            <span className={`member-profile-status-chip ${connectionState}`}>
-              <i />
-              {connectionLabel}
-            </span>
+            <div className="member-profile-chips">
+              <span className={`member-profile-status-chip ${connectionState}`}>
+                <i />
+                {connectionLabel}
+              </span>
+              {liveStreak > 0 ? (
+                <span className="player-chip player-chip-streak">🔥 {liveStreak}日連続</span>
+              ) : null}
+              {liveProfile.githubUsername ? (
+                <span className="player-chip player-chip-github">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="11" height="11">
+                    <path
+                      fill="currentColor"
+                      d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.55v-2.04c-3.2.7-3.87-1.36-3.87-1.36-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.18-3.1-.12-.29-.51-1.46.11-3.04 0 0 .97-.31 3.18 1.18a11.06 11.06 0 0 1 5.79 0c2.21-1.5 3.18-1.18 3.18-1.18.62 1.58.23 2.75.12 3.04.74.81 1.18 1.84 1.18 3.1 0 4.43-2.7 5.4-5.27 5.68.41.36.78 1.06.78 2.13v3.15c0 .31.21.66.8.55C20.21 21.39 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z"
+                    />
+                  </svg>
+                  {liveProfile.githubUsername}
+                </span>
+              ) : null}
+            </div>
           </div>
         </header>
+
+        {liveEffort + liveOutput > 0 || liveContribCount > 0 ? (
+          <div className="member-profile-stats" aria-label="このユーザーの累計">
+            <div>
+              <strong>{liveEffort.toLocaleString()}</strong>
+              <span>Effort</span>
+            </div>
+            <div>
+              <strong>{liveOutput.toLocaleString()}</strong>
+              <span>Output</span>
+            </div>
+            <div>
+              <strong>{liveContribCount.toLocaleString()}</strong>
+              <span>commits</span>
+            </div>
+          </div>
+        ) : null}
 
         <div className="profile-resolve-panel">
           <span>決意</span>
@@ -9929,9 +10074,9 @@ function App() {
               承認する
             </button>
           ) : null}
-          {githubUrl ? (
-            <a href={githubUrl} target="_blank" rel="noreferrer">
-              GitHub
+          {liveGithubUrl ? (
+            <a href={liveGithubUrl} target="_blank" rel="noreferrer">
+              GitHub →
             </a>
           ) : null}
         </div>
@@ -13536,6 +13681,112 @@ function App() {
             ) : (
               <>
                 {playerStatusCard(false)}
+
+                {/* Quick actions row — profile-screen specific. Lets
+                    the user jump straight to common follow-ups
+                    (edit settings, copy profile share link, shop)
+                    without scrolling the whole modal stack. */}
+                <div className="profile-quick-actions" role="group" aria-label="クイックアクション">
+                  <button
+                    type="button"
+                    className="profile-quick-action"
+                    onClick={handleSettingsOpen}
+                  >
+                    <span aria-hidden="true">✏️</span>
+                    プロフィールを編集
+                  </button>
+                  <button
+                    type="button"
+                    className="profile-quick-action"
+                    onClick={() => setCurrentView("shop")}
+                  >
+                    <span aria-hidden="true">🛍</span>
+                    ショップ
+                  </button>
+                  {userId ? (
+                    <button
+                      type="button"
+                      className="profile-quick-action"
+                      onClick={() => {
+                        const baseUrl = `${window.location.origin}${window.location.pathname}`;
+                        const url = `${baseUrl}?u=${encodeURIComponent(userId)}`;
+                        try {
+                          void navigator.clipboard.writeText(url);
+                          showToast("プロフィールリンクをコピーしました", { kind: "success" });
+                        } catch {
+                          window.prompt("プロフィールリンク（コピーしてください）", url);
+                        }
+                      }}
+                    >
+                      <span aria-hidden="true">🔗</span>
+                      プロフィールリンクをコピー
+                    </button>
+                  ) : null}
+                </div>
+
+                {/* Lifetime stats — sum of every recorded study
+                    minute (regardless of week) plus the most-
+                    invested subjects. The aggregate is cheap
+                    (linear in studyLogs, capped client-side).
+                    Hidden when there's literally nothing to show
+                    so a new account doesn't see a wall of zeros. */}
+                {(() => {
+                  const lifetimeMinutes = studyLogs.reduce((acc, log) => acc + log.minutes, 0);
+                  if (lifetimeMinutes === 0 && studyLogs.length === 0) return null;
+                  const subjectTotals = new Map<string, number>();
+                  studyLogs.forEach((log) => {
+                    const key = log.subject || "Deep Work";
+                    subjectTotals.set(key, (subjectTotals.get(key) || 0) + log.minutes);
+                  });
+                  const topSubjects = Array.from(subjectTotals.entries())
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 3);
+                  const firstLog = studyLogs.length > 0
+                    ? new Date(studyLogs[0].createdAt).getTime()
+                    : Date.now();
+                  const daysSince = Math.max(
+                    1,
+                    Math.floor((Date.now() - firstLog) / (24 * 60 * 60 * 1000)),
+                  );
+                  return (
+                    <article className="profile-lifetime-card" aria-label="累計の足跡">
+                      <header className="profile-lifetime-head">
+                        <p className="card-kicker">Lifetime</p>
+                        <h3>これまでの積み上げ</h3>
+                      </header>
+                      <div className="profile-lifetime-metrics">
+                        <div>
+                          <small>累計学習</small>
+                          <strong>{formatStudyTimeJa(lifetimeMinutes)}</strong>
+                        </div>
+                        <div>
+                          <small>記録日数</small>
+                          <strong>{daysSince}日</strong>
+                        </div>
+                        <div>
+                          <small>記録件数</small>
+                          <strong>{studyLogs.length.toLocaleString()}</strong>
+                        </div>
+                      </div>
+                      {topSubjects.length > 0 ? (
+                        <div className="profile-lifetime-subjects">
+                          <p className="profile-lifetime-subjects-head">よく学んでいる対象</p>
+                          <ol>
+                            {topSubjects.map(([subject, minutes], index) => (
+                              <li key={subject}>
+                                <span className="profile-lifetime-rank">{index + 1}</span>
+                                <strong>{subject}</strong>
+                                <span className="profile-lifetime-minutes">
+                                  {formatStudyTimeJa(minutes)}
+                                </span>
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
+                      ) : null}
+                    </article>
+                  );
+                })()}
 
                 <div className="profile-panel-stack">
                   <article className="card hours-card weekly-card is-compact">

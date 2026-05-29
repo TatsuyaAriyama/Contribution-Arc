@@ -5690,6 +5690,356 @@
   font-size: 18px;
 }
 
+/* Character-sprite variant of the player avatar — used in the
+   profile status card. Renders the user's selected character
+   silhouette in their chosen color so the card communicates
+   "this is me in the workspace" at a glance. The optional photo
+   inset sits in the bottom-right corner as a small chip. */
+.player-avatar-character {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  padding: 4px;
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(31, 111, 74, 0.12), rgba(var(--tint-soft-rgb), 0.3)),
+    var(--surface);
+}
+
+.player-avatar-character .profile-character-preview {
+  width: 100%;
+  height: 100%;
+}
+
+.player-avatar-photo {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--bg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+.player-avatar-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.player-heading-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.player-level-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(31, 111, 74, 0.12);
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 850;
+  letter-spacing: 0.02em;
+  margin-left: 4px;
+  vertical-align: 4px;
+}
+
+.player-heading-chips,
+.member-profile-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+/* Generic info chip used for streak / today / org / GitHub badges
+   on both the self-status card and the other-user profile cards.
+   Same shape across surfaces so the visual language stays
+   consistent. */
+.player-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 11.5px;
+  font-weight: 800;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.player-chip-streak {
+  border-color: rgba(220, 110, 50, 0.28);
+  background: rgba(220, 110, 50, 0.08);
+  color: #b35a18;
+}
+
+.player-chip-today {
+  border-color: rgba(31, 111, 74, 0.24);
+  background: rgba(31, 111, 74, 0.08);
+  color: var(--green);
+}
+
+.player-chip-org {
+  border-color: rgba(60, 130, 200, 0.28);
+  background: rgba(60, 130, 200, 0.08);
+  color: #2563eb;
+}
+
+.player-chip-github {
+  color: var(--ink-strong);
+}
+
+.player-chip-github svg {
+  flex: 0 0 auto;
+}
+
+.player-chip-link {
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.player-chip-link:hover {
+  background: var(--bg);
+  border-color: rgba(var(--ink-rgb), 0.24);
+}
+
+[data-theme="dark"] .player-chip-streak {
+  border-color: rgba(255, 170, 100, 0.32);
+  background: rgba(255, 170, 100, 0.1);
+  color: #ffb478;
+}
+
+[data-theme="dark"] .player-chip-today {
+  border-color: rgba(74, 222, 128, 0.32);
+  background: rgba(74, 222, 128, 0.1);
+  color: var(--green);
+}
+
+[data-theme="dark"] .player-chip-org {
+  border-color: rgba(96, 165, 250, 0.32);
+  background: rgba(96, 165, 250, 0.1);
+  color: #93c5fd;
+}
+
+/* 決意 panel rendered on the self-status card. Sits below the
+   contribution summary; muted background frames the user's
+   one-line declaration. Empty state shows a nudge to set it. */
+.player-determination {
+  display: grid;
+  gap: 4px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--green);
+  border-radius: 8px 12px 12px 8px;
+  background: rgba(31, 111, 74, 0.06);
+}
+
+.player-determination > span {
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.player-determination p {
+  margin: 0;
+  color: var(--ink-strong);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.player-determination-empty {
+  color: var(--muted) !important;
+  font-style: italic;
+  font-size: 12.5px !important;
+}
+
+/* Stats row on other-user profile cards — sits between identity
+   and the resolve panel. Same 3-column rhythm as the self-card's
+   contribution-summary so a side-by-side compare feels native. */
+.member-profile-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.member-profile-stats div {
+  display: grid;
+  gap: 2px;
+  text-align: center;
+}
+
+.member-profile-stats strong {
+  color: var(--ink-strong);
+  font-size: 18px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.member-profile-stats span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Quick action row on the dedicated profile screen — three pill
+   buttons (edit / shop / copy share link) so the user can act on
+   the status they're looking at without scrolling. */
+.profile-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.profile-quick-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.profile-quick-action:hover {
+  background: var(--bg);
+  border-color: rgba(31, 111, 74, 0.32);
+  transform: translateY(-1px);
+}
+
+.profile-quick-action span[aria-hidden="true"] {
+  font-size: 14px;
+}
+
+/* Lifetime stats card on the profile screen. Aggregates every
+   recorded study minute + the 3 most-invested subjects so the
+   user sees their long-run track record (not just the weekly
+   chart above). */
+.profile-lifetime-card {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 18px 20px;
+  border: 1px solid var(--line-strong);
+  border-radius: 22px;
+  background:
+    radial-gradient(120% 80% at 100% 0%, rgba(31, 111, 74, 0.06), transparent 60%),
+    var(--surface-warm);
+}
+
+.profile-lifetime-head h3 {
+  margin: 4px 0 0;
+  color: var(--ink-strong);
+  font-size: 19px;
+  font-weight: 900;
+}
+
+.profile-lifetime-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.profile-lifetime-metrics div {
+  display: grid;
+  gap: 2px;
+}
+
+.profile-lifetime-metrics small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.profile-lifetime-metrics strong {
+  color: var(--ink-strong);
+  font-size: 22px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.profile-lifetime-subjects-head {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.profile-lifetime-subjects ol {
+  display: grid;
+  gap: 8px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.profile-lifetime-subjects li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.profile-lifetime-rank {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(31, 111, 74, 0.12);
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.profile-lifetime-subjects strong {
+  color: var(--ink-strong);
+  font-size: 13.5px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-lifetime-minutes {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
 .player-avatar img,
 .settings-avatar-preview img,
 .presence-avatar img {
