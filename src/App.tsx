@@ -8464,21 +8464,17 @@ function App() {
     setOpenMonumentId(null);
   };
 
-  // Tapping an avatar *inside the workspace room*. Other members open a
-  // compact in-stage profile card; tapping yourself still jumps to your
-  // full profile screen (there's nothing to "connect" with on yourself).
+  // Tapping an avatar *inside the workspace room*. Opens the same compact
+  // in-stage profile card for every member — including yourself — so the
+  // popover stays a consistent "tap a character to see who they are" gesture.
+  // The card swaps its friend-request affordances for an "あなた" label when
+  // the tapped member is the current user (see `roomMemberCompactCard`).
   const handleRoomMemberTap = (member: WorkspaceMember) => {
-    if (member.userId === currentUser.uid) {
-      setProfileMember(null);
-      setProfileUser(null);
-      setCurrentView("profile");
-      return;
-    }
     handleCloseRoomPanels();
     setFriendMessage("");
     setRoomMemberPanel(member);
     setRoomMemberPanelUser(null);
-    if (!member.userId.startsWith("npc-")) {
+    if (!member.userId.startsWith("npc-") && member.userId !== currentUser.uid) {
       void getDoc(doc(db, "users", member.userId))
         .then((snapshot) => {
           if (snapshot.exists()) {
@@ -10511,6 +10507,7 @@ function App() {
     const liveLevel = typeof liveProfile?.level === "number" ? liveProfile.level : null;
     const liveStreak = typeof liveProfile?.streak === "number" ? liveProfile.streak : 0;
 
+    const isSelf = member.userId === currentUser.uid;
     const pendingOutgoingRequest = friendRequests.find(
       (request) =>
         request.profile.uid === memberProfile.uid &&
@@ -10530,18 +10527,22 @@ function App() {
       friends.some((friend) => friend.uid === memberProfile.uid) || Boolean(acceptedRequest);
     const hasPendingRequest = Boolean(pendingOutgoingRequest || pendingIncomingRequest);
 
-    const connectionLabel = isFriend
-      ? "つながっています"
-      : pendingIncomingRequest
-        ? "申請が届いています"
-        : pendingOutgoingRequest
-          ? "承認待ち"
-          : "未接続";
-    const connectionState = isFriend
-      ? "is-friend"
-      : hasPendingRequest
-        ? "is-pending"
-        : "is-stranger";
+    const connectionLabel = isSelf
+      ? "あなた"
+      : isFriend
+        ? "つながっています"
+        : pendingIncomingRequest
+          ? "申請が届いています"
+          : pendingOutgoingRequest
+            ? "承認待ち"
+            : "未接続";
+    const connectionState = isSelf
+      ? "is-self"
+      : isFriend
+        ? "is-friend"
+        : hasPendingRequest
+          ? "is-pending"
+          : "is-stranger";
 
     return (
       <article className="room-member-card">
@@ -10594,27 +10595,29 @@ function App() {
         </div>
 
         <div className="room-member-card-actions">
-          <button
-            type="button"
-            disabled={isFriend || hasPendingRequest}
-            onClick={() => handleFriendRequest(memberProfile)}
-          >
-            {isFriend
-              ? "フレンド"
-              : pendingIncomingRequest
-                ? "申請が届いています"
-                : pendingOutgoingRequest
-                  ? "申請中"
-                  : "フレンド申請"}
-          </button>
-          {pendingIncomingRequest ? (
+          {isSelf ? null : (
+            <button
+              type="button"
+              disabled={isFriend || hasPendingRequest}
+              onClick={() => handleFriendRequest(memberProfile)}
+            >
+              {isFriend
+                ? "フレンド"
+                : pendingIncomingRequest
+                  ? "申請が届いています"
+                  : pendingOutgoingRequest
+                    ? "申請中"
+                    : "フレンド申請"}
+            </button>
+          )}
+          {!isSelf && pendingIncomingRequest ? (
             <button type="button" onClick={() => handleFriendAccept(pendingIncomingRequest)}>
               承認する
             </button>
           ) : null}
           <button
             type="button"
-            className="is-secondary"
+            className={isSelf ? undefined : "is-secondary"}
             onClick={() => {
               handleCloseRoomPanels();
               void handleMemberProfileOpen(member);

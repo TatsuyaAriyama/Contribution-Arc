@@ -11140,6 +11140,11 @@
   color: var(--muted);
 }
 
+.room-member-card-status.is-self {
+  background: rgba(var(--ink-rgb), 0.07);
+  color: var(--ink);
+}
+
 .room-member-card-now {
   display: flex;
   align-items: center;
