@@ -3675,6 +3675,9 @@ function App() {
   // 別にして、teams ビューの課金ボタンだけを無効化できるようにする。
   const [billingBusy, setBillingBusy] = useState<boolean>(false);
   const [newOrgName, setNewOrgName] = useState<string>("");
+  // Teams ランディングの「組織を作って始める」用の軽量モーダル。設定
+  // パネルの奥までスクロールさせずに、その場で組織名→作成まで完結させる。
+  const [isOrgCreateOpen, setIsOrgCreateOpen] = useState<boolean>(false);
   // Admin dashboard (Phase 2) — owner-only modal with members list,
   // aggregate metrics, CSV export. Members are loaded on demand
   // (not on every settings open) since the query is per-org.
@@ -8730,6 +8733,7 @@ function App() {
       const org = await createOrganization(db, currentUser.uid, playerName, name);
       setCurrentOrganization(org);
       setNewOrgName("");
+      setIsOrgCreateOpen(false);
       showToast(`組織「${org.name}」を作成しました`, { kind: "success" });
     } catch (error) {
       console.warn("Create org failed", error);
@@ -11622,6 +11626,73 @@ function App() {
           streak: studyStreak,
         }}
       />
+
+      {isOrgCreateOpen ? (
+        <div
+          className="settings-modal-backdrop"
+          role="presentation"
+          onClick={() => {
+            if (!isOrgWorking) setIsOrgCreateOpen(false);
+          }}
+        >
+          <section
+            className="settings-modal org-create-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="org-create-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div>
+              <p className="card-kicker">Teams</p>
+              <h2 id="org-create-modal-title">組織を作って始める</h2>
+              <p className="recruitment-modal-help">
+                チーム名を入れるだけで組織を作成できます。あとで招待リンクで仲間を招けます。
+              </p>
+            </div>
+
+            <form
+              className="settings-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void handleCreateOrganization();
+              }}
+            >
+              <label className="recruitment-field">
+                <span>チーム名 / 組織名</span>
+                <input
+                  autoFocus
+                  value={newOrgName}
+                  onChange={(event) => {
+                    setNewOrgName(event.target.value);
+                    if (orgError) setOrgError("");
+                  }}
+                  placeholder="例: Acme Inc."
+                  maxLength={64}
+                  aria-label="組織名"
+                />
+              </label>
+              {orgError ? <p className="settings-error">{orgError}</p> : null}
+              <div className="recruitment-modal-actions">
+                <button
+                  type="button"
+                  className="settings-org-leave"
+                  onClick={() => setIsOrgCreateOpen(false)}
+                  disabled={isOrgWorking}
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="submit"
+                  className="teams-cta-primary"
+                  disabled={isOrgWorking || !newOrgName.trim()}
+                >
+                  {isOrgWorking ? "作成中…" : "作成して始める →"}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      ) : null}
 
       {isRecruitmentModalOpen ? (
         <div className="settings-modal-backdrop" role="presentation" onClick={handleCloseRecruitmentModal}>
@@ -14551,7 +14622,11 @@ function App() {
                 <button
                   type="button"
                   className="teams-cta-primary"
-                  onClick={handleSettingsOpen}
+                  onClick={() => {
+                    setOrgError("");
+                    setNewOrgName("");
+                    setIsOrgCreateOpen(true);
+                  }}
                 >
                   組織を作って始める →
                 </button>
@@ -14838,7 +14913,11 @@ function App() {
                 <button
                   type="button"
                   className="teams-cta-primary"
-                  onClick={handleSettingsOpen}
+                  onClick={() => {
+                    setOrgError("");
+                    setNewOrgName("");
+                    setIsOrgCreateOpen(true);
+                  }}
                 >
                   組織を作って始める →
                 </button>

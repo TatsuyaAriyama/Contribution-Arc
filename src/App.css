@@ -20379,6 +20379,30 @@ body {
   margin-top: 8px;
 }
 
+/* 組織作成モーダル: settings-modal を継承しつつ、テキスト入力に
+   recruitment-field の見た目を当てる(プレーン input は対象外なため)。 */
+.org-create-modal .settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.org-create-modal .recruitment-field input {
+  font: inherit;
+  font-size: 14px;
+  border: 1px solid rgba(var(--ink-rgb), 0.12);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--ink, #111827);
+  background: var(--surface);
+}
+
+.org-create-modal .recruitment-field input:focus {
+  outline: none;
+  border-color: rgba(31, 111, 74, 0.5);
+}
+
 /* ============================================================
    Signature visual identity
    Aurora ambient backdrop, hairline focus accent, and a soft
