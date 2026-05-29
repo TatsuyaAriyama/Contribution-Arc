@@ -19929,50 +19929,172 @@ body {
 /* The old `.aurora-backdrop` (drifting corner gradients) was removed —
    light mode is now plain white, dark mode stays pure black. */
 
-[data-theme="dark"] .cursor-spotlight {
-  display: none;
-}
+/* Cursor spotlight — two-layer follow light (Linear / Stripe style).
+   .cursor-spotlight-core   tight dot, snaps to pointer 1:1.
+   .cursor-spotlight-aura   large soft halo, lerps behind pointer;
+                            scale responds to motion velocity so
+                            fast strokes briefly stretch into a wisp.
+   .cursor-spotlight-ripple expanding ring on every mousedown.
+   .is-hover on the parent (any clickable element underneath)
+                            contracts the core into a sharper dot
+                            and brightens the aura — telegraphs
+                            "this is interactive" without per-
+                            element CSS.
+   Dark mode now uses a phosphor-green palette instead of being
+   hidden entirely; the contrast against pure black makes the
+   light element feel premium without overwhelming the canvas. */
 
-/* Cursor spotlight — only on real cursors */
 @media (pointer: fine) {
   .cursor-spotlight {
     position: fixed;
     top: 0;
     left: 0;
-    width: 160px;
-    height: 160px;
-    margin: -80px 0 0 -80px;
+    width: 0;
+    height: 0;
     z-index: 1;
     pointer-events: none;
     opacity: 0;
-    background: radial-gradient(
-      closest-side,
-      rgba(31, 111, 74, 0.14),
-      rgba(31, 111, 74, 0.06) 40%,
-      transparent 72%
-    );
-    transform: translate3d(var(--spot-x, 50vw), var(--spot-y, 50vh), 0);
-    transition: opacity 480ms ease;
-    will-change: transform;
+    transition: opacity 320ms ease;
   }
 
   .cursor-spotlight.is-visible {
     opacity: 1;
   }
 
-  [data-theme="dark"] .cursor-spotlight {
+  .cursor-spotlight-core {
+    position: absolute;
+    left: -3px;
+    top: -3px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(31, 111, 74, 0.78);
+    box-shadow: 0 0 14px rgba(31, 111, 74, 0.45);
+    transform: translate3d(var(--core-x, 0px), var(--core-y, 0px), 0);
+    transition:
+      width 200ms cubic-bezier(0.4, 0, 0.2, 1),
+      height 200ms cubic-bezier(0.4, 0, 0.2, 1),
+      left 200ms cubic-bezier(0.4, 0, 0.2, 1),
+      top 200ms cubic-bezier(0.4, 0, 0.2, 1),
+      background-color 200ms ease,
+      box-shadow 200ms ease;
+    will-change: transform;
+  }
+
+  .cursor-spotlight-aura {
+    position: absolute;
+    left: -110px;
+    top: -110px;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
     background: radial-gradient(
       closest-side,
-      rgba(74, 222, 128, 0.12),
-      rgba(74, 222, 128, 0.05) 42%,
+      rgba(31, 111, 74, 0.18) 0%,
+      rgba(31, 111, 74, 0.09) 38%,
       transparent 72%
     );
+    transform: translate3d(var(--aura-x, 0px), var(--aura-y, 0px), 0)
+      scale(var(--aura-scale, 1));
+    will-change: transform;
+    mix-blend-mode: multiply;
+  }
+
+  .cursor-spotlight-ripple {
+    position: absolute;
+    left: -10px;
+    top: -10px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(31, 111, 74, 0.55);
+    pointer-events: none;
+    opacity: 0;
+    transform: translate3d(var(--ripple-x, 0px), var(--ripple-y, 0px), 0) scale(0.6);
+    will-change: transform, opacity;
+  }
+
+  .cursor-spotlight.is-clicking .cursor-spotlight-ripple {
+    animation: cursor-spotlight-ripple 540ms cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+  }
+
+  @keyframes cursor-spotlight-ripple {
+    0% {
+      transform: translate3d(var(--ripple-x), var(--ripple-y), 0) scale(0.6);
+      opacity: 0.75;
+      border-width: 1.5px;
+    }
+    100% {
+      transform: translate3d(var(--ripple-x), var(--ripple-y), 0) scale(6);
+      opacity: 0;
+      border-width: 0.5px;
+    }
+  }
+
+  /* Hover state: core contracts into a sharper accent, aura brightens.
+     The size transition (4 → 8 px) combined with the colour bump
+     reads as "the cursor is paying attention to this element". */
+  .cursor-spotlight.is-hover .cursor-spotlight-core {
+    left: -5px;
+    top: -5px;
+    width: 10px;
+    height: 10px;
+    background: rgba(31, 111, 74, 1);
+    box-shadow:
+      0 0 20px rgba(31, 111, 74, 0.7),
+      0 0 0 4px rgba(31, 111, 74, 0.1);
+  }
+
+  .cursor-spotlight.is-hover .cursor-spotlight-aura {
+    background: radial-gradient(
+      closest-side,
+      rgba(31, 111, 74, 0.24) 0%,
+      rgba(31, 111, 74, 0.12) 38%,
+      transparent 72%
+    );
+  }
+
+  /* Dark theme — phosphor-green palette. The blend mode flips to
+     `screen` so the additive glow lights up against pure black. */
+  [data-theme="dark"] .cursor-spotlight-core {
+    background: rgba(74, 222, 128, 0.85);
+    box-shadow: 0 0 16px rgba(74, 222, 128, 0.6);
+  }
+
+  [data-theme="dark"] .cursor-spotlight-aura {
+    background: radial-gradient(
+      closest-side,
+      rgba(74, 222, 128, 0.16) 0%,
+      rgba(74, 222, 128, 0.08) 40%,
+      transparent 72%
+    );
+    mix-blend-mode: screen;
+  }
+
+  [data-theme="dark"] .cursor-spotlight.is-hover .cursor-spotlight-core {
+    background: rgba(110, 231, 183, 1);
+    box-shadow:
+      0 0 22px rgba(110, 231, 183, 0.8),
+      0 0 0 4px rgba(110, 231, 183, 0.12);
+  }
+
+  [data-theme="dark"] .cursor-spotlight-ripple {
+    border-color: rgba(74, 222, 128, 0.55);
   }
 }
 
 @media (pointer: coarse) {
   .cursor-spotlight {
     display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor-spotlight-core {
+    transition: none;
+  }
+  .cursor-spotlight.is-clicking .cursor-spotlight-ripple {
+    animation: none;
   }
 }
 

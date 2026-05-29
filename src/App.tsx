@@ -4425,46 +4425,168 @@ function App() {
     }
   }, [theme]);
 
-  // Cursor spotlight — fine pointers only, throttled to rAF for cost
+  // Cursor spotlight — Linear / Stripe style two-layer cursor light.
+  //
+  // Layout:
+  //   .cursor-spotlight-core   — small dot following the pointer
+  //                              exactly (1:1, no lerp).
+  //   .cursor-spotlight-aura   — large soft halo lerping behind the
+  //                              cursor, scales with pointer velocity
+  //                              so fast motion stretches it into a
+  //                              comet-like wisp.
+  //   .cursor-spotlight-ripple — momentary expanding ring on every
+  //                              mousedown; pure CSS animation
+  //                              re-fired by toggling a class.
+  //
+  // The pointer position is fed as CSS variables on the parent so
+  // each child consumes them via transform: translate3d(var(--...)).
+  // body has `zoom: var(--ui-scale)` applied — see existing comment
+  // — so all coordinates are divided by that scale before being
+  // written into the variables.
+  //
+  // Interactive elements get a hover class so the cursor reads as
+  // "this is clickable" without needing a per-element CSS hover rule.
+  //
+  // prefers-reduced-motion gets a stripped-down path: lerp is
+  // disabled (aura tracks exactly), ripple does not fire.
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!window.matchMedia("(pointer: fine)").matches) return;
+    const el = spotlightRef.current;
+    if (!el) return;
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    let pointerX = window.innerWidth / 2;
+    let pointerY = window.innerHeight / 2;
+    let auraX = pointerX;
+    let auraY = pointerY;
+    let prevPointerX = pointerX;
+    let prevPointerY = pointerY;
+    // Damped velocity in 0..1 range — fed into the aura's CSS scale
+    // so the halo widens during fast strokes and contracts when the
+    // user pauses on a target.
+    let velocity = 0;
     let frame = 0;
-    let nextX = 0;
-    let nextY = 0;
-    const apply = () => {
-      const el = spotlightRef.current;
-      if (el) {
-        // body has `zoom: var(--ui-scale)` applied, but clientX/Y are raw
-        // viewport coords. position:fixed children of a zoomed ancestor get
-        // their `transform` translate values multiplied by that zoom, so we
-        // pre-divide here to keep the spotlight centered on the real cursor.
-        const scaleRaw = getComputedStyle(document.documentElement)
-          .getPropertyValue("--ui-scale")
-          .trim();
-        const scale = parseFloat(scaleRaw);
-        const z = Number.isFinite(scale) && scale > 0 ? scale : 1;
-        el.style.setProperty("--spot-x", `${nextX / z}px`);
-        el.style.setProperty("--spot-y", `${nextY / z}px`);
-        if (!el.classList.contains("is-visible")) el.classList.add("is-visible");
+    let isMoving = false;
+    let isVisible = false;
+    const lerpAmount = reducedMotion ? 1 : 0.18;
+    const velocityDecay = reducedMotion ? 0 : 0.85;
+    const velocityNorm = 28; // px/frame mapped to scale=1
+
+    const readScale = () => {
+      const raw = getComputedStyle(document.documentElement).getPropertyValue("--ui-scale").trim();
+      const parsed = parseFloat(raw);
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+    };
+
+    const tick = () => {
+      // Lerp aura toward pointer. With reducedMotion lerpAmount=1
+      // so it snaps exactly to pointer.
+      auraX += (pointerX - auraX) * lerpAmount;
+      auraY += (pointerY - auraY) * lerpAmount;
+
+      const stepX = pointerX - prevPointerX;
+      const stepY = pointerY - prevPointerY;
+      const stepVelocity = Math.min(1, Math.hypot(stepX, stepY) / velocityNorm);
+      velocity = velocity * velocityDecay + stepVelocity * (1 - velocityDecay);
+      prevPointerX = pointerX;
+      prevPointerY = pointerY;
+
+      const z = readScale();
+      el.style.setProperty("--core-x", `${pointerX / z}px`);
+      el.style.setProperty("--core-y", `${pointerY / z}px`);
+      el.style.setProperty("--aura-x", `${auraX / z}px`);
+      el.style.setProperty("--aura-y", `${auraY / z}px`);
+      // Aura scale 1.0 at rest, up to 1.6 at peak velocity. The
+      // stretch happens via scaleX too via the CSS class — kept on
+      // CSS side so the math stays declarative.
+      el.style.setProperty("--aura-scale", `${1 + velocity * 0.6}`);
+      el.style.setProperty("--aura-velocity", velocity.toFixed(3));
+
+      // Stop the rAF loop when the aura has settled. Restarts as
+      // soon as another mousemove arrives.
+      const settled = Math.abs(pointerX - auraX) < 0.4 && Math.abs(pointerY - auraY) < 0.4 && velocity < 0.01;
+      if (settled && !isMoving) {
+        frame = 0;
+        return;
       }
-      frame = 0;
+      frame = window.requestAnimationFrame(tick);
     };
+
+    const ensureRunning = () => {
+      if (!frame) frame = window.requestAnimationFrame(tick);
+    };
+
     const onMove = (event: MouseEvent) => {
-      nextX = event.clientX;
-      nextY = event.clientY;
-      if (!frame) frame = window.requestAnimationFrame(apply);
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+      isMoving = true;
+      if (!isVisible) {
+        isVisible = true;
+        // First show: snap aura to pointer so it doesn't fly in from
+        // (0, 0) on first render.
+        auraX = pointerX;
+        auraY = pointerY;
+        prevPointerX = pointerX;
+        prevPointerY = pointerY;
+        el.classList.add("is-visible");
+      }
+      ensureRunning();
+      // Mark moving inactive shortly after — the rAF loop checks
+      // this flag to decide whether to stop after settling.
+      window.clearTimeout(moveSettleTimer);
+      moveSettleTimer = window.setTimeout(() => {
+        isMoving = false;
+      }, 80);
     };
+
+    let moveSettleTimer = 0;
+
     const onLeave = () => {
-      const el = spotlightRef.current;
-      if (el) el.classList.remove("is-visible");
+      isVisible = false;
+      el.classList.remove("is-visible");
     };
+
+    // Hover detection — adds .is-hover when the pointer is over
+    // anything the user can click. Uses event delegation so we don't
+    // attach per-element listeners.
+    const HOVER_SELECTOR = "button, a, [role='button'], [role='tab'], [role='menuitem'], input, select, textarea, label, [data-cursor-hover]";
+    const onOver = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target?.closest) return;
+      if (target.closest(HOVER_SELECTOR)) {
+        if (!el.classList.contains("is-hover")) el.classList.add("is-hover");
+      } else {
+        if (el.classList.contains("is-hover")) el.classList.remove("is-hover");
+      }
+    };
+
+    const onDown = (event: MouseEvent) => {
+      if (reducedMotion) return;
+      const z = readScale();
+      el.style.setProperty("--ripple-x", `${event.clientX / z}px`);
+      el.style.setProperty("--ripple-y", `${event.clientY / z}px`);
+      // Restart the animation by toggling the class off → reflow →
+      // back on. Without the reflow the same animation doesn't
+      // re-trigger.
+      el.classList.remove("is-clicking");
+      void el.offsetWidth;
+      el.classList.add("is-clicking");
+    };
+
     window.addEventListener("mousemove", onMove, { passive: true });
     window.addEventListener("mouseleave", onLeave);
+    window.addEventListener("mouseover", onOver, { passive: true });
+    window.addEventListener("mousedown", onDown, { passive: true });
+
     return () => {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseleave", onLeave);
+      window.removeEventListener("mouseover", onOver);
+      window.removeEventListener("mousedown", onDown);
       if (frame) window.cancelAnimationFrame(frame);
+      if (moveSettleTimer) window.clearTimeout(moveSettleTimer);
     };
   }, []);
 
@@ -10369,7 +10491,11 @@ function App() {
       animate={{ opacity: 1, y: 0 }}
       transition={SPRING_SOFT}
     >
-      <div ref={spotlightRef} className="cursor-spotlight" aria-hidden="true" />
+      <div ref={spotlightRef} className="cursor-spotlight" aria-hidden="true">
+        <div className="cursor-spotlight-aura" />
+        <div className="cursor-spotlight-core" />
+        <div className="cursor-spotlight-ripple" />
+      </div>
       {isDesktopApp ? (
         <header className="desktop-app-header" aria-label="Contribution Arc desktop header">
           <div className="desktop-app-brand">
