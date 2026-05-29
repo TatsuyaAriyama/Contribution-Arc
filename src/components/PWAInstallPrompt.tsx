@@ -67,11 +67,8 @@ export function PWAInstallPrompt() {
     if (typeof window === "undefined") return;
     if (isStandalone() || alreadyAccepted() || dismissedForever()) return;
 
-    const handleEvent = (event: Event) => {
-      // Block the default mini-infobar — we render our own banner so the
-      // affordance matches the rest of the UI.
-      event.preventDefault();
-      setDeferred(event as BeforeInstallPromptEvent);
+    const reveal = (event: BeforeInstallPromptEvent) => {
+      setDeferred(event);
       window.setTimeout(() => {
         // Re-check standalone right before showing: the user may have
         // installed via the address-bar chip while we were waiting.
@@ -80,12 +77,26 @@ export function PWAInstallPrompt() {
       }, SHOW_DELAY_MS);
     };
 
+    // main.tsx may have already captured the event before React mounted.
+    const stash = window as unknown as { __arcDeferredInstallPrompt?: BeforeInstallPromptEvent };
+    if (stash.__arcDeferredInstallPrompt) {
+      reveal(stash.__arcDeferredInstallPrompt);
+    }
+
+    const handleEvent = (event: Event) => {
+      // Block the default mini-infobar — we render our own banner so the
+      // affordance matches the rest of the UI.
+      event.preventDefault();
+      reveal(event as BeforeInstallPromptEvent);
+    };
+
     const handleInstalled = () => {
       try {
         window.localStorage.setItem(ACCEPTED_KEY, "1");
       } catch {
         /* ignore */
       }
+      delete stash.__arcDeferredInstallPrompt;
       setVisible(false);
       setDeferred(null);
     };
@@ -113,6 +124,10 @@ export function PWAInstallPrompt() {
   const install = async () => {
     if (busy) return;
     setBusy(true);
+    // The deferred event is single-use; drop the stash so a remount
+    // doesn't try to replay an already-consumed prompt.
+    delete (window as unknown as { __arcDeferredInstallPrompt?: unknown })
+      .__arcDeferredInstallPrompt;
     try {
       await deferred.prompt();
       const choice = await deferred.userChoice;
