@@ -450,5 +450,30 @@ service cloud.firestore {
       allow delete: if signedIn()
         && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
     }
+
+    // 作業部屋への招待。friendRequests と同じ「受信者が自分の uid で
+    // 購読する」ターゲット配信モデル。送信者は自分を fromUid に縛られ、
+    // 受信者だけが status を accepted / declined に更新できる。fromUid /
+    // toUid / roomId は更新で書き換え不可。
+    match /workspaceInvites/{inviteId} {
+      allow read: if signedIn()
+        && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.fromUid == request.auth.uid
+        && request.resource.data.toUid is string
+        && request.resource.data.roomId is string
+        && request.resource.data.roomName is string
+        && request.resource.data.message is string
+        && request.resource.data.message.size() <= 140
+        && request.resource.data.status == "pending";
+      allow update: if signedIn()
+        && resource.data.toUid == request.auth.uid
+        && request.resource.data.fromUid == resource.data.fromUid
+        && request.resource.data.toUid == resource.data.toUid
+        && request.resource.data.roomId == resource.data.roomId
+        && (request.resource.data.status == "accepted" || request.resource.data.status == "declined");
+      allow delete: if signedIn()
+        && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
+    }
   }
 }

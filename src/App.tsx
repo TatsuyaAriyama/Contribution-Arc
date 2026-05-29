@@ -104,6 +104,12 @@ import {
   type WorkspaceRecruitmentRecord,
 } from "./services/workspaceRecruitments";
 import {
+  createWorkspaceInvite,
+  respondToWorkspaceInvite,
+  subscribeIncomingWorkspaceInvites,
+  type WorkspaceInviteRecord,
+} from "./services/workspaceInvites";
+import {
   WorkspaceRecruitmentFeedCard,
   type RecruitmentAuthor,
 } from "./components/feed/WorkspaceRecruitmentFeedCard";
@@ -502,7 +508,7 @@ type RoomCreateState = "idle" | "saving" | "saved" | "offline";
 
 type NotificationItem = {
   id: string;
-  type: "dailyLog" | "post" | "friendRequest" | "reply";
+  type: "dailyLog" | "post" | "friendRequest" | "reply" | "workspaceInvite";
   title: string;
   body: string;
   createdAt: string;
@@ -816,6 +822,7 @@ const notificationSoundSources = {
   post: `${import.meta.env.BASE_URL}sounds/notification-soft.mp3`,
   reply: `${import.meta.env.BASE_URL}sounds/notification-soft.mp3`,
   friendRequest: `${import.meta.env.BASE_URL}sounds/notification-soft.mp3`,
+  workspaceInvite: `${import.meta.env.BASE_URL}sounds/notification-soft.mp3`,
 } as const;
 const workspaceActorSlots = [
   { x: 28, y: 54 },
@@ -2042,6 +2049,7 @@ function readAppNotifications(scope: string): NotificationItem[] {
 function getNotificationSourceText(type: NotificationItem["type"]) {
   if (type === "dailyLog") return "日報";
   if (type === "post") return "投稿";
+  if (type === "workspaceInvite") return "作業部屋への招待";
   return "フレンド申請";
 }
 
@@ -3627,6 +3635,12 @@ function App() {
   // right = always-visible feed). Outside-click closes them, mirroring the
   // user-menu / notifications pattern just above.
   const [isFriendsPopoverOpen, setIsFriendsPopoverOpen] = useState(false);
+  // Full friends directory dialog (opened from the popover footer). Lets the
+  // user see every friend beyond the 8-row popover cap and send room invites.
+  const [isFriendsModalOpen, setIsFriendsModalOpen] = useState(false);
+  // Friends already invited this session — flips the per-row button to a
+  // settled "招待済み" state so the user can't spam-send.
+  const [invitedFriendUids, setInvitedFriendUids] = useState<Set<string>>(new Set());
   const friendsPopoverRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!isFriendsPopoverOpen) return;
@@ -3917,6 +3931,7 @@ function App() {
   const quickCaptureTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [timelineFilter, setTimelineFilter] = useState<"following" | "all">("all");
   const [workspaceRecruitments, setWorkspaceRecruitments] = useState<WorkspaceRecruitmentRecord[]>([]);
+  const [incomingInvites, setIncomingInvites] = useState<WorkspaceInviteRecord[]>([]);
   const [feedNowTick, setFeedNowTick] = useState(() => Date.now());
   const spotlightRef = useRef<HTMLDivElement | null>(null);
   const [isRecruitmentModalOpen, setIsRecruitmentModalOpen] = useState(false);
@@ -4148,6 +4163,9 @@ function App() {
       setFollowing([]);
       setFriends([]);
       setFriendRequests([]);
+      setIncomingInvites([]);
+      setInvitedFriendUids(new Set());
+      setIsFriendsModalOpen(false);
       setFriendMessage("");
       setIsNotificationsOpen(false);
       setLastNotificationReadAt("");
@@ -4677,6 +4695,23 @@ function App() {
     );
     return () => unsubscribe();
   }, [currentUser, isWorkspaceLoaded, isPageVisible]);
+
+  // Incoming workspace invites. Recipient-scoped (where toUid == me, status
+  // pending, limit 20) — same targeted-delivery shape as friendRequests.
+  // Pending invites surface as in-app notifications below; accepting one
+  // jumps the user into the inviter's room.
+  useEffect(() => {
+    if (!currentUser) {
+      return;
+    }
+    const unsubscribe = subscribeIncomingWorkspaceInvites(
+      db,
+      currentUser.uid,
+      (items) => setIncomingInvites(items),
+      (error) => console.info("Workspace invites sync skipped.", error),
+    );
+    return () => unsubscribe();
+  }, [currentUser]);
 
   useEffect(() => {
     // Tick at 1s when any active recruitment is visible so countdown text
@@ -7049,6 +7084,35 @@ function App() {
           desktopNotificationSettings.friendRequest,
         );
       });
+
+    incomingInvites
+      .filter((invite) => invite.status === "pending")
+      .forEach((invite) => {
+        const notificationId = `workspaceInvite:${invite.id}`;
+        if (seenNotificationKeysRef.current.has(notificationId)) {
+          return;
+        }
+
+        if (!isRecentEnough(invite.createdAt)) {
+          seenNotificationKeysRef.current.add(notificationId);
+          return;
+        }
+
+        pushAppNotification(
+          {
+            id: notificationId,
+            type: "workspaceInvite",
+            title: "作業部屋への招待",
+            body: `${invite.fromName}が「${invite.roomName}」に招待しました`,
+            createdAt: invite.createdAt,
+            read: false,
+            sourceUserId: invite.fromUid,
+          },
+          // Reuse the friend-request channel toggle — both are "someone
+          // reached out to you" notifications; no separate setting needed.
+          desktopNotificationSettings.friendRequest,
+        );
+      });
   }, [
     allWorkspaceRooms,
     currentUser,
@@ -7056,6 +7120,7 @@ function App() {
     desktopNotificationSettings,
     friendRequests,
     friends,
+    incomingInvites,
     isWorkspaceLoaded,
     notifiableUserIds,
     posts,
@@ -8482,6 +8547,78 @@ function App() {
     event.preventDefault();
     event.stopPropagation();
     void handleFriendAccept(request);
+  };
+
+  // Send a friend a targeted invite to the room the user currently has
+  // selected. Optimistically flips the row to "招待済み"; rolls back if the
+  // write fails so the user can retry.
+  const handleSendWorkspaceInvite = async (friend: FriendPreview) => {
+    if (!currentUser) return;
+    if (!selectedRoom) {
+      showToast("先に作業部屋を選んでください", { kind: "info" });
+      return;
+    }
+
+    setInvitedFriendUids((prev) => {
+      const next = new Set(prev);
+      next.add(friend.uid);
+      return next;
+    });
+
+    const invite: WorkspaceInviteRecord = {
+      id: crypto.randomUUID(),
+      fromUid: currentUser.uid,
+      fromName: playerName || "Developer",
+      toUid: friend.uid,
+      roomId: selectedRoom.id,
+      roomName: selectedRoom.name,
+      message: "",
+      status: "pending",
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      await createWorkspaceInvite(db, invite);
+      showToast(`${friend.name} を「${selectedRoom.name}」に招待しました`, { kind: "success" });
+    } catch (error) {
+      console.info("Workspace invite send skipped.", error);
+      setInvitedFriendUids((prev) => {
+        const next = new Set(prev);
+        next.delete(friend.uid);
+        return next;
+      });
+      showToast("招待を送れませんでした。時間をおいて再度お試しください", { kind: "error" });
+    }
+  };
+
+  // Accept an incoming invite: jump to the inviter's room and mark the
+  // invite accepted (which drops it from the pending snapshot).
+  const handleAcceptWorkspaceInvite = async (invite: WorkspaceInviteRecord) => {
+    setSelectedRoomId(invite.roomId);
+    setCurrentView("workspace");
+    setIsNotificationsOpen(false);
+    setAppNotifications((items) =>
+      items.map((item) =>
+        item.id === `workspaceInvite:${invite.id}` ? { ...item, read: true } : item,
+      ),
+    );
+
+    try {
+      await respondToWorkspaceInvite(db, invite.id, "accepted");
+    } catch (error) {
+      console.info("Workspace invite accept sync skipped.", error);
+    }
+
+    showToast(`「${invite.roomName}」へ移動しました`, { kind: "success" });
+  };
+
+  const handleNotificationInviteAccept = (
+    event: ReactMouseEvent<HTMLButtonElement>,
+    invite: WorkspaceInviteRecord,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    void handleAcceptWorkspaceInvite(invite);
   };
 
   const handleFriendOpen = (friend: FriendPreview) => {
@@ -11874,6 +12011,18 @@ function App() {
                     </div>
                   )}
                 </div>
+                {sidebarFriends.length > 0 ? (
+                  <button
+                    type="button"
+                    className="topbar-popover-foot"
+                    onClick={() => {
+                      setIsFriendsModalOpen(true);
+                      setIsFriendsPopoverOpen(false);
+                    }}
+                  >
+                    すべてのフレンドを見る・作業部屋に招待
+                  </button>
+                ) : null}
               </section>
             ) : null}
           </div>
@@ -11976,6 +12125,9 @@ function App() {
                       const friendRequest = friendRequests.find(
                         (request) => item.id === `friendRequest:${request.id}`,
                       );
+                      const workspaceInvite = incomingInvites.find(
+                        (invite) => item.id === `workspaceInvite:${invite.id}`,
+                      );
                       const sourceProfile = friendRequest?.profile || workspaceProfiles[item.sourceUserId];
 
                       return (
@@ -12023,6 +12175,15 @@ function App() {
                             onClick={(event) => handleNotificationFriendAccept(event, friendRequest)}
                           >
                             承認
+                          </button>
+                        ) : null}
+                        {workspaceInvite ? (
+                          <button
+                            type="button"
+                            className="notification-accept"
+                            onClick={(event) => handleNotificationInviteAccept(event, workspaceInvite)}
+                          >
+                            参加
                           </button>
                         ) : null}
                       </article>
@@ -12491,6 +12652,93 @@ function App() {
                 </button>
               </div>
             </form>
+          </section>
+        </div>
+      ) : null}
+
+      {isFriendsModalOpen ? (
+        <div
+          className="settings-modal-backdrop"
+          role="presentation"
+          onClick={() => setIsFriendsModalOpen(false)}
+        >
+          <section
+            className="settings-modal friends-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="friends-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="friends-modal-head">
+              <div>
+                <p className="card-kicker">Friends</p>
+                <h2 id="friends-modal-title">フレンド一覧</h2>
+              </div>
+              <button
+                type="button"
+                className="friends-modal-close"
+                aria-label="閉じる"
+                onClick={() => setIsFriendsModalOpen(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <p className="friends-modal-help">
+              {selectedRoom ? (
+                <>
+                  招待先の部屋: <strong>{selectedRoom.name}</strong>
+                </>
+              ) : (
+                "作業部屋を選ぶと、フレンドを招待できます。"
+              )}
+            </p>
+
+            <div className="friends-modal-list">
+              {sidebarFriends.length > 0 ? (
+                sidebarFriends.map((friend) => {
+                  const invited = invitedFriendUids.has(friend.uid);
+                  return (
+                    <div key={friend.uid} className="friends-modal-row">
+                      <button
+                        type="button"
+                        className="friends-modal-person"
+                        onClick={() => {
+                          handleFriendOpen(friend);
+                          setIsFriendsModalOpen(false);
+                        }}
+                      >
+                        <span className="friends-modal-avatar">
+                          {friend.avatar ? (
+                            <img src={friend.avatar} alt="" />
+                          ) : (
+                            friend.name.slice(0, 1).toUpperCase()
+                          )}
+                          <i className={`topbar-popover-dot ${friend.status}`} />
+                        </span>
+                        <span className="friends-modal-meta">
+                          <strong>{friend.name}</strong>
+                          {friend.userId ? <small>@{friend.userId}</small> : null}
+                          <small>{friend.activity}</small>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className="friends-modal-invite"
+                        disabled={!selectedRoom || invited}
+                        onClick={() => handleSendWorkspaceInvite(friend)}
+                      >
+                        {invited ? "招待済み" : "招待"}
+                      </button>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="friends-modal-empty">
+                  まだフレンドがいません。プロフィールから招待しましょう。
+                </p>
+              )}
+            </div>
           </section>
         </div>
       ) : null}
