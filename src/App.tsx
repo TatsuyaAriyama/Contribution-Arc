@@ -6373,26 +6373,65 @@ function App() {
   const githubUsername = githubProviderInfo
     ? githubLoginCached || syncedGithubUsername || githubProviderInfo.displayName || userId
     : "";
-  // Lazy-fetch the user's public GitHub contribution grid as soon as we
-  // know which login to query. The service handles its own 1h cache so
-  // re-mounts (route changes, hot reloads) don't re-hit the endpoint.
+  // Lazy-fetch the user's public GitHub contribution grid. If the first
+  // candidate (the resolved username above) doesn't exist on GitHub — which
+  // happens when displayName ≠ login — we transparently retry with the
+  // remaining candidates so a single bad fallback can't permanently break
+  // the grid. Successful candidates are persisted back to localStorage so
+  // subsequent mounts skip the retry.
+  const githubCandidatesKey = [
+    githubLoginCached,
+    syncedGithubUsername,
+    githubProviderInfo?.displayName || "",
+    userId,
+  ]
+    .filter(Boolean)
+    .join("|");
   useEffect(() => {
-    if (!githubUsername) return;
+    if (!githubProviderInfo) return;
+    const candidates = Array.from(
+      new Set(
+        [
+          githubLoginCached,
+          syncedGithubUsername,
+          githubProviderInfo.displayName || "",
+          userId,
+        ]
+          .map((value) => value.trim())
+          .filter(Boolean),
+      ),
+    );
+    if (candidates.length === 0) return;
     let cancelled = false;
     setGithubContributionsError(null);
-    fetchGithubContributions(githubUsername)
-      .then((data) => {
-        if (!cancelled) setGithubContributions(data);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        const message = err instanceof Error ? err.message : String(err);
-        setGithubContributionsError(message);
-      });
+    (async () => {
+      let lastError: unknown = null;
+      for (const candidate of candidates) {
+        try {
+          const data = await fetchGithubContributions(candidate);
+          if (cancelled) return;
+          setGithubContributions(data);
+          // Pin the working candidate so future mounts/devices skip the
+          // retry loop and the cloud-synced login converges to a real one.
+          if (currentUser && candidate !== githubLoginCached) {
+            safeSetLocalStorage(`ca:gh-login:${currentUser.uid}`, candidate);
+          }
+          if (candidate !== syncedGithubUsername) {
+            setSyncedGithubUsername(candidate);
+          }
+          return;
+        } catch (err) {
+          lastError = err;
+        }
+      }
+      if (cancelled) return;
+      const message = lastError instanceof Error ? lastError.message : String(lastError);
+      setGithubContributionsError(message);
+    })();
     return () => {
       cancelled = true;
     };
-  }, [githubUsername]);
+  }, [githubProviderInfo, githubCandidatesKey, currentUser, githubLoginCached, syncedGithubUsername, userId]);
   const totalWeeklyMinutes = weeklyStudyHours.reduce((sum, item) => sum + item.totalMinutes, 0);
   const todayStudyMinutes = weeklyStudyHours.find((item) => item.isToday)?.totalMinutes ?? 0;
   /* Phase 10d: クイック記録ポップオーバーに並べる「最近の対象」.
