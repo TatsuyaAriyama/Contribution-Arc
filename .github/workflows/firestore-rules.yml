@@ -1,0 +1,52 @@
+name: Deploy Firestore Rules
+
+# Pushes the Firestore security rules (and indexes) to the Firebase
+# project whenever they change on main. Without this, edits to
+# firestore.rules only ever live in the repo — they never reach Firebase
+# — so any feature relying on a new collection/rule (e.g. the workspace
+# 置き手紙 notes subcollection) fails with a permission error in prod.
+#
+# Setup (one-time): add a repository secret named FIREBASE_SERVICE_ACCOUNT
+# containing the JSON key of a service account with permission to deploy
+# Firestore rules (the default "Firebase Admin SDK" service account in
+# Project Settings → Service accounts → Generate new private key works).
+# After adding the secret you can run this workflow manually from the
+# Actions tab (Run workflow) to deploy immediately.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "firestore.rules"
+      - "firestore.indexes.json"
+      - "firebase.json"
+  workflow_dispatch:
+
+concurrency:
+  group: firestore-rules
+  cancel-in-progress: true
+
+jobs:
+  deploy-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Deploy Firestore rules & indexes
+        run: >-
+          npx --yes firebase-tools@13 deploy
+          --only firestore
+          --project github-contribution-rpg
+          --non-interactive
