@@ -318,7 +318,14 @@ service cloud.firestore {
         && (
           request.resource.data.ownerUid == resource.data.ownerUid
           || get(/databases/$(database)/documents/users/$(request.resource.data.ownerUid)).data.organizationId == orgId
-        );
+        )
+        // 課金フィールドはサーバ（Stripe webhook を受ける Cloud Function /
+        // admin SDK）専用。admin SDK はルールをバイパスするので、ここで
+        // クライアントからの書き換えを禁止しておくことで「UI からの自己
+        // アップグレード」を塞ぐ。planTier / stripeCustomerId /
+        // stripeSubscriptionId は client から変更不可。
+        && !request.resource.data.diff(resource.data).changedKeys()
+              .hasAny(["planTier", "stripeCustomerId", "stripeSubscriptionId"]);
       // 削除はオーナーのみ。Phase 1 MVP では UI から呼んでいないが
       // 将来の管理画面のために許可しておく。
       allow delete: if signedIn()

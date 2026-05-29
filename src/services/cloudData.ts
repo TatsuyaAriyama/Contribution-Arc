@@ -17,6 +17,7 @@ import {
 } from "firebase/firestore";
 
 import { guardedOnSnapshot, scheduleDocWrite } from "./firebaseGuard";
+import { normalizePlanTier, type PlanTier } from "./plans";
 
 export type StudyLogRecord = {
   id: string;
@@ -324,6 +325,11 @@ export type OrganizationRecord = {
   name: string;
   ownerUid: string;
   createdAt: string;
+  // 契約プラン。更新するのはサーバ(Stripe webhook を受ける Cloud
+  // Function 等)だけで、クライアントからは read-only として扱う
+  // (= UI から自己アップグレードさせない)。未設定は "free" 扱い。
+  // 詳細は src/services/plans.ts を参照。
+  planTier?: PlanTier;
   // Phase 3: outbound Slack integration. Empty string / undefined =
   // no integration. The owner manages this from the admin dashboard.
   // Phase 9 expanded the event taxonomy — older docs that only
@@ -574,6 +580,9 @@ export async function createOrganization(
     name: name.trim(),
     ownerUid,
     createdAt,
+    // 新規組織は free から。アップグレードは Stripe Checkout 経由で
+    // サーバが planTier を書き換える(クライアントは触らない)。
+    planTier: "free",
   };
 
   // Three writes, kept separate (not in a transaction) so the rule
@@ -742,6 +751,7 @@ export async function loadOrganization(
     name: data.name,
     ownerUid: data.ownerUid,
     createdAt: data.createdAt || new Date().toISOString(),
+    planTier: normalizePlanTier(data.planTier),
     slackWebhookUrl: typeof data.slackWebhookUrl === "string" ? data.slackWebhookUrl : undefined,
     slackEvents: data.slackEvents
       ? {
@@ -952,6 +962,7 @@ export async function acceptOrganizationInvite(
       name: orgData.name || invite.orgName,
       ownerUid: orgData.ownerUid,
       createdAt: orgData.createdAt || new Date().toISOString(),
+      planTier: normalizePlanTier(orgData.planTier),
     };
   });
 

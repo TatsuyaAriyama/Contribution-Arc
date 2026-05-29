@@ -120,6 +120,12 @@ import {
 } from "./services/persistentCache";
 import { fetchGithubContributions, type GithubContributions } from "./services/githubContributions";
 import { computeStudyStreak } from "./services/studyStreak";
+import { PLANS, getPlan, BETA_ALL_FEATURES_FREE, type PlanTier } from "./services/plans";
+import {
+  createCheckoutSession,
+  createPortalSession,
+  isBillingConfigured,
+} from "./services/billing";
 import { type AppView, type FriendPreview, type LiveActivity } from "./components/PremiumNavigation";
 import { SilentWorkspaceRoom, type RoomActivityItem } from "./components/SilentWorkspaceRoom";
 import { ArcPurchasePanel } from "./components/ArcPurchasePanel";
@@ -450,6 +456,9 @@ type Organization = {
   name: string;
   ownerUid: string;
   createdAt: string;
+  /** 契約プラン。サーバ(Stripe webhook)管理・クライアントは read-only。
+   *  未設定は free 扱い。詳細は src/services/plans.ts。 */
+  planTier?: PlanTier;
   slackWebhookUrl?: string;
   slackEvents?: {
     roomJoins?: boolean;
@@ -3638,6 +3647,9 @@ function App() {
   const [orgError, setOrgError] = useState<string>("");
   const [orgInviteToken, setOrgInviteToken] = useState<string>("");
   const [isOrgWorking, setIsOrgWorking] = useState<boolean>(false);
+  // Stripe Checkout / Portal への遷移中フラグ。組織管理(isOrgWorking)とは
+  // 別にして、teams ビューの課金ボタンだけを無効化できるようにする。
+  const [billingBusy, setBillingBusy] = useState<boolean>(false);
   const [newOrgName, setNewOrgName] = useState<string>("");
   // Admin dashboard (Phase 2) — owner-only modal with members list,
   // aggregate metrics, CSV export. Members are loaded on demand
@@ -8758,6 +8770,47 @@ function App() {
       setOrgError("退出に失敗しました。再度お試しください。");
     } finally {
       setIsOrgWorking(false);
+    }
+  };
+
+  // Stripe Checkout を開始。サーバ(callable)がセッション URL を返すので
+  // そこへ遷移する。座席数は現在のメンバー数を初期値として渡す(ユーザーは
+  // Stripe の画面でも調整できる)。決済情報・キーには一切触れない。
+  const handleStartCheckout = async (tier: "team" | "enterprise") => {
+    if (!currentUser || !currentOrganization || billingBusy) return;
+    if (currentOrganization.ownerUid !== currentUser.uid) return;
+    setBillingBusy(true);
+    try {
+      const seats = Math.max(1, orgMembers.length);
+      const { url } = await createCheckoutSession({
+        orgId: currentOrganization.id,
+        tier,
+        seats,
+      });
+      window.location.assign(url);
+    } catch (error) {
+      console.warn("Checkout failed", error);
+      showToast("決済ページを開けませんでした。時間をおいて再度お試しください。", {
+        kind: "error",
+      });
+    } finally {
+      setBillingBusy(false);
+    }
+  };
+
+  // 契約済み組織の請求ポータル(プラン変更・解約・領収書)を開く。
+  const handleManageBilling = async () => {
+    if (!currentUser || !currentOrganization || billingBusy) return;
+    if (currentOrganization.ownerUid !== currentUser.uid) return;
+    setBillingBusy(true);
+    try {
+      const { url } = await createPortalSession({ orgId: currentOrganization.id });
+      window.location.assign(url);
+    } catch (error) {
+      console.warn("Portal failed", error);
+      showToast("請求ポータルを開けませんでした。", { kind: "error" });
+    } finally {
+      setBillingBusy(false);
     }
   };
 
@@ -14141,6 +14194,59 @@ function App() {
             </div>
           </header>
 
+          {currentOrganization && currentOrganization.ownerUid === currentUser?.uid ? (
+            <section className="teams-plan-manage" aria-label="現在のプラン">
+              <div className="teams-plan-manage-head">
+                <p className="card-kicker">{currentOrganization.name} の現在のプラン</p>
+                <h2>{getPlan(currentOrganization.planTier ?? "free").name}</h2>
+                <p>{getPlan(currentOrganization.planTier ?? "free").tagline}</p>
+              </div>
+              <div className="teams-plan-manage-actions">
+                {BETA_ALL_FEATURES_FREE ? (
+                  <p className="teams-plan-manage-beta">
+                    β 期間中はすべての機能を無料でお使いいただけます。<br />
+                    正式版の開始時にプランの選択・お支払いが有効になります。
+                  </p>
+                ) : isBillingConfigured() ? (
+                  (currentOrganization.planTier ?? "free") === "free" ? (
+                    <>
+                      <button
+                        type="button"
+                        className="teams-cta-primary"
+                        onClick={() => handleStartCheckout("team")}
+                        disabled={billingBusy}
+                      >
+                        {billingBusy ? "処理中…" : "Team にアップグレード →"}
+                      </button>
+                      <a
+                        className="teams-cta-secondary"
+                        href="mailto:ari.initx@gmail.com?subject=Enterprise%20%E5%B0%8E%E5%85%A5%E7%9B%B8%E8%AB%87"
+                      >
+                        Enterprise を相談
+                      </a>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="teams-cta-primary"
+                      onClick={handleManageBilling}
+                      disabled={billingBusy}
+                    >
+                      {billingBusy ? "処理中…" : "請求・プランを管理 →"}
+                    </button>
+                  )
+                ) : (
+                  <a
+                    className="teams-cta-secondary"
+                    href="mailto:ari.initx@gmail.com?subject=Contribution%20Arc%20for%20Teams%20%E5%B0%8E%E5%85%A5%E7%9B%B8%E8%AB%87"
+                  >
+                    アップグレードの相談（メール）
+                  </a>
+                )}
+              </div>
+            </section>
+          ) : null}
+
           <section className="teams-values" aria-label="価値提案">
             <article>
               <h3>組織限定の作業部屋</h3>
@@ -14189,42 +14295,28 @@ function App() {
               <p>正式版リリース時に以下の構成で提供予定です。</p>
             </header>
             <div className="teams-pricing-grid">
-              <article className="teams-plan">
-                <h3>Free</h3>
-                <p className="teams-plan-price">¥0</p>
-                <p className="teams-plan-tagline">個人 / 小規模利用</p>
-                <ul>
-                  <li>公開ルーム参加</li>
-                  <li>学習ログ・GitHub 連携</li>
-                  <li>Arc 通貨でカスタマイズ</li>
-                </ul>
-              </article>
-              <article className="teams-plan is-featured">
-                <span className="teams-plan-badge">推奨</span>
-                <h3>Team</h3>
-                <p className="teams-plan-price">
-                  ¥800<small>/ user / 月</small>
-                </p>
-                <p className="teams-plan-tagline">5〜50 名のチーム</p>
-                <ul>
-                  <li>組織テナント・招待リンク</li>
-                  <li>組織限定ルーム</li>
-                  <li>Admin ダッシュボード + CSV</li>
-                  <li>Slack 連携</li>
-                  <li>メール優先サポート</li>
-                </ul>
-              </article>
-              <article className="teams-plan">
-                <h3>Enterprise</h3>
-                <p className="teams-plan-price">お問い合わせ</p>
-                <p className="teams-plan-tagline">51 名以上 / 法務要件あり</p>
-                <ul>
-                  <li>SAML / SSO 認証</li>
-                  <li>SCIM プロビジョニング</li>
-                  <li>監査ログ・データレジデンシー</li>
-                  <li>SLA・専任カスタマーサクセス</li>
-                </ul>
-              </article>
+              {/* 料金表は src/services/plans.ts(単一の真実)から生成。
+                  表示文言・価格・推奨バッジはすべて PLANS を編集すれば
+                  こことゲーティングが同時に揃う。 */}
+              {PLANS.map((plan) => (
+                <article
+                  key={plan.tier}
+                  className={`teams-plan${plan.featured ? " is-featured" : ""}`}
+                >
+                  {plan.featured ? <span className="teams-plan-badge">推奨</span> : null}
+                  <h3>{plan.name}</h3>
+                  <p className="teams-plan-price">
+                    {plan.priceLabel}
+                    {plan.priceUnit ? <small>{plan.priceUnit}</small> : null}
+                  </p>
+                  <p className="teams-plan-tagline">{plan.tagline}</p>
+                  <ul>
+                    {plan.features.map((feature) => (
+                      <li key={feature}>{feature}</li>
+                    ))}
+                  </ul>
+                </article>
+              ))}
             </div>
             <p className="teams-pricing-note">
               ※ 価格は予定です。β 期間中は全機能無料でお使いいただけます。
