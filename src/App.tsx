@@ -11556,7 +11556,13 @@ function App() {
               aria-pressed={isFeedOpen}
               aria-label={isFeedOpen ? "フィードを閉じる" : "フィードを開く"}
               data-tooltip={isFeedOpen ? "フィードを閉じる" : "フィードを開く"}
-              onClick={() => setIsFeedOpen((prev) => !prev)}
+              onClick={() => {
+                if (window.matchMedia("(max-width: 720px)").matches) {
+                  setCurrentView("feed");
+                } else {
+                  setIsFeedOpen((prev) => !prev);
+                }
+              }}
             >
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <rect
@@ -16147,13 +16153,35 @@ function App() {
 
       </div>
 
+      {/* FEED 単独画面（スマホ版） */}
+      {currentView === "feed" ? (
+        <article className="app-view-feed">
+          <header className="feed-view-header">
+            <button
+              type="button"
+              className="topbar-icon-button"
+              aria-label="ホームに戻る"
+              onClick={() => setCurrentView("home")}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M19 12H5M12 19l-7-7 7-7" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <h1>フィード</h1>
+          </header>
+          <div className="feed-view-content">
+            {feedSection}
+          </div>
+        </article>
+      ) : null}
+
       {/* Workspace view fills the canvas with the 2D room and its own
           presence/chat tools — overlaying the global FEED next to it
           competes for attention, makes the desktop layout cramped, and
           hides the room behind feed scroll on mobile. Hide it there.
           On every other view the right pane respects the user's
           isFeedOpen preference (default true, persisted to localStorage). */}
-      {currentView !== "workspace" && isFeedOpen ? (
+      {currentView !== "workspace" && currentView !== "feed" && isFeedOpen ? (
         <aside className="two-pane-right" aria-label="フィード">
           {feedSection}
         </aside>
