@@ -4445,6 +4445,16 @@ function App() {
         setCoins(grantedCoins);
         setLastFeedRewardDate(profile.lastFeedRewardDate || "");
         setFeedRewardArcEarned(profile.feedRewardArcEarned || 0);
+        // Sync the GitHub login from the cloud profile so devices that
+        // never went through the OAuth popup (e.g. mobile after the user
+        // linked on desktop) still resolve the right username for the
+        // contribution fetch. Mirror it to this device's localStorage too,
+        // matching the cache key the sign-in path writes, so the render-time
+        // resolver picks it up without a code-path special case.
+        if (profile.githubUsername) {
+          setSyncedGithubUsername(profile.githubUsername);
+          safeSetLocalStorage(`ca:gh-login:${currentUser.uid}`, profile.githubUsername);
+        }
         // Hydrate the live org doc if the profile says we're a member.
         // Failure is non-fatal — the user still has the denormalized
         // org name from their profile and can retry from settings.
@@ -6180,6 +6190,14 @@ function App() {
   // kept around so the UI can render a non-fatal "取得できませんでした" hint.
   const [githubContributions, setGithubContributions] = useState<GithubContributions | null>(null);
   const [githubContributionsError, setGithubContributionsError] = useState<string | null>(null);
+  // GitHub login name mirrored from the cloud profile (users doc). The real
+  // login is captured at sign-in via getAdditionalUserInfo, but that only
+  // lands in *this device's* localStorage. On a second device (e.g. mobile
+  // after linking on PC) that cache is empty, so we'd fall back to the
+  // GitHub *display name* — which usually isn't the API-queryable login and
+  // makes the contribution fetch fail. Reading the login that PC persisted
+  // to Firestore lets every device resolve the same username.
+  const [syncedGithubUsername, setSyncedGithubUsername] = useState("");
   // Drives the "GitHub アカウントを連携" CTA shown in the contribution-arc
   // card for users signed in via email or Google. linkWithPopup attaches
   // the GitHub provider to the existing Firebase user, so they don't need
@@ -6393,28 +6411,72 @@ function App() {
       return "";
     }
   })();
-  const githubUsername =
-    githubLoginCached || githubProviderInfo?.displayName || (githubProviderInfo ? userId : "");
-  // Lazy-fetch the user's public GitHub contribution grid as soon as we
-  // know which login to query. The service handles its own 1h cache so
-  // re-mounts (route changes, hot reloads) don't re-hit the endpoint.
+  // Resolution order: this device's sign-in cache → the login synced from
+  // the cloud profile (covers a fresh device) → the GitHub display name →
+  // userId. Only resolve when the GitHub provider is actually linked so an
+  // unlinked account doesn't keep querying a stale synced login.
+  const githubUsername = githubProviderInfo
+    ? githubLoginCached || syncedGithubUsername || githubProviderInfo.displayName || userId
+    : "";
+  // Lazy-fetch the user's public GitHub contribution grid. If the first
+  // candidate (the resolved username above) doesn't exist on GitHub — which
+  // happens when displayName ≠ login — we transparently retry with the
+  // remaining candidates so a single bad fallback can't permanently break
+  // the grid. Successful candidates are persisted back to localStorage so
+  // subsequent mounts skip the retry.
+  const githubCandidatesKey = [
+    githubLoginCached,
+    syncedGithubUsername,
+    githubProviderInfo?.displayName || "",
+    userId,
+  ]
+    .filter(Boolean)
+    .join("|");
   useEffect(() => {
-    if (!githubUsername) return;
+    if (!githubProviderInfo) return;
+    const candidates = Array.from(
+      new Set(
+        [
+          githubLoginCached,
+          syncedGithubUsername,
+          githubProviderInfo.displayName || "",
+          userId,
+        ]
+          .map((value) => value.trim())
+          .filter(Boolean),
+      ),
+    );
+    if (candidates.length === 0) return;
     let cancelled = false;
     setGithubContributionsError(null);
-    fetchGithubContributions(githubUsername)
-      .then((data) => {
-        if (!cancelled) setGithubContributions(data);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        const message = err instanceof Error ? err.message : String(err);
-        setGithubContributionsError(message);
-      });
+    (async () => {
+      let lastError: unknown = null;
+      for (const candidate of candidates) {
+        try {
+          const data = await fetchGithubContributions(candidate);
+          if (cancelled) return;
+          setGithubContributions(data);
+          // Pin the working candidate so future mounts/devices skip the
+          // retry loop and the cloud-synced login converges to a real one.
+          if (currentUser && candidate !== githubLoginCached) {
+            safeSetLocalStorage(`ca:gh-login:${currentUser.uid}`, candidate);
+          }
+          if (candidate !== syncedGithubUsername) {
+            setSyncedGithubUsername(candidate);
+          }
+          return;
+        } catch (err) {
+          lastError = err;
+        }
+      }
+      if (cancelled) return;
+      const message = lastError instanceof Error ? lastError.message : String(lastError);
+      setGithubContributionsError(message);
+    })();
     return () => {
       cancelled = true;
     };
-  }, [githubUsername]);
+  }, [githubProviderInfo, githubCandidatesKey, currentUser, githubLoginCached, syncedGithubUsername, userId]);
   const totalWeeklyMinutes = weeklyStudyHours.reduce((sum, item) => sum + item.totalMinutes, 0);
   const todayStudyMinutes = weeklyStudyHours.find((item) => item.isToday)?.totalMinutes ?? 0;
   /* Phase 10d: クイック記録ポップオーバーに並べる「最近の対象」.
@@ -11664,7 +11726,13 @@ function App() {
               aria-pressed={isFeedOpen}
               aria-label={isFeedOpen ? "フィードを閉じる" : "フィードを開く"}
               data-tooltip={isFeedOpen ? "フィードを閉じる" : "フィードを開く"}
-              onClick={() => setIsFeedOpen((prev) => !prev)}
+              onClick={() => {
+                if (window.matchMedia("(max-width: 720px)").matches) {
+                  setCurrentView("feed");
+                } else {
+                  setIsFeedOpen((prev) => !prev);
+                }
+              }}
             >
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <rect
@@ -16484,13 +16552,35 @@ function App() {
 
       </div>
 
+      {/* FEED 単独画面（スマホ版） */}
+      {currentView === "feed" ? (
+        <article className="app-view-feed">
+          <header className="feed-view-header">
+            <button
+              type="button"
+              className="topbar-icon-button"
+              aria-label="ホームに戻る"
+              onClick={() => setCurrentView("home")}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M19 12H5M12 19l-7-7 7-7" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <h1>フィード</h1>
+          </header>
+          <div className="feed-view-content">
+            {feedSection}
+          </div>
+        </article>
+      ) : null}
+
       {/* Workspace view fills the canvas with the 2D room and its own
           presence/chat tools — overlaying the global FEED next to it
           competes for attention, makes the desktop layout cramped, and
           hides the room behind feed scroll on mobile. Hide it there.
           On every other view the right pane respects the user's
           isFeedOpen preference (default true, persisted to localStorage). */}
-      {currentView !== "workspace" && isFeedOpen ? (
+      {currentView !== "workspace" && currentView !== "feed" && isFeedOpen ? (
         <aside className="two-pane-right" aria-label="フィード">
           {feedSection}
         </aside>
