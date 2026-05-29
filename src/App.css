@@ -2751,18 +2751,17 @@
 
 .character-color-grid {
   display: grid;
-  /* Cells size themselves to the longest label (Graphite / Deep Green
-     are 8-10 chars). At 72px min-width every name fits on one line at
-     the 12.5px label size below, and the grid still packs tightly on
-     wider modals via auto-fill. */
+  /* Labels are short Japanese color names (1-2 chars). At 72px min-width
+     every name fits on one line at the 12.5px label size below, and the
+     grid still packs tightly on wider modals via auto-fill. */
   grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
   gap: 8px;
 }
 
 .character-color-grid.compact {
   /* The compact variant is used in dense rows like the daily-feed
-     inline picker. Slightly tighter floor; still wide enough that
-     "Graphite" reads in full. */
+     inline picker. Slightly tighter floor; still wide enough that the
+     Japanese color names read in full. */
   grid-template-columns: repeat(auto-fill, minmax(66px, 1fr));
 }
 
@@ -2838,9 +2837,9 @@
   font-size: 12.5px;
   font-weight: 850;
   line-height: 1.2;
-  /* Allow long names ("Deep Green") to wrap to a second line instead
-     of getting clipped behind an ellipsis. The button already has a
-     comfortable min-height to absorb the extra row. */
+  /* Allow names to wrap to a second line instead of getting clipped
+     behind an ellipsis. The button already has a comfortable min-height
+     to absorb the extra row. */
   white-space: normal;
   text-align: center;
   word-break: keep-all;

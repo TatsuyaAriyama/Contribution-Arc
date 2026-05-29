@@ -754,19 +754,18 @@ const ARC_PACK_CATALOG: ArcPack[] = [
 ];
 
 const characterColorOptions = [
-  { name: "ツタ", value: "#3a5a40" },
-  { name: "Forest", value: "#1f6f4a" },
-  { name: "Deep Green", value: "#176345" },
-  { name: "Mint", value: "#2f8f83" },
-  { name: "Blue", value: "#3f6f9f" },
-  { name: "Navy", value: "#20334a" },
-  { name: "Slate", value: "#475569" },
-  { name: "Violet", value: "#7667a8" },
-  { name: "Plum", value: "#7c3f6f" },
-  { name: "Rose", value: "#b05268" },
-  { name: "Amber", value: "#c8a95b" },
-  { name: "Moss", value: "#6f8f3f" },
-  { name: "Graphite", value: "#111827" },
+  { name: "常磐", value: "#1f6f4a" },
+  { name: "深緑", value: "#176345" },
+  { name: "青磁", value: "#2f8f83" },
+  { name: "縹", value: "#3f6f9f" },
+  { name: "紺", value: "#20334a" },
+  { name: "鈍色", value: "#475569" },
+  { name: "菫", value: "#7667a8" },
+  { name: "梅紫", value: "#7c3f6f" },
+  { name: "薔薇", value: "#b05268" },
+  { name: "琥珀", value: "#c8a95b" },
+  { name: "苔色", value: "#6f8f3f" },
+  { name: "墨", value: "#111827" },
 ];
 
 const defaultStudyLogs: StudyLog[] = [];
