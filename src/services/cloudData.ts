@@ -2,6 +2,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  documentId,
   getDoc,
   getDocs,
   onSnapshot,
@@ -218,6 +219,67 @@ export async function saveWorkspaceSessionToCloud(db: Firestore, session: Worksp
     },
     { merge: true },
   );
+}
+
+/* The two appearance fields the feed/report avatars care about. */
+export type AuthorAppearance = {
+  characterShape: string;
+  characterColor: string;
+};
+
+/* Live appearance lookup for feed / reply / daily-report avatars.
+
+   Posts, replies and daily reports each snapshot the author's
+   character color at write time and never recorded the character
+   *shape* at all — so historically every feed avatar rendered as the
+   default silhouette in whatever color was equipped that day, and went
+   stale the moment the author re-skinned. We instead want the avatar to
+   mirror the author's *currently equipped* character + color.
+
+   This pulls the author's `users/{uid}` profile (any signed-in user may
+   read it per the Firestore rules) and returns just the two appearance
+   fields. Reads are batched with `documentId() in` (chunks of 10, the
+   `in` limit) so a feed full of distinct authors costs a handful of
+   reads rather than one per post. Callers cache the result per session,
+   so a given author is fetched at most once — keeping this comfortably
+   inside the free tier. */
+export async function fetchAuthorAppearances(
+  db: Firestore,
+  userIds: string[],
+): Promise<Record<string, AuthorAppearance>> {
+  const unique = Array.from(new Set(userIds.filter(Boolean)));
+  if (unique.length === 0) return {};
+
+  const result: Record<string, AuthorAppearance> = {};
+  const chunks: string[][] = [];
+  for (let i = 0; i < unique.length; i += 10) {
+    chunks.push(unique.slice(i, i + 10));
+  }
+
+  await Promise.all(
+    chunks.map(async (chunk) => {
+      try {
+        const snapshot = await getDocs(
+          query(collection(db, "users"), where(documentId(), "in", chunk)),
+        );
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          result[docSnap.id] = {
+            characterShape:
+              typeof data.characterShape === "string" ? data.characterShape : "default",
+            characterColor:
+              typeof data.characterColor === "string" ? data.characterColor : "",
+          };
+        });
+      } catch {
+        // A single chunk failing (rules / transient network) shouldn't
+        // blank the rest — the per-record snapshot color is the fallback
+        // for any id we couldn't resolve here.
+      }
+    }),
+  );
+
+  return result;
 }
 
 export async function saveUserProgressToCloud(db: Firestore, profile: UserProgressRecord) {
