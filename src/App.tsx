@@ -12147,13 +12147,20 @@ function App() {
                             }
                           }}
                         >
-                          <span className="notification-avatar">
-                            {sourceProfile?.photoURL ? (
-                              <img src={sourceProfile.photoURL} alt="" />
-                            ) : (
-                              item.title.slice(0, 1).toUpperCase()
-                            )}
-                          </span>
+                          {sourceProfile ? (
+                            (() => {
+                              const look = resolveAuthorAppearance(
+                                item.sourceUserId,
+                                sourceProfile.characterColor,
+                                sourceProfile.characterShape,
+                              );
+                              return <ProfileCharacterPreview color={look.color} shape={look.shape} />;
+                            })()
+                          ) : (
+                            <span className="notification-avatar">
+                              {item.title.slice(0, 1).toUpperCase()}
+                            </span>
+                          )}
                           <span>
                             <strong>{item.title}</strong>
                             <small>{item.body}</small>
