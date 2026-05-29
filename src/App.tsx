@@ -12628,20 +12628,10 @@ function App() {
                           aria-pressed={isActive}
                         >
                           <span className="shape-tile-stage" aria-hidden="true">
-                            <span
-                              className={`character-shape-swatch shape-${option.value}`}
-                              style={{ "--actor-color": playerCharacterColor } as CSSProperties}
-                            >
-                              {option.value === "owl" ? (
-                                <>
-                                  <span className="swatch-owl-beak" />
-                                  <span className="swatch-owl-foot swatch-owl-foot-left" />
-                                  <span className="swatch-owl-foot swatch-owl-foot-right" />
-                                </>
-                              ) : option.value === "ghost" ? (
-                                ghostSvgMarkup
-                              ) : null}
-                            </span>
+                            <ProfileCharacterPreview
+                              color={playerCharacterColor}
+                              shape={option.value}
+                            />
                           </span>
                           <span className="shape-tile-text">
                             <strong className="shape-tile-name">
@@ -14357,20 +14347,10 @@ function App() {
                               aria-pressed={isActive}
                             >
                               <span className="shape-tile-stage" aria-hidden="true">
-                                <span
-                                  className={`character-shape-swatch shape-${option.value}`}
-                                  style={{ "--actor-color": playerCharacterColor } as CSSProperties}
-                                >
-                                  {option.value === "owl" ? (
-                                    <>
-                                      <span className="swatch-owl-beak" />
-                                      <span className="swatch-owl-foot swatch-owl-foot-left" />
-                                      <span className="swatch-owl-foot swatch-owl-foot-right" />
-                                    </>
-                                  ) : option.value === "ghost" ? (
-                                    ghostSvgMarkup
-                                  ) : null}
-                                </span>
+                                <ProfileCharacterPreview
+                                  color={playerCharacterColor}
+                                  shape={option.value}
+                                />
                               </span>
                               <span className="shape-tile-text">
                                 <strong className="shape-tile-name">

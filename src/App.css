@@ -10447,6 +10447,28 @@
   background-size: 14px 14px, 14px 14px, auto, auto;
 }
 
+/* The picker tile renders the same `ProfileCharacterPreview` component
+   that the workspace stage uses, so every Yoi (and Tomo, and Horo)
+   icon looks identical everywhere. The preview's own gridded
+   backdrop is suppressed here because the tile stage already
+   provides one — otherwise the two backgrounds would double-stack. */
+.shape-tile-stage .profile-character-preview {
+  width: 64px;
+  height: 64px;
+  background: none;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  overflow: visible;
+}
+
+/* The 64px frame above hosts the 40px actor sprite with breathing
+   room on every side so the owl's head/tufts can extrude upward and
+   the legs/feet can extrude downward without clipping. */
+.shape-tile-stage .profile-character-preview .actor-sprite {
+  transform: translateY(2px);
+}
+
 .shape-tile-text {
   display: grid;
   gap: 2px;
@@ -10522,144 +10544,6 @@
 .shape-tile-badge.is-lock {
   background: rgba(var(--ink-rgb), 0.08);
 }
-
-.character-shape-swatch {
-  position: relative;
-  display: block;
-  flex: 0 0 auto;
-  width: 46px;
-  height: 46px;
-}
-
-.character-shape-grid.compact .character-shape-swatch {
-  width: 40px;
-  height: 40px;
-}
-
-/* Default swatch — mirrors the in-stage Tomo sprite: a rounded square
-   body with a brighter inner highlight square (rendered via the
-   ::before pseudo) and two black dot feet poking out below (drawn
-   from the ::after via two stacked radial-gradient bg layers). No
-   JSX change is needed; the tile already gives the swatch a stage
-   with breathing room below for the feet to sit on. */
-.character-shape-swatch.shape-default {
-  position: relative;
-  overflow: visible;
-  border-radius: 8px;
-  background: var(--actor-color, #1f6f4a);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 0 0 1px rgba(var(--ink-rgb), 0.1),
-    0 8px 14px rgba(var(--ink-rgb), 0.08);
-}
-
-.character-shape-swatch.shape-default::before {
-  content: "";
-  position: absolute;
-  inset: 22% 22% 22%;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, 0.22);
-}
-
-.character-shape-swatch.shape-default::after {
-  content: "";
-  position: absolute;
-  left: 22%;
-  right: 22%;
-  bottom: -18%;
-  height: 26%;
-  background:
-    radial-gradient(circle at 22% 50%, #09110e 0 38%, transparent 42%),
-    radial-gradient(circle at 78% 50%, #09110e 0 38%, transparent 42%);
-}
-
-.character-shape-swatch.shape-ghost {
-  /* Render the same inline-SVG spectre as the profile preview so the
-     picker reads as the exact same character (was previously a separate
-     purple clip-path blob that didn't match). */
-  background: transparent;
-}
-
-.character-shape-swatch.shape-ghost .ghost-svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  transform: scale(1.08);
-  transform-origin: center;
-  overflow: visible;
-}
-
-/* Owl swatch — egg-shaped body with two large amber eyes, a small
-   beak, and two little feet poking out at the bottom. Mirrors the
-   workspace sprite at thumbnail scale so the picker preview reads
-   as the same character users see in the room. */
-.character-shape-swatch.shape-owl {
-  position: relative;
-  overflow: visible;
-  background: var(--actor-color, #1f6f4a);
-  border-radius: 48% 48% 44% 44% / 54% 54% 46% 46%;
-  box-shadow:
-    inset 0 -2px 3px rgba(0, 0, 0, 0.18),
-    inset 0 1px 1px rgba(255, 255, 255, 0.18);
-  filter: drop-shadow(0 3px 5px rgba(var(--ink-rgb), 0.18));
-}
-
-/* Eyes — large amber discs with black pupils and a small white
-   highlight, positioned in the upper half of the body. */
-.character-shape-swatch.shape-owl::before,
-.character-shape-swatch.shape-owl::after {
-  content: "";
-  position: absolute;
-  top: 28%;
-  width: 28%;
-  height: 28%;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 32% 30%, #fff 0 18%, transparent 22%),
-    radial-gradient(circle at 50% 52%, #0a0e0c 0 32%, #f5c451 38% 100%);
-  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.25);
-}
-
-.character-shape-swatch.shape-owl::before {
-  left: 14%;
-}
-
-.character-shape-swatch.shape-owl::after {
-  right: 14%;
-}
-
-/* Beak — tiny amber diamond centered just below the eyes. */
-.swatch-owl-beak {
-  position: absolute;
-  top: 58%;
-  left: 50%;
-  width: 16%;
-  height: 12%;
-  background: #d97706;
-  transform: translateX(-50%) rotate(45deg);
-  border-radius: 1px;
-}
-
-/* Feet — two small amber ovals poking out below the body. */
-.swatch-owl-foot {
-  position: absolute;
-  bottom: -8%;
-  width: 22%;
-  height: 14%;
-  background: #f59e0b;
-  border-radius: 50%;
-  box-shadow: inset 0 -1px 1px rgba(0, 0, 0, 0.18);
-}
-
-.swatch-owl-foot-left {
-  left: 22%;
-}
-
-.swatch-owl-foot-right {
-  right: 22%;
-}
-
 
 .actor-name,
 .actor-task {
@@ -22746,7 +22630,7 @@ a[role="button"],
   opacity: 1;
 }
 
-.shape-tile.is-locked .character-shape-swatch {
+.shape-tile.is-locked .profile-character-preview {
   filter: grayscale(0.4);
 }
 
