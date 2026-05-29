@@ -71,6 +71,8 @@ import {
   setMemberTeamName,
   exportUserData,
   deleteUserAccount,
+  fetchAuthorAppearances,
+  type AuthorAppearance,
   type AuditLogRecord,
   type OrganizationMemberRecord,
   type OrganizationRecord,
@@ -508,6 +510,9 @@ type DailyReport = {
   userId: string;
   userName?: string;
   characterColor?: string;
+  // Snapshot of the author's equipped silhouette at save time; falls
+  // back to "default" for reports written before this field existed.
+  characterShape?: string;
   currentTitle?: string;
   date: string;
   plan: string;
@@ -1717,6 +1722,7 @@ function normalizeDailyReport(data: Partial<DailyReport>, fallbackUserId: string
     userId: typeof data.userId === "string" && data.userId ? data.userId : fallbackUserId,
     userName: typeof data.userName === "string" ? data.userName : "",
     characterColor: typeof data.characterColor === "string" ? data.characterColor : "",
+    characterShape: typeof data.characterShape === "string" ? data.characterShape : "default",
     currentTitle: typeof data.currentTitle === "string" ? data.currentTitle : "",
     date,
     plan: typeof data.plan === "string" ? data.plan : "",
@@ -3826,6 +3832,16 @@ function App() {
      see yet. Resets to the loaded report's flag on date change. */
   const [dailyIsDraftDraft, setDailyIsDraftDraft] = useState(false);
   const [postReplies, setPostReplies] = useState<ContributionReplyRecord[]>([]);
+  // Live appearance (shape + color) for every non-self author visible in
+  // the feed / replies / daily reports, keyed by uid. Posts only snapshot
+  // the color at write time and never the shape, so to make an avatar
+  // mirror its author's *currently equipped* character we resolve it from
+  // their live profile here. Populated lazily on load and cached for the
+  // session (fetchedAppearanceIdsRef) so each author costs at most one read.
+  const [authorAppearances, setAuthorAppearances] = useState<
+    Record<string, AuthorAppearance>
+  >({});
+  const fetchedAppearanceIdsRef = useRef<Set<string>>(new Set());
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [replyError, setReplyError] = useState("");
   const [openReplyPostIds, setOpenReplyPostIds] = useState<Set<string>>(() => new Set());
@@ -4844,6 +4860,69 @@ function App() {
       cancelled = true;
     };
   }, [currentUser, visiblePostIdsKey]);
+
+  // Resolve live avatars for everyone visible in the feed, replies and
+  // shared daily reports. We never look the current user up — their own
+  // avatar always renders from live state (real-time, free). For everyone
+  // else we fetch their equipped shape + color once per session; the
+  // result refreshes whenever the page reloads or new authors appear, so
+  // a teammate re-skinning shows up on the next load without any per-frame
+  // listener cost.
+  useEffect(() => {
+    if (!currentUser) return;
+    const ids = new Set<string>();
+    const collect = (uid?: string) => {
+      if (uid && uid !== currentUser.uid) ids.add(uid);
+    };
+    posts.forEach((post) => collect(post.userId));
+    postReplies.forEach((reply) => collect(reply.userId));
+    dailyReports.forEach((report) => collect(report.userId));
+    sharedDailyReports.forEach((report) => collect(report.userId));
+
+    const toFetch = Array.from(ids).filter(
+      (uid) => !fetchedAppearanceIdsRef.current.has(uid),
+    );
+    if (toFetch.length === 0) return;
+    toFetch.forEach((uid) => fetchedAppearanceIdsRef.current.add(uid));
+
+    let cancelled = false;
+    void fetchAuthorAppearances(db, toFetch)
+      .then((map) => {
+        if (cancelled || Object.keys(map).length === 0) return;
+        setAuthorAppearances((prev) => ({ ...prev, ...map }));
+      })
+      .catch((error) => {
+        // Non-fatal: the snapshot color is the fallback. Allow a retry
+        // on the next change by forgetting the ids we couldn't resolve.
+        toFetch.forEach((uid) => fetchedAppearanceIdsRef.current.delete(uid));
+        console.info("Author appearance fetch skipped.", error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser, posts, postReplies, dailyReports, sharedDailyReports]);
+
+  // Pick the avatar shape + color to render for a piece of authored
+  // content. The current user always renders from their live equipped
+  // state; everyone else resolves to their live profile when we've
+  // fetched it, falling back to whatever the record snapshotted.
+  const resolveAuthorAppearance = useCallback(
+    (
+      authorUid: string | undefined,
+      fallbackColor?: string,
+      fallbackShape?: string,
+    ): { color: string; shape: CharacterShape } => {
+      if (authorUid && authorUid === currentUser?.uid) {
+        return { color: playerCharacterColor, shape: playerCharacterShape };
+      }
+      const live = authorUid ? authorAppearances[authorUid] : undefined;
+      return {
+        color: live?.characterColor || fallbackColor || "",
+        shape: getSafeCharacterShape(live?.characterShape || fallbackShape || "default"),
+      };
+    },
+    [authorAppearances, currentUser, playerCharacterColor, playerCharacterShape],
+  );
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
@@ -6885,6 +6964,7 @@ function App() {
       avatar: getSerializableAvatar(playerAvatar || currentUser.photoURL || ""),
       currentCharacter: characterOptions[0].id,
       characterColor: playerCharacterColor,
+      characterShape: playerCharacterShape,
       currentTitle,
       text: text.slice(0, 280),
       createdAt,
@@ -7044,6 +7124,7 @@ function App() {
       username: playerName,
       avatar: getSerializableAvatar(playerAvatar || currentUser.photoURL || ""),
       characterColor: playerCharacterColor,
+      characterShape: playerCharacterShape,
       text: text.slice(0, 160),
       createdAt: new Date().toISOString(),
     };
@@ -7141,6 +7222,7 @@ function App() {
       userId: currentUser.uid,
       userName: playerName,
       characterColor: playerCharacterColor,
+      characterShape: playerCharacterShape,
       currentTitle,
       date,
       plan: planText,
@@ -7272,6 +7354,7 @@ function App() {
       userId: currentUser.uid,
       userName: playerName,
       characterColor: playerCharacterColor,
+      characterShape: playerCharacterShape,
       currentTitle,
       date: selectedDailyDate,
       plan: nextPlan,
@@ -9717,7 +9800,14 @@ function App() {
         key={post.id}
       >
         <button type="button" className="log-post-author" onClick={() => handlePostAuthorOpen(post)}>
-          <ProfileCharacterPreview color={post.characterColor} />
+          {(() => {
+            const look = resolveAuthorAppearance(
+              post.userId,
+              post.characterColor,
+              post.characterShape,
+            );
+            return <ProfileCharacterPreview color={look.color} shape={look.shape} />;
+          })()}
           <span>
             <strong>{post.username}</strong>
             <small>{formatPostTime(post.createdAt)}</small>
@@ -9834,7 +9924,14 @@ function App() {
             <div className="post-reply-list">
               {visibleReplies.map((reply) => (
                 <article key={reply.id} className="post-reply-item">
-                  <ProfileCharacterPreview color={reply.characterColor} />
+                  {(() => {
+                    const look = resolveAuthorAppearance(
+                      reply.userId,
+                      reply.characterColor,
+                      reply.characterShape,
+                    );
+                    return <ProfileCharacterPreview color={look.color} shape={look.shape} />;
+                  })()}
                   <p>
                     <strong>{reply.username}</strong>
                     <span>{reply.text}</span>
@@ -11565,10 +11662,16 @@ function App() {
               onClick={(event) => event.stopPropagation()}
             >
               <header className="daily-detail-modal-head">
-                <ProfileCharacterPreview
-                  color={report.characterColor || characterColorOptions[0].value}
-                 
-                />
+                {(() => {
+                  const look = resolveAuthorAppearance(
+                    report.userId,
+                    report.characterColor,
+                    report.characterShape,
+                  );
+                  return (
+                    <ProfileCharacterPreview color={look.color} shape={look.shape} />
+                  );
+                })()}
                 <div>
                   <p className="card-kicker">Daily Report</p>
                   <h2 id="daily-detail-modal-title">{displayName}</h2>
@@ -13254,10 +13357,19 @@ function App() {
                           aria-label={t("{name}の{date}の日報を開く", { name: displayName, date: formatDailyDate(report.date) })}
                         >
                           <div>
-                            <ProfileCharacterPreview
-                              color={report.characterColor || characterColorOptions[0].value}
-                             
-                            />
+                            {(() => {
+                              const look = resolveAuthorAppearance(
+                                report.userId,
+                                report.characterColor,
+                                report.characterShape,
+                              );
+                              return (
+                                <ProfileCharacterPreview
+                                  color={look.color}
+                                  shape={look.shape}
+                                />
+                              );
+                            })()}
                             <span>
                               <strong>{displayName}</strong>
                               <small>{formatDailyDate(report.date)}</small>

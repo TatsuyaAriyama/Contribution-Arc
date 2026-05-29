@@ -23,6 +23,9 @@ export type ContributionPostRecord = {
   avatar: string;
   currentCharacter: string;
   characterColor: string;
+  // Snapshot of the author's equipped silhouette at post time. Used as
+  // the fallback when the author's live profile can't be resolved.
+  characterShape: string;
   currentTitle: string;
   text: string;
   createdAt: string;
@@ -43,6 +46,7 @@ export type ContributionReplyRecord = {
   username: string;
   avatar: string;
   characterColor: string;
+  characterShape: string;
   text: string;
   createdAt: string;
 };
@@ -95,6 +99,7 @@ export function subscribePostsFromCloud(
           avatar: readString(data.avatar),
           currentCharacter: readString(data.currentCharacter, "arc-sprite"),
           characterColor: readString(data.characterColor, "#1f6f4a"),
+          characterShape: readString(data.characterShape, "default"),
           currentTitle: readString(data.currentTitle, "Builder"),
           text: readString(data.text),
           createdAt: readCreatedAt(data.createdAt),
@@ -187,6 +192,7 @@ export async function fetchRepliesForPosts(
             username: readString(data.username, "Developer"),
             avatar: readString(data.avatar),
             characterColor: readString(data.characterColor, "#1f6f4a"),
+            characterShape: readString(data.characterShape, "default"),
             text: readString(data.text),
             createdAt: readCreatedAt(data.createdAt),
           } satisfies ContributionReplyRecord;
