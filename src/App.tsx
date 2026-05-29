@@ -14154,8 +14154,8 @@ function App() {
               静かに可視化する。
             </h1>
             <p className="teams-hero-lede">
-              通話なしの 2D 作業部屋・学習時間の自動集計・GitHub 連携。
-              個人で使えるツールを、組織でそのまま運用できる形にしました。
+              通知も通話もない作業部屋に集まるだけ。学習時間と GitHub コミットが
+              自動で積み上がり、チームが学びに投じた時間が静かに可視化されます。
             </p>
             <div className="teams-hero-cta">
               {currentOrganization ? (
@@ -14192,7 +14192,59 @@ function App() {
                 導入相談（メール）
               </a>
             </div>
+            <p className="teams-hero-fineprint">
+              クレジットカード不要・β 期間中は全機能無料
+            </p>
+            <ul className="teams-trustbar" aria-label="主な機能">
+              <li>通知ゼロ設計</li>
+              <li>Slack 連携</li>
+              <li>GitHub 連携</li>
+              <li>CSV エクスポート</li>
+              <li>SSO / SCIM 対応予定</li>
+            </ul>
           </header>
+
+          <section className="teams-preview" aria-label="ダッシュボードのイメージ">
+            <div className="teams-preview-frame">
+              <div className="teams-preview-bar" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+                <p>Admin ダッシュボード</p>
+              </div>
+              <div className="teams-preview-body">
+                <div className="teams-preview-metrics">
+                  <div className="teams-metric">
+                    <p className="teams-metric-label">今月の累計学習</p>
+                    <p className="teams-metric-value">
+                      428<small>時間</small>
+                    </p>
+                    <p className="teams-metric-delta">先月比 +18%</p>
+                  </div>
+                  <div className="teams-metric">
+                    <p className="teams-metric-label">アクティブメンバー</p>
+                    <p className="teams-metric-value">
+                      24<small>人</small>
+                    </p>
+                    <p className="teams-metric-delta">継続率 92%</p>
+                  </div>
+                  <div className="teams-metric">
+                    <p className="teams-metric-label">今週のコミット</p>
+                    <p className="teams-metric-value">1,206</p>
+                    <p className="teams-metric-delta">直近 7 日間</p>
+                  </div>
+                </div>
+                <div className="teams-preview-chart" aria-hidden="true">
+                  {[38, 52, 44, 67, 71, 59, 83, 76, 64, 90, 72, 81].map((h, i) => (
+                    <span key={i} style={{ height: `${h}%` }} />
+                  ))}
+                </div>
+              </div>
+            </div>
+            <p className="teams-preview-caption">
+              ※ 表示はイメージです。チームの学習時間・コミットを集計し、CSV で書き出せます。
+            </p>
+          </section>
 
           {currentOrganization && currentOrganization.ownerUid === currentUser?.uid ? (
             <section className="teams-plan-manage" aria-label="現在のプラン">
@@ -14271,6 +14323,30 @@ function App() {
             </article>
           </section>
 
+          <section className="teams-steps" aria-label="導入の流れ">
+            <header>
+              <p className="card-kicker">How it works</p>
+              <h2>最短 30 秒で、チームの可視化を始められる</h2>
+            </header>
+            <ol className="teams-steps-list">
+              <li>
+                <span className="teams-step-no">01</span>
+                <h3>組織を作る</h3>
+                <p>Google で 30 秒。クレジットカードは要りません。</p>
+              </li>
+              <li>
+                <span className="teams-step-no">02</span>
+                <h3>招待リンクを配る</h3>
+                <p>リンクを共有するだけ。メンバーは作業部屋に入るだけで集計が始まります。</p>
+              </li>
+              <li>
+                <span className="teams-step-no">03</span>
+                <h3>ダッシュボードで可視化</h3>
+                <p>学習時間・コミット・継続率を集計し、CSV で L&amp;D レポートへ。</p>
+              </li>
+            </ol>
+          </section>
+
           <section className="teams-privacy" aria-label="プライバシー方針">
             <div>
               <p className="card-kicker">Privacy by design</p>
@@ -14321,6 +14397,88 @@ function App() {
             <p className="teams-pricing-note">
               ※ 価格は予定です。β 期間中は全機能無料でお使いいただけます。
             </p>
+          </section>
+
+          <section className="teams-faq" aria-label="よくある質問">
+            <header>
+              <p className="card-kicker">FAQ</p>
+              <h2>導入前の、よくある質問</h2>
+            </header>
+            <div className="teams-faq-list">
+              <details>
+                <summary>個人の作業内容は管理者に見えますか？</summary>
+                <p>
+                  いいえ。個別の学習ログ・投稿本文は admin にも表示しません。
+                  可視化されるのは「チームがどれだけ学びに投資したか」だけです。
+                </p>
+              </details>
+              <details>
+                <summary>データはどこに保存されますか？</summary>
+                <p>
+                  Google Cloud（Firestore）に暗号化して保存します。
+                  退会時にはデータを削除できます。
+                </p>
+              </details>
+              <details>
+                <summary>最低何人から使えますか？</summary>
+                <p>
+                  1 人からお使いいただけます。Team プランは 5〜50 名のチームを想定しています。
+                </p>
+              </details>
+              <details>
+                <summary>解約はいつでもできますか？</summary>
+                <p>
+                  はい。請求ポータルからいつでも解約でき、当月末までご利用いただけます。
+                </p>
+              </details>
+              <details>
+                <summary>SSO / SCIM には対応していますか？</summary>
+                <p>
+                  Enterprise プランで SAML / SSO・SCIM プロビジョニング・監査ログに対応します。
+                  導入相談からご連絡ください。
+                </p>
+              </details>
+            </div>
+          </section>
+
+          <section className="teams-cta-band" aria-label="始める">
+            <h2>チームの学びを、今日から可視化する。</h2>
+            <p>β 期間中は全機能無料。まずは組織を作って、作業部屋を開いてみてください。</p>
+            <div className="teams-hero-cta">
+              {currentOrganization ? (
+                <button
+                  type="button"
+                  className="teams-cta-primary"
+                  onClick={() => {
+                    setCurrentView("workspace");
+                  }}
+                >
+                  {currentOrganization.name} のワークスペースを開く →
+                </button>
+              ) : currentUser ? (
+                <button
+                  type="button"
+                  className="teams-cta-primary"
+                  onClick={handleSettingsOpen}
+                >
+                  組織を作って始める →
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="teams-cta-primary"
+                  onClick={() => signInWithPopup(auth, googleProvider).catch(() => undefined)}
+                >
+                  Google で 30 秒で始める →
+                </button>
+              )}
+              <a
+                href="mailto:ari.initx@gmail.com?subject=Contribution%20Arc%20for%20Teams%20%E5%B0%8E%E5%85%A5%E7%9B%B8%E8%AB%87"
+                className="teams-cta-secondary"
+              >
+                導入相談（メール）
+              </a>
+            </div>
           </section>
 
           <footer className="teams-foot">
