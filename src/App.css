@@ -10041,6 +10041,44 @@
   }
 }
 
+/* 着替えポップオーバー: wider than the note/monument cards to fit the
+   shape + color pickers comfortably, and scrollable on short screens. */
+.workspace-appearance-popover.is-centered {
+  width: min(384px, 90vw);
+  max-height: 86vh;
+  overflow-y: auto;
+}
+
+.room-appearance-card {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
+  background: var(--surface);
+  box-shadow:
+    0 24px 60px rgba(var(--ink-rgb), 0.16),
+    inset 0 1px 0 rgba(var(--surface-rgb), 0.9);
+}
+
+.room-appearance-preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.room-appearance-preview .profile-character-preview {
+  flex: 0 0 auto;
+}
+
+.room-appearance-preview .character-active-intro {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
 .actor-sprite {
   position: relative;
   display: block;

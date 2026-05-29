@@ -148,6 +148,13 @@ type SilentWorkspaceRoomProps = {
   onRoomRename?: () => void;
   onRoomDelete?: () => void;
   canDeleteRoom?: boolean;
+  /* 分身の着替え ("change appearance"): a centered popover holding the
+     shape/color picker so members can restyle their avatar without
+     leaving the room. The parent owns the open state and the picker
+     markup; this component surfaces the trigger and renders the panel
+     in the shared stage-popover slot. */
+  onComposeAppearance?: () => void;
+  appearancePanel?: ReactNode;
 };
 
 function formatChatLogTime(atMs: number) {
@@ -248,6 +255,8 @@ export function SilentWorkspaceRoom({
   onRoomRename,
   onRoomDelete,
   canDeleteRoom = false,
+  onComposeAppearance,
+  appearancePanel,
 }: SilentWorkspaceRoomProps) {
   const isFocusPresentation = presentation === "focus";
   const [isPresetEditorOpen, setIsPresetEditorOpen] = useState(false);
@@ -833,6 +842,25 @@ export function SilentWorkspaceRoom({
               </div>
             </>
           ) : null}
+
+          {/* 分身の着替えポップオーバー (centered). */}
+          {appearancePanel ? (
+            <>
+              <button
+                type="button"
+                className="workspace-popover-backdrop"
+                aria-label="閉じる"
+                onClick={onPanelClose}
+              />
+              <div
+                className="workspace-stage-popover workspace-appearance-popover is-centered"
+                role="dialog"
+                aria-modal="true"
+              >
+                {appearancePanel}
+              </div>
+            </>
+          ) : null}
         </div>
 
         <div className={`preset-message-panel ${isPresetTrayOpen ? "is-open" : ""}`}>
@@ -860,6 +888,17 @@ export function SilentWorkspaceRoom({
               >
                 <span aria-hidden="true">✉</span>
                 <strong>置き手紙</strong>
+              </button>
+            ) : null}
+            {onComposeAppearance ? (
+              <button
+                type="button"
+                className="floor-note-drop-button appearance-drop-button"
+                onClick={onComposeAppearance}
+                aria-label="分身の見た目を変える"
+              >
+                <span aria-hidden="true">✦</span>
+                <strong>着替え</strong>
               </button>
             ) : null}
           </div>

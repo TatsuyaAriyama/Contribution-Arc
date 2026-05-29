@@ -3760,6 +3760,7 @@ function App() {
   const [floorNoteDraft, setFloorNoteDraft] = useState("");
   const [floorNoteError, setFloorNoteError] = useState("");
   const [isSavingFloorNote, setIsSavingFloorNote] = useState(false);
+  const [isEditingAppearance, setIsEditingAppearance] = useState(false);
   const [openMonumentId, setOpenMonumentId] = useState<string | null>(null);
   const [determination, setDetermination] = useState("");
   const [draftDetermination, setDraftDetermination] = useState("");
@@ -8459,6 +8460,7 @@ function App() {
     setOpenFloorNoteId(null);
     setIsComposingFloorNote(false);
     setFloorNoteError("");
+    setIsEditingAppearance(false);
     setOpenMonumentId(null);
   };
 
@@ -8511,6 +8513,15 @@ function App() {
     setFloorNoteDraft("");
     setFloorNoteError("");
     setIsComposingFloorNote(true);
+  };
+
+  // Open the in-room "着替え" popover so members can restyle their
+  // avatar (shape + color) without leaving the workspace. The picker
+  // reuses the same setters as the settings/profile screens, so changes
+  // persist through the existing saveUserProgressToCloud effect.
+  const handleComposeAppearance = () => {
+    handleCloseRoomPanels();
+    setIsEditingAppearance(true);
   };
 
   const handleFloorNoteOpen = (id: string) => {
@@ -15170,6 +15181,138 @@ function App() {
                           : null
                       }
                       onPanelClose={handleCloseRoomPanels}
+                      onComposeAppearance={handleComposeAppearance}
+                      appearancePanel={
+                        isEditingAppearance ? (
+                          <article className="room-appearance-card">
+                            <button
+                              type="button"
+                              className="room-member-card-close"
+                              onClick={handleCloseRoomPanels}
+                              aria-label="閉じる"
+                            >
+                              ×
+                            </button>
+                            <span className="room-note-card-kicker">✦ 分身を変える</span>
+                            <div className="room-appearance-preview">
+                              <ProfileCharacterPreview
+                                color={playerCharacterColor}
+                                shape={playerCharacterShape}
+                              />
+                              {(() => {
+                                const active = characterShapeOptions.find(
+                                  (o) => o.value === playerCharacterShape,
+                                );
+                                if (!active) return null;
+                                return (
+                                  <p className="character-active-intro">
+                                    <strong>
+                                      {active.name} <span>{active.romaji}</span>
+                                    </strong>
+                                    {active.intro}
+                                  </p>
+                                );
+                              })()}
+                            </div>
+                            <div className="character-customize-section compact">
+                              <p className="character-customize-section-label">シルエット</p>
+                              <div
+                                className="character-shape-grid compact"
+                                aria-label="キャラクターの形"
+                              >
+                                {characterShapeOptions.map((option) => {
+                                  const isLocked = !ownedCharacterShapes.includes(option.value);
+                                  const isActive = playerCharacterShape === option.value;
+                                  return (
+                                    <button
+                                      type="button"
+                                      key={option.value}
+                                      className={`shape-tile ${isActive ? "active " : ""}${
+                                        isLocked ? "is-locked" : ""
+                                      }`}
+                                      onClick={() => {
+                                        if (isLocked) {
+                                          setCurrentView("shop");
+                                        } else {
+                                          setPlayerCharacterShape(option.value);
+                                        }
+                                      }}
+                                      title={
+                                        isLocked
+                                          ? `${option.name} ${option.romaji}（ショップで購入）`
+                                          : `${option.name} ${option.romaji}`
+                                      }
+                                      aria-label={
+                                        isLocked
+                                          ? `${option.name} ${option.romaji}はショップで購入できます`
+                                          : `${option.name} ${option.romaji}を選択`
+                                      }
+                                      aria-pressed={isActive}
+                                    >
+                                      <span className="shape-tile-stage" aria-hidden="true">
+                                        <ProfileCharacterPreview
+                                          color={playerCharacterColor}
+                                          shape={option.value}
+                                        />
+                                      </span>
+                                      <span className="shape-tile-text">
+                                        <strong className="shape-tile-name">
+                                          {option.name}
+                                          <span className="shape-tile-romaji">{option.romaji}</span>
+                                        </strong>
+                                      </span>
+                                      {isLocked ? (
+                                        <span
+                                          className="shape-tile-badge is-lock"
+                                          aria-hidden="true"
+                                        >
+                                          🔒
+                                        </span>
+                                      ) : isActive ? (
+                                        <span
+                                          className="shape-tile-badge is-check"
+                                          aria-hidden="true"
+                                        >
+                                          ✓
+                                        </span>
+                                      ) : null}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                            <div className="character-customize-section compact">
+                              <p className="character-customize-section-label">カラー</p>
+                              <div className="character-color-grid compact" aria-label="分身カラー">
+                                {characterColorOptions.map((color) => (
+                                  <button
+                                    type="button"
+                                    key={color.value}
+                                    className={
+                                      playerCharacterColor === color.value ? "active" : ""
+                                    }
+                                    onClick={() => setPlayerCharacterColor(color.value)}
+                                    title={color.name}
+                                    aria-label={`${color.name}を選択`}
+                                  >
+                                    <span style={{ background: color.value }} />
+                                    <small>{color.name}</small>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="room-note-card-actions">
+                              <button
+                                type="button"
+                                className="is-primary"
+                                onClick={handleCloseRoomPanels}
+                              >
+                                完了
+                              </button>
+                            </div>
+                          </article>
+                        ) : null
+                      }
                       floorNotes={floorNoteMarkers}
                       onFloorNoteOpen={handleFloorNoteOpen}
                       onComposeFloorNote={handleComposeFloorNote}
