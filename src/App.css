@@ -10244,6 +10244,39 @@
 
 /* Customize sections — group label + grid so シルエット / カラー
    read as separate sub-controls inside the character card. */
+/* One-line intro for the currently selected character. Sits between
+   the preview header and the silhouette grid; the kanji+romaji name
+   leads, then the poetic flavour line. Green left rule ties it to
+   the active selection. */
+.character-active-intro {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 12px 0 4px;
+  padding: 10px 14px;
+  border-left: 3px solid var(--green);
+  border-radius: 8px 12px 12px 8px;
+  background: rgba(31, 111, 74, 0.06);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.character-active-intro strong {
+  color: var(--ink-strong);
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.character-active-intro strong span {
+  margin-left: 3px;
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
 .character-customize-section {
   display: grid;
   gap: 10px;

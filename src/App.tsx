@@ -643,10 +643,31 @@ const characterShapeOptions: {
   name: string;
   romaji: string;
   tagline: string;
+  /* One-line poetic intro shown beside the large preview when this
+     shape is selected. Longer / more evocative than `tagline`. */
+  intro: string;
 }[] = [
-  { value: "default", name: "灯", romaji: "Tomo", tagline: "そばに灯る相棒" },
-  { value: "ghost", name: "朧", romaji: "Horo", tagline: "ふわりと漂う魂" },
-  { value: "owl", name: "宵", romaji: "Yoi", tagline: "夜更けの番人" },
+  {
+    value: "default",
+    name: "灯",
+    romaji: "Tomo",
+    tagline: "そばに灯る相棒",
+    intro: "暗がりにそっと灯る、はじまりの相棒。",
+  },
+  {
+    value: "ghost",
+    name: "朧",
+    romaji: "Horo",
+    tagline: "ふわりと漂う魂",
+    intro: "輪郭をほどいて漂う、もう一人のあなた。",
+  },
+  {
+    value: "owl",
+    name: "宵",
+    romaji: "Yoi",
+    tagline: "夜更けの番人",
+    intro: "夜更けをひとり見守る、静かな番人。",
+  },
 ];
 
 // Shop catalog. "default" is intentionally not listed — every account
@@ -12357,10 +12378,23 @@ function App() {
                   <span>{t("分身キャラクター")}</span>
                   <ProfileCharacterPreview
                     color={playerCharacterColor}
-                   
+
                     shape={playerCharacterShape}
                   />
                 </div>
+
+                {(() => {
+                  const active = characterShapeOptions.find((o) => o.value === playerCharacterShape);
+                  if (!active) return null;
+                  return (
+                    <p className="character-active-intro">
+                      <strong>
+                        {active.name} <span>{active.romaji}</span>
+                      </strong>
+                      {active.intro}
+                    </p>
+                  );
+                })()}
 
                 <div className="character-customize-section compact">
                   <p className="character-customize-section-label">{t("シルエット")}</p>
@@ -14063,10 +14097,23 @@ function App() {
                       </div>
                       <ProfileCharacterPreview
                         color={playerCharacterColor}
-                       
+
                         shape={playerCharacterShape}
                       />
                     </div>
+
+                    {(() => {
+                      const active = characterShapeOptions.find((o) => o.value === playerCharacterShape);
+                      if (!active) return null;
+                      return (
+                        <p className="character-active-intro">
+                          <strong>
+                            {active.name} <span>{active.romaji}</span>
+                          </strong>
+                          {active.intro}
+                        </p>
+                      );
+                    })()}
 
                     <div className="character-customize-section">
                       <p className="character-customize-section-label">シルエット</p>
