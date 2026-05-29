@@ -3767,6 +3767,24 @@ function App() {
   const [playerCharacterColor, setPlayerCharacterColor] = useState(characterColorOptions[0].value);
   const [playerCharacterShape, setPlayerCharacterShape] = useState<CharacterShape>("default");
   const [ownedCharacterShapes, setOwnedCharacterShapes] = useState<CharacterShape[]>(["default"]);
+  // Set the moment the user picks a color/shape in this session. The
+  // account-load effect runs an async `getDoc` whose `.then()` writes the
+  // cloud's stored appearance back into local state — if that resolves
+  // *after* the user has already changed their character (and before the
+  // 1.5s-debounced save round-trips to Firestore), it would clobber the
+  // fresh pick with the stale server value, snapping the avatar back to a
+  // previous character. This lock makes the choice authoritative: once the
+  // user selects, the load no longer overwrites it. Reset at the top of the
+  // load effect so a genuine account switch still hydrates from the cloud.
+  const characterChoiceLockedRef = useRef(false);
+  const chooseCharacterColor = useCallback((value: string) => {
+    characterChoiceLockedRef.current = true;
+    setPlayerCharacterColor(value);
+  }, []);
+  const chooseCharacterShape = useCallback((shape: CharacterShape) => {
+    characterChoiceLockedRef.current = true;
+    setPlayerCharacterShape(shape);
+  }, []);
   const [coins, setCoins] = useState<number>(0);
   /* Daily feed-post Arc reward bookkeeping. Both fields are mirrored
      to the user profile doc so a second device sees the same gate.
@@ -4216,6 +4234,10 @@ function App() {
       return;
     }
 
+    // Fresh account load: allow the cloud profile to hydrate the avatar.
+    // Any in-session pick re-locks this via chooseCharacterColor/Shape.
+    characterChoiceLockedRef.current = false;
+
     const savedUserId = window.localStorage.getItem(`contribution-arc-user-id-${currentUser.uid}`);
     const accountScope = getAccountStorageScope(currentUser.uid, savedUserId || "");
     const shouldUseLegacyUserStorage = !savedUserId;
@@ -4379,7 +4401,9 @@ function App() {
         setDetermination(profile.determination || savedDetermination || "");
         setDraftDetermination(profile.determination || savedDetermination || "");
         setPlayerAvatar(profile.photoURL || savedAvatar || currentUser.photoURL || "");
-        setPlayerCharacterColor(profile.characterColor || savedCharacterColor || characterColorOptions[0].value);
+        if (!characterChoiceLockedRef.current) {
+          setPlayerCharacterColor(profile.characterColor || savedCharacterColor || characterColorOptions[0].value);
+        }
         // Shape ownership migration. ADMIN_EMAIL gets every silhouette plus
         // a generous coin grant (used to seed test purchases). Everyone
         // else has their owned set narrowed to whatever they legitimately
@@ -4422,7 +4446,9 @@ function App() {
         } else {
           setCurrentOrganization(null);
         }
-        setPlayerCharacterShape(safeShape);
+        if (!characterChoiceLockedRef.current) {
+          setPlayerCharacterShape(safeShape);
+        }
         setOpenedWorkspaceGiftLevels((levels) =>
           Array.from(new Set([...levels, ...(profile.openedWorkspaceGiftLevels || [])])).sort(
             (first, second) => first - second,
@@ -13164,7 +13190,7 @@ function App() {
                               setIsSettingsOpen(false);
                               setCurrentView("shop");
                             } else {
-                              setPlayerCharacterShape(option.value);
+                              chooseCharacterShape(option.value);
                             }
                           }}
                           title={isLocked ? `${option.name} ${option.romaji}（ショップで購入）` : `${option.name} ${option.romaji}`}
@@ -13211,7 +13237,7 @@ function App() {
                         type="button"
                         key={color.value}
                         className={playerCharacterColor === color.value ? "active" : ""}
-                        onClick={() => setPlayerCharacterColor(color.value)}
+                        onClick={() => chooseCharacterColor(color.value)}
                         title={color.name}
                         aria-label={`${color.name}を選択`}
                       >
@@ -14883,7 +14909,7 @@ function App() {
                                 if (isLocked) {
                                   setCurrentView("shop");
                                 } else {
-                                  setPlayerCharacterShape(option.value);
+                                  chooseCharacterShape(option.value);
                                 }
                               }}
                               title={isLocked ? `${option.name} ${option.romaji}（ショップで購入）` : `${option.name} ${option.romaji}`}
@@ -14930,7 +14956,7 @@ function App() {
                             type="button"
                             key={color.value}
                             className={playerCharacterColor === color.value ? "active" : ""}
-                            onClick={() => setPlayerCharacterColor(color.value)}
+                            onClick={() => chooseCharacterColor(color.value)}
                             title={color.name}
                             aria-label={`${color.name}を選択`}
                           >
@@ -15282,7 +15308,7 @@ function App() {
                                         if (isLocked) {
                                           setCurrentView("shop");
                                         } else {
-                                          setPlayerCharacterShape(option.value);
+                                          chooseCharacterShape(option.value);
                                         }
                                       }}
                                       title={
@@ -15339,7 +15365,7 @@ function App() {
                                     className={
                                       playerCharacterColor === color.value ? "active" : ""
                                     }
-                                    onClick={() => setPlayerCharacterColor(color.value)}
+                                    onClick={() => chooseCharacterColor(color.value)}
                                     title={color.name}
                                     aria-label={`${color.name}を選択`}
                                   >
@@ -16013,7 +16039,7 @@ function App() {
                             <button
                               type="button"
                               className="shop-product-equip"
-                              onClick={() => setPlayerCharacterShape(item.shape)}
+                              onClick={() => chooseCharacterShape(item.shape)}
                             >
                               着用する
                             </button>
@@ -16039,7 +16065,7 @@ function App() {
                               setOwnedCharacterShapes((current) =>
                                 current.includes(item.shape) ? current : [...current, item.shape],
                               );
-                              setPlayerCharacterShape(item.shape);
+                              chooseCharacterShape(item.shape);
                             }}
                           >
                             {canAfford ? "購入する" : "Arc 不足"}
