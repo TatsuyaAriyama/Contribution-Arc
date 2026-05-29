@@ -5,7 +5,9 @@ import {
   documentId,
   getDoc,
   getDocs,
+  limit as queryLimit,
   onSnapshot,
+  orderBy,
   query,
   runTransaction,
   serverTimestamp,
@@ -110,10 +112,22 @@ function readCreatedAt(value: unknown) {
   return new Date().toISOString();
 }
 
+type StudyLogWriteOptions = {
+  roomId?: string;
+  earnedExp?: number;
+  source?: string;
+  /* Org tenant stamp. When the author belongs to an organization we
+     write its id onto every log so the org owner's Manager Dashboard
+     can run team-wide aggregation and per-member drill-down with a
+     single org-scoped query (see firestore.rules studyLogs read). Solo
+     accounts omit it, keeping their logs fully private. */
+  organizationId?: string;
+};
+
 function studyLogToCloudPayload(
   userId: string,
   log: StudyLogRecord,
-  options: { roomId?: string; earnedExp?: number; source?: string } = {},
+  options: StudyLogWriteOptions = {},
 ) {
   return {
     userId,
@@ -127,6 +141,7 @@ function studyLogToCloudPayload(
     color: log.color || "",
     learningItemId: log.learningItemId || "",
     source: options.source || "manual",
+    ...(options.organizationId ? { organizationId: options.organizationId } : {}),
     updatedAt: serverTimestamp(),
   };
 }
@@ -173,12 +188,17 @@ export async function saveStudyLogToCloud(
   db: Firestore,
   userId: string,
   log: StudyLogRecord,
-  options: { roomId?: string; earnedExp?: number; source?: string } = {},
+  options: StudyLogWriteOptions = {},
 ) {
   await setDoc(doc(db, "studyLogs", log.id), studyLogToCloudPayload(userId, log, options), { merge: true });
 }
 
-export async function migrateStudyLogsToCloud(db: Firestore, userId: string, logs: StudyLogRecord[]) {
+export async function migrateStudyLogsToCloud(
+  db: Firestore,
+  userId: string,
+  logs: StudyLogRecord[],
+  options: { organizationId?: string } = {},
+) {
   const cleanLogs = logs.filter((log) => log.id && log.minutes > 0 && log.subject.trim());
   const chunkSize = 400;
 
@@ -188,7 +208,10 @@ export async function migrateStudyLogsToCloud(db: Firestore, userId: string, log
       batch.set(
         doc(db, "studyLogs", log.id),
         {
-          ...studyLogToCloudPayload(userId, log, { source: "localStorage-migration" }),
+          ...studyLogToCloudPayload(userId, log, {
+            source: "localStorage-migration",
+            organizationId: options.organizationId,
+          }),
           migratedAt: serverTimestamp(),
         },
         { merge: true },
@@ -200,6 +223,110 @@ export async function migrateStudyLogsToCloud(db: Firestore, userId: string, log
 
 export async function deleteStudyLogFromCloud(db: Firestore, logId: string) {
   await deleteDoc(doc(db, "studyLogs", logId));
+}
+
+/* A study log enriched with its author id, for org-scoped reads where
+   the Manager Dashboard needs to group by member. The personal app
+   never needs userId (every log is the current user's), so it's kept
+   off StudyLogRecord and only added here. */
+export type OrgStudyLogRecord = StudyLogRecord & { userId: string };
+
+function mapStudyLogDoc(id: string, data: Record<string, unknown>): OrgStudyLogRecord {
+  const minutes = readNumber(data.studyMinutes, readNumber(data.minutes));
+  return {
+    id,
+    userId: readString(data.userId),
+    subject: readString(data.category, readString(data.subject, "Deep Work")),
+    minutes,
+    createdAt: readCreatedAt(data.createdAt),
+    color: readString(data.color),
+    learningItemId: readString(data.learningItemId) || undefined,
+  };
+}
+
+/* Manager Dashboard — per-member drill-down. Reads one member's logs,
+   scoped to the org so the firestore.rules org-owner branch authorizes
+   the query (the org filter is mandatory: "rules are not filters").
+   Sorted/sliced server-side via the (organizationId, userId, createdAt)
+   composite index; capped so a prolific member can't balloon the read.
+   Logs predating the org-stamping rollout lack organizationId and are
+   intentionally excluded. */
+export async function listMemberStudyLogs(
+  db: Firestore,
+  orgId: string,
+  memberUid: string,
+  max = 400,
+): Promise<StudyLogRecord[]> {
+  const snapshot = await getDocs(
+    query(
+      collection(db, "studyLogs"),
+      where("organizationId", "==", orgId),
+      where("userId", "==", memberUid),
+      orderBy("createdAt", "desc"),
+      queryLimit(max),
+    ),
+  );
+  return snapshot.docs
+    .map((item) => mapStudyLogDoc(item.id, item.data() as Record<string, unknown>))
+    .filter((log) => log.minutes > 0);
+}
+
+/* Manager Dashboard — team-wide aggregation. One windowed query across
+   every member's logs in the org since `sinceIso`, ordered + capped via
+   the (organizationId, createdAt) composite index. The caller derives
+   team trend / heatmap / genre breakdown from the returned logs. The
+   window + limit keep this a bounded read regardless of org size. */
+export async function fetchOrganizationStudyLogs(
+  db: Firestore,
+  orgId: string,
+  sinceIso: string,
+  max = 3000,
+): Promise<OrgStudyLogRecord[]> {
+  const snapshot = await getDocs(
+    query(
+      collection(db, "studyLogs"),
+      where("organizationId", "==", orgId),
+      where("createdAt", ">=", sinceIso),
+      orderBy("createdAt", "desc"),
+      queryLimit(max),
+    ),
+  );
+  return snapshot.docs
+    .map((item) => mapStudyLogDoc(item.id, item.data() as Record<string, unknown>))
+    .filter((log) => log.minutes > 0);
+}
+
+/* One-time, member-side backfill: stamp the member's own pre-rollout
+   logs with their current organizationId so the Manager Dashboard's
+   history (drill-down + team trend) reaches back beyond the rollout
+   date instead of starting empty. Runs under the author's own
+   credentials (self-update is always allowed), and is guarded by the
+   caller with a localStorage marker so it executes at most once per
+   (user, org) — honoring the project's write-dedup discipline. Returns
+   how many logs were stamped. */
+export async function backfillStudyLogOrganizationId(
+  db: Firestore,
+  userId: string,
+  orgId: string,
+): Promise<number> {
+  const snapshot = await getDocs(query(collection(db, "studyLogs"), where("userId", "==", userId)));
+  const stale = snapshot.docs.filter((item) => {
+    const value = (item.data() as Record<string, unknown>).organizationId;
+    return typeof value !== "string" || value.length === 0;
+  });
+  if (stale.length === 0) {
+    return 0;
+  }
+
+  const chunkSize = 400;
+  for (let index = 0; index < stale.length; index += chunkSize) {
+    const batch = writeBatch(db);
+    stale.slice(index, index + chunkSize).forEach((item) => {
+      batch.set(doc(db, "studyLogs", item.id), { organizationId: orgId, updatedAt: serverTimestamp() }, { merge: true });
+    });
+    await batch.commit();
+  }
+  return stale.length;
 }
 
 export async function saveWorkspaceSessionToCloud(db: Firestore, session: WorkspaceSessionRecord) {

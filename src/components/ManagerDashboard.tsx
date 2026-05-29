@@ -1,5 +1,9 @@
-import { useMemo, useState } from "react";
-import type { OrganizationMemberRecord } from "../services/cloudData";
+import { useEffect, useMemo, useState } from "react";
+import type {
+  OrganizationMemberRecord,
+  OrgStudyLogRecord,
+  StudyLogRecord,
+} from "../services/cloudData";
 
 export interface ManagerDashboardProps {
   /** All team members in the organization. */
@@ -15,8 +19,16 @@ export interface ManagerDashboardProps {
   /** Send the weekly digest to the org's configured Slack channel.
    *  Resolves with an error string on failure, undefined on success. */
   onSendSlackDigest?: () => Promise<string | undefined>;
-  /** Callback when a member is clicked for detail view. */
+  /** Callback when a member is clicked. Optional — the dashboard now
+   *  opens its own detail panel; kept for parent-side hooks. */
   onMemberSelect?: (member: OrganizationMemberRecord) => void;
+  /** Fetch every org member's study logs since an ISO timestamp, for
+   *  team-wide aggregation. Org-scoped + windowed in the data layer.
+   *  Absent → the team-insight section is hidden. */
+  onFetchOrgLogs?: (sinceIso: string) => Promise<OrgStudyLogRecord[]>;
+  /** Fetch one member's recent study logs for the drill-down panel.
+   *  Absent → the panel shows only the snapshot stats. */
+  onFetchMemberLogs?: (memberUid: string) => Promise<StudyLogRecord[]>;
 }
 
 type DigestSendState = "idle" | "sending" | "sent" | "error";
@@ -129,6 +141,113 @@ function relativeLabel(days: number | null): string {
 const roleLabel = (role: OrganizationMemberRecord["organizationRole"]): string =>
   role === "owner" ? "オーナー" : role === "admin" ? "管理者" : "メンバー";
 
+/* ── Time-series aggregation (used by team insights + member panel) ──
+   All pure functions over the minimal log shape the data layer returns.
+   The personal app has its own getContributionArc; we keep a compact,
+   dependency-free version here so the dashboard component stays
+   self-contained and Firestore-free. */
+type LogLike = { subject: string; minutes: number; createdAt: string; color?: string };
+
+const WEEK_MS = 7 * DAY_MS;
+
+/** Local-time YYYY-MM-DD key (never UTC — a 23:00 JST log must land on
+ *  its own calendar day, matching teamDigest's reasoning). */
+function localDayKey(d: Date): string {
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+  return `${d.getFullYear()}-${m < 10 ? `0${m}` : m}-${day < 10 ? `0${day}` : day}`;
+}
+
+/** Minutes summed into `weeks` rolling 7-day buckets, oldest→newest.
+ *  Bucket index 0 (returned last) is the current week. */
+function weeklyTrend(logs: LogLike[], weeks: number, now: number): number[] {
+  const buckets = new Array<number>(weeks).fill(0);
+  for (const log of logs) {
+    const t = Date.parse(log.createdAt);
+    if (Number.isNaN(t)) continue;
+    const idx = Math.floor((now - t) / WEEK_MS);
+    if (idx >= 0 && idx < weeks) buckets[weeks - 1 - idx] += log.minutes;
+  }
+  return buckets;
+}
+
+type HeatCell = { key: string; minutes: number };
+
+/** Daily minute totals for the last `days` days, oldest→today. */
+function dailyHeatmap(logs: LogLike[], days: number, now: number): HeatCell[] {
+  const map = new Map<string, number>();
+  for (const log of logs) {
+    const t = Date.parse(log.createdAt);
+    if (Number.isNaN(t)) continue;
+    const key = localDayKey(new Date(t));
+    map.set(key, (map.get(key) || 0) + log.minutes);
+  }
+  const cells: HeatCell[] = [];
+  const today = new Date(now);
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const key = localDayKey(d);
+    cells.push({ key, minutes: map.get(key) || 0 });
+  }
+  return cells;
+}
+
+/** Map daily minutes to a 0–4 intensity tier for the heatmap palette. */
+function heatLevel(minutes: number): 0 | 1 | 2 | 3 | 4 {
+  if (minutes <= 0) return 0;
+  if (minutes < 30) return 1;
+  if (minutes < 60) return 2;
+  if (minutes < 120) return 3;
+  return 4;
+}
+
+type SubjectRow = { subject: string; color: string; minutes: number; pct: number };
+
+/** Minutes grouped by subject, sorted desc, top `topN` kept. Carries the
+ *  log's own color so the breakdown matches the learner's palette without
+ *  the dashboard needing access to their learningItems. */
+function subjectBreakdown(
+  logs: LogLike[],
+  topN: number,
+): { rows: SubjectRow[]; otherCount: number; otherMinutes: number } {
+  const map = new Map<string, { subject: string; color: string; minutes: number }>();
+  for (const log of logs) {
+    const subject = log.subject || "その他";
+    const cur = map.get(subject) || { subject, color: log.color || "", minutes: 0 };
+    cur.minutes += log.minutes;
+    if (!cur.color && log.color) cur.color = log.color;
+    map.set(subject, cur);
+  }
+  const all = Array.from(map.values()).sort((a, b) => b.minutes - a.minutes);
+  const total = all.reduce((s, x) => s + x.minutes, 0) || 1;
+  const top = all.slice(0, topN);
+  const rest = all.slice(topN);
+  return {
+    rows: top.map((x) => ({ ...x, pct: x.minutes / total })),
+    otherCount: rest.length,
+    otherMinutes: rest.reduce((s, x) => s + x.minutes, 0),
+  };
+}
+
+/** Compact "Nh Mm" / "Mm" label from minutes. */
+function formatMinutesJa(minutes: number): string {
+  const m = Math.max(0, Math.round(minutes));
+  const h = Math.floor(m / 60);
+  const rem = m % 60;
+  if (h > 0 && rem > 0) return `${h}h ${rem}m`;
+  if (h > 0) return `${h}h`;
+  return `${rem}m`;
+}
+
+/** Short month/day label for a log timestamp. */
+function shortDateJa(iso: string): string {
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return "";
+  const d = new Date(t);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
 type SortKey = "effort" | "recent" | "level" | "output";
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
@@ -138,6 +257,13 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "output", label: "アウトプットが多い順" },
 ];
 
+/* How far back the team-insight window reaches. 12 weeks ≈ a quarter —
+   long enough to show a trend, short enough to keep the windowed read
+   bounded. Logs predating the org-stamping rollout won't appear (they
+   carry no organizationId), so the trend fills in over time. */
+const TEAM_WINDOW_WEEKS = 12;
+const TEAM_WINDOW_DAYS = TEAM_WINDOW_WEEKS * 7;
+
 export function ManagerDashboard({
   teamMembers,
   currentUser,
@@ -145,6 +271,8 @@ export function ManagerDashboard({
   hasSlackWebhook,
   onSendSlackDigest,
   onMemberSelect,
+  onFetchOrgLogs,
+  onFetchMemberLogs,
 }: ManagerDashboardProps) {
   const [searchQuery, setSearchQuery] = useState("");
   /* Team filter. Empty string means "all teams"; the sentinel
@@ -159,6 +287,37 @@ export function ManagerDashboard({
   // Frozen at mount — a dashboard session doesn't need live re-ticking,
   // and a stable `now` keeps the useMemos from recomputing every render.
   const now = useMemo(() => Date.now(), []);
+
+  /* Team-wide insights, fetched once via a single windowed org-scoped
+     query. State machine drives the section's loading / error / empty UI. */
+  const [orgLogs, setOrgLogs] = useState<OrgStudyLogRecord[] | null>(null);
+  const [orgLogsState, setOrgLogsState] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [selectedMember, setSelectedMember] = useState<OrganizationMemberRecord | null>(null);
+
+  useEffect(() => {
+    if (!onFetchOrgLogs) return;
+    let cancelled = false;
+    setOrgLogsState("loading");
+    const sinceIso = new Date(now - TEAM_WINDOW_DAYS * DAY_MS).toISOString();
+    onFetchOrgLogs(sinceIso)
+      .then((logs) => {
+        if (cancelled) return;
+        setOrgLogs(logs);
+        setOrgLogsState("ready");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setOrgLogsState("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [onFetchOrgLogs, now]);
+
+  const openMember = (member: OrganizationMemberRecord) => {
+    setSelectedMember(member);
+    onMemberSelect?.(member);
+  };
 
   // Per-member derived fields (days since sync + activity tier),
   // computed once so the list, charts, and follow-up section agree.
@@ -245,6 +404,40 @@ export function ManagerDashboard({
       activeRate: totalMembers > 0 ? Math.round((activeCount / totalMembers) * 100) : 0,
     };
   }, [enriched, teamMembers]);
+
+  /* Team-wide insights derived from the windowed org logs: weekly
+     learning trend, the skills the team is actually investing in, and
+     a window summary (total hours + distinct contributors). This is the
+     "what is my team learning, and is momentum building?" view a paying
+     manager wants — not derivable from the per-member snapshot alone. */
+  const teamInsights = useMemo(() => {
+    if (!orgLogs) return null;
+    const trend = weeklyTrend(orgLogs, TEAM_WINDOW_WEEKS, now);
+    const maxWeek = Math.max(1, ...trend);
+    const windowMinutes = trend.reduce((s, v) => s + v, 0);
+    const thisWeek = trend[trend.length - 1] || 0;
+    const lastWeek = trend[trend.length - 2] || 0;
+    const contributors = new Set(orgLogs.map((l) => l.userId)).size;
+    const { rows, otherCount, otherMinutes } = subjectBreakdown(orgLogs, 6);
+    return {
+      trend: trend.map((minutes, i) => ({
+        minutes,
+        ratio: minutes / maxWeek,
+        // Weeks-ago label: rightmost bar = 今週.
+        weeksAgo: TEAM_WINDOW_WEEKS - 1 - i,
+      })),
+      windowHours: Math.round(windowMinutes / 60),
+      thisWeekHours: Math.round(thisWeek / 60),
+      lastWeekHours: Math.round(lastWeek / 60),
+      deltaPct:
+        lastWeek > 0 ? Math.round(((thisWeek - lastWeek) / lastWeek) * 100) : thisWeek > 0 ? 100 : 0,
+      contributors,
+      subjects: rows,
+      otherCount,
+      otherMinutes,
+      isEmpty: windowMinutes === 0,
+    };
+  }, [orgLogs, now]);
 
   // Engagement segmentation for the team-health bar.
   const engagement = useMemo(() => {
@@ -475,6 +668,110 @@ export function ManagerDashboard({
         </article>
       </section>
 
+      {/* Team-wide insights — weekly trend + skill mix over the window.
+          Only rendered when the parent wired the org-log fetcher. */}
+      {onFetchOrgLogs && teamMembers.length > 0 ? (
+        <section className="manager-insights">
+          <header className="manager-insights-head">
+            <div>
+              <h3 className="manager-chart-title">チームの学習トレンド</h3>
+              <p className="manager-chart-sublabel">直近 {TEAM_WINDOW_WEEKS} 週間</p>
+            </div>
+            {teamInsights && !teamInsights.isEmpty ? (
+              <div className="manager-insights-summary">
+                <span className="manager-insights-total">
+                  {teamInsights.windowHours}
+                  <span className="manager-stat-unit">h</span>
+                </span>
+                <span className="manager-insights-meta">
+                  {teamInsights.contributors} 名が記録
+                </span>
+              </div>
+            ) : null}
+          </header>
+
+          {orgLogsState === "loading" ? (
+            <p className="manager-insights-state">読み込み中…</p>
+          ) : orgLogsState === "error" ? (
+            <p className="manager-insights-state">トレンドを読み込めませんでした。</p>
+          ) : teamInsights && teamInsights.isEmpty ? (
+            <p className="manager-insights-state">
+              この期間の学習記録はまだありません。メンバーが学習を記録すると、ここに週ごとの推移が表示されます。
+            </p>
+          ) : teamInsights ? (
+            <div className="manager-insights-body">
+              <div className="manager-trend">
+                <div className="manager-trend-bars" role="img" aria-label="週ごとのチーム学習時間の推移">
+                  {teamInsights.trend.map((w, i) => (
+                    <span
+                      key={i}
+                      className={`manager-trend-bar${w.weeksAgo === 0 ? " is-current" : ""}`}
+                      style={{ height: `${Math.max(w.ratio * 100, 3)}%` }}
+                      title={`${w.weeksAgo === 0 ? "今週" : `${w.weeksAgo}週前`} ・ ${formatMinutesJa(w.minutes)}`}
+                    />
+                  ))}
+                </div>
+                <div className="manager-trend-foot">
+                  <span>{TEAM_WINDOW_WEEKS}週前</span>
+                  <span className="manager-trend-now">
+                    今週 {teamInsights.thisWeekHours}h
+                    {teamInsights.deltaPct !== 0 ? (
+                      <span
+                        className={`manager-trend-delta${teamInsights.deltaPct >= 0 ? " is-up" : " is-down"}`}
+                      >
+                        {teamInsights.deltaPct >= 0 ? "▲" : "▼"}
+                        {Math.abs(teamInsights.deltaPct)}%
+                      </span>
+                    ) : null}
+                  </span>
+                </div>
+              </div>
+
+              <div className="manager-skills">
+                <h4 className="manager-skills-title">学習トピック</h4>
+                {teamInsights.subjects.length === 0 ? (
+                  <p className="manager-insights-state">トピックの記録がありません。</p>
+                ) : (
+                  <ul className="manager-skills-list">
+                    {teamInsights.subjects.map((s) => (
+                      <li key={s.subject} className="manager-skill-row">
+                        <span className="manager-skill-name" title={s.subject}>
+                          <span
+                            className="manager-skill-dot"
+                            style={{ background: s.color || "var(--green, #1f6f4a)" }}
+                            aria-hidden="true"
+                          />
+                          {s.subject}
+                        </span>
+                        <span className="manager-bar-track" aria-hidden="true">
+                          <span
+                            className="manager-bar-fill"
+                            style={{
+                              width: `${Math.max(s.pct * 100, 2)}%`,
+                              background: s.color || undefined,
+                            }}
+                          />
+                        </span>
+                        <span className="manager-skill-value">{formatMinutesJa(s.minutes)}</span>
+                      </li>
+                    ))}
+                    {teamInsights.otherCount > 0 ? (
+                      <li className="manager-skill-row is-other">
+                        <span className="manager-skill-name">他 {teamInsights.otherCount} トピック</span>
+                        <span className="manager-bar-track" aria-hidden="true" />
+                        <span className="manager-skill-value">
+                          {formatMinutesJa(teamInsights.otherMinutes)}
+                        </span>
+                      </li>
+                    ) : null}
+                  </ul>
+                )}
+              </div>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
       {/* Team-health engagement bar + follow-up list */}
       {teamMembers.length > 0 ? (
         <section className="manager-charts">
@@ -528,9 +825,9 @@ export function ManagerDashboard({
                     className="manager-followup-item"
                     role="button"
                     tabIndex={0}
-                    onClick={() => onMemberSelect?.(f.member)}
+                    onClick={() => openMember(f.member)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") onMemberSelect?.(f.member);
+                      if (e.key === "Enter" || e.key === " ") openMember(f.member);
                     }}
                   >
                     <span className="manager-followup-name">{f.member.displayName}</span>
@@ -682,9 +979,9 @@ export function ManagerDashboard({
                   className="manager-member-card"
                   role="button"
                   tabIndex={0}
-                  onClick={() => onMemberSelect?.(member)}
+                  onClick={() => openMember(member)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") onMemberSelect?.(member);
+                    if (e.key === "Enter" || e.key === " ") openMember(member);
                   }}
                 >
                   <div className="manager-member-avatar">
@@ -735,6 +1032,267 @@ export function ManagerDashboard({
           </div>
         )}
       </section>
+
+      {selectedMember ? (
+        <MemberDetailPanel
+          member={selectedMember}
+          isYou={!!currentUser.uid && currentUser.uid === selectedMember.uid}
+          onClose={() => setSelectedMember(null)}
+          onFetchMemberLogs={onFetchMemberLogs}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/* ── Per-member drill-down ─────────────────────────────────────────
+   Opened when the manager clicks a member. Fetches that member's recent
+   logs (org-scoped) and renders a 13-week contribution heatmap, an
+   8-week trend, the subjects they're investing in, and recent sessions —
+   turning the flat roster row into something a manager can act on in a
+   1:1. Falls back to the snapshot stats when no fetcher is wired or the
+   member has no stamped logs yet. */
+const MEMBER_HEATMAP_DAYS = 91; // 13 weeks
+const MEMBER_TREND_WEEKS = 8;
+
+function MemberDetailPanel({
+  member,
+  isYou,
+  onClose,
+  onFetchMemberLogs,
+}: {
+  member: OrganizationMemberRecord;
+  isYou: boolean;
+  onClose: () => void;
+  onFetchMemberLogs?: (memberUid: string) => Promise<StudyLogRecord[]>;
+}) {
+  const [logs, setLogs] = useState<StudyLogRecord[] | null>(null);
+  const [state, setState] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const now = useMemo(() => Date.now(), []);
+
+  // Close on Escape — expected behavior for an overlay.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!onFetchMemberLogs) return;
+    let cancelled = false;
+    setState("loading");
+    onFetchMemberLogs(member.uid)
+      .then((fetched) => {
+        if (cancelled) return;
+        setLogs(fetched);
+        setState("ready");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setState("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [member.uid, onFetchMemberLogs]);
+
+  const derived = useMemo(() => {
+    if (!logs) return null;
+    const heatmap = dailyHeatmap(logs, MEMBER_HEATMAP_DAYS, now);
+    const trend = weeklyTrend(logs, MEMBER_TREND_WEEKS, now);
+    const maxWeek = Math.max(1, ...trend);
+    const { rows, otherCount } = subjectBreakdown(logs, 5);
+    const windowMinutes = heatmap.reduce((s, c) => s + c.minutes, 0);
+    const activeDays = heatmap.filter((c) => c.minutes > 0).length;
+    const recent = [...logs]
+      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+      .slice(0, 8);
+    return {
+      heatmap,
+      trend: trend.map((minutes) => ({ minutes, ratio: minutes / maxWeek })),
+      subjects: rows,
+      otherCount,
+      windowHours: Math.round(windowMinutes / 60),
+      activeDays,
+      thisWeekHours: Math.round((trend[trend.length - 1] || 0) / 60),
+      recent,
+      hasData: windowMinutes > 0,
+    };
+  }, [logs, now]);
+
+  const snapshotHours = Math.round((member.effortExp || 0) / 60);
+
+  return (
+    <div
+      className="manager-detail-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${member.displayName} の学習詳細`}
+      onClick={onClose}
+    >
+      <div className="manager-detail-panel" onClick={(e) => e.stopPropagation()}>
+        <header className="manager-detail-head">
+          <div className="manager-detail-identity">
+            <div className="manager-detail-avatar">
+              {member.avatarUrl ? (
+                <img src={member.avatarUrl} alt={member.displayName} />
+              ) : (
+                <span>{member.displayName.charAt(0)}</span>
+              )}
+            </div>
+            <div>
+              <strong className="manager-detail-name">
+                {member.displayName}
+                {isYou ? <span className="manager-you-badge">あなた</span> : null}
+              </strong>
+              <small className="manager-detail-id">@{member.userId}</small>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="manager-detail-close"
+            onClick={onClose}
+            aria-label="閉じる"
+          >
+            ✕
+          </button>
+        </header>
+
+        <div className="manager-detail-kpis">
+          <div className="manager-detail-kpi">
+            <span className="manager-detail-kpi-label">累計学習</span>
+            <strong>{snapshotHours}h</strong>
+          </div>
+          <div className="manager-detail-kpi">
+            <span className="manager-detail-kpi-label">レベル</span>
+            <strong>{member.level || 1}</strong>
+          </div>
+          <div className="manager-detail-kpi">
+            <span className="manager-detail-kpi-label">アウトプット</span>
+            <strong>{(member.outputExp || 0).toLocaleString()}</strong>
+          </div>
+          <div className="manager-detail-kpi">
+            <span className="manager-detail-kpi-label">最終同期</span>
+            <strong>{relativeLabel(daysSince(member.lastSyncedAt, now))}</strong>
+          </div>
+        </div>
+
+        {!onFetchMemberLogs ? (
+          <p className="manager-insights-state">詳細データは利用できません。</p>
+        ) : state === "loading" ? (
+          <p className="manager-insights-state">読み込み中…</p>
+        ) : state === "error" ? (
+          <p className="manager-insights-state">学習記録を読み込めませんでした。</p>
+        ) : derived && !derived.hasData ? (
+          <p className="manager-insights-state">
+            直近 13 週間の学習記録はまだありません。記録が増えると、ここに学習の推移が表示されます。
+          </p>
+        ) : derived ? (
+          <div className="manager-detail-body">
+            <section className="manager-detail-section">
+              <header className="manager-detail-section-head">
+                <h4>学習の記録</h4>
+                <span className="manager-chart-sublabel">
+                  直近 13 週間 ・ {derived.activeDays} 日活動 ・ {derived.windowHours}h
+                </span>
+              </header>
+              <div className="manager-heatmap" role="img" aria-label="13週間の学習ヒートマップ">
+                {derived.heatmap.map((cell) => (
+                  <span
+                    key={cell.key}
+                    className={`manager-heat-cell is-l${heatLevel(cell.minutes)}`}
+                    title={`${cell.key} ・ ${formatMinutesJa(cell.minutes)}`}
+                  />
+                ))}
+              </div>
+              <div className="manager-heat-legend">
+                <span>少</span>
+                <span className="manager-heat-cell is-l0" aria-hidden="true" />
+                <span className="manager-heat-cell is-l1" aria-hidden="true" />
+                <span className="manager-heat-cell is-l2" aria-hidden="true" />
+                <span className="manager-heat-cell is-l3" aria-hidden="true" />
+                <span className="manager-heat-cell is-l4" aria-hidden="true" />
+                <span>多</span>
+              </div>
+            </section>
+
+            <section className="manager-detail-section">
+              <header className="manager-detail-section-head">
+                <h4>週ごとの推移</h4>
+                <span className="manager-chart-sublabel">直近 {MEMBER_TREND_WEEKS} 週間</span>
+              </header>
+              <div className="manager-trend-bars is-compact" role="img" aria-label="週ごとの学習時間">
+                {derived.trend.map((w, i) => (
+                  <span
+                    key={i}
+                    className={`manager-trend-bar${i === derived.trend.length - 1 ? " is-current" : ""}`}
+                    style={{ height: `${Math.max(w.ratio * 100, 3)}%` }}
+                    title={`${derived.trend.length - 1 - i === 0 ? "今週" : `${derived.trend.length - 1 - i}週前`} ・ ${formatMinutesJa(w.minutes)}`}
+                  />
+                ))}
+              </div>
+            </section>
+
+            {derived.subjects.length > 0 ? (
+              <section className="manager-detail-section">
+                <header className="manager-detail-section-head">
+                  <h4>学習トピック</h4>
+                  {derived.otherCount > 0 ? (
+                    <span className="manager-chart-sublabel">他 {derived.otherCount}</span>
+                  ) : null}
+                </header>
+                <ul className="manager-skills-list">
+                  {derived.subjects.map((s) => (
+                    <li key={s.subject} className="manager-skill-row">
+                      <span className="manager-skill-name" title={s.subject}>
+                        <span
+                          className="manager-skill-dot"
+                          style={{ background: s.color || "var(--green, #1f6f4a)" }}
+                          aria-hidden="true"
+                        />
+                        {s.subject}
+                      </span>
+                      <span className="manager-bar-track" aria-hidden="true">
+                        <span
+                          className="manager-bar-fill"
+                          style={{ width: `${Math.max(s.pct * 100, 2)}%`, background: s.color || undefined }}
+                        />
+                      </span>
+                      <span className="manager-skill-value">{formatMinutesJa(s.minutes)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
+            {derived.recent.length > 0 ? (
+              <section className="manager-detail-section">
+                <header className="manager-detail-section-head">
+                  <h4>最近の記録</h4>
+                </header>
+                <ul className="manager-detail-logs">
+                  {derived.recent.map((log) => (
+                    <li key={log.id} className="manager-detail-log">
+                      <span className="manager-detail-log-date">{shortDateJa(log.createdAt)}</span>
+                      <span className="manager-detail-log-subject" title={log.subject}>
+                        <span
+                          className="manager-skill-dot"
+                          style={{ background: log.color || "var(--green, #1f6f4a)" }}
+                          aria-hidden="true"
+                        />
+                        {log.subject}
+                      </span>
+                      <span className="manager-detail-log-minutes">{formatMinutesJa(log.minutes)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

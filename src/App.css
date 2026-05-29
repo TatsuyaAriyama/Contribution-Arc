@@ -25247,6 +25247,434 @@ a[role="button"],
   }
 }
 
+/* ─── Team-wide insights (trend + skill mix) ─────────────────────── */
+.manager-insights {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(var(--ink-rgb, 31, 32, 36), 0.12);
+  border-radius: 14px;
+  background: rgba(var(--surface-rgb), 0.6);
+}
+
+.manager-insights-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.manager-insights-summary {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+}
+
+.manager-insights-total {
+  font-size: 24px;
+  font-weight: 780;
+  color: var(--ink);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.manager-insights-meta {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.manager-insights-state {
+  margin: 0;
+  padding: 8px 0;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.manager-insights-body {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .manager-insights-body {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+}
+
+/* ─── Weekly trend bars ──────────────────────────────────────────── */
+.manager-trend {
+  display: grid;
+  gap: 8px;
+}
+
+.manager-trend-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 104px;
+}
+
+.manager-trend-bars.is-compact {
+  height: 68px;
+}
+
+.manager-trend-bar {
+  flex: 1 1 0;
+  min-height: 2px;
+  border-radius: 3px 3px 0 0;
+  background: rgba(var(--green-rgb, 31, 111, 74), 0.3);
+  transition: height 0.28s ease, background 0.18s ease;
+}
+
+.manager-trend-bar.is-current {
+  background: var(--green);
+}
+
+.manager-trend-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.manager-trend-now {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--ink);
+  font-weight: 720;
+  font-variant-numeric: tabular-nums;
+}
+
+.manager-trend-delta {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.manager-trend-delta.is-up {
+  color: var(--green);
+}
+
+.manager-trend-delta.is-down {
+  color: var(--accent-warm, #d3573b);
+}
+
+/* ─── Skill / topic breakdown ────────────────────────────────────── */
+.manager-skills {
+  display: grid;
+  gap: 10px;
+}
+
+.manager-skills-title {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.manager-skills-list {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.manager-skill-row {
+  display: grid;
+  grid-template-columns: minmax(72px, 38%) 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.manager-skill-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.manager-skill-row.is-other .manager-skill-name {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.manager-skill-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  flex: none;
+}
+
+.manager-skill-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ─── Member drill-down panel ────────────────────────────────────── */
+.manager-detail-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 20px;
+  background: rgba(20, 30, 24, 0.4);
+  backdrop-filter: blur(3px);
+  overflow-y: auto;
+}
+
+.manager-detail-panel {
+  width: 100%;
+  max-width: 560px;
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid rgba(var(--ink-rgb, 31, 32, 36), 0.12);
+  border-radius: 16px;
+  background: var(--surface, #fff);
+  box-shadow: 0 24px 60px rgba(20, 30, 24, 0.24);
+}
+
+.manager-detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.manager-detail-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.manager-detail-avatar {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  background: rgba(var(--green-rgb, 31, 111, 74), 0.12);
+  color: var(--green);
+  font-weight: 700;
+  font-size: 18px;
+  overflow: hidden;
+  flex: none;
+}
+
+.manager-detail-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.manager-detail-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 740;
+  color: var(--ink);
+}
+
+.manager-detail-id {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.manager-detail-close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(var(--ink-rgb, 31, 32, 36), 0.06);
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.16s ease;
+  flex: none;
+}
+
+.manager-detail-close:hover {
+  background: rgba(var(--ink-rgb, 31, 32, 36), 0.12);
+  color: var(--ink);
+}
+
+.manager-detail-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+@media (max-width: 480px) {
+  .manager-detail-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.manager-detail-kpi {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(var(--ink-rgb, 31, 32, 36), 0.04);
+}
+
+.manager-detail-kpi-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.manager-detail-kpi strong {
+  font-size: 17px;
+  font-weight: 760;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.manager-detail-body {
+  display: grid;
+  gap: 20px;
+}
+
+.manager-detail-section {
+  display: grid;
+  gap: 10px;
+}
+
+.manager-detail-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.manager-detail-section-head h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 720;
+  color: var(--ink);
+}
+
+/* ─── Contribution heatmap ───────────────────────────────────────── */
+.manager-heatmap {
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 3px;
+}
+
+.manager-heat-cell {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 2px;
+  background: rgba(var(--ink-rgb, 31, 32, 36), 0.06);
+}
+
+.manager-heat-cell.is-l1 {
+  background: rgba(var(--green-rgb, 31, 111, 74), 0.3);
+}
+
+.manager-heat-cell.is-l2 {
+  background: rgba(var(--green-rgb, 31, 111, 74), 0.5);
+}
+
+.manager-heat-cell.is-l3 {
+  background: rgba(var(--green-rgb, 31, 111, 74), 0.74);
+}
+
+.manager-heat-cell.is-l4 {
+  background: var(--green);
+}
+
+.manager-heat-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.manager-heat-legend .manager-heat-cell {
+  width: 11px;
+  height: 11px;
+  aspect-ratio: auto;
+}
+
+/* ─── Recent logs list ───────────────────────────────────────────── */
+.manager-detail-logs {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.manager-detail-log {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: rgba(var(--ink-rgb, 31, 32, 36), 0.03);
+}
+
+.manager-detail-log-date {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.manager-detail-log-subject {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.manager-detail-log-minutes {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 /* ============================================================
    Phase 10d — グローバルクイック記録ポップオーバー
    どの画面からでも、トップバー / mobile 中央 CTA から

@@ -48,11 +48,14 @@ import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import { auth, db, githubProvider, googleProvider } from "./firebase";
 import {
   acceptOrganizationInvite,
+  backfillStudyLogOrganizationId,
   createOrganization,
   createOrganizationInvite,
   deleteStudyLogFromCloud,
+  fetchOrganizationStudyLogs,
   leaveOrganization,
   listAuditLogs,
+  listMemberStudyLogs,
   listOrganizationMembers,
   loadOrganization,
   migrateStudyLogsToCloud,
@@ -3969,6 +3972,37 @@ function App() {
       });
   }, [currentView, currentOrganization, currentUser?.uid]);
 
+  /* One-time, member-side backfill of organizationId onto pre-rollout
+     study logs. Every org member runs this once so the owner's Manager
+     Dashboard sees their full history rather than only logs created
+     after the org-stamping rollout. Guarded by a per-(user,org)
+     localStorage marker so it never re-runs — honoring the project's
+     write-dedup discipline (no repeated batch writes on every load). */
+  useEffect(() => {
+    const uid = currentUser?.uid;
+    const orgId = currentOrganization?.id;
+    if (!uid || !orgId) return;
+    const marker = `contribution-arc-orgstamp-${uid}-${orgId}`;
+    let alreadyDone = false;
+    try {
+      alreadyDone = window.localStorage.getItem(marker) === "done";
+    } catch {
+      /* private mode / storage disabled — fall through and run once */
+    }
+    if (alreadyDone) return;
+    safeSetLocalStorage(marker, "done");
+    void backfillStudyLogOrganizationId(db, uid, orgId).catch((error) => {
+      // Non-fatal: future logs still stamp via the write path. Clear the
+      // marker so a later session can retry the historical backfill.
+      try {
+        window.localStorage.removeItem(marker);
+      } catch {
+        /* ignore */
+      }
+      console.warn("Study log org backfill skipped.", error);
+    });
+  }, [currentUser?.uid, currentOrganization?.id]);
+
   useEffect(() => {
     return onAuthStateChanged(auth, (user) => {
       didRequestStudyLogMigrationRef.current = false;
@@ -4387,7 +4421,9 @@ function App() {
 
           if (localOnly.length > 0 && !didRequestStudyLogMigrationRef.current) {
             didRequestStudyLogMigrationRef.current = true;
-            void migrateStudyLogsToCloud(db, currentUser.uid, localOnly).catch((error) => {
+            void migrateStudyLogsToCloud(db, currentUser.uid, localOnly, {
+              organizationId: currentOrganization?.id,
+            }).catch((error) => {
               didRequestStudyLogMigrationRef.current = false;
               console.error("Study log recovery upload failed.", error);
             });
@@ -6774,6 +6810,7 @@ function App() {
     void saveStudyLogToCloud(db, currentUser.uid, nextLog, {
       earnedExp: Math.round(safeMinutes * 1.25),
       source: "learning-quick",
+      organizationId: currentOrganization?.id,
     }).catch((error) => {
       console.error("Quick study log save failed.", error);
     });
@@ -6811,6 +6848,7 @@ function App() {
     void saveStudyLogToCloud(db, currentUser.uid, nextLog, {
       earnedExp: Math.round(minutes * 1.25),
       source: "manual",
+      organizationId: currentOrganization?.id,
     }).catch((error) => {
       // Surface to console as an error so silent persistence failures
       // (rules / network) don't quietly lose records. Local state +
@@ -8373,6 +8411,7 @@ function App() {
       roomId: session.roomId,
       earnedExp: session.earnedExp,
       source: "workspace-session",
+      organizationId: currentOrganization?.id,
     }).catch((error) => {
       console.error("Workspace study log cloud save failed.", error);
     });
@@ -15284,10 +15323,12 @@ function App() {
                   }
                   return undefined;
                 }}
-                onMemberSelect={(member) => {
-                  // For now, clicking a member just shows their profile
-                  // In a future phase, this could open a detail view
-                }}
+                onFetchOrgLogs={(sinceIso) =>
+                  fetchOrganizationStudyLogs(db, currentOrganization.id, sinceIso)
+                }
+                onFetchMemberLogs={(memberUid) =>
+                  listMemberStudyLogs(db, currentOrganization.id, memberUid)
+                }
               />
             )
           ) : (

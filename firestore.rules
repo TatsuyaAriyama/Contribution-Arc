@@ -122,8 +122,28 @@ service cloud.firestore {
     }
 
     match /studyLogs/{logId} {
+      // Two read paths:
+      //   (a) Self: the author reading their own logs (the common case —
+      //       powers the personal dashboard / heatmap).
+      //   (b) Org owner: the owner of the organization stamped on the
+      //       log may read it. This is what unlocks the Manager
+      //       Dashboard's per-member drill-down and team-wide
+      //       aggregation. Scoped tightly: only logs that carry an
+      //       `organizationId` whose org doc has ownerUid == requester.
+      //       Members who haven't joined an org, or logs predating the
+      //       org-stamping rollout, stay private. Because "rules are not
+      //       filters", the manager client MUST constrain its queries
+      //       with `where("organizationId","==",orgId)` so every matched
+      //       doc satisfies branch (b).
       allow read: if signedIn()
-        && resource.data.userId == request.auth.uid;
+        && (
+          resource.data.userId == request.auth.uid
+          || (
+            resource.data.organizationId is string
+            && resource.data.organizationId.size() > 0
+            && get(/databases/$(database)/documents/organizations/$(resource.data.organizationId)).data.ownerUid == request.auth.uid
+          )
+        );
       allow create: if signedIn()
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.category is string
