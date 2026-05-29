@@ -3573,7 +3573,7 @@
   background: #fdfdff;
   color: var(--ink);
   font: inherit;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.55;
   resize: vertical;
   outline: none;
@@ -6896,17 +6896,17 @@
 .study-form input,
 .study-form select {
   width: 100%;
-  height: 34px;
+  height: 40px;
   min-width: 0;
   border: 1px solid var(--line);
   border-radius: 11px;
   background: var(--surface);
   color: var(--ink);
   font: inherit;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 800;
   outline: none;
-  padding: 0 10px;
+  padding: 0 12px;
 }
 
 .study-color-field {
@@ -26660,5 +26660,246 @@ a[role="button"],
 @media (min-width: 721px) {
   .app-view-feed {
     display: none;
+  }
+}
+
+/* =========================================================
+   Mobile polish (≤720px)
+   個別のCSS分散修正ではカバーしきれない "全画面共通" の
+   操作性問題を一括で解消するブロック。タップ領域、フォント、
+   横スクロール、タッチフィードバック、慣性スクロールなど、
+   企業品質に最低限必要な要素をここで保証する。
+   ========================================================= */
+@media (max-width: 720px) {
+  /* iOS Safari の灰色タップハイライトを消す。Material 風の
+     active state を別途用意するので二重表示を避ける目的。 */
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ページ全体の横スクロールを禁止。あちこちの固定幅要素が
+     はみ出してもここで吸収する最後の防衛線。 */
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
+  /* 慣性スクロールを全スクロール領域に。iOS の標準挙動。 */
+  body {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 画像のはみ出し防止。グローバル img ルールがないので
+     ここで保証する。 */
+  img,
+  video,
+  svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* iOS は font-size < 16px の input をフォーカス時に勝手に
+     拡大する。これを防ぐため全 input/textarea/select を
+     16px 以上に強制。type="file" やトグル系は除外。 */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  textarea,
+  select {
+    font-size: max(16px, 1rem);
+  }
+
+  /* ============= タップ領域の最低保証 =============
+     全インタラクティブ要素に 44×44 を保証。WCAG / iOS HIG /
+     Material Design いずれも推奨するアクセシビリティ最低線。
+     既存の小ボタンは押せれば中央寄せで広がるよう min-height +
+     padding + display: inline-flex を強制する。 */
+  button,
+  a[role="button"],
+  [role="button"],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"] {
+    min-height: 44px;
+  }
+
+  /* ただし、ピル状の小さいバッジ ボタン群はサイズが
+     "情報" として意味を持つので除外。floor note の小アイコン
+     や記念碑のラベルなど、ステージ内のオーバーレイ要素は
+     見た目を保ったまま透明な拡張ヒットエリアで補う。 */
+  .workspace-floor-note,
+  .workspace-monument,
+  .actor-focus-ring,
+  .topbar-icon-button,
+  .mobile-tab-presence-dot,
+  .topbar-quicklog,
+  .room-card-menu-button {
+    min-height: 0;
+  }
+
+  /* "min-height: 0" にした上で、視覚サイズは保ちつつヒット
+     エリアを 44px 確保するために :before の透明ヒット領域を
+     被せる。トップバーのアイコンボタンは縦領域の制約上、
+     実サイズ 40px までを許容しつつ拡張で補う。 */
+  .topbar-icon-button {
+    position: relative;
+    min-width: 40px;
+    min-height: 40px;
+  }
+  .topbar-icon-button::before {
+    content: "";
+    position: absolute;
+    inset: -4px;
+    pointer-events: auto;
+  }
+
+  /* タッチフィードバック。tap-highlight を消した代わりに
+     :active で軽く沈ませる。プロ品質の "押した感" を出す。 */
+  button:active,
+  a[role="button"]:active,
+  [role="button"]:active {
+    transform: scale(0.97);
+    transition: transform 0.08s ease-out;
+  }
+
+  /* 文字列の折り返しを安全側に。日本語の超長い単語や
+     URL でレイアウトが崩れない。 */
+  p,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  li,
+  dd,
+  span {
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+
+  /* ============= トップバー高さ削減 =============
+     premium-dashboard-header は PC 想定で 64px 以上ある。
+     スマホでは縦領域が貴重なので圧縮。ボトムナビと合わせて
+     使えるコンテンツ高を最大化する。 */
+  .premium-dashboard-header {
+    min-height: 56px;
+    padding-top: max(8px, env(safe-area-inset-top));
+    padding-bottom: 8px;
+  }
+
+  /* ============= ボトムナビの安全な高さ =============
+     iPhone のホームインジケータ領域を確実に避ける。
+     既存実装をベースに、最低タップサイズ 56px を保証。 */
+  .mobile-bottom-nav {
+    min-height: 60px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+  .mobile-bottom-nav button {
+    min-height: 56px;
+    /* タブナビは情報量重視。:active の縮みを軽く。 */
+  }
+  .mobile-bottom-nav button:active {
+    transform: scale(0.95);
+  }
+
+  /* ボトムナビの分だけ全 view の最下部に余白を確保。
+     スクロール最下部の要素がナビに隠れないようにする。 */
+  .app-shell {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* ============= モーダルのモバイル最適化 =============
+     PC 想定の固定幅 modal をフルスクリーン寄りに。両脇余白
+     16px、上下も safe-area を尊重。 */
+  .settings-modal,
+  .user-search-modal,
+  .daily-detail-modal,
+  .share-x-panel {
+    width: 100%;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100svh - 24px);
+    border-radius: 18px;
+  }
+  .user-search-modal {
+    padding: 16px;
+  }
+  .share-x-panel {
+    padding: 16px;
+  }
+
+  /* ============= プロフィールレイアウトの横スクロール対策 =============
+     900px で 1 列化されているが、両ペイン (two-pane-right) と
+     720-900px の間で窮屈になる。720px 以下では完全に 1 列固定。 */
+  .profile-layout {
+    grid-template-columns: 1fr;
+  }
+
+  /* ============= FEED 単独画面（モバイル） =============
+     FEED ボタンで開く独立ビュー。トップに戻るボタン付き
+     ヘッダー、内部はスクロール可能、ボトムナビは表示維持。 */
+  .app-view-feed {
+    z-index: 65; /* mobile-bottom-nav (70) より下に */
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+  .feed-view-header {
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 1;
+    padding-top: max(12px, env(safe-area-inset-top));
+  }
+
+  /* ============= フォーム/カードの押しやすさ =============
+     主要なボタン群が小さすぎる箇所を一括で底上げ。 */
+  .workspace-nav-button i,
+  .log-composer-footer button,
+  .profile-log-head button,
+  .room-log-strip button,
+  .status-card-link::after,
+  .today-strip-share,
+  .workspace-room-create-visibility button,
+  .room-title-toggle {
+    min-height: 40px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  /* ============= 横スクロールしがちな grid 群 =============
+     固定 minmax(N, ...) を含む grid を 720px 以下では強制 1 列に。
+     横はみ出しの最後の防衛線。 */
+  .study-form {
+    grid-template-columns: 1fr;
+  }
+
+  /* ============= スクロール領域の慣性スクロール明示 ============= */
+  .two-pane-shell,
+  .app-view-feed,
+  .feed-view-content,
+  .premium-dashboard-content,
+  .logs-layout,
+  .daily-screen {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* ============= フォーカスリングの視認性 =============
+     キーボード（外付け）操作時のフォーカスを残しつつ、
+     マウス/タッチ操作時は :focus を抑える。 */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+  :focus-visible {
+    outline: 2px solid var(--green);
+    outline-offset: 2px;
+  }
+}
+
+/* 折り畳み・極小端末（≤380px）向けの追加圧縮 */
+@media (max-width: 380px) {
+  .premium-dashboard-header {
+    min-height: 48px;
+    gap: 4px;
+  }
+  .mobile-bottom-nav button span {
+    font-size: 10px;
   }
 }
