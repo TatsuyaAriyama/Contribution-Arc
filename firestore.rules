@@ -443,10 +443,17 @@ service cloud.firestore {
         && request.resource.data.fromUid == request.auth.uid
         && request.resource.data.toUid is string
         && request.resource.data.status == "pending";
+      // 受信側 (toUid) は status を accepted / rejected に更新できる。
+      // 旧仕様は accepted のみだったが、申請の "拒否" を可視化するため
+      // rejected も許可。fromUid / toUid は不変。
       allow update: if signedIn()
         && resource.data.toUid == request.auth.uid
         && request.resource.data.fromUid == resource.data.fromUid
-        && request.resource.data.toUid == resource.data.toUid;
+        && request.resource.data.toUid == resource.data.toUid
+        && request.resource.data.status in ["pending", "accepted", "rejected"];
+      // 双方とも削除可能。受信側は申請を消す = 拒否 + 履歴削除。送信側は
+      // 申請取り消し or 友達関係を解除する用。Friends list の "削除" ボタン
+      // はこの delete を呼ぶ。
       allow delete: if signedIn()
         && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
     }

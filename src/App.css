@@ -27877,3 +27877,213 @@ a[role="button"],
 .room-preview-join:hover::after {
   left: 100%;
 }
+
+/* =========================================================
+   Friends polish — フレンド機能のクオリティアップ
+   検索バー、ソート、ピン、削除、リーダーボード表示、通知の
+   拒否ボタン、ステータスメッセージなど、新しい UI 要素のスタイル。
+   ========================================================= */
+
+/* ───────── ヘッダーのカウント表示 ───────── */
+.friends-modal-head h2 .friends-modal-count {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+/* ───────── 検索 + ソートのコントロール行 ───────── */
+.friends-modal-controls {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0 4px;
+}
+.friends-modal-search {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+.friends-modal-search:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(var(--green-rgb, 31, 111, 74), 0.14);
+}
+.friends-modal-sort {
+  flex: 0 0 auto;
+  height: 38px;
+  padding: 0 28px 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ───────── 行のアクション群（ピン / 招待 / 削除） ───────── */
+.friends-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+.friends-modal-pin,
+.friends-modal-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease,
+    border-color 0.14s ease,
+    transform 0.14s ease;
+}
+.friends-modal-pin:hover {
+  background: rgba(var(--green-rgb, 31, 111, 74), 0.08);
+  color: var(--green);
+}
+.friends-modal-pin[aria-label="ピン留めを外す"] {
+  color: #d4a52f;
+}
+.friends-modal-remove:hover {
+  background: rgba(216, 76, 86, 0.1);
+  color: #c4424d;
+  border-color: rgba(216, 76, 86, 0.18);
+}
+.friends-modal-pin:active,
+.friends-modal-remove:active {
+  transform: scale(0.92);
+}
+
+/* ───────── ピン留め行のサブ強調 ───────── */
+.friends-modal-row.is-pinned {
+  background: linear-gradient(
+    90deg,
+    rgba(var(--green-rgb, 31, 111, 74), 0.06),
+    transparent 80%
+  );
+  border-color: rgba(var(--green-rgb, 31, 111, 74), 0.18);
+}
+.friends-modal-pin-mark {
+  display: inline-flex;
+  margin-left: 6px;
+  color: #d4a52f;
+  font-size: 12px;
+}
+
+/* ───────── レベル / ストリーク / Friends since の小さなステータス ───────── */
+.friends-modal-stats {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.friends-modal-stats em {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(var(--ink-rgb), 0.06);
+  color: var(--ink);
+  font-style: normal;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+/* ───────── 通知の承認＋拒否の二段ボタン ───────── */
+.notification-friend-actions {
+  display: inline-flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.notification-decline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(var(--ink-rgb), 0.12);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+}
+.notification-decline:hover {
+  background: rgba(var(--ink-rgb), 0.06);
+  color: var(--ink);
+}
+.notification-decline:active {
+  transform: scale(0.96);
+}
+
+/* ───────── プロフィール画面の解除 / 拒否ボタン ───────── */
+.friend-action-decline,
+.friend-action-remove {
+  border: 1px solid rgba(216, 76, 86, 0.28) !important;
+  background: transparent !important;
+  color: #c4424d !important;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+.friend-action-decline:hover:not(:disabled),
+.friend-action-remove:hover:not(:disabled) {
+  background: rgba(216, 76, 86, 0.08) !important;
+}
+
+/* ───────── モバイル最適化 ───────── */
+@media (max-width: 720px) {
+  .friends-modal-controls {
+    flex-direction: column;
+    gap: 6px;
+  }
+  .friends-modal-search,
+  .friends-modal-sort {
+    width: 100%;
+    height: 44px;
+    font-size: 16px;
+  }
+  .friends-modal-row {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .friends-modal-actions {
+    width: 100%;
+    margin-top: 8px;
+    justify-content: flex-end;
+  }
+  .friends-modal-pin,
+  .friends-modal-remove {
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
+    font-size: 18px;
+  }
+  .friends-modal-invite {
+    min-height: 40px;
+    padding: 0 14px;
+  }
+}
