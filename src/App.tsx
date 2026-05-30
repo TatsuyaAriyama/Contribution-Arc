@@ -12296,7 +12296,7 @@ function App() {
             ) : null}
           </button>
 
-          <div className="topbar-popover-wrap" ref={friendsPopoverRef}>
+          <div className="topbar-popover-wrap topbar-popover-wrap-friends" ref={friendsPopoverRef}>
             <button
               type="button"
               className={`topbar-icon-button${isFriendsPopoverOpen ? " is-open" : ""}`}
@@ -12304,6 +12304,14 @@ function App() {
               data-tooltip="Friends"
               aria-expanded={isFriendsPopoverOpen}
               onClick={() => {
+                // モバイル（≤720px）では popover が窮屈なので、タップで
+                // フル幅の Friends modal を直接開く。PC は従来通り popover。
+                if (typeof window !== "undefined" && window.matchMedia("(max-width: 720px)").matches) {
+                  setIsFriendsModalOpen(true);
+                  setIsFriendsPopoverOpen(false);
+                  setIsLivePopoverOpen(false);
+                  return;
+                }
                 setIsFriendsPopoverOpen((prev) => !prev);
                 setIsLivePopoverOpen(false);
               }}
