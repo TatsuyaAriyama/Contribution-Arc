@@ -28534,3 +28534,77 @@ a[role="button"],
     overflow-x: clip;
   }
 }
+
+/* =========================================================
+   Mobile viewport hard clamp — 最終徹底防衛
+   "作業部屋が左に偏る" 問題が依然残るため、ありえる原因を
+   片っ端から物理的に止める。
+   ========================================================= */
+@media (max-width: 720px) {
+  /* (a) html / body / #root を viewport 幅で完全クランプ。
+         どんなに子要素が overflow しても画面に出ない。 */
+  html,
+  body {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+  }
+  #root {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* (b) premium-dashboard-header の full-bleed トリックを無効化。
+         PC では `.app-shell` が中央寄せ・幅制限されているため
+         `width: 100vw; margin-inline: calc(50% - 50vw)` で viewport
+         全幅を取る必要があったが、モバイルでは .app-shell 自身が
+         既に 100% 幅なのでこのトリックは不要。むしろ計算誤差や
+         スクロールバー幅で 1-数 px のズレが偏りの原因になりうる。 */
+  .premium-dashboard-header {
+    width: 100%;
+    margin-inline: 0;
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    box-sizing: border-box;
+  }
+
+  /* (c) workspace 主要要素を全部明示的に full-width + center に。
+         どこかの祖先 margin が効いていても、子で打ち消す。 */
+  .app-shell,
+  .premium-shell,
+  .two-pane-shell,
+  .two-pane-left,
+  .workspace-screen,
+  .silent-workspace,
+  .workspace-2d-card,
+  .workspace-2d-shell,
+  .workspace-2d-main,
+  .workspace-stage {
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    box-sizing: border-box;
+  }
+
+  /* (d) FEED 単独ビュー以外の view 全体に対し、コンテナをセンタリング
+         打ち消し。万一 transform: translateX や margin-left が残って
+         いてもここで 0 に。 */
+  .app-shell > *,
+  .two-pane-shell > * {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    transform: none;
+  }
+
+  /* (e) workspace の祖先までさかのぼっても overflow を断つ。 */
+  .premium-shell,
+  .silent-workspace,
+  .workspace-2d-card {
+    overflow-x: clip;
+  }
+}
