@@ -351,7 +351,7 @@ type UserProfile = {
   language?: Language;
 };
 
-type FriendRequestStatus = "pending" | "accepted";
+type FriendRequestStatus = "pending" | "accepted" | "rejected";
 type FriendRequestDirection = "incoming" | "outgoing";
 
 type FriendRequest = {
@@ -1626,6 +1626,16 @@ function upsertStoredFriendRequest(scope: string, nextRequest: FriendRequest) {
     safeSetLocalStorage(getFriendRequestsStorageKey(scope), JSON.stringify(nextRequests));
   } catch {
     // Local mirror is a convenience for same-browser account switching.
+  }
+}
+
+function removeStoredFriendRequest(scope: string, requestId: string) {
+  try {
+    const requests = readStoredFriendRequests(scope);
+    const nextRequests = requests.filter((request) => request.id !== requestId);
+    safeSetLocalStorage(getFriendRequestsStorageKey(scope), JSON.stringify(nextRequests));
+  } catch {
+    /* localStorage 不可なら無視。クラウド側が真実。 */
   }
 }
 
@@ -3710,6 +3720,29 @@ function App() {
   const [friends, setFriends] = useState<FriendPreview[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [friendMessage, setFriendMessage] = useState("");
+  // Pinned friends（ローカルだけで保持）。お気に入りの友達を一覧の上位に
+  // 固定する。Firestore 同期は P2 でやる予定 ── ひとまずデバイス毎の
+  // 設定として動作させる。配列順は保持しない（Set で扱う）。
+  const [pinnedFriendUids, setPinnedFriendUids] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem("ca:pinned-friends");
+      return raw ? (JSON.parse(raw) as string[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("ca:pinned-friends", JSON.stringify(pinnedFriendUids));
+    } catch {
+      /* localStorage 不可なら諦める */
+    }
+  }, [pinnedFriendUids]);
+  // Friends modal の表示モード / 検索 / ソート。それぞれセッション保持。
+  const [friendsModalQuery, setFriendsModalQuery] = useState("");
+  const [friendsModalSort, setFriendsModalSort] = useState<
+    "online" | "name" | "recent" | "level" | "streak"
+  >("online");
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [lastNotificationReadAt, setLastNotificationReadAt] = useState("");
   const [appNotifications, setAppNotifications] = useState<NotificationItem[]>([]);
@@ -6757,18 +6790,39 @@ function App() {
   const personalActivityMembers = activeMembers.filter(
     (member) => member.userId === currentUserUid || friendIds.has(member.userId),
   );
-  const sidebarFriends = friends.map((friend) => {
-    const activeFriend = activeMembers.find((member) => member.userId === friend.uid);
-    if (activeFriend) {
-      return {
-        ...friend,
-        status: "online" as const,
-        activity: `学習中: ${activeFriend.building}`,
-      };
-    }
+  const pinnedFriendUidSet = new Set(pinnedFriendUids);
+  const sidebarFriends = friends
+    .map((friend) => {
+      // 友達の最新プロフィール（クラウドから随時取得される workspaceProfiles
+      // を流用）。表示名・avatar・determination・キャラ色などが本人の変更を
+      // 即座に反映する。なければ申請時の snapshot をそのまま使う（fallback）。
+      const liveProfile = workspaceProfiles[friend.uid];
+      const enriched = liveProfile
+        ? {
+            ...friend,
+            name: liveProfile.displayName || friend.name,
+            avatar: liveProfile.photoURL || friend.avatar,
+            userId: liveProfile.userId || friend.userId,
+          }
+        : friend;
 
-    return friend;
-  });
+      const activeFriend = activeMembers.find((member) => member.userId === friend.uid);
+      if (activeFriend) {
+        return {
+          ...enriched,
+          status: "online" as const,
+          activity: `学習中: ${activeFriend.building}`,
+        };
+      }
+
+      return enriched;
+    })
+    // ピン留めされた友達を先頭に。残りは元の順序を維持（接続順）。
+    .sort((a, b) => {
+      const aPinned = pinnedFriendUidSet.has(a.uid) ? 0 : 1;
+      const bPinned = pinnedFriendUidSet.has(b.uid) ? 0 : 1;
+      return aPinned - bPinned;
+    });
   // Hide short pings, then collapse runs of identical sessions (same subject +
   // minutes from the same author) into a single row with a ×N badge so the
   // ticker doesn't repeat "Ari completed 5分 開発" five times in a row.
@@ -8547,6 +8601,73 @@ function App() {
     event.preventDefault();
     event.stopPropagation();
     void handleFriendAccept(request);
+  };
+
+  // 申請の拒否。受信した pending request を rejected に更新し、
+  // ローカルからも消す（履歴は cloud 側に rejected として残るが、
+  // notification には現れない）。送信側にも rejected status が同期される
+  // ので「断られた」が分かる ── 既存の "永久 pending" 状態を解消する。
+  const handleFriendReject = async (request: FriendRequest) => {
+    if (!currentUser) return;
+    if (request.direction !== "incoming") return;
+
+    setFriendRequests((requests) => requests.filter((item) => item.id !== request.id));
+    const accountScope = getAccountStorageScope(currentUser.uid, userId);
+    removeStoredFriendRequest(accountScope, request.id);
+
+    try {
+      await setDoc(
+        doc(db, "friendRequests", request.id),
+        {
+          status: "rejected",
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
+      // しばらく後に doc を delete して spam を防ぐ。失敗しても無視。
+      void deleteDoc(doc(db, "friendRequests", request.id)).catch(() => {});
+    } catch (error) {
+      console.info("Friend request reject cloud sync skipped.", error);
+    }
+    showToast("申請を拒否しました", { kind: "info" });
+  };
+
+  const handleNotificationFriendReject = (
+    event: ReactMouseEvent<HTMLButtonElement>,
+    request: FriendRequest,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    void handleFriendReject(request);
+  };
+
+  // 友達削除。friendRequests/{id} を双方とも delete する（rules で許可済み）。
+  // 双方の friends list / pinnedFriends / mutedFriends から該当 uid を除外。
+  // confirm はモーダル側で取ってから呼び出す前提（呼び側で window.confirm）。
+  const handleFriendRemove = async (friend: FriendPreview) => {
+    if (!currentUser) return;
+    const requestId = getFriendRequestDocId(currentUser.uid, friend.uid);
+    const reverseRequestId = getFriendRequestDocId(friend.uid, currentUser.uid);
+
+    setFriends((items) => items.filter((item) => item.uid !== friend.uid));
+    setFriendRequests((requests) =>
+      requests.filter((item) => item.profile.uid !== friend.uid),
+    );
+    const accountScope = getAccountStorageScope(currentUser.uid, userId);
+    removeStoredFriendRequest(accountScope, requestId);
+    removeStoredFriendRequest(accountScope, reverseRequestId);
+    setPinnedFriendUids((ids) => ids.filter((id) => id !== friend.uid));
+
+    try {
+      // どちらの方向で friendRequest が作られたか分からないので両方試す。
+      await Promise.allSettled([
+        deleteDoc(doc(db, "friendRequests", requestId)),
+        deleteDoc(doc(db, "friendRequests", reverseRequestId)),
+      ]);
+    } catch (error) {
+      console.info("Friend remove cloud sync skipped.", error);
+    }
+    showToast(`${friend.name} をフレンドから外しました`, { kind: "info" });
   };
 
   // Send a friend a targeted invite to the room the user currently has
@@ -11029,8 +11150,33 @@ function App() {
             {isFriend ? "フレンド" : pendingIncomingRequest ? "申請が届いています" : pendingOutgoingRequest ? "申請中" : "フレンド申請"}
           </button>
           {pendingIncomingRequest ? (
-            <button type="button" onClick={() => handleFriendAccept(pendingIncomingRequest)}>
-              承認する
+            <>
+              <button type="button" onClick={() => handleFriendAccept(pendingIncomingRequest)}>
+                承認する
+              </button>
+              <button
+                type="button"
+                className="friend-action-decline"
+                onClick={() => handleFriendReject(pendingIncomingRequest)}
+              >
+                拒否
+              </button>
+            </>
+          ) : null}
+          {isFriend ? (
+            <button
+              type="button"
+              className="friend-action-remove"
+              onClick={() => {
+                const friend = friends.find((item) => item.uid === profile.uid);
+                if (!friend) return;
+                const ok = window.confirm(
+                  `${profile.displayName || friend.name} をフレンドから外しますか？`,
+                );
+                if (ok) void handleFriendRemove(friend);
+              }}
+            >
+              フレンド解除
             </button>
           ) : null}
           {liveGithubUrl ? (
@@ -12176,13 +12322,23 @@ function App() {
                           </span>
                         </button>
                         {friendRequest?.direction === "incoming" && friendRequest.status === "pending" ? (
-                          <button
-                            type="button"
-                            className="notification-accept"
-                            onClick={(event) => handleNotificationFriendAccept(event, friendRequest)}
-                          >
-                            承認
-                          </button>
+                          <div className="notification-friend-actions">
+                            <button
+                              type="button"
+                              className="notification-accept"
+                              onClick={(event) => handleNotificationFriendAccept(event, friendRequest)}
+                            >
+                              承認
+                            </button>
+                            <button
+                              type="button"
+                              className="notification-decline"
+                              onClick={(event) => handleNotificationFriendReject(event, friendRequest)}
+                              aria-label="フレンド申請を拒否"
+                            >
+                              拒否
+                            </button>
+                          </div>
                         ) : null}
                         {workspaceInvite ? (
                           <button
@@ -12663,92 +12819,251 @@ function App() {
         </div>
       ) : null}
 
-      {isFriendsModalOpen ? (
-        <div
-          className="settings-modal-backdrop"
-          role="presentation"
-          onClick={() => setIsFriendsModalOpen(false)}
-        >
-          <section
-            className="settings-modal friends-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="friends-modal-title"
-            onClick={(event) => event.stopPropagation()}
+      {isFriendsModalOpen ? (() => {
+        // 友達一覧の拡張表示。検索 / ソート / pin / 削除 / レベル等の
+        // メタ情報を一画面に集約する。「最近会ってない」や "Friends since"
+        // など、関係の温度感をひと目で掴めるよう情報を増やしている。
+        const pinSet = new Set(pinnedFriendUids);
+        const query = friendsModalQuery.trim().toLowerCase();
+        const acceptedRequestByUid = new Map<string, FriendRequest>();
+        friendRequests.forEach((request) => {
+          if (request.status === "accepted") {
+            acceptedRequestByUid.set(request.profile.uid, request);
+          }
+        });
+
+        // 各 friend に表示用メタを乗せた配列を作る。
+        const enrichedFriends = sidebarFriends.map((friend) => {
+          const profile = workspaceProfiles[friend.uid];
+          const acceptedAt = acceptedRequestByUid.get(friend.uid)?.acceptedAt;
+          const friendsSinceDays = acceptedAt
+            ? Math.max(
+                0,
+                Math.floor((Date.now() - new Date(acceptedAt).getTime()) / 86400000),
+              )
+            : null;
+          return {
+            friend,
+            level: profile?.level || 0,
+            streak: profile?.streak || 0,
+            effortExp: profile?.effortExp || 0,
+            outputExp: profile?.outputExp || 0,
+            determination: profile?.determination || "",
+            friendsSinceDays,
+            isPinned: pinSet.has(friend.uid),
+          };
+        });
+
+        const filtered = query
+          ? enrichedFriends.filter(({ friend }) => {
+              const haystack = [
+                friend.name,
+                friend.userId,
+                friend.activity,
+              ]
+                .filter(Boolean)
+                .join(" ")
+                .toLowerCase();
+              return haystack.includes(query);
+            })
+          : enrichedFriends;
+
+        const statusRank = (s: string) => (s === "online" ? 0 : s === "away" ? 1 : 2);
+        const sorted = [...filtered].sort((a, b) => {
+          // ピンは常に先頭
+          if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+          switch (friendsModalSort) {
+            case "name":
+              return a.friend.name.localeCompare(b.friend.name, "ja");
+            case "recent":
+              return (
+                new Date(acceptedRequestByUid.get(b.friend.uid)?.acceptedAt || 0).getTime() -
+                new Date(acceptedRequestByUid.get(a.friend.uid)?.acceptedAt || 0).getTime()
+              );
+            case "level":
+              return b.level - a.level;
+            case "streak":
+              return b.streak - a.streak;
+            case "online":
+            default:
+              return statusRank(a.friend.status) - statusRank(b.friend.status);
+          }
+        });
+
+        const onlineCount = enrichedFriends.filter(({ friend }) => friend.status === "online").length;
+
+        return (
+          <div
+            className="settings-modal-backdrop"
+            role="presentation"
+            onClick={() => setIsFriendsModalOpen(false)}
           >
-            <div className="friends-modal-head">
-              <div>
-                <p className="card-kicker">Friends</p>
-                <h2 id="friends-modal-title">フレンド一覧</h2>
+            <section
+              className="settings-modal friends-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="friends-modal-title"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="friends-modal-head">
+                <div>
+                  <p className="card-kicker">Friends</p>
+                  <h2 id="friends-modal-title">
+                    フレンド一覧
+                    <span className="friends-modal-count">
+                      {enrichedFriends.length}人 · オンライン {onlineCount}人
+                    </span>
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  className="friends-modal-close"
+                  aria-label="閉じる"
+                  onClick={() => setIsFriendsModalOpen(false)}
+                >
+                  ×
+                </button>
               </div>
-              <button
-                type="button"
-                className="friends-modal-close"
-                aria-label="閉じる"
-                onClick={() => setIsFriendsModalOpen(false)}
-              >
-                ×
-              </button>
-            </div>
 
-            <p className="friends-modal-help">
-              {selectedRoom ? (
-                <>
-                  招待先の部屋: <strong>{selectedRoom.name}</strong>
-                </>
-              ) : (
-                "作業部屋を選ぶと、フレンドを招待できます。"
-              )}
-            </p>
+              <p className="friends-modal-help">
+                {selectedRoom ? (
+                  <>
+                    招待先の部屋: <strong>{selectedRoom.name}</strong>
+                  </>
+                ) : (
+                  "作業部屋を選ぶと、フレンドを招待できます。"
+                )}
+              </p>
 
-            <div className="friends-modal-list">
-              {sidebarFriends.length > 0 ? (
-                sidebarFriends.map((friend) => {
-                  const invited = invitedFriendUids.has(friend.uid);
-                  return (
-                    <div key={friend.uid} className="friends-modal-row">
-                      <button
-                        type="button"
-                        className="friends-modal-person"
-                        onClick={() => {
-                          handleFriendOpen(friend);
-                          setIsFriendsModalOpen(false);
-                        }}
-                      >
-                        <span className="friends-modal-avatar">
-                          {friend.avatar ? (
-                            <img src={friend.avatar} alt="" />
-                          ) : (
-                            friend.name.slice(0, 1).toUpperCase()
-                          )}
-                          <i className={`topbar-popover-dot ${friend.status}`} />
-                        </span>
-                        <span className="friends-modal-meta">
-                          <strong>{friend.name}</strong>
-                          {friend.userId ? <small>@{friend.userId}</small> : null}
-                          <small>{friend.activity}</small>
-                        </span>
-                      </button>
-                      <button
-                        type="button"
-                        className="friends-modal-invite"
-                        disabled={!selectedRoom || invited}
-                        onClick={() => handleSendWorkspaceInvite(friend)}
-                      >
-                        {invited ? "招待済み" : "招待"}
-                      </button>
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="friends-modal-empty">
-                  まだフレンドがいません。プロフィールから招待しましょう。
-                </p>
-              )}
-            </div>
-          </section>
-        </div>
-      ) : null}
+              {/* 検索 + ソートコントロール。検索は name / userId / activity に
+                  対する部分一致。ソートはオンライン優先がデフォルト。 */}
+              {enrichedFriends.length > 0 ? (
+                <div className="friends-modal-controls">
+                  <input
+                    type="search"
+                    className="friends-modal-search"
+                    placeholder="名前・@ID で検索"
+                    value={friendsModalQuery}
+                    onChange={(event) => setFriendsModalQuery(event.target.value)}
+                    aria-label="フレンドを検索"
+                  />
+                  <select
+                    className="friends-modal-sort"
+                    value={friendsModalSort}
+                    onChange={(event) =>
+                      setFriendsModalSort(event.target.value as typeof friendsModalSort)
+                    }
+                    aria-label="並べ替え"
+                  >
+                    <option value="online">オンライン順</option>
+                    <option value="name">名前順</option>
+                    <option value="recent">フレンド成立順</option>
+                    <option value="level">レベル順</option>
+                    <option value="streak">ストリーク順</option>
+                  </select>
+                </div>
+              ) : null}
+
+              <div className="friends-modal-list">
+                {sorted.length > 0 ? (
+                  sorted.map(({ friend, level, streak, friendsSinceDays, isPinned }) => {
+                    const invited = invitedFriendUids.has(friend.uid);
+                    return (
+                      <div key={friend.uid} className={`friends-modal-row${isPinned ? " is-pinned" : ""}`}>
+                        <button
+                          type="button"
+                          className="friends-modal-person"
+                          onClick={() => {
+                            handleFriendOpen(friend);
+                            setIsFriendsModalOpen(false);
+                          }}
+                        >
+                          <span className="friends-modal-avatar">
+                            {friend.avatar ? (
+                              <img src={friend.avatar} alt="" />
+                            ) : (
+                              friend.name.slice(0, 1).toUpperCase()
+                            )}
+                            <i className={`topbar-popover-dot ${friend.status}`} />
+                          </span>
+                          <span className="friends-modal-meta">
+                            <strong>
+                              {friend.name}
+                              {isPinned ? <span className="friends-modal-pin-mark" aria-hidden="true">★</span> : null}
+                            </strong>
+                            {friend.userId ? <small>@{friend.userId}</small> : null}
+                            <small>{friend.activity}</small>
+                            {/* レベル/ストリーク/Friends since の小サマリー。
+                                数値 0 のときは出さない（押し付けがましさを抑制）。 */}
+                            {(level > 0 || streak > 0 || friendsSinceDays !== null) ? (
+                              <span className="friends-modal-stats">
+                                {level > 0 ? <em>Lv {level}</em> : null}
+                                {streak > 0 ? <em>🔥 {streak}d</em> : null}
+                                {friendsSinceDays !== null ? (
+                                  <em title={`Friends since ${friendsSinceDays} day(s) ago`}>
+                                    {friendsSinceDays === 0 ? "今日成立" : `${friendsSinceDays}日目`}
+                                  </em>
+                                ) : null}
+                              </span>
+                            ) : null}
+                          </span>
+                        </button>
+                        <div className="friends-modal-actions">
+                          <button
+                            type="button"
+                            className="friends-modal-pin"
+                            aria-label={isPinned ? "ピン留めを外す" : "ピン留めする"}
+                            title={isPinned ? "ピン留めを外す" : "ピン留めする"}
+                            onClick={() =>
+                              setPinnedFriendUids((ids) =>
+                                isPinned
+                                  ? ids.filter((id) => id !== friend.uid)
+                                  : [friend.uid, ...ids],
+                              )
+                            }
+                          >
+                            {isPinned ? "★" : "☆"}
+                          </button>
+                          <button
+                            type="button"
+                            className="friends-modal-invite"
+                            disabled={!selectedRoom || invited}
+                            onClick={() => handleSendWorkspaceInvite(friend)}
+                          >
+                            {invited ? "招待済み" : "招待"}
+                          </button>
+                          <button
+                            type="button"
+                            className="friends-modal-remove"
+                            aria-label={`${friend.name} をフレンドから外す`}
+                            title="フレンドから外す"
+                            onClick={() => {
+                              const ok = window.confirm(
+                                `${friend.name} をフレンドから外しますか？\nお互いの友達リストから消えます。`,
+                              );
+                              if (ok) void handleFriendRemove(friend);
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : enrichedFriends.length > 0 ? (
+                  <p className="friends-modal-empty">
+                    検索に一致するフレンドはいません。
+                  </p>
+                ) : (
+                  <p className="friends-modal-empty">
+                    まだフレンドがいません。プロフィールから招待しましょう。
+                  </p>
+                )}
+              </div>
+            </section>
+          </div>
+        );
+      })() : null}
 
       {isRecruitmentModalOpen ? (
         <div className="settings-modal-backdrop" role="presentation" onClick={handleCloseRecruitmentModal}>
