@@ -3738,11 +3738,72 @@ function App() {
       /* localStorage 不可なら諦める */
     }
   }, [pinnedFriendUids]);
+  // ミュート：関係は残したまま、その人からの通知音 / デスクトップ通知 /
+  // 通知バッジを抑制する。"切りたくはないけどしばらく静かに" 用。
+  const [mutedFriendUids, setMutedFriendUids] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem("ca:muted-friends");
+      return raw ? (JSON.parse(raw) as string[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("ca:muted-friends", JSON.stringify(mutedFriendUids));
+    } catch {
+      /* ignore */
+    }
+  }, [mutedFriendUids]);
+  // ブロック：相手からのフレンド申請を自動で隠す。検索・推薦からも除外。
+  const [blockedFriendUids, setBlockedFriendUids] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem("ca:blocked-friends");
+      return raw ? (JSON.parse(raw) as string[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("ca:blocked-friends", JSON.stringify(blockedFriendUids));
+    } catch {
+      /* ignore */
+    }
+  }, [blockedFriendUids]);
+  // 応援 (👏) クールダウン。同一 recipient に対して 1 日 1 回まで。
+  // ローカル + Firestore doc id で二重防止。
+  const [encouragementsSent, setEncouragementsSent] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem("ca:encouragements-sent");
+      if (!raw) return new Set();
+      const parsed = JSON.parse(raw) as { date: string; uids: string[] };
+      const today = new Date().toISOString().slice(0, 10);
+      if (parsed.date !== today) return new Set();
+      return new Set(parsed.uids);
+    } catch {
+      return new Set();
+    }
+  });
+  useEffect(() => {
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      localStorage.setItem(
+        "ca:encouragements-sent",
+        JSON.stringify({ date: today, uids: Array.from(encouragementsSent) }),
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [encouragementsSent]);
   // Friends modal の表示モード / 検索 / ソート。それぞれセッション保持。
   const [friendsModalQuery, setFriendsModalQuery] = useState("");
   const [friendsModalSort, setFriendsModalSort] = useState<
     "online" | "name" | "recent" | "level" | "streak"
   >("online");
+  // 一括招待モード（複数選択 → まとめて invite）。
+  const [friendsBulkSelectMode, setFriendsBulkSelectMode] = useState(false);
+  const [friendsBulkSelectedUids, setFriendsBulkSelectedUids] = useState<Set<string>>(() => new Set());
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [lastNotificationReadAt, setLastNotificationReadAt] = useState("");
   const [appNotifications, setAppNotifications] = useState<NotificationItem[]>([]);
@@ -5402,6 +5463,10 @@ function App() {
     }
 
     const applyCloudRequests = (direction: FriendRequestDirection, cloudRequests: FriendRequest[]) => {
+      // ブロック中の uid からの request は UI に出さない。
+      const filteredCloudRequests = cloudRequests.filter(
+        (request) => !blockedFriendUids.includes(request.profile.uid),
+      );
       setFriendRequests((requests) => {
         const localRequests = requests
           .map((request) => ({
@@ -5409,7 +5474,7 @@ function App() {
             direction: request.direction || "outgoing",
           }))
           .filter((request) => request.direction !== direction);
-        const nextRequests = [...cloudRequests, ...localRequests];
+        const nextRequests = [...filteredCloudRequests, ...localRequests];
 
         return nextRequests.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       });
@@ -6959,10 +7024,17 @@ function App() {
     void playNotificationSound("default", desktopNotificationSettings);
   };
   const pushAppNotification = (item: NotificationItem, shouldSendNative: boolean) => {
+    // ブロック中のユーザーからの通知は完全に無視。
+    if (blockedFriendUids.includes(item.sourceUserId)) {
+      seenNotificationKeysRef.current.add(item.id);
+      return;
+    }
     const cooldownKey = `${item.type}:${item.sourceUserId}`;
     const now = Date.now();
     const lastNotifiedAt = notificationCooldownRef.current[cooldownKey] || 0;
-    const canSendNative = shouldSendNative && now - lastNotifiedAt > notificationCooldownMs;
+    // ミュート中：一覧には残すがネイティブ通知 / 音は抑制。
+    const isMuted = mutedFriendUids.includes(item.sourceUserId);
+    const canSendNative = shouldSendNative && !isMuted && now - lastNotifiedAt > notificationCooldownMs;
     const canPlaySound =
       canSendNative &&
       desktopNotificationSettings.sound &&
@@ -8424,9 +8496,15 @@ function App() {
         limit(12),
       );
       const snapshot = await getDocs(usersQuery);
+      const blockedSet = new Set(blockedFriendUids);
       const results = snapshot.docs
         .map((item) => normalizeUserProfile(item.id, item.data() as Partial<UserProfile>))
-        .filter((profile) => profile.uid !== currentUser.uid && profile.userId);
+        .filter(
+          (profile) =>
+            profile.uid !== currentUser.uid &&
+            profile.userId &&
+            !blockedSet.has(profile.uid),
+        );
 
       setSearchResults(results);
       if (results.length === 0) {
@@ -8670,6 +8748,81 @@ function App() {
     showToast(`${friend.name} をフレンドから外しました`, { kind: "info" });
   };
 
+  // ミュート切替（関係維持・通知のみ抑制）
+  const handleToggleFriendMute = (uid: string) => {
+    setMutedFriendUids((ids) => (ids.includes(uid) ? ids.filter((id) => id !== uid) : [...ids, uid]));
+  };
+
+  // ブロック：友達関係を解除しつつ blockedFriendUids に追加。
+  // クライアント側のフィルタなので完全防御ではないが、UI 上は完全に
+  // 見えなくなる。仕様としては「自分のクライアントから消す」スコープ。
+  const handleBlockUser = async (target: { uid: string; name: string }) => {
+    if (!currentUser) return;
+    if (target.uid === currentUser.uid) return;
+
+    setBlockedFriendUids((ids) => (ids.includes(target.uid) ? ids : [...ids, target.uid]));
+    const wasFriend = friends.some((friend) => friend.uid === target.uid);
+    if (wasFriend) {
+      const friend = friends.find((item) => item.uid === target.uid);
+      if (friend) {
+        await handleFriendRemove(friend).catch(() => {});
+      }
+    }
+    setFriendRequests((requests) => requests.filter((item) => item.profile.uid !== target.uid));
+    showToast(`${target.name} をブロックしました`, { kind: "info" });
+  };
+
+  const handleUnblockUser = (uid: string) => {
+    setBlockedFriendUids((ids) => ids.filter((id) => id !== uid));
+    showToast("ブロックを解除しました", { kind: "success" });
+  };
+
+  // 応援 (👏)。1 日 1 回まで。doc ID で二重防止 → ローカル即時 disable。
+  const handleSendEncouragement = async (recipient: { uid: string; name: string }) => {
+    if (!currentUser) return;
+    if (recipient.uid === currentUser.uid) return;
+    if (encouragementsSent.has(recipient.uid)) {
+      showToast("今日はもう応援を送りました", { kind: "info" });
+      return;
+    }
+    const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    const docId = `${currentUser.uid}_${recipient.uid}_${today}`;
+    setEncouragementsSent((set) => {
+      const next = new Set(set);
+      next.add(recipient.uid);
+      return next;
+    });
+    try {
+      await setDoc(doc(db, "encouragements", docId), {
+        senderUid: currentUser.uid,
+        senderName: playerName || "Developer",
+        senderUserId: userId,
+        recipientUid: recipient.uid,
+        createdAt: new Date().toISOString(),
+      });
+      showToast(`👏 ${recipient.name} に応援を送りました`, { kind: "success" });
+    } catch (error) {
+      console.info("Encouragement send skipped (likely duplicate).", error);
+    }
+  };
+
+  // 古い pending request の自動非表示（クライアント側フィルタ・30日）
+  const handleDismissStalePendingRequests = () => {
+    const cutoff = Date.now() - 30 * 86400000;
+    setFriendRequests((requests) =>
+      requests.filter((request) => {
+        if (request.status !== "pending") return true;
+        return new Date(request.createdAt).getTime() >= cutoff;
+      }),
+    );
+  };
+  useEffect(() => {
+    handleDismissStalePendingRequests();
+    const id = window.setInterval(handleDismissStalePendingRequests, 6 * 60 * 60 * 1000);
+    return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Send a friend a targeted invite to the room the user currently has
   // selected. Optimistically flips the row to "招待済み"; rolls back if the
   // write fails so the user can retry.
@@ -8710,6 +8863,28 @@ function App() {
       });
       showToast("招待を送れませんでした。時間をおいて再度お試しください", { kind: "error" });
     }
+  };
+
+  // 一括招待。複数 friend uid を受けて逐次 invite を送る。
+  const handleBatchInvite = async (targetUids: string[]) => {
+    if (!currentUser) return;
+    if (!selectedRoom) {
+      showToast("先に作業部屋を選んでください", { kind: "info" });
+      return;
+    }
+    if (targetUids.length === 0) return;
+    let sent = 0;
+    for (const uid of targetUids) {
+      const friend = friends.find((item) => item.uid === uid);
+      if (!friend) continue;
+      try {
+        await handleSendWorkspaceInvite(friend);
+        sent += 1;
+      } catch {
+        /* 1件失敗しても続行 */
+      }
+    }
+    if (sent > 1) showToast(`${sent} 人に一斉招待を送りました`, { kind: "success" });
   };
 
   // Accept an incoming invite: jump to the inviter's room and mark the
@@ -11164,20 +11339,54 @@ function App() {
             </>
           ) : null}
           {isFriend ? (
-            <button
-              type="button"
-              className="friend-action-remove"
-              onClick={() => {
-                const friend = friends.find((item) => item.uid === profile.uid);
-                if (!friend) return;
-                const ok = window.confirm(
-                  `${profile.displayName || friend.name} をフレンドから外しますか？`,
-                );
-                if (ok) void handleFriendRemove(friend);
-              }}
-            >
-              フレンド解除
-            </button>
+            <>
+              <button
+                type="button"
+                className="friend-action-remove"
+                onClick={() => {
+                  const friend = friends.find((item) => item.uid === profile.uid);
+                  if (!friend) return;
+                  const ok = window.confirm(
+                    `${profile.displayName || friend.name} をフレンドから外しますか？`,
+                  );
+                  if (ok) void handleFriendRemove(friend);
+                }}
+              >
+                フレンド解除
+              </button>
+              <button
+                type="button"
+                className="friend-action-mute"
+                onClick={() => handleToggleFriendMute(profile.uid)}
+                title={mutedFriendUids.includes(profile.uid) ? "ミュート解除" : "通知をミュート"}
+              >
+                {mutedFriendUids.includes(profile.uid) ? "🔔 ミュート解除" : "🔕 ミュート"}
+              </button>
+            </>
+          ) : null}
+          {profile.uid !== currentUserUid ? (
+            blockedFriendUids.includes(profile.uid) ? (
+              <button
+                type="button"
+                className="friend-action-block"
+                onClick={() => handleUnblockUser(profile.uid)}
+              >
+                ブロック解除
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="friend-action-block"
+                onClick={() => {
+                  const ok = window.confirm(
+                    `${profile.displayName || "このユーザー"} をブロックしますか？\nフレンド関係は解除され、申請も届かなくなります。`,
+                  );
+                  if (ok) void handleBlockUser({ uid: profile.uid, name: profile.displayName || "ユーザー" });
+                }}
+              >
+                🚫 ブロック
+              </button>
+            )
           ) : null}
           {liveGithubUrl ? (
             <a href={liveGithubUrl} target="_blank" rel="noreferrer">
@@ -12820,10 +13029,10 @@ function App() {
       ) : null}
 
       {isFriendsModalOpen ? (() => {
-        // 友達一覧の拡張表示。検索 / ソート / pin / 削除 / レベル等の
-        // メタ情報を一画面に集約する。「最近会ってない」や "Friends since"
-        // など、関係の温度感をひと目で掴めるよう情報を増やしている。
+        // 友達一覧の拡張表示。検索 / ソート / pin / 削除 / mute / block /
+        // 応援 / 一括選択 / おすすめ / "Friends since" などを一画面に集約。
         const pinSet = new Set(pinnedFriendUids);
+        const muteSet = new Set(mutedFriendUids);
         const query = friendsModalQuery.trim().toLowerCase();
         const acceptedRequestByUid = new Map<string, FriendRequest>();
         friendRequests.forEach((request) => {
@@ -12842,6 +13051,13 @@ function App() {
                 Math.floor((Date.now() - new Date(acceptedAt).getTime()) / 86400000),
               )
             : null;
+          // 最終アクティブ日（プロフィールの lastSyncedAt を流用）。
+          const lastActiveDays = profile?.lastSyncedAt
+            ? Math.max(
+                0,
+                Math.floor((Date.now() - new Date(profile.lastSyncedAt).getTime()) / 86400000),
+              )
+            : null;
           return {
             friend,
             level: profile?.level || 0,
@@ -12850,9 +13066,44 @@ function App() {
             outputExp: profile?.outputExp || 0,
             determination: profile?.determination || "",
             friendsSinceDays,
+            lastActiveDays,
             isPinned: pinSet.has(friend.uid),
+            isMuted: muteSet.has(friend.uid),
           };
         });
+
+        // おすすめフレンド：自分の友達がフォローしている人のうち、自分は
+        // まだ友達でなくブロックでも申請中でもない uid を集計。共通フレンド
+        // 数 (mutualCount) 順で上位 5 件を表示。
+        const myFriendUidSet = new Set(friends.map((f) => f.uid));
+        const blockedSet = new Set(blockedFriendUids);
+        const pendingUidSet = new Set(
+          friendRequests
+            .filter((r) => r.status === "pending")
+            .map((r) => r.profile.uid),
+        );
+        const recommendationCount = new Map<string, number>();
+        friends.forEach((friend) => {
+          const profile = workspaceProfiles[friend.uid];
+          if (!profile?.following) return;
+          profile.following.forEach((candidateUid) => {
+            if (!candidateUid) return;
+            if (candidateUid === currentUserUid) return;
+            if (myFriendUidSet.has(candidateUid)) return;
+            if (blockedSet.has(candidateUid)) return;
+            if (pendingUidSet.has(candidateUid)) return;
+            recommendationCount.set(candidateUid, (recommendationCount.get(candidateUid) || 0) + 1);
+          });
+        });
+        const recommendedUids = Array.from(recommendationCount.entries())
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+          .map(([uid, mutualCount]) => ({
+            uid,
+            mutualCount,
+            profile: workspaceProfiles[uid],
+          }))
+          .filter((item) => item.profile);
 
         const filtered = query
           ? enrichedFriends.filter(({ friend }) => {
@@ -12935,8 +13186,7 @@ function App() {
                 )}
               </p>
 
-              {/* 検索 + ソートコントロール。検索は name / userId / activity に
-                  対する部分一致。ソートはオンライン優先がデフォルト。 */}
+              {/* 検索 + ソート + 一括選択モード。 */}
               {enrichedFriends.length > 0 ? (
                 <div className="friends-modal-controls">
                   <input
@@ -12961,23 +13211,66 @@ function App() {
                     <option value="level">レベル順</option>
                     <option value="streak">ストリーク順</option>
                   </select>
+                  {selectedRoom ? (
+                    <button
+                      type="button"
+                      className={`friends-modal-bulk-toggle${friendsBulkSelectMode ? " is-active" : ""}`}
+                      onClick={() => {
+                        setFriendsBulkSelectMode((mode) => !mode);
+                        setFriendsBulkSelectedUids(new Set());
+                      }}
+                      title="一括招待モード"
+                    >
+                      {friendsBulkSelectMode ? "✓ 一括選択中" : "□ 一括選択"}
+                    </button>
+                  ) : null}
                 </div>
               ) : null}
 
               <div className="friends-modal-list">
                 {sorted.length > 0 ? (
-                  sorted.map(({ friend, level, streak, friendsSinceDays, isPinned }) => {
+                  sorted.map(({ friend, level, streak, friendsSinceDays, lastActiveDays, isPinned, isMuted }) => {
                     const invited = invitedFriendUids.has(friend.uid);
+                    const isSelected = friendsBulkSelectedUids.has(friend.uid);
+                    const encouragedToday = encouragementsSent.has(friend.uid);
                     return (
-                      <div key={friend.uid} className={`friends-modal-row${isPinned ? " is-pinned" : ""}`}>
+                      <div
+                        key={friend.uid}
+                        className={[
+                          "friends-modal-row",
+                          isPinned ? "is-pinned" : "",
+                          isMuted ? "is-muted" : "",
+                          friendsBulkSelectMode ? "is-bulk" : "",
+                          isSelected ? "is-selected" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                      >
                         <button
                           type="button"
                           className="friends-modal-person"
                           onClick={() => {
+                            if (friendsBulkSelectMode) {
+                              setFriendsBulkSelectedUids((set) => {
+                                const next = new Set(set);
+                                if (next.has(friend.uid)) next.delete(friend.uid);
+                                else next.add(friend.uid);
+                                return next;
+                              });
+                              return;
+                            }
                             handleFriendOpen(friend);
                             setIsFriendsModalOpen(false);
                           }}
                         >
+                          {friendsBulkSelectMode ? (
+                            <span
+                              className={`friends-modal-checkbox${isSelected ? " is-on" : ""}`}
+                              aria-hidden="true"
+                            >
+                              {isSelected ? "✓" : ""}
+                            </span>
+                          ) : null}
                           <span className="friends-modal-avatar">
                             {friend.avatar ? (
                               <img src={friend.avatar} alt="" />
@@ -12990,12 +13283,11 @@ function App() {
                             <strong>
                               {friend.name}
                               {isPinned ? <span className="friends-modal-pin-mark" aria-hidden="true">★</span> : null}
+                              {isMuted ? <span className="friends-modal-mute-mark" aria-hidden="true" title="ミュート中">🔕</span> : null}
                             </strong>
                             {friend.userId ? <small>@{friend.userId}</small> : null}
                             <small>{friend.activity}</small>
-                            {/* レベル/ストリーク/Friends since の小サマリー。
-                                数値 0 のときは出さない（押し付けがましさを抑制）。 */}
-                            {(level > 0 || streak > 0 || friendsSinceDays !== null) ? (
+                            {(level > 0 || streak > 0 || friendsSinceDays !== null || lastActiveDays !== null) ? (
                               <span className="friends-modal-stats">
                                 {level > 0 ? <em>Lv {level}</em> : null}
                                 {streak > 0 ? <em>🔥 {streak}d</em> : null}
@@ -13004,49 +13296,94 @@ function App() {
                                     {friendsSinceDays === 0 ? "今日成立" : `${friendsSinceDays}日目`}
                                   </em>
                                 ) : null}
+                                {lastActiveDays !== null && lastActiveDays >= 14 ? (
+                                  <em
+                                    className="friends-modal-stale"
+                                    title={`Last active ${lastActiveDays} days ago`}
+                                  >
+                                    🕯 {lastActiveDays}d
+                                  </em>
+                                ) : null}
                               </span>
                             ) : null}
                           </span>
                         </button>
-                        <div className="friends-modal-actions">
-                          <button
-                            type="button"
-                            className="friends-modal-pin"
-                            aria-label={isPinned ? "ピン留めを外す" : "ピン留めする"}
-                            title={isPinned ? "ピン留めを外す" : "ピン留めする"}
-                            onClick={() =>
-                              setPinnedFriendUids((ids) =>
-                                isPinned
-                                  ? ids.filter((id) => id !== friend.uid)
-                                  : [friend.uid, ...ids],
-                              )
-                            }
-                          >
-                            {isPinned ? "★" : "☆"}
-                          </button>
-                          <button
-                            type="button"
-                            className="friends-modal-invite"
-                            disabled={!selectedRoom || invited}
-                            onClick={() => handleSendWorkspaceInvite(friend)}
-                          >
-                            {invited ? "招待済み" : "招待"}
-                          </button>
-                          <button
-                            type="button"
-                            className="friends-modal-remove"
-                            aria-label={`${friend.name} をフレンドから外す`}
-                            title="フレンドから外す"
-                            onClick={() => {
-                              const ok = window.confirm(
-                                `${friend.name} をフレンドから外しますか？\nお互いの友達リストから消えます。`,
-                              );
-                              if (ok) void handleFriendRemove(friend);
-                            }}
-                          >
-                            ×
-                          </button>
-                        </div>
+                        {!friendsBulkSelectMode ? (
+                          <div className="friends-modal-actions">
+                            <button
+                              type="button"
+                              className={`friends-modal-encourage${encouragedToday ? " is-done" : ""}`}
+                              aria-label={encouragedToday ? "今日応援済み" : `${friend.name} を応援する`}
+                              title={encouragedToday ? "今日は応援済み" : "応援する（1日1回）"}
+                              disabled={encouragedToday}
+                              onClick={() =>
+                                void handleSendEncouragement({ uid: friend.uid, name: friend.name })
+                              }
+                            >
+                              👏
+                            </button>
+                            <button
+                              type="button"
+                              className={`friends-modal-mute${isMuted ? " is-active" : ""}`}
+                              aria-label={isMuted ? "ミュート解除" : "ミュートする"}
+                              title={isMuted ? "ミュート解除" : "通知をミュート"}
+                              onClick={() => handleToggleFriendMute(friend.uid)}
+                            >
+                              {isMuted ? "🔔" : "🔕"}
+                            </button>
+                            <button
+                              type="button"
+                              className="friends-modal-pin"
+                              aria-label={isPinned ? "ピン留めを外す" : "ピン留めする"}
+                              title={isPinned ? "ピン留めを外す" : "ピン留めする"}
+                              onClick={() =>
+                                setPinnedFriendUids((ids) =>
+                                  isPinned
+                                    ? ids.filter((id) => id !== friend.uid)
+                                    : [friend.uid, ...ids],
+                                )
+                              }
+                            >
+                              {isPinned ? "★" : "☆"}
+                            </button>
+                            <button
+                              type="button"
+                              className="friends-modal-invite"
+                              disabled={!selectedRoom || invited}
+                              onClick={() => handleSendWorkspaceInvite(friend)}
+                            >
+                              {invited ? "招待済み" : "招待"}
+                            </button>
+                            <button
+                              type="button"
+                              className="friends-modal-block"
+                              aria-label={`${friend.name} をブロック`}
+                              title="ブロックする"
+                              onClick={() => {
+                                const ok = window.confirm(
+                                  `${friend.name} をブロックしますか？\nフレンド関係も同時に解除され、相手からの通知や申請が届かなくなります。`,
+                                );
+                                if (ok) void handleBlockUser({ uid: friend.uid, name: friend.name });
+                              }}
+                            >
+                              🚫
+                            </button>
+                            <button
+                              type="button"
+                              className="friends-modal-remove"
+                              aria-label={`${friend.name} をフレンドから外す`}
+                              title="フレンドから外す"
+                              onClick={() => {
+                                const ok = window.confirm(
+                                  `${friend.name} をフレンドから外しますか？\nお互いの友達リストから消えます。`,
+                                );
+                                if (ok) void handleFriendRemove(friend);
+                              }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ) : null}
                       </div>
                     );
                   })
@@ -13060,6 +13397,102 @@ function App() {
                   </p>
                 )}
               </div>
+
+              {/* おすすめフレンド：友達の友達からの推薦 */}
+              {recommendedUids.length > 0 ? (
+                <div className="friends-modal-recommend">
+                  <p className="friends-modal-recommend-title">
+                    あなたへのおすすめ
+                    <small>共通のフレンドから推薦</small>
+                  </p>
+                  <ul>
+                    {recommendedUids.map(({ uid, mutualCount, profile }) => (
+                      <li key={uid}>
+                        <button
+                          type="button"
+                          className="friends-modal-recommend-card"
+                          onClick={() => {
+                            handleUserProfileOpen(profile);
+                            setIsFriendsModalOpen(false);
+                          }}
+                        >
+                          <span className="friends-modal-recommend-avatar">
+                            {profile.photoURL ? (
+                              <img src={profile.photoURL} alt="" />
+                            ) : (
+                              (profile.displayName || "?").slice(0, 1).toUpperCase()
+                            )}
+                          </span>
+                          <span className="friends-modal-recommend-meta">
+                            <strong>{profile.displayName}</strong>
+                            {profile.userId ? <small>@{profile.userId}</small> : null}
+                            <small className="friends-modal-recommend-mutual">
+                              共通フレンド {mutualCount}人
+                            </small>
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {/* ブロック中の uid 一覧（解除導線） */}
+              {blockedFriendUids.length > 0 ? (
+                <div className="friends-modal-blocked">
+                  <p className="friends-modal-blocked-title">
+                    ブロック中
+                    <small>{blockedFriendUids.length}人</small>
+                  </p>
+                  <ul>
+                    {blockedFriendUids.map((uid) => {
+                      const profile = workspaceProfiles[uid];
+                      const name = profile?.displayName || uid.slice(0, 6);
+                      return (
+                        <li key={uid}>
+                          <span>{name}</span>
+                          <button
+                            type="button"
+                            className="friends-modal-unblock"
+                            onClick={() => handleUnblockUser(uid)}
+                          >
+                            解除
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ) : null}
+
+              {/* 一括招待フッターバー */}
+              {friendsBulkSelectMode ? (
+                <div className="friends-modal-bulk-bar" role="status">
+                  <span>{friendsBulkSelectedUids.size} 人を選択中</span>
+                  <button
+                    type="button"
+                    className="friends-modal-bulk-clear"
+                    onClick={() => setFriendsBulkSelectedUids(new Set())}
+                    disabled={friendsBulkSelectedUids.size === 0}
+                  >
+                    クリア
+                  </button>
+                  <button
+                    type="button"
+                    className="friends-modal-bulk-invite"
+                    onClick={() => {
+                      void handleBatchInvite(Array.from(friendsBulkSelectedUids));
+                      setFriendsBulkSelectedUids(new Set());
+                      setFriendsBulkSelectMode(false);
+                    }}
+                    disabled={friendsBulkSelectedUids.size === 0 || !selectedRoom}
+                  >
+                    {friendsBulkSelectedUids.size > 0
+                      ? `${friendsBulkSelectedUids.size} 人を招待`
+                      : "招待先を選択"}
+                  </button>
+                </div>
+              ) : null}
             </section>
           </div>
         );

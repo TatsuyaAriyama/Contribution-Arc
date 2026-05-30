@@ -28053,6 +28053,334 @@ a[role="button"],
 .friend-action-remove:hover:not(:disabled) {
   background: rgba(216, 76, 86, 0.08) !important;
 }
+.friend-action-mute,
+.friend-action-block {
+  border: 1px solid rgba(var(--ink-rgb), 0.18) !important;
+  background: transparent !important;
+  color: var(--ink) !important;
+  transition: background 0.14s ease;
+}
+.friend-action-mute:hover {
+  background: rgba(var(--ink-rgb), 0.06) !important;
+}
+.friend-action-block:hover {
+  background: rgba(216, 76, 86, 0.08) !important;
+  color: #c4424d !important;
+  border-color: rgba(216, 76, 86, 0.3) !important;
+}
+
+/* ───────── 一括選択モード ───────── */
+.friends-modal-bulk-toggle {
+  flex: 0 0 auto;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+}
+.friends-modal-bulk-toggle:hover {
+  background: rgba(var(--green-rgb, 31, 111, 74), 0.06);
+}
+.friends-modal-bulk-toggle.is-active {
+  background: var(--green);
+  color: #fff;
+  border-color: var(--green);
+}
+.friends-modal-checkbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--line);
+  border-radius: 6px;
+  margin-right: 8px;
+  background: var(--surface);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  flex: 0 0 auto;
+  transition: background 0.14s ease, border-color 0.14s ease;
+}
+.friends-modal-checkbox.is-on {
+  background: var(--green);
+  border-color: var(--green);
+}
+.friends-modal-row.is-bulk .friends-modal-person {
+  cursor: pointer;
+}
+.friends-modal-row.is-selected {
+  background: rgba(var(--green-rgb, 31, 111, 74), 0.08);
+  border-color: rgba(var(--green-rgb, 31, 111, 74), 0.2);
+}
+
+/* ───────── 一括招待フッターバー ───────── */
+.friends-modal-bulk-bar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.friends-modal-bulk-bar > span {
+  flex: 1 1 auto;
+}
+.friends-modal-bulk-clear {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+.friends-modal-bulk-clear:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.friends-modal-bulk-invite {
+  min-height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--green);
+  color: #fff;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 800;
+  transition: filter 0.14s ease;
+}
+.friends-modal-bulk-invite:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.friends-modal-bulk-invite:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ───────── 行アクション（応援 / ミュート / ブロック） ───────── */
+.friends-modal-encourage,
+.friends-modal-mute,
+.friends-modal-block {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  transition:
+    background 0.14s ease,
+    transform 0.14s ease,
+    border-color 0.14s ease;
+}
+.friends-modal-encourage:hover:not(:disabled) {
+  background: rgba(255, 196, 0, 0.14);
+  transform: translateY(-1px) scale(1.08);
+}
+.friends-modal-encourage:active:not(:disabled) {
+  transform: scale(0.92);
+}
+.friends-modal-encourage.is-done,
+.friends-modal-encourage:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.friends-modal-mute:hover {
+  background: rgba(var(--ink-rgb), 0.06);
+}
+.friends-modal-mute.is-active {
+  background: rgba(var(--ink-rgb), 0.06);
+  border-color: rgba(var(--ink-rgb), 0.18);
+}
+.friends-modal-block:hover {
+  background: rgba(216, 76, 86, 0.1);
+  color: #c4424d;
+  border-color: rgba(216, 76, 86, 0.2);
+}
+
+/* ───────── ミュート行 ───────── */
+.friends-modal-row.is-muted {
+  opacity: 0.78;
+}
+.friends-modal-mute-mark {
+  margin-left: 6px;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+/* ───────── 長期非アクティブ友達 ───────── */
+.friends-modal-stale {
+  background: rgba(180, 130, 50, 0.12) !important;
+  color: #876b34 !important;
+}
+[data-theme="dark"] .friends-modal-stale {
+  color: #ddc488 !important;
+}
+
+/* ───────── おすすめフレンド ───────── */
+.friends-modal-recommend {
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: linear-gradient(
+    180deg,
+    rgba(var(--green-rgb, 31, 111, 74), 0.04),
+    transparent
+  );
+}
+.friends-modal-recommend-title {
+  margin: 0 0 8px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 800;
+}
+.friends-modal-recommend-title small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.friends-modal-recommend ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.friends-modal-recommend-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--surface);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.14s ease, border-color 0.14s ease;
+}
+.friends-modal-recommend-card:hover {
+  background: rgba(var(--green-rgb, 31, 111, 74), 0.06);
+  border-color: rgba(var(--green-rgb, 31, 111, 74), 0.18);
+}
+.friends-modal-recommend-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(var(--ink-rgb), 0.08);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 800;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+.friends-modal-recommend-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.friends-modal-recommend-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.friends-modal-recommend-meta strong {
+  font-size: 13px;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.friends-modal-recommend-meta small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.friends-modal-recommend-mutual {
+  color: var(--green) !important;
+  font-weight: 700;
+}
+
+/* ───────── ブロック一覧（解除用） ───────── */
+.friends-modal-blocked {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(216, 76, 86, 0.04);
+}
+.friends-modal-blocked-title {
+  margin: 0 0 6px;
+  color: var(--ink);
+  font-size: 11.5px;
+  font-weight: 800;
+}
+.friends-modal-blocked-title small {
+  margin-left: 6px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.friends-modal-blocked ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.friends-modal-blocked li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 12px;
+}
+.friends-modal-unblock {
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+}
+.friends-modal-unblock:hover {
+  background: rgba(var(--ink-rgb), 0.06);
+  color: var(--ink);
+}
 
 /* ───────── モバイル最適化 ───────── */
 @media (max-width: 720px) {
@@ -28076,14 +28404,30 @@ a[role="button"],
     justify-content: flex-end;
   }
   .friends-modal-pin,
-  .friends-modal-remove {
+  .friends-modal-remove,
+  .friends-modal-encourage,
+  .friends-modal-mute,
+  .friends-modal-block {
     width: 40px;
     height: 40px;
     min-height: 40px;
-    font-size: 18px;
+    font-size: 17px;
   }
   .friends-modal-invite {
     min-height: 40px;
     padding: 0 14px;
+  }
+  .friends-modal-bulk-toggle {
+    width: 100%;
+    height: 44px;
+  }
+  .friends-modal-bulk-bar {
+    flex-wrap: wrap;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+  .friends-modal-bulk-invite {
+    flex: 1 1 100%;
+    min-height: 44px;
+    margin-top: 4px;
   }
 }

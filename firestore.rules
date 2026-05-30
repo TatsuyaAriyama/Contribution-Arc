@@ -436,6 +436,21 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // 応援 (👏)。送信者が受信者を励ますだけの "軽いリアクション"。
+    // doc ID は `${senderUid}_${recipientUid}_${YYYYMMDD}` で固定なので、
+    // 同じ受信者には日に 1 回しか create が成功しない（rules で update/delete
+    // を禁止することで spam を防止する）。
+    match /encouragements/{encouragementId} {
+      allow read: if signedIn()
+        && (resource.data.senderUid == request.auth.uid || resource.data.recipientUid == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.senderUid == request.auth.uid
+        && request.resource.data.recipientUid is string
+        && request.resource.data.recipientUid != request.auth.uid
+        && request.resource.data.createdAt is string;
+      allow update, delete: if false;
+    }
+
     match /friendRequests/{requestId} {
       allow read: if signedIn()
         && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
