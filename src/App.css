@@ -28601,10 +28601,73 @@ a[role="button"],
     transform: none;
   }
 
-  /* (e) workspace の祖先までさかのぼっても overflow を断つ。 */
+  /* (e) workspace の祖先までさかのぼっても overflow を断つ。
+         Samsung Internet 等 Android ブラウザの一部バージョンで
+         `overflow-x: clip` が無視されるケースを想定し、`hidden` も
+         併用する。 */
   .premium-shell,
   .silent-workspace,
   .workspace-2d-card {
-    overflow-x: clip;
+    overflow-x: hidden;
+  }
+}
+
+/* =========================================================
+   Android (Galaxy / Samsung Internet) hard-clamp
+   特定機種で hard clamp が効かなかったため、!important で
+   specificity 競合を完全排除する最後の保険。
+   ========================================================= */
+@media (max-width: 720px) {
+  html,
+  body,
+  #root,
+  .app-shell,
+  .premium-shell {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  /* workspace 系コンテナを viewport 全幅に強制。途中の margin/
+     padding/transform を完全に打ち消す。 */
+  .workspace-screen,
+  .workspace-2d-shell,
+  .workspace-2d-main,
+  .silent-workspace,
+  .workspace-2d-card,
+  .two-pane-shell,
+  .two-pane-left {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box !important;
+    transform: none !important;
+  }
+
+  /* ステージそのものも viewport 端まで広げる。境界 14px の角丸は
+     維持しつつ、外側に margin: 0 で密着。 */
+  .workspace-stage {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* premium-dashboard-header はもう一度明示。
+     full-bleed トリックが他の場所で復活していても潰す。 */
+  .premium-dashboard-header {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box !important;
   }
 }
