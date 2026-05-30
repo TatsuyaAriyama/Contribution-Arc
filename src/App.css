@@ -27312,3 +27312,564 @@ a[role="button"],
     font-size: 10px;
   }
 }
+
+/* =========================================================
+   Workspace polish — 作業部屋の品質を企業レベルへ
+   既存の散らばった .workspace-* / .actor-* CSS を触らずに、
+   末尾で意図的に上書きして "気配・読みやすさ・反応速度・余韻"
+   の四点を底上げするブロック。ライト/ダーク両対応、reduced-
+   motion 配慮、モバイル最適化を込みで一括管理する。
+   ========================================================= */
+
+/* ──────────── 1. ステージ環境（光・vignette） ────────────
+   既存の workspace-stage は dark gradient 固定。ライトテーマで
+   不自然になり、ダークテーマでも単調。微妙な vignette と
+   光のにじみを足して "場所" として成立させる。 */
+.workspace-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.08), transparent 60%),
+    radial-gradient(ellipse at 50% 100%, rgba(0, 0, 0, 0.32), transparent 70%);
+  z-index: 1;
+}
+
+[data-theme="light"] .workspace-stage {
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.025) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px),
+    linear-gradient(180deg, #f7f8f5 0%, #eef1ec 60%, #e7eae3 100%);
+  background-size: 36px 36px, 36px 36px, 100% 100%;
+  border-color: rgba(31, 111, 74, 0.16);
+}
+[data-theme="light"] .workspace-stage::after {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(31, 111, 74, 0.06), transparent 55%),
+    radial-gradient(ellipse at 50% 100%, rgba(31, 111, 74, 0.08), transparent 70%);
+}
+[data-theme="light"] .workspace-floor-grid {
+  border-color: rgba(31, 111, 74, 0.18);
+}
+
+/* ──────────── 2. アバターラベルの可読性 ────────────
+   .actor-name / .actor-task はステージ上の小さな文字で、
+   ダークテーマで背景に溶ける。常に十分なコントラストを
+   保つよう、半透明 + backdrop-filter で前景を作る。 */
+.actor-name,
+.actor-task {
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.actor-name {
+  background: rgba(255, 255, 255, 0.96);
+  color: #1a2326;
+  text-shadow: none;
+  font-weight: 800;
+}
+[data-theme="dark"] .actor-name {
+  background: rgba(255, 255, 255, 0.96);
+  color: #0c1613;
+}
+.actor-task {
+  background: rgba(7, 16, 13, 0.82);
+  color: #ecf3ef;
+}
+[data-theme="light"] .actor-task {
+  background: rgba(31, 111, 74, 0.92);
+  color: #ffffff;
+}
+
+/* ──────────── 3. 入室トースト ────────────
+   ステージ上部中央に短時間だけスライドダウン表示。
+   "誰か来た" の気配を視覚と SR の両方で伝える。 */
+.workspace-arrival-toast {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  z-index: 9;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(7, 16, 13, 0.86);
+  color: #f3f7f4;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transform: translate(-50%, -8px);
+  opacity: 0;
+  animation: workspace-arrival-in 280ms cubic-bezier(0.22, 1, 0.36, 1) forwards,
+    workspace-arrival-out 320ms ease-in 2800ms forwards;
+  pointer-events: none;
+}
+.workspace-arrival-toast-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4dd07a;
+  box-shadow: 0 0 0 4px rgba(77, 208, 122, 0.18);
+  animation: workspace-arrival-dot 1.2s ease-in-out infinite;
+}
+@keyframes workspace-arrival-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+@keyframes workspace-arrival-out {
+  to {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+}
+@keyframes workspace-arrival-dot {
+  0%, 100% {
+    box-shadow: 0 0 0 4px rgba(77, 208, 122, 0.18);
+  }
+  50% {
+    box-shadow: 0 0 0 7px rgba(77, 208, 122, 0.04);
+  }
+}
+
+/* ──────────── 4. 空状態 (自分一人) ────────────
+   "静かな部屋。最初のひと言を残してみよう。" を
+   ステージ右下に控えめに表示。視界を邪魔しない位置。 */
+.workspace-stage-empty {
+  position: absolute;
+  right: 24px;
+  bottom: 24px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(var(--surface-rgb), 0.6);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(var(--ink-rgb), 0.06);
+  pointer-events: none;
+  animation: workspace-empty-pulse 4s ease-in-out infinite;
+}
+.workspace-stage-empty-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  opacity: 0.65;
+}
+.workspace-stage-empty p {
+  margin: 0;
+}
+@keyframes workspace-empty-pulse {
+  0%, 100% { opacity: 0.86; }
+  50% { opacity: 1; }
+}
+
+/* ──────────── 5. 置き手紙の未読バッジ ────────────
+   既存 is-unread の glow に加え、小さな赤いドットを足して
+   "未読" を距離が離れても認識できるように。 */
+.workspace-floor-note-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e35d6a;
+  box-shadow: 0 0 0 2px rgba(var(--surface-rgb), 1);
+  pointer-events: none;
+  animation: workspace-floor-badge-pulse 1.6s ease-in-out infinite;
+}
+@keyframes workspace-floor-badge-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 0.84;
+  }
+}
+
+/* ──────────── 6. チャットログの最新フラッシュ ────────────
+   "今喋った" 感を出す。既存の workspace-chat-log-in アニメに
+   ハイライト背景を重ねる。 */
+.workspace-chat-log li.is-newest {
+  background: rgba(var(--green-rgb, 31, 111, 74), 0.12);
+  animation:
+    workspace-chat-log-in 220ms ease-out,
+    workspace-chat-newest-flash 1.4s ease-out;
+}
+@keyframes workspace-chat-newest-flash {
+  0% {
+    background: rgba(var(--green-rgb, 31, 111, 74), 0.28);
+    box-shadow: 0 0 0 0 rgba(var(--green-rgb, 31, 111, 74), 0.4);
+  }
+  100% {
+    background: rgba(var(--green-rgb, 31, 111, 74), 0.12);
+    box-shadow: 0 0 0 6px rgba(var(--green-rgb, 31, 111, 74), 0);
+  }
+}
+
+/* ──────────── 7. バブルメッセージのフェード ────────────
+   TTL 切れで突然消える代わりに、最後の 1 秒をフェードアウトで
+   "見落とした" 感をやわらげる。 */
+.workspace-bubble {
+  animation: workspace-bubble-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: 50% 100%;
+}
+@keyframes workspace-bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ──────────── 8. 入室ドロップインの品質UP ────────────
+   既存 is-just-joined 用のアニメに、軽い bounce を追加。
+   既存の workspace-drop-in があるならそれを上書きしない。 */
+.workspace-actor.is-just-joined {
+  animation: workspace-actor-arrive 540ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes workspace-actor-arrive {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% - 18px)) scale(0.88);
+  }
+  60% {
+    opacity: 1;
+    transform: translate(-50%, calc(-50% + 4px)) scale(1.04);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* ──────────── 9. アバター移動最適化 ────────────
+   walk loop が percent left/top を毎フレーム再計算するので、
+   browser に paint 最適化のヒントを与える。 */
+.workspace-actor.is-player.is-walking,
+.workspace-actor.is-just-joined {
+  will-change: transform, left, top;
+}
+
+/* ──────────── 10. ポップオーバーのモバイル最適化 ────────────
+   PC では既存の anchor 配置を活かし、スマホでは下から
+   スライドアップする bottom-sheet 風に変換。背景が
+   見えるように max-height を抑える。 */
+@media (max-width: 720px) {
+  .workspace-popover-backdrop {
+    background: rgba(0, 0, 0, 0.38);
+  }
+  .workspace-stage-popover {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 80svh !important;
+    margin: 0 !important;
+    border-radius: 20px 20px 0 0 !important;
+    transform: none !important;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    animation: workspace-popover-up 240ms cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow: 0 -16px 36px rgba(0, 0, 0, 0.24);
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+  /* スマホでは anchor 系のクラスは無視（中央寄せはそのまま） */
+  .workspace-stage-popover.anchor-right,
+  .workspace-stage-popover.anchor-below {
+    transform: none !important;
+  }
+}
+@keyframes workspace-popover-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ──────────── 11. オーバーレイのモバイル圧縮 ────────────
+   既存の workspace-room-overlay は左上に固定で 264px 幅。
+   スマホでは縦領域を食うので、コラプス時を一行ピル風に。 */
+@media (max-width: 720px) {
+  .workspace-room-overlay {
+    width: calc(100% - 24px);
+    max-width: calc(100% - 24px);
+    top: 10px;
+    left: 12px;
+    padding: 8px 10px;
+    border-radius: 12px;
+  }
+  .workspace-room-overlay.is-collapsed > *:not(.workspace-room-overlay-head) {
+    display: none;
+  }
+  .workspace-room-overlay.is-collapsed {
+    width: auto;
+    max-width: calc(100% - 24px);
+  }
+  .workspace-room-overlay-head {
+    align-items: center;
+  }
+  .workspace-room-overlay-name {
+    font-size: 13px;
+  }
+  .workspace-room-overlay-meta {
+    font-size: 11px;
+  }
+  .workspace-room-overlay-toggle {
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    border-radius: 8px;
+    background: rgba(var(--ink-rgb), 0.04);
+    border: 1px solid rgba(var(--ink-rgb), 0.06);
+    font-size: 16px;
+    line-height: 1;
+  }
+  .workspace-chat-log {
+    top: auto;
+    bottom: 12px;
+    right: 12px;
+    width: min(220px, calc(100% - 24px));
+    max-height: 30vh;
+    font-size: 11px;
+  }
+}
+
+/* ──────────── 12. プリセット下部バーのモバイル最適化 ────────────
+   既存の preset-toggle-row は横一列。スマホでボタンが
+   詰まると親指範囲外になるので、横スクロール許可と
+   ボタン高さ 44px 保証で読みやすく押しやすく。 */
+@media (max-width: 720px) {
+  .preset-toggle-row {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px;
+  }
+  .preset-toggle-row > * {
+    min-height: 44px;
+  }
+  .preset-chat-toggle,
+  .floor-note-drop-button,
+  .appearance-drop-button {
+    flex: 1 1 auto;
+    min-width: 90px;
+  }
+  .preset-message-bar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 8px;
+  }
+  .preset-message-bar button {
+    min-height: 44px;
+    font-size: 13px;
+  }
+  .preset-message-editor {
+    grid-template-columns: 1fr !important;
+  }
+  .preset-message-editor input {
+    font-size: 16px;
+    min-height: 44px;
+  }
+}
+
+/* ──────────── 13. 集中リングのパルス（in-progress 時） ────────────
+   進捗があり on-break でないリングを微妙にパルスさせて
+   "今稼働中" を視覚化。光量は最小限。 */
+.actor-focus-ring:not(.is-paused) {
+  animation: workspace-focus-pulse 4.8s ease-in-out infinite;
+}
+@keyframes workspace-focus-pulse {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.68;
+  }
+}
+
+/* ──────────── 14. 記念碑のホバーで微発光 ────────────
+   タップしてプロフィールが見えることを示唆。 */
+.workspace-monument-stone {
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    filter 0.18s ease;
+}
+.workspace-monument:hover .workspace-monument-stone {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+
+/* ──────────── 15. reduced-motion 対応 ────────────
+   "動きを減らす" 設定の OS では、装飾アニメを全停止。
+   情報伝達に必要なフラッシュだけ残す。 */
+@media (prefers-reduced-motion: reduce) {
+  .workspace-arrival-toast,
+  .workspace-arrival-toast-dot,
+  .workspace-stage-empty,
+  .workspace-floor-note-badge,
+  .workspace-chat-log li.is-newest,
+  .workspace-bubble,
+  .workspace-actor.is-just-joined,
+  .actor-focus-ring,
+  .workspace-actor.is-npc,
+  .workspace-actor.is-walking .actor-sprite,
+  .workspace-actor.is-walking .sprite-leg-left,
+  .workspace-actor.is-walking .sprite-leg-right {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ──────────── 16. ステージのモバイル時最低高さ調整 ────────────
+   スマホで stage が clamp(480px, 58vh, 660px) だと
+   キーボード出現時に詰まる。可変に。 */
+@media (max-width: 720px) {
+  .workspace-stage {
+    min-height: 360px;
+    height: clamp(360px, 56vh, 560px);
+    border-radius: 14px;
+  }
+}
+
+/* ──────────── 17. ホバー時のアバター持ち上げ（PC） ────────────
+   既存の hover で translateY(-2px) を強化し、影も濃く。
+   "押せる" 感の明確化。 */
+@media (hover: hover) {
+  .workspace-actor {
+    transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .workspace-actor:hover {
+    z-index: 6;
+  }
+  .workspace-actor:hover .actor-sprite {
+    filter: brightness(1.06);
+  }
+}
+
+/* ──────────── 18. focus ring の不要なホバー枠を抑制 ────────────
+   モバイル mobile-polish ブロックの :focus-visible はステージ
+   actor にも適用される。アバターはタップターゲットなので
+   既存ホバーが目立つようにアウトラインを内側に寄せる。 */
+.workspace-actor:focus-visible .actor-sprite {
+  box-shadow:
+    0 0 0 3px rgba(var(--green-rgb, 31, 111, 74), 0.42),
+    0 20px 38px rgba(0, 0, 0, 0.2);
+}
+.workspace-actor:focus-visible {
+  outline: none !important;
+}
+
+/* ──────────── 19. 定型文ボタンのキーボードヒント ────────────
+   PC では各ボタンに数字キー (1〜6) のラベルを表示し、ホットキー
+   送信が可能なことを発見させる。スマホでは小型化 or 非表示。 */
+.preset-message-bar button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.preset-key-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border: 1px solid rgba(var(--ink-rgb), 0.18);
+  border-radius: 4px;
+  background: rgba(var(--surface-rgb), 0.5);
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+.preset-message-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+/* タッチデバイスではホットキーがないので非表示 */
+@media (hover: none), (max-width: 720px) {
+  .preset-key-hint {
+    display: none;
+  }
+}
+
+/* ──────────── 20. プリビュー（pre-join lobby）の品質UP ────────────
+   入室前の最初の印象。タイトル余裕、アバタースタックを少し
+   華やかに、CTAボタンを大胆に。 */
+.workspace-room-preview {
+  position: relative;
+}
+.room-preview-avatar-stack {
+  position: relative;
+}
+.room-preview-avatar {
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.room-preview-avatar:hover {
+  transform: translateY(-3px) scale(1.04);
+  z-index: 2;
+}
+.room-preview-join {
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 220ms ease;
+}
+.room-preview-join:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 36px rgba(var(--green-rgb, 31, 111, 74), 0.22);
+}
+.room-preview-join::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.22),
+    transparent
+  );
+  transition: left 0.7s ease;
+}
+.room-preview-join:hover::after {
+  left: 100%;
+}

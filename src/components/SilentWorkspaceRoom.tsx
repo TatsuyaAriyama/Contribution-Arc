@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type ChangeEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ChangeEvent, type ReactNode } from "react";
 
 export type RoomActivityItem = {
   id: string;
@@ -294,11 +294,92 @@ export function SilentWorkspaceRoom({
   void ringTick;
   useEffect(() => {
     if (members.length === 0) return;
-    const id = window.setInterval(() => setRingTick((t) => t + 1), 60000);
+    // 60s 間隔だと、ステージを見つめている間に進捗が "止まって見える"。
+    // 10s に短縮しても 1 部屋あたり stand-alone な setState 1 回分なので
+    // コストは無視できる。視覚的な "生きてる感" が大きく上がる。
+    const id = window.setInterval(() => setRingTick((t) => t + 1), 10000);
     return () => window.clearInterval(id);
   }, [members.length]);
+
+  // 入室トースト。前回のレンダーから members に新規 userId が増えていれば、
+  // その名前を 3 秒だけステージ上部にフェード表示する。自分自身の入室は
+  // 入室直後のオーバーレイで既に分かるので除外。これがあると「気配」を
+  // ちゃんと感じられる ── 静かな部屋に人が来た合図。
+  const previousMemberIdsRef = useRef<Set<string>>(new Set());
+  const [arrivalToast, setArrivalToast] = useState<string | null>(null);
+  useEffect(() => {
+    const previous = previousMemberIdsRef.current;
+    const currentIds = new Set(members.map((member) => member.userId));
+    const newcomers = members.filter(
+      (member) => !previous.has(member.userId) && member.userId !== currentUserId,
+    );
+    previousMemberIdsRef.current = currentIds;
+    if (previous.size === 0) return; // 初回ハイドレートはトーストしない
+    if (newcomers.length === 0) return;
+    const label =
+      newcomers.length === 1
+        ? `${newcomers[0].name} さんが入室`
+        : `${newcomers[0].name} さん他 ${newcomers.length - 1} 人が入室`;
+    setArrivalToast(label);
+    const id = window.setTimeout(() => setArrivalToast(null), 3200);
+    return () => window.clearTimeout(id);
+  }, [members, currentUserId]);
+
+  // Esc キーでステージ内ポップオーバーを一括クローズ。ポップオーバーが
+  // 開いている時だけリスナーを張るので、それ以外の入力には影響しない。
+  const hasOpenPopover = Boolean(
+    (selectedMemberId && memberPanel) || floorNotePanel || monumentPanel || appearancePanel,
+  );
+  useEffect(() => {
+    if (!hasOpenPopover || !onPanelClose) return;
+    const handle = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        onPanelClose();
+      }
+    };
+    window.addEventListener("keydown", handle);
+    return () => window.removeEventListener("keydown", handle);
+  }, [hasOpenPopover, onPanelClose]);
+
+  // ポップオーバーが開いている間は背景スクロールを止める。スマホで
+  // ポップオーバーの上下スクロールが裏のページに抜けるのを防ぐ。
+  useEffect(() => {
+    if (!hasOpenPopover) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [hasOpenPopover]);
+
   const presetSlots = [...presetMessages, "", "", "", "", "", ""].slice(0, 6);
   const visiblePresetMessages = presetSlots.map((message) => message.trim()).filter(Boolean);
+
+  // ホットキー：1〜6 で定型文を送信。input/textarea にフォーカスがある
+  // 時は無効。ポップオーバーが開いている間も無効。PC ユーザー向けの
+  // パワーユーザー機能だが、知らない人には邪魔にならない（押さなければ
+  // 何も起きない）。
+  useEffect(() => {
+    if (!isJoined || hasOpenPopover) return;
+    const handle = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (target?.isContentEditable) return;
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      const num = Number(event.key);
+      if (Number.isInteger(num) && num >= 1 && num <= 6) {
+        const message = visiblePresetMessages[num - 1];
+        if (message) {
+          event.preventDefault();
+          onPresetMessage(message);
+        }
+      }
+    };
+    window.addEventListener("keydown", handle);
+    return () => window.removeEventListener("keydown", handle);
+  }, [isJoined, hasOpenPopover, visiblePresetMessages, onPresetMessage]);
   const currentMember = members.find((member) => member.userId === currentUserId);
   const isCurrentUserOnBreak = currentMember?.status === "on-break";
 
@@ -533,17 +614,44 @@ export function SilentWorkspaceRoom({
             </aside>
           ) : null}
 
+          {/* 入室トースト。新規入室を 3 秒だけ知らせる。aria-live で SR にも伝える。 */}
+          {arrivalToast ? (
+            <div
+              className="workspace-arrival-toast"
+              role="status"
+              aria-live="polite"
+            >
+              <span className="workspace-arrival-toast-dot" aria-hidden="true" />
+              {arrivalToast}
+            </div>
+          ) : null}
+
+          {/* 空状態 ── ステージに自分以外まだ誰もいない時の励まし表示。
+              自分が入室済かつ自分しかいない場合のみ。誰もいない PRE-JOIN
+              は別ビュー（room-preview）に振り分けられているのでここには来ない。 */}
+          {isJoined && members.length <= 1 && presetLog.length === 0 ? (
+            <div className="workspace-stage-empty" aria-hidden="true">
+              <span className="workspace-stage-empty-dot" />
+              <p>静かな部屋。最初のひと言を残してみよう。</p>
+            </div>
+          ) : null}
+
           {/* Recent-message log. Floats in the top-right corner of the
               stage as a glassy semi-transparent panel so the room
               canvas and avatars remain visible behind it. Hidden when
               the log is empty so the room reads as a quiet space until
               someone speaks. */}
           {presetLog.length > 0 ? (
-            <aside className="workspace-chat-log" aria-label="ルームの発言ログ">
+            <aside
+              className="workspace-chat-log"
+              aria-label="ルームの発言ログ"
+              aria-live="polite"
+              aria-atomic="false"
+            >
               <p className="workspace-chat-log-title">最近の発言</p>
               <ul>
-                {presetLog.map((entry) => (
-                  <li key={entry.id}>
+                {presetLog.map((entry, index) => (
+                  <li key={entry.id} className={index === 0 ? "is-newest" : ""}>
                     <span
                       className="workspace-chat-log-dot"
                       style={{ background: entry.color || "var(--ink)" }}
@@ -729,6 +837,7 @@ export function SilentWorkspaceRoom({
               }
               onClick={() => onMonumentOpen?.(monument.id)}
               aria-label={monument.label}
+              title={monument.label}
             >
               <span className="workspace-monument-stone" aria-hidden="true">
                 <span className="workspace-monument-icon">{monument.icon}</span>
@@ -758,10 +867,14 @@ export function SilentWorkspaceRoom({
               }
               onClick={() => onFloorNoteOpen?.(note.id)}
               aria-label={`${note.name}さんの置き手紙`}
+              title={`${note.name}さんの置き手紙`}
             >
               <span className="workspace-floor-note-icon" aria-hidden="true">
                 ✉
               </span>
+              {note.isUnread ? (
+                <span className="workspace-floor-note-badge" aria-hidden="true" />
+              ) : null}
             </button>
           ))}
 
@@ -770,8 +883,30 @@ export function SilentWorkspaceRoom({
           {selectedMemberId && memberPanel
             ? (() => {
                 const target = members.find((m) => m.userId === selectedMemberId);
-                const anchorX = target ? target.x : 50;
-                const anchorY = target ? target.y : 50;
+                // target が members から見つからない（直前に退室、もしくは
+                // 一時的なデータ欠損）場合はステージ中央配置の "centered" 版に
+                // フォールバック。何も見えない/変な位置に出る、を防ぐ。
+                if (!target) {
+                  return (
+                    <>
+                      <button
+                        type="button"
+                        className="workspace-popover-backdrop"
+                        aria-label="閉じる"
+                        onClick={onPanelClose}
+                      />
+                      <div
+                        className="workspace-stage-popover workspace-member-popover is-centered"
+                        role="dialog"
+                        aria-modal="true"
+                      >
+                        {memberPanel}
+                      </div>
+                    </>
+                  );
+                }
+                const anchorX = target.x;
+                const anchorY = target.y;
                 return (
                   <>
                     <button
@@ -906,8 +1041,15 @@ export function SilentWorkspaceRoom({
           {isPresetTrayOpen ? (
             <div className="preset-message-bar" aria-label="定型コミュニケーション">
               {visiblePresetMessages.map((message, index) => (
-                <button type="button" key={`${message}-${index}`} onClick={() => onPresetMessage(message)} disabled={!isJoined}>
-                  {message}
+                <button
+                  type="button"
+                  key={`${message}-${index}`}
+                  onClick={() => onPresetMessage(message)}
+                  disabled={!isJoined}
+                  title={`${message} (${index + 1} キーで送信)`}
+                >
+                  <kbd className="preset-key-hint" aria-hidden="true">{index + 1}</kbd>
+                  <span className="preset-message-text">{message}</span>
                 </button>
               ))}
               <button
