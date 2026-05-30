@@ -3719,6 +3719,27 @@ function App() {
   const [following, setFollowing] = useState<string[]>([]);
   const [friends, setFriends] = useState<FriendPreview[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
+  // 古い pending request の自動非表示（クライアント側フィルタ・30日）。
+  // 起動時 + 6h ごとに一括掃く。effect は **早期 return より前** に置く
+  // 必要があるため、handler セクションではなく state 宣言の隣に配置。
+  // 後段の `if (!isAuthReady) return` などより前に呼ばれないと、認証状態
+  // 変化時に hooks の呼び出し数が変わって React error #310 を引き起こす
+  // ── 実際に本番でこの順序ミスでクラッシュした（"画面の復帰が必要です"
+  // エラーバウンダリ）。
+  useEffect(() => {
+    const dismissStale = () => {
+      const cutoff = Date.now() - 30 * 86400000;
+      setFriendRequests((requests) =>
+        requests.filter((request) => {
+          if (request.status !== "pending") return true;
+          return new Date(request.createdAt).getTime() >= cutoff;
+        }),
+      );
+    };
+    dismissStale();
+    const id = window.setInterval(dismissStale, 6 * 60 * 60 * 1000);
+    return () => window.clearInterval(id);
+  }, []);
   const [friendMessage, setFriendMessage] = useState("");
   // Pinned friends（ローカルだけで保持）。お気に入りの友達を一覧の上位に
   // 固定する。Firestore 同期は P2 でやる予定 ── ひとまずデバイス毎の
@@ -8806,22 +8827,8 @@ function App() {
     }
   };
 
-  // 古い pending request の自動非表示（クライアント側フィルタ・30日）
-  const handleDismissStalePendingRequests = () => {
-    const cutoff = Date.now() - 30 * 86400000;
-    setFriendRequests((requests) =>
-      requests.filter((request) => {
-        if (request.status !== "pending") return true;
-        return new Date(request.createdAt).getTime() >= cutoff;
-      }),
-    );
-  };
-  useEffect(() => {
-    handleDismissStalePendingRequests();
-    const id = window.setInterval(handleDismissStalePendingRequests, 6 * 60 * 60 * 1000);
-    return () => window.clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // dismiss-stale の実体 useEffect は state 宣言直下に移動済み
+  // （早期 return より前に hook を呼ぶため。React error #310 回避）。
 
   // Send a friend a targeted invite to the room the user currently has
   // selected. Optimistically flips the row to "招待済み"; rolls back if the
