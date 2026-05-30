@@ -28670,4 +28670,56 @@ a[role="button"],
     margin-right: 0 !important;
     box-sizing: border-box !important;
   }
+
+  /* ===== 内部レイアウトの非折り返し flex を強制折り返し =====
+     スクショで判明：.workspace-room-strip は
+     "<- Home / 新しい場所を作る入力 / 公開ピル / テンプレピル
+       / 一覧を更新 / room pills" を横一列に並べる flex で、
+     flex-wrap 未指定。内部の .workspace-room-create input は
+     width: 160px 固定で、すべて並ぶと viewport 幅を簡単に
+     超過して右側のボタンが画面外に切れる。
+     モバイルでは縦並び＋折り返しに切替え、固定幅入力も解除。 */
+  .workspace-room-strip {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    padding: 8px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .workspace-room-create {
+    flex: 1 1 100% !important;
+    flex-wrap: wrap !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .workspace-room-create input {
+    width: 100% !important;
+    flex: 1 1 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+  .workspace-room-create-visibility {
+    flex-wrap: wrap !important;
+    width: 100% !important;
+  }
+  .workspace-room-refresh {
+    flex: 1 1 auto !important;
+  }
+  .workspace-room-pills {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* preset 下部バーも同様の非折り返し flex 問題があるため、
+     念のためここでも明示。 */
+  .preset-message-panel,
+  .preset-toggle-row {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex-wrap: wrap !important;
+    box-sizing: border-box !important;
+  }
 }
