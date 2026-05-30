@@ -27144,14 +27144,23 @@ a[role="button"],
   /* ただし、ピル状の小さいバッジ ボタン群はサイズが
      "情報" として意味を持つので除外。floor note の小アイコン
      や記念碑のラベルなど、ステージ内のオーバーレイ要素は
-     見た目を保ったまま透明な拡張ヒットエリアで補う。 */
+     見た目を保ったまま透明な拡張ヒットエリアで補う。
+     データグリッドのセル (contribution heatmap 等) も「決まった
+     サイズの正方形」が情報そのものなので除外する。 */
   .workspace-floor-note,
   .workspace-monument,
   .actor-focus-ring,
   .topbar-icon-button,
   .mobile-tab-presence-dot,
   .topbar-quicklog,
-  .room-card-menu-button {
+  .room-card-menu-button,
+  .contribution-arc-cell,
+  .workspace-summary-presence-avatar,
+  .room-preview-avatar,
+  .friends-modal-avatar,
+  .topbar-popover-avatar,
+  .topbar-popover-dot,
+  .friends-modal-pin-mark {
     min-height: 0;
   }
 
