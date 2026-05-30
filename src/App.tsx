@@ -5463,6 +5463,10 @@ function App() {
     }
 
     const applyCloudRequests = (direction: FriendRequestDirection, cloudRequests: FriendRequest[]) => {
+      // ブロック中の uid からの request は UI に出さない。
+      const filteredCloudRequests = cloudRequests.filter(
+        (request) => !blockedFriendUids.includes(request.profile.uid),
+      );
       setFriendRequests((requests) => {
         const localRequests = requests
           .map((request) => ({
@@ -5470,7 +5474,7 @@ function App() {
             direction: request.direction || "outgoing",
           }))
           .filter((request) => request.direction !== direction);
-        const nextRequests = [...cloudRequests, ...localRequests];
+        const nextRequests = [...filteredCloudRequests, ...localRequests];
 
         return nextRequests.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       });
@@ -7020,10 +7024,17 @@ function App() {
     void playNotificationSound("default", desktopNotificationSettings);
   };
   const pushAppNotification = (item: NotificationItem, shouldSendNative: boolean) => {
+    // ブロック中のユーザーからの通知は完全に無視。
+    if (blockedFriendUids.includes(item.sourceUserId)) {
+      seenNotificationKeysRef.current.add(item.id);
+      return;
+    }
     const cooldownKey = `${item.type}:${item.sourceUserId}`;
     const now = Date.now();
     const lastNotifiedAt = notificationCooldownRef.current[cooldownKey] || 0;
-    const canSendNative = shouldSendNative && now - lastNotifiedAt > notificationCooldownMs;
+    // ミュート中：一覧には残すがネイティブ通知 / 音は抑制。
+    const isMuted = mutedFriendUids.includes(item.sourceUserId);
+    const canSendNative = shouldSendNative && !isMuted && now - lastNotifiedAt > notificationCooldownMs;
     const canPlaySound =
       canSendNative &&
       desktopNotificationSettings.sound &&
@@ -8485,9 +8496,15 @@ function App() {
         limit(12),
       );
       const snapshot = await getDocs(usersQuery);
+      const blockedSet = new Set(blockedFriendUids);
       const results = snapshot.docs
         .map((item) => normalizeUserProfile(item.id, item.data() as Partial<UserProfile>))
-        .filter((profile) => profile.uid !== currentUser.uid && profile.userId);
+        .filter(
+          (profile) =>
+            profile.uid !== currentUser.uid &&
+            profile.userId &&
+            !blockedSet.has(profile.uid),
+        );
 
       setSearchResults(results);
       if (results.length === 0) {
@@ -8731,6 +8748,81 @@ function App() {
     showToast(`${friend.name} をフレンドから外しました`, { kind: "info" });
   };
 
+  // ミュート切替（関係維持・通知のみ抑制）
+  const handleToggleFriendMute = (uid: string) => {
+    setMutedFriendUids((ids) => (ids.includes(uid) ? ids.filter((id) => id !== uid) : [...ids, uid]));
+  };
+
+  // ブロック：友達関係を解除しつつ blockedFriendUids に追加。
+  // クライアント側のフィルタなので完全防御ではないが、UI 上は完全に
+  // 見えなくなる。仕様としては「自分のクライアントから消す」スコープ。
+  const handleBlockUser = async (target: { uid: string; name: string }) => {
+    if (!currentUser) return;
+    if (target.uid === currentUser.uid) return;
+
+    setBlockedFriendUids((ids) => (ids.includes(target.uid) ? ids : [...ids, target.uid]));
+    const wasFriend = friends.some((friend) => friend.uid === target.uid);
+    if (wasFriend) {
+      const friend = friends.find((item) => item.uid === target.uid);
+      if (friend) {
+        await handleFriendRemove(friend).catch(() => {});
+      }
+    }
+    setFriendRequests((requests) => requests.filter((item) => item.profile.uid !== target.uid));
+    showToast(`${target.name} をブロックしました`, { kind: "info" });
+  };
+
+  const handleUnblockUser = (uid: string) => {
+    setBlockedFriendUids((ids) => ids.filter((id) => id !== uid));
+    showToast("ブロックを解除しました", { kind: "success" });
+  };
+
+  // 応援 (👏)。1 日 1 回まで。doc ID で二重防止 → ローカル即時 disable。
+  const handleSendEncouragement = async (recipient: { uid: string; name: string }) => {
+    if (!currentUser) return;
+    if (recipient.uid === currentUser.uid) return;
+    if (encouragementsSent.has(recipient.uid)) {
+      showToast("今日はもう応援を送りました", { kind: "info" });
+      return;
+    }
+    const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    const docId = `${currentUser.uid}_${recipient.uid}_${today}`;
+    setEncouragementsSent((set) => {
+      const next = new Set(set);
+      next.add(recipient.uid);
+      return next;
+    });
+    try {
+      await setDoc(doc(db, "encouragements", docId), {
+        senderUid: currentUser.uid,
+        senderName: playerName || "Developer",
+        senderUserId: userId,
+        recipientUid: recipient.uid,
+        createdAt: new Date().toISOString(),
+      });
+      showToast(`👏 ${recipient.name} に応援を送りました`, { kind: "success" });
+    } catch (error) {
+      console.info("Encouragement send skipped (likely duplicate).", error);
+    }
+  };
+
+  // 古い pending request の自動非表示（クライアント側フィルタ・30日）
+  const handleDismissStalePendingRequests = () => {
+    const cutoff = Date.now() - 30 * 86400000;
+    setFriendRequests((requests) =>
+      requests.filter((request) => {
+        if (request.status !== "pending") return true;
+        return new Date(request.createdAt).getTime() >= cutoff;
+      }),
+    );
+  };
+  useEffect(() => {
+    handleDismissStalePendingRequests();
+    const id = window.setInterval(handleDismissStalePendingRequests, 6 * 60 * 60 * 1000);
+    return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Send a friend a targeted invite to the room the user currently has
   // selected. Optimistically flips the row to "招待済み"; rolls back if the
   // write fails so the user can retry.
@@ -8771,6 +8863,28 @@ function App() {
       });
       showToast("招待を送れませんでした。時間をおいて再度お試しください", { kind: "error" });
     }
+  };
+
+  // 一括招待。複数 friend uid を受けて逐次 invite を送る。
+  const handleBatchInvite = async (targetUids: string[]) => {
+    if (!currentUser) return;
+    if (!selectedRoom) {
+      showToast("先に作業部屋を選んでください", { kind: "info" });
+      return;
+    }
+    if (targetUids.length === 0) return;
+    let sent = 0;
+    for (const uid of targetUids) {
+      const friend = friends.find((item) => item.uid === uid);
+      if (!friend) continue;
+      try {
+        await handleSendWorkspaceInvite(friend);
+        sent += 1;
+      } catch {
+        /* 1件失敗しても続行 */
+      }
+    }
+    if (sent > 1) showToast(`${sent} 人に一斉招待を送りました`, { kind: "success" });
   };
 
   // Accept an incoming invite: jump to the inviter's room and mark the
