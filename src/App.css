@@ -28458,3 +28458,70 @@ a[role="button"],
     margin-top: 4px;
   }
 }
+
+/* =========================================================
+   Workspace mobile fix — ステージが viewport より狭く左寄り
+   になる問題を解消。app-shell の左右余白を撤去し、workspace
+   ステージとその周辺コンテンツを viewport 幅いっぱいに展開する。
+   ========================================================= */
+@media (max-width: 720px) {
+  /* 1. app-shell は PC では中央寄せ + 14px 余白 (calc(100% - 28px))。
+        モバイルではこの余白が "左寄り感" の正体になりがちなので、
+        viewport 全幅を取る。 */
+  .app-shell {
+    width: 100%;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* 2. two-pane-shell / two-pane-left も padding を持っている場合は
+        詰める。デフォルト padding は 0 だが、念のため。 */
+  .two-pane-shell,
+  .two-pane-left {
+    padding: 0;
+  }
+
+  /* 3. workspace 関連コンテナの padding 圧縮。PC では gap/padding が
+        広いが、モバイルでは縦領域も貴重なので最小限に。 */
+  .workspace-screen {
+    gap: 8px;
+    padding: 0 8px;
+  }
+  .silent-workspace {
+    margin-top: 0;
+    padding: 8px 0;
+  }
+  .workspace-2d-main {
+    padding: 4px;
+    gap: 8px;
+  }
+
+  /* 4. ルーム選択ピル列は overflow-x: auto。左右の余白が大きすぎると
+        最初のピルが画面端に到達できないので削減。横スクロールは
+        維持。 */
+  .workspace-room-pills {
+    padding-left: 8px;
+    padding-right: 8px;
+    scroll-padding-left: 8px;
+  }
+
+  /* 5. ステージ右端で何かはみ出していたら最終ガード。 */
+  .workspace-stage {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .workspace-2d-shell {
+    max-width: 100%;
+  }
+
+  /* 6. 横スクロール最終防衛（mobile polish 既存指定の補強）。
+        子の意図しない overflow で画面が広がるのを物理的に止める。 */
+  .app-shell,
+  .two-pane-shell,
+  .two-pane-left,
+  .workspace-screen,
+  .workspace-2d-shell,
+  .workspace-2d-main {
+    overflow-x: clip;
+  }
+}
