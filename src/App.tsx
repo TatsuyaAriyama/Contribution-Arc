@@ -3738,11 +3738,72 @@ function App() {
       /* localStorage 不可なら諦める */
     }
   }, [pinnedFriendUids]);
+  // ミュート：関係は残したまま、その人からの通知音 / デスクトップ通知 /
+  // 通知バッジを抑制する。"切りたくはないけどしばらく静かに" 用。
+  const [mutedFriendUids, setMutedFriendUids] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem("ca:muted-friends");
+      return raw ? (JSON.parse(raw) as string[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("ca:muted-friends", JSON.stringify(mutedFriendUids));
+    } catch {
+      /* ignore */
+    }
+  }, [mutedFriendUids]);
+  // ブロック：相手からのフレンド申請を自動で隠す。検索・推薦からも除外。
+  const [blockedFriendUids, setBlockedFriendUids] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem("ca:blocked-friends");
+      return raw ? (JSON.parse(raw) as string[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("ca:blocked-friends", JSON.stringify(blockedFriendUids));
+    } catch {
+      /* ignore */
+    }
+  }, [blockedFriendUids]);
+  // 応援 (👏) クールダウン。同一 recipient に対して 1 日 1 回まで。
+  // ローカル + Firestore doc id で二重防止。
+  const [encouragementsSent, setEncouragementsSent] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem("ca:encouragements-sent");
+      if (!raw) return new Set();
+      const parsed = JSON.parse(raw) as { date: string; uids: string[] };
+      const today = new Date().toISOString().slice(0, 10);
+      if (parsed.date !== today) return new Set();
+      return new Set(parsed.uids);
+    } catch {
+      return new Set();
+    }
+  });
+  useEffect(() => {
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      localStorage.setItem(
+        "ca:encouragements-sent",
+        JSON.stringify({ date: today, uids: Array.from(encouragementsSent) }),
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [encouragementsSent]);
   // Friends modal の表示モード / 検索 / ソート。それぞれセッション保持。
   const [friendsModalQuery, setFriendsModalQuery] = useState("");
   const [friendsModalSort, setFriendsModalSort] = useState<
     "online" | "name" | "recent" | "level" | "streak"
   >("online");
+  // 一括招待モード（複数選択 → まとめて invite）。
+  const [friendsBulkSelectMode, setFriendsBulkSelectMode] = useState(false);
+  const [friendsBulkSelectedUids, setFriendsBulkSelectedUids] = useState<Set<string>>(() => new Set());
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [lastNotificationReadAt, setLastNotificationReadAt] = useState("");
   const [appNotifications, setAppNotifications] = useState<NotificationItem[]>([]);
