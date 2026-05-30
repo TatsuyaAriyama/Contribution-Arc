@@ -22678,10 +22678,17 @@ select:focus-visible,
 
 @media (max-width: 720px) {
   /* Hide the topbar's inline view nav and the secondary popover icons
-     — the bottom nav handles primary moves, and friends / live can be
-     reached from the avatar menu (or restored to a "more" tab later). */
+     — the bottom nav handles primary moves. Friends は別動線で必要
+     (sidebar はモバイルで折り畳み、modal/popover を開く方法がない) なので
+     friends 用 wrap だけは表示し続け、タップで modal を直接開く（onClick
+     側で分岐済み）。Live など他の popover wrap は引き続き非表示。 */
   .premium-dashboard-header .topbar-nav,
-  .premium-dashboard-header .topbar-popover-wrap {
+  .premium-dashboard-header .topbar-popover-wrap:not(.topbar-popover-wrap-friends) {
+    display: none;
+  }
+  /* モバイルでは Friends ボタンタップで popover は出ない（modal に
+     直行）ので、万が一 state が立っていても popover を強制的に隠す。 */
+  .premium-dashboard-header .topbar-popover-wrap-friends .topbar-popover {
     display: none;
   }
 
