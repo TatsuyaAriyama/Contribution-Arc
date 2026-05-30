@@ -28394,14 +28394,25 @@ a[role="button"],
     height: 44px;
     font-size: 16px;
   }
+  /* .friends-modal-row は display: grid（minmax(0,1fr) auto）なので、
+     flex-wrap は効かない。モバイルでは person と actions を縦並びに切替えて
+     person ペインが必ず全幅を確保できるようにする。アクション群は下段に
+     折り返し（wrap）可能にして 6 ボタン入っても破綻させない。 */
   .friends-modal-row {
-    flex-wrap: wrap;
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    align-items: stretch;
   }
   .friends-modal-actions {
     width: 100%;
-    margin-top: 8px;
+    margin-top: 0;
     justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+  .friends-modal-person {
+    width: 100%;
+    min-width: 0;
   }
   .friends-modal-pin,
   .friends-modal-remove,
