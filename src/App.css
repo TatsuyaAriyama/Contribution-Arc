@@ -27109,13 +27109,22 @@ a[role="button"],
     -webkit-overflow-scrolling: touch;
   }
 
-  /* 画像のはみ出し防止。グローバル img ルールがないので
-     ここで保証する。 */
-  img,
+  /* 画像のはみ出し防止。グローバル img ルールがないのでここで保証する。
+     重要：`height: auto` はあえて入れない。多くの場所（actor-sprite,
+     friends-modal-avatar, room-preview-avatar 等）が固定サイズの親に
+     `width: 100%; height: 100%` で img を詰めるパターンを使っており、
+     `height: auto` でそれを上書きすると元画像のアスペクト比次第で
+     縦伸び/横潰れする（実際に作業部屋アバターが縦長矩形になっていた
+     のはこれが原因）。max-width だけで overflow 防止する。 */
+  img:not(.actor-sprite img),
   video,
   svg {
     max-width: 100%;
-    height: auto;
+  }
+  .actor-sprite img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
   }
 
   /* iOS は font-size < 16px の input をフォーカス時に勝手に
