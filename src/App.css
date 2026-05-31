@@ -30102,3 +30102,116 @@ a[role="button"],
     text-overflow: ellipsis;
   }
 }
+
+/* =========================================================
+   P2/P3 batch: teams / manager / focus ring / 細部仕上げ
+   ========================================================= */
+@media (max-width: 720px) {
+  /* (P2-27) Manager Dashboard を 1 列に
+     左右ペイン構造を強制的にスタック化。詳しい layout は本体側に
+     残し、grid 系の columns だけ単列に折りたたむ。 */
+  .manager-dashboard,
+  .manager-dashboard-main,
+  .manager-dashboard-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .manager-dashboard-card {
+    width: 100% !important;
+  }
+
+  /* (P3-44) Teams view を 1 列に */
+  .teams-screen,
+  .teams-layout,
+  .teams-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* (P3-31) Focus-visible の outline を確実に視認できる色に */
+  *:focus-visible {
+    outline: 2px solid var(--green);
+    outline-offset: 2px;
+  }
+  /* button や a の box-shadow ベース focus は維持 (既存) */
+
+  /* (P3-32) Learning items の empty state に padding + 中央寄せ */
+  .learning-screen .learning-empty,
+  .learning-empty-state {
+    padding: 24px 16px;
+    text-align: center;
+  }
+  .learning-empty-state strong {
+    display: block;
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+  .learning-empty-state p {
+    color: var(--muted);
+    font-size: 13px;
+    margin: 0 0 12px;
+  }
+
+  /* (P3-37) Skeleton loader を learning カードに薄く適用
+     既存の .is-loading にだけ pulse。 */
+  .learning-card.is-loading,
+  .learning-screen .loading-skeleton {
+    background: linear-gradient(
+      90deg,
+      rgba(var(--ink-rgb), 0.04) 0%,
+      rgba(var(--ink-rgb), 0.08) 50%,
+      rgba(var(--ink-rgb), 0.04) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  }
+  @keyframes skeleton-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* (P3-38) Room create のエラーメッセージにアクション風の retry */
+  .room-create-message.error {
+    border: 1px solid rgba(216, 76, 86, 0.24);
+    background: rgba(216, 76, 86, 0.06);
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* (P3-36) prefers-reduced-motion のグローバル補強 */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* (P3-34) appearance popover の color picker を scroll wrapper で */
+  .room-appearance-card .character-color-grid {
+    max-height: 200px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* 一般：button:active のフィードバック軽量化 */
+  button:active {
+    transition: transform 0.08s ease-out;
+  }
+
+  /* logs-screen の log-composer の textarea を 16px に保証 */
+  .log-composer textarea {
+    font-size: 16px !important;
+  }
+
+  /* Logs Composer Profile Preview を 56px に */
+  .log-composer > .profile-character-preview {
+    width: 56px !important;
+    height: 56px !important;
+  }
+}
