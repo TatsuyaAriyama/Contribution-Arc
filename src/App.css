@@ -28971,40 +28971,60 @@ a[role="button"],
     pointer-events: auto;
   }
 
-  /* FAB 本体ボタン（+ / ×） */
+  /* FAB 本体ボタン（メニュー / ×）。
+     ラベル "メニュー" を併記して "何のための + か" を明示する。
+     開いた時は "閉じる" と "×" に変化、ユーザーに状態を伝える。 */
   .hud-fab-toggle {
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
-    width: 56px;
-    height: 56px;
-    min-height: 56px;
+    gap: 6px;
+    min-height: 52px;
+    padding: 0 18px 0 16px;
     border: 0;
-    border-radius: 50%;
+    border-radius: 999px;
     background: var(--green);
     color: #fff;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24), 0 0 0 3px rgba(var(--green-rgb, 31, 111, 74), 0.18);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28), 0 0 0 3px rgba(var(--green-rgb, 31, 111, 74), 0.18);
     cursor: pointer;
-    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.18s ease;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    /* バックドロップより上に置いてタップを確実に受け取る */
+    position: relative;
+    z-index: 2;
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.18s ease, background 0.18s ease;
   }
   .hud-fab-toggle:active {
-    transform: scale(0.94);
+    transform: scale(0.96);
   }
   .hud-fab-toggle-icon {
-    font-size: 28px;
-    font-weight: 300;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    font-size: 18px;
+    font-weight: 700;
     line-height: 1;
     transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
   }
+  .hud-fab-toggle::after {
+    /* ラベル「メニュー / 閉じる」を疑似要素で出す。state に応じて
+       内容を切り替えるので JSX 側は触らずに済む。 */
+    content: "メニュー";
+  }
   .hud-fab.is-hud-open .hud-fab-toggle {
-    background: rgba(7, 16, 13, 0.92);
-    transform: rotate(45deg);
+    background: rgba(7, 16, 13, 0.94);
+  }
+  .hud-fab.is-hud-open .hud-fab-toggle::after {
+    content: "閉じる";
   }
   .hud-fab.is-hud-open .hud-fab-toggle-icon {
-    transform: rotate(-45deg);
+    transform: rotate(45deg);
   }
 
-  /* バックドロップ（タップで閉じる） */
+  /* バックドロップ（タップで閉じる）。actions / toggle より明確に下に。 */
   .hud-fab-backdrop {
     display: block !important;
     position: fixed;
@@ -29013,7 +29033,7 @@ a[role="button"],
     background: rgba(0, 0, 0, 0.32);
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);
-    z-index: 1;
+    z-index: 0;
     cursor: default;
     animation: hud-fab-backdrop-in 0.18s ease;
   }
@@ -29022,12 +29042,14 @@ a[role="button"],
     to { opacity: 1; }
   }
 
-  /* 展開時のアクション群 */
+  /* 展開時のアクション群（バックドロップより上、タップを必ず受け取る） */
   .hud-fab-actions {
     display: flex !important;
     flex-direction: column;
     align-items: flex-end;
     gap: 10px;
+    position: relative;
+    z-index: 2;
     /* HUD 閉時は非表示 + アニメ準備状態 */
     pointer-events: none;
     opacity: 0;
