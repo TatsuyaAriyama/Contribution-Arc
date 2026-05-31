@@ -29007,7 +29007,10 @@ a[role="button"],
 @media (max-width: 720px) {
   /* モバイル：preset-message-panel を完全に FAB スピードダイヤルに
      置き換える。既存の floating HUD スタイル (PC では absolute
-     bottom 16px center) を打ち消し、右下に固定する。 */
+     bottom 16px center) を打ち消し、右下に固定する。
+     Portal で body 直下に来た時にも確実に勝てるよう、
+     div.preset-message-panel.hud-fab で specificity を上げる。 */
+  div.preset-message-panel.hud-fab,
   .workspace-screen .workspace-2d-shell .preset-message-panel,
   .preset-message-panel.hud-fab {
     position: fixed !important;
@@ -29018,13 +29021,14 @@ a[role="button"],
     transform: none !important;
     width: auto !important;
     max-width: none !important;
+    margin: 0 !important;
     padding: 0 !important;
     background: transparent !important;
     border: 0 !important;
     box-shadow: none !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    z-index: 60 !important;
+    z-index: 9000 !important;
     /* 既存の grid 設定を flex に */
     display: flex !important;
     flex-direction: column-reverse !important;
@@ -29033,6 +29037,7 @@ a[role="button"],
     pointer-events: none !important;
   }
   /* 内側のクリック可能要素だけ pointer-events を戻す */
+  div.preset-message-panel.hud-fab > *,
   .preset-message-panel.hud-fab > * {
     pointer-events: auto;
   }
