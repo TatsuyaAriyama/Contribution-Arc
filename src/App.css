@@ -30520,3 +30520,104 @@ select:disabled {
     border-width: 2px;
   }
 }
+
+/* =========================================================
+   モーション / マイクロインタラクション統一
+   "押した感" / リスト項目の hover / カード遷移など細部を
+   揃え、モバイルアプリらしい滑らかな体験を作る。
+   ========================================================= */
+
+/* (a) 一般的な :active 時の subtle scale フィードバック */
+@media (max-width: 720px) {
+  /* mobile-polish ブロックで button:active { scale 0.97 } を入れたが、
+     例外要素を更にチューニング。リストカードは縮みを抑えめに。 */
+  .workspace-room-pill:active,
+  .friends-modal-row:active,
+  .topbar-popover-row:active,
+  .room-member-card:active,
+  .learning-card:active {
+    transform: scale(0.985);
+    transition: transform 0.1s ease-out;
+  }
+
+  /* (b) リスト項目の tap-highlight を緑に統一
+         html { -webkit-tap-highlight-color: transparent } を入れた上で、
+         専用の :active 表現を保証する。 */
+  .friends-modal-row,
+  .topbar-popover-row,
+  .room-member-card,
+  .learning-card,
+  .workspace-room-pill {
+    -webkit-tap-highlight-color: rgba(var(--green-rgb, 31, 111, 74), 0.08);
+  }
+
+  /* (c) FAB / CTA の押し戻し */
+  .hud-fab-toggle:active,
+  .room-preview-join:active,
+  .quicklog-popover-cta:active {
+    transform: scale(0.95);
+    transition: transform 0.08s ease-out;
+  }
+
+  /* (d) リスト項目 hover ↔ active の transition 統一 */
+  .friends-modal-row,
+  .topbar-popover-row,
+  .room-member-card,
+  .learning-card {
+    transition: background 0.14s ease, transform 0.1s ease-out, box-shadow 0.18s ease;
+  }
+}
+
+/* (e) ビュー遷移時の subtle fade (PC/モバイル両方) */
+.app-shell main {
+  view-transition-name: app-shell-main;
+}
+
+/* (f) skeleton shimmer のグローバル定義 (mobile polish と統一) */
+@keyframes app-skeleton-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+.is-skeleton {
+  animation: app-skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+/* (g) モバイル：FAB 表示時の入場アニメ */
+@media (max-width: 720px) {
+  .preset-message-panel.hud-fab {
+    animation: hud-fab-enter 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+@keyframes hud-fab-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* (h) prefers-reduced-motion 対応 */
+@media (prefers-reduced-motion: reduce) {
+  .preset-message-panel.hud-fab,
+  .workspace-room-pill,
+  .friends-modal-row,
+  .topbar-popover-row,
+  .room-member-card,
+  .learning-card,
+  .hud-fab-toggle,
+  .room-preview-join,
+  .quicklog-popover-cta {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* (i) ボタンのフィードバック shadow (PC) - hover で立ち上がる */
+@media (hover: hover) {
+  .room-preview-join:hover {
+    box-shadow: 0 14px 36px rgba(var(--green-rgb, 31, 111, 74), 0.22);
+  }
+}
