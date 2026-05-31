@@ -29769,13 +29769,25 @@ a[role="button"],
     align-items: center !important;
     flex: 0 0 auto !important;
     gap: 0 !important;
+    /* 既存のスタイル(他の場所で white-space: nowrap 等)を維持する */
+    overflow: hidden;
   }
-  /* 検索ボタン内のテキスト (placeholder 等) は全て非表示 */
-  .premium-dashboard-header .user-search-button > *:not(svg) {
+  /* 検索ボタン内のテキスト/⌘K 等は非表示、アイコン span だけ残す */
+  .premium-dashboard-header .user-search-button > *:not(.user-search-icon) {
     display: none !important;
   }
-  .premium-dashboard-header .user-search-button em {
-    display: none !important;
+  .premium-dashboard-header .user-search-button .user-search-icon {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    color: var(--ink);
+  }
+  .premium-dashboard-header .user-search-button .user-search-icon svg {
+    width: 22px;
+    height: 22px;
+    display: block;
   }
 
   /* topbar-feed-toggle / shop-button / friends 等のアイコンボタン */
