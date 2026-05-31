@@ -361,12 +361,17 @@ export function SilentWorkspaceRoom({
 
   // ポップオーバーが開いている間は背景スクロールを止める。スマホで
   // ポップオーバーの上下スクロールが裏のページに抜けるのを防ぐ。
+  // 同時に :has() セレクタの代替として body class を付与する
+  // (Samsung Internet 等で :has() が動作しないため、CSS 側はこの
+  // class で HUD の退避や FAB 非表示などを判定する)。
   useEffect(() => {
     if (!hasOpenPopover) return;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    document.body.classList.add("workspace-popover-active");
     return () => {
       document.body.style.overflow = prevOverflow;
+      document.body.classList.remove("workspace-popover-active");
     };
   }, [hasOpenPopover]);
 
