@@ -29686,3 +29686,20 @@ a[role="button"],
     display: none !important;
   }
 }
+
+/* =========================================================
+   モバイル：「記録」(logs view) を "タイムライン専用" に
+   ユーザー指摘：bottom-nav の "記録" が "ホーム" と同じ contribution
+   グラフを表示してしまって紛らわしい。logs view は本来「みんなの記録 /
+   タイムライン」が主役なので、contribution arc card をモバイル時のみ
+   非表示にして、タイムラインに集中させる。
+   ========================================================= */
+@media (max-width: 720px) {
+  .logs-screen > .contribution-arc-card {
+    display: none !important;
+  }
+  /* TutorialHint の余白を詰めて、本体タイムラインに早くたどり着くように */
+  .logs-screen .tutorial-hint {
+    margin-bottom: 8px;
+  }
+}
