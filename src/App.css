@@ -29703,3 +29703,115 @@ a[role="button"],
     margin-bottom: 8px;
   }
 }
+
+/* =========================================================
+   モバイル：トップバーのシステム項目を 1 行コンパクトに
+   既存の grid (2-3 行: meta + bell+avatar / search / workspace-nav)
+   を、横並び 1 行の flex に作り変える。検索バーは丸いアイコン
+   ボタンに縮小し、すべての要素を 40px の丸ボタンで統一する。
+   ========================================================= */
+@media (max-width: 720px) {
+  /* grid を解除して flex 一列に */
+  .premium-dashboard-header {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 8px 12px !important;
+    grid-template-areas: none !important;
+    grid-template-columns: none !important;
+    grid-template-rows: none !important;
+    min-height: 56px !important;
+    overflow: visible !important;
+  }
+
+  /* topbar-context (workspace-nav-button を含むラッパー) を中央スペーサーに */
+  .premium-dashboard-header .topbar-context {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    /* meta 内の date/time/today は controled に表示。スペース不足時は隠れる */
+  }
+
+  /* workspace-nav-button を 40px アイコンに圧縮 (PC では大きい "今" 等の
+     表示があるが、モバイル 1 行では絵だけで OK) */
+  .premium-dashboard-header .workspace-nav-button {
+    grid-column: auto !important;
+    grid-row: auto !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    justify-content: center !important;
+    align-items: center !important;
+    flex: 0 0 auto !important;
+  }
+  .premium-dashboard-header .workspace-nav-button > *:not(.workspace-nav-icon):not(svg) {
+    display: none !important;
+  }
+
+  /* 検索ボタンを丸い 40px アイコンに */
+  .premium-dashboard-header .user-search-button {
+    grid-area: auto !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    max-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    justify-content: center !important;
+    align-items: center !important;
+    flex: 0 0 auto !important;
+    gap: 0 !important;
+  }
+  /* 検索ボタン内のテキスト (placeholder 等) は全て非表示 */
+  .premium-dashboard-header .user-search-button > *:not(svg) {
+    display: none !important;
+  }
+  .premium-dashboard-header .user-search-button em {
+    display: none !important;
+  }
+
+  /* topbar-feed-toggle / shop-button / friends 等のアイコンボタン */
+  .premium-dashboard-header .topbar-feed-toggle,
+  .premium-dashboard-header .topbar-shop-button,
+  .premium-dashboard-header .topbar-popover-wrap-friends > .topbar-icon-button {
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    flex: 0 0 auto !important;
+  }
+
+  /* notification-wrap と user-menu-wrap を flex item に */
+  .premium-dashboard-header .user-session {
+    display: contents !important;
+  }
+  .premium-dashboard-header .notification-wrap,
+  .premium-dashboard-header .user-menu-wrap,
+  .premium-dashboard-header .topbar-popover-wrap-friends {
+    grid-area: auto !important;
+    justify-self: auto !important;
+    flex: 0 0 auto !important;
+  }
+  .premium-dashboard-header .notification-wrap > .notification-button,
+  .premium-dashboard-header .user-menu-wrap > .user-menu-button {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  /* ショップの "10,000" バッジが大きすぎて 1 行を崩すので、
+     小さなチップに圧縮 */
+  .premium-dashboard-header .topbar-icon-badge,
+  .premium-dashboard-header .topbar-shop-button .topbar-shop-coins {
+    font-size: 9px !important;
+    padding: 1px 6px !important;
+    min-width: 0 !important;
+  }
+}
