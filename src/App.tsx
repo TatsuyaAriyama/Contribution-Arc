@@ -12535,9 +12535,21 @@ function App() {
             aria-label={t("ユーザーを探す")}
           >
             <span aria-hidden="true" className="user-search-icon">
-              <svg viewBox="0 0 24 24" focusable="false">
-                <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" strokeWidth="1.8" />
-                <path d="M20 20l-3.6-3.6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              {/* Feather Icons 風の虫眼鏡。viewBox 24×24 / stroke 2 で
+                  サイズが変わっても線の比率が崩れない設計。
+                  stroke-linecap/join を round にして親しみやすい角に。 */}
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                focusable="false"
+                aria-hidden="true"
+              >
+                <circle cx="10.5" cy="10.5" r="6.5" />
+                <line x1="20" y1="20" x2="16.05" y2="16.05" />
               </svg>
             </span>
             <strong>Search</strong>

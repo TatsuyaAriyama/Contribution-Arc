@@ -29784,14 +29784,40 @@ a[role="button"],
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
+    /* 親 (button) は 40×40 円。アイコンは中央に 22×22 で固定。
+       flex-shrink: 0 で他の要素に押されない。 */
     width: 22px;
     height: 22px;
+    flex: 0 0 22px;
     color: var(--ink);
+    pointer-events: none; /* タップは親 button が受け取る */
   }
   .premium-dashboard-header .user-search-button .user-search-icon svg {
-    width: 22px;
-    height: 22px;
+    /* viewBox 24×24 を 22×22 で描画。
+       preserveAspectRatio で常に等比保持。
+       max-width/height を明示して global polish の svg { max-width: 100% }
+       や、コンテナ伸縮の影響を完全排除。 */
+    width: 22px !important;
+    height: 22px !important;
+    max-width: 22px !important;
+    max-height: 22px !important;
+    min-width: 22px;
+    min-height: 22px;
     display: block;
+    flex: 0 0 22px;
+    /* シャープな描画 (低 dpi で線がぼやけない) */
+    shape-rendering: geometricPrecision;
+    /* SVG が svg 要素自身の比率を保つように */
+    overflow: visible;
+  }
+  /* アクティブ時の軽いフィードバック (押した感) */
+  .premium-dashboard-header .user-search-button:active .user-search-icon svg {
+    transform: scale(0.9);
+    transition: transform 80ms ease-out;
+  }
+  /* ダークモードで svg の線をやや薄めに */
+  [data-theme="dark"] .premium-dashboard-header .user-search-button .user-search-icon {
+    color: rgba(232, 234, 237, 0.92);
   }
 
   /* topbar-feed-toggle / shop-button / friends 等のアイコンボタン */
