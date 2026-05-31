@@ -110,6 +110,11 @@ type SilentWorkspaceRoomProps = {
   presetLog?: PresetLogEntry[];
   isPlayerWalking: boolean;
   activityItems: RoomActivityItem[];
+  /* ステージ床をタップした座標 (%)。スマホ向けの "Tap to walk" 操作で、
+     キーボードが使えない端末でも自分のアバターを動かせるようにする。
+     親 (App.tsx) はこの座標を walk-loop の目的地として消費する。
+     null/undefined ならタップ移動は無効化 (popover 開放中など)。 */
+  onStageTap?: (x: number, y: number) => void;
   onMemberOpen: (member: RoomActor) => void;
   onActivityOpen: (item: RoomActivityItem) => void;
   /* In-stage compact profile popover. When `selectedMemberId` matches a
@@ -232,6 +237,7 @@ export function SilentWorkspaceRoom({
   presetLog = [],
   isPlayerWalking,
   activityItems,
+  onStageTap,
   onMemberOpen,
   onActivityOpen,
   selectedMemberId = null,
@@ -473,7 +479,22 @@ export function SilentWorkspaceRoom({
   return (
     <div className={`workspace-2d-shell ${isFocusPresentation ? "focus-presentation" : ""}`}>
       <div className="workspace-2d-main">
-        <div className="workspace-stage" aria-label="Silent workspace">
+        <div
+          className="workspace-stage"
+          aria-label="Silent workspace"
+          onPointerDown={(event) => {
+            // タップ移動：ステージ "床" 部分のタップに反応。
+            // アクター・置き手紙・記念碑・ポップオーバー・オーバーレイ
+            // をタップした場合は、それぞれのハンドラが既に動作するので
+            // ここでは無視する (event.target === currentTarget)。
+            if (event.target !== event.currentTarget) return;
+            if (!onStageTap) return;
+            const rect = event.currentTarget.getBoundingClientRect();
+            const x = ((event.clientX - rect.left) / rect.width) * 100;
+            const y = ((event.clientY - rect.top) / rect.height) * 100;
+            onStageTap(x, y);
+          }}
+        >
           <div className="workspace-floor-grid" aria-hidden="true" />
 
           {!isFocusPresentation ? (

@@ -4108,6 +4108,11 @@ function App() {
   // can flip the class in the same frame the key was pressed instead
   // of waiting for the next rAF tick to notice the change.
   const isPlayerWalkingRef = useRef(false);
+  // タップ移動の目的地（ステージ内座標 %）。スマホ向けに「ステージ床
+  // をタップしたらそこへ歩く」操作を実装するための ref。WASD と同じ
+  // walk loop 内で処理され、目的地まで毎フレーム補間して移動する。
+  // キー入力があれば即座にキャンセル（WASD 優先）。
+  const tapWalkTargetRef = useRef<{ x: number; y: number } | null>(null);
   const syncedRoomPositionRef = useRef<string | null>(null);
   const graphSvgRef = useRef<SVGSVGElement | null>(null);
   const isApplyingRemoteRoomsRef = useRef(false);
@@ -6270,9 +6275,15 @@ function App() {
     let lastTimestamp: number | null = null;
     const tick = (timestamp: number) => {
       const keys = pressedWorkspaceKeysRef.current;
-      const dx = (keys.has("d") || keys.has("arrowright") ? 1 : 0) - (keys.has("a") || keys.has("arrowleft") ? 1 : 0);
-      const dy = (keys.has("s") || keys.has("arrowdown") ? 1 : 0) - (keys.has("w") || keys.has("arrowup") ? 1 : 0);
-      const isMoving = dx !== 0 || dy !== 0;
+      const dxKey = (keys.has("d") || keys.has("arrowright") ? 1 : 0) - (keys.has("a") || keys.has("arrowleft") ? 1 : 0);
+      const dyKey = (keys.has("s") || keys.has("arrowdown") ? 1 : 0) - (keys.has("w") || keys.has("arrowup") ? 1 : 0);
+      const hasKeyInput = dxKey !== 0 || dyKey !== 0;
+      // キー入力があればタップ移動目的地をキャンセル（手動操作優先）
+      if (hasKeyInput) {
+        tapWalkTargetRef.current = null;
+      }
+      const tapTarget = tapWalkTargetRef.current;
+      const isMoving = hasKeyInput || tapTarget !== null;
 
       if (!isMoving) {
         if (isPlayerWalkingRef.current) {
@@ -6282,6 +6293,12 @@ function App() {
         lastTimestamp = null;
         frameId = window.requestAnimationFrame(tick);
         return;
+      }
+
+      // walking flag を即時 ON（タップ直後にも歩行アニメが反映される）
+      if (!isPlayerWalkingRef.current) {
+        isPlayerWalkingRef.current = true;
+        setIsPlayerWalking(true);
       }
 
       // Seed lastTimestamp on the first active frame so the integration
@@ -6294,12 +6311,40 @@ function App() {
       // Clamp huge gaps (tab unfocus, debugger pause, etc.) so we don't
       // teleport across the room on resume.
       const elapsed = Math.min(timestamp - previous, 64);
-      const length = Math.hypot(dx, dy) || 1;
       const seconds = elapsed / 1000;
-      setPlayerPosition((position) => ({
-        x: clampNumber(position.x + (dx / length) * SPEED_PERCENT_PER_SEC * seconds, 7, 93),
-        y: clampNumber(position.y + (dy / length) * SPEED_PERCENT_PER_SEC * seconds, 14, 88),
-      }));
+      const stepMagnitude = SPEED_PERCENT_PER_SEC * seconds;
+
+      setPlayerPosition((position) => {
+        if (hasKeyInput) {
+          // キー操作 — 方向ベクトルで等速移動
+          const length = Math.hypot(dxKey, dyKey) || 1;
+          return {
+            x: clampNumber(position.x + (dxKey / length) * stepMagnitude, 7, 93),
+            y: clampNumber(position.y + (dyKey / length) * stepMagnitude, 14, 88),
+          };
+        }
+        if (tapTarget) {
+          // タップ移動 — 目的地に向けて毎フレーム step ずつ近付く
+          const vx = tapTarget.x - position.x;
+          const vy = tapTarget.y - position.y;
+          const dist = Math.hypot(vx, vy);
+          if (dist <= stepMagnitude || dist < 0.6) {
+            // 到着 — 目的地を消費して位置をスナップ
+            tapWalkTargetRef.current = null;
+            return {
+              x: clampNumber(tapTarget.x, 7, 93),
+              y: clampNumber(tapTarget.y, 14, 88),
+            };
+          }
+          const nx = vx / dist;
+          const ny = vy / dist;
+          return {
+            x: clampNumber(position.x + nx * stepMagnitude, 7, 93),
+            y: clampNumber(position.y + ny * stepMagnitude, 14, 88),
+          };
+        }
+        return position;
+      });
 
       frameId = window.requestAnimationFrame(tick);
     };
@@ -16385,6 +16430,15 @@ function App() {
                       canDeleteRoom={selectedRoom.createdBy === currentUser.uid}
                       isPlayerWalking={isPlayerWalking}
                       activityItems={roomActivityItems}
+                      onStageTap={(x, y) => {
+                        // タップした座標 (%) を目的地として walk loop に渡す。
+                        // 自分が入室中かつポップオーバーが開いていない時のみ。
+                        if (!canMoveInRoom) return;
+                        tapWalkTargetRef.current = {
+                          x: clampNumber(x, 7, 93),
+                          y: clampNumber(y, 14, 88),
+                        };
+                      }}
                       onMemberOpen={handleRoomMemberTap}
                       onActivityOpen={handleRoomActivityOpen}
                       selectedMemberId={roomMemberPanel?.userId ?? null}
