@@ -1209,16 +1209,19 @@ export function SilentWorkspaceRoom({
             ) : null}
           </div>
 
-          {/* 本体の FAB ボタン（右下、+ ⇔ ×）。 */}
+          {/* 本体の FAB ボタン（右下）。アイコン「+」+ ラベル「メニュー」を
+              並べたピル型。閉じた時は「+ メニュー」、開いた時は CSS で
+              「+」が 45 度回転して「×」に見え、ラベルは「閉じる」に変わる
+              （::after で切替）。 */}
           <button
             type="button"
             className="hud-fab-toggle"
             onClick={() => setIsHudOpen((open) => !open)}
             aria-expanded={isHudOpen}
-            aria-label={isHudOpen ? "メニューを閉じる" : "メニューを開く"}
+            aria-label={isHudOpen ? "メニューを閉じる" : "操作メニューを開く"}
           >
             <span aria-hidden="true" className="hud-fab-toggle-icon">
-              {isHudOpen ? "×" : "+"}
+              +
             </span>
           </button>
 
