@@ -29827,3 +29827,70 @@ a[role="button"],
     min-width: 0 !important;
   }
 }
+
+/* =========================================================
+   モバイル：profile-topbar (← Home) を全 view で非表示
+   bottom-nav の "ホーム" タブで戻れるため、各 view 上部に
+   占有する戻るボタンは不要。縦領域を 40-50px 確保する。
+   ========================================================= */
+@media (max-width: 720px) {
+  .profile-topbar {
+    display: none !important;
+  }
+}
+
+/* =========================================================
+   モバイル：tutorial-hint をコンパクトに
+   各 view の上部に「初回ヒント」が大きく出ると、肝心のコンテンツが
+   下に押される。閉じる動線は維持しつつ、padding/margin/font-size を
+   小さくして "邪魔にならない上品な存在" にする。
+   ========================================================= */
+@media (max-width: 720px) {
+  .tutorial-hint {
+    margin: 0 0 10px !important;
+    padding: 10px 12px 12px !important;
+    border-radius: 12px !important;
+  }
+  .tutorial-hint-title {
+    font-size: 14px !important;
+    line-height: 1.4;
+  }
+  .tutorial-hint-body {
+    font-size: 12px !important;
+    line-height: 1.55;
+  }
+  .tutorial-hint-bullets {
+    margin-top: 6px;
+    gap: 4px;
+  }
+  .tutorial-hint-bullets li {
+    font-size: 11.5px !important;
+    line-height: 1.5;
+  }
+  .tutorial-hint-close {
+    width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+  }
+}
+
+/* =========================================================
+   モバイル：カード共通のサイズ統一
+   .card の border-radius と shadow がモバイルでは大袈裟。
+   コンパクトに統一する。
+   ========================================================= */
+@media (max-width: 720px) {
+  .card {
+    border-radius: 16px !important;
+    box-shadow:
+      0 8px 24px rgba(var(--ink-rgb), 0.05),
+      inset 0 1px 0 rgba(var(--surface-rgb), 0.9) !important;
+  }
+  /* セクション間のマージン詰め */
+  .premium-shell .home-screen > section,
+  .premium-shell .home-screen > article,
+  .premium-shell .logs-screen > section,
+  .premium-shell .logs-screen > article {
+    margin-bottom: 10px !important;
+  }
+}
