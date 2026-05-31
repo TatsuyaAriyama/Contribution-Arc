@@ -1149,21 +1149,26 @@ export function SilentWorkspaceRoom({
         {/* 下部 HUD：FAB スピードダイヤル + 定型文トレイ。
             通常時は右下に "+" 1 つだけ。タップで「定型文・置き手紙・着替え」
             が縦に展開。各アクション選択で HUD は自動で閉じる。
-            重要：popover (member / note / monument / appearance) 開放中は
-            HUD 自体を DOM から消す。CSS で隠す方式 (display: none / z-index
-            退避) は Android の :has() 未対応や stacking context の不整合で
-            効かない端末があるため、最も確実な「物理的に存在させない」
-            アプローチに統一する。 */}
-        {hasOpenPopover ? null : <div
-          className={[
-            "preset-message-panel",
-            "hud-fab",
-            isHudOpen ? "is-hud-open" : "",
-            isPresetTrayOpen ? "is-open" : "",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-        >
+            重要：popover 開放中は HUD 自体を DOM から消し、その他の時は
+            React Portal で document.body 直下にレンダーする。
+            これにより：
+            1) popover との重なりを完全防止
+            2) 祖先の overflow:clip / transform / contain による
+               position:fixed の "containing block" 変更を回避し、
+               viewport 相対の右下固定を確実にする */}
+        {hasOpenPopover || typeof document === "undefined"
+          ? null
+          : createPortal(
+              <div
+                className={[
+                  "preset-message-panel",
+                  "hud-fab",
+                  isHudOpen ? "is-hud-open" : "",
+                  isPresetTrayOpen ? "is-open" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
           {/* HUD 展開時のバックドロップ。タップで HUD を閉じる。 */}
           {isHudOpen ? (
             <button
@@ -1285,7 +1290,9 @@ export function SilentWorkspaceRoom({
               ))}
             </div>
           ) : null}
-        </div>}
+        </div>,
+              document.body,
+            )}
       </div>
 
     </div>
