@@ -28910,17 +28910,46 @@ a[role="button"],
   }
 
   /* 4. appearance card のレイアウト最適化：シルエット/カラーが
-        縦に余裕を持って並ぶよう、内部 grid を 1 列ベースに。 */
+        縦に余裕を持って並ぶよう、内部 grid を 1 列ベースに。
+        重要：.character-customize-section 自体は grid 化しない
+        （grid 化すると中の .character-shape-grid が狭いセルに押し込まれ
+        ラベルが縦書きみたいに潰れる）。 */
   .room-appearance-card {
     padding: 14px !important;
   }
+  .room-appearance-card .character-customize-section {
+    display: block !important;
+  }
   .room-appearance-card .character-shape-grid.compact {
+    display: grid !important;
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     gap: 8px !important;
   }
-  .room-appearance-card .character-color-grid,
-  .room-appearance-card .character-customize-section {
+  .room-appearance-card .character-color-grid {
+    display: grid !important;
     grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)) !important;
+    gap: 6px !important;
+  }
+  /* close (×) ボタンを popover の上部に sticky 固定し、長いコンテンツを
+     スクロールしても常にタップ可能な位置に置く。pointer-events と
+     z-index も明示してスクロール領域に埋もれないようにする。 */
+  .room-appearance-card .room-member-card-close,
+  .room-note-card .room-member-card-close {
+    position: sticky !important;
+    top: 4px !important;
+    right: 4px !important;
+    margin-left: auto !important;
+    z-index: 5 !important;
+    pointer-events: auto !important;
+    /* タップ領域確実に 44x44 */
+    width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 22px !important;
+    line-height: 1 !important;
   }
 }
 
