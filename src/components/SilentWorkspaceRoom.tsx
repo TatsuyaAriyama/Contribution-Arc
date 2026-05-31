@@ -1139,9 +1139,13 @@ export function SilentWorkspaceRoom({
 
         {/* 下部 HUD：FAB スピードダイヤル + 定型文トレイ。
             通常時は右下に "+" 1 つだけ。タップで「定型文・置き手紙・着替え」
-            が縦に展開。各アクション選択で HUD は自動で閉じる。これで
-            ステージや popover の前に被って邪魔することがない。 */}
-        <div
+            が縦に展開。各アクション選択で HUD は自動で閉じる。
+            重要：popover (member / note / monument / appearance) 開放中は
+            HUD 自体を DOM から消す。CSS で隠す方式 (display: none / z-index
+            退避) は Android の :has() 未対応や stacking context の不整合で
+            効かない端末があるため、最も確実な「物理的に存在させない」
+            アプローチに統一する。 */}
+        {hasOpenPopover ? null : <div
           className={[
             "preset-message-panel",
             "hud-fab",
@@ -1272,7 +1276,7 @@ export function SilentWorkspaceRoom({
               ))}
             </div>
           ) : null}
-        </div>
+        </div>}
       </div>
 
     </div>
