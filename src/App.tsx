@@ -6733,6 +6733,20 @@ function App() {
     setIsQuickLogPopoverOpen(false);
     setQuickLogMinutesById({});
   }, []);
+
+  // 「記録する」CTA をもう一度押すと閉じるトグル動作。
+  // モバイルでは右上の "×" よりも、慣れたボトムナビの CTA が
+  // 自然な「閉じる」導線になる。state を見て open / close を切替。
+  const toggleQuickLogPopover = useCallback(() => {
+    setIsQuickLogPopoverOpen((open) => {
+      if (open) {
+        setQuickLogMinutesById({});
+        return false;
+      }
+      setQuickLogMinutesById({});
+      return true;
+    });
+  }, []);
   // Most-time-spent subject of today's logs — used as the share-image label.
   const todayTopSubject = useMemo(() => {
     const today = new Date();
@@ -12207,7 +12221,8 @@ function App() {
           <button
             type="button"
             className={`topbar-quicklog${todayStudyMinutes > 0 ? " has-progress" : ""}${isQuickLogPopoverOpen ? " is-open" : ""}`}
-            onClick={openQuickLogPopover}
+            onClick={toggleQuickLogPopover}
+            aria-expanded={isQuickLogPopoverOpen}
             aria-label={
               todayStudyMinutes > 0
                 ? t("クイック記録 — 今日 {duration} 学習", { duration: formatStudyTimeJa(todayStudyMinutes) })
@@ -17816,8 +17831,9 @@ function App() {
           <button
             type="button"
             className={`is-cta${isQuickLogPopoverOpen ? " is-active" : ""}`}
-            onClick={openQuickLogPopover}
-            aria-label="記録する"
+            onClick={toggleQuickLogPopover}
+            aria-label={isQuickLogPopoverOpen ? "記録ポップオーバーを閉じる" : "記録する"}
+            aria-expanded={isQuickLogPopoverOpen}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
