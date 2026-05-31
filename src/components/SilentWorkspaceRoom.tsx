@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type ChangeEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 export type RoomActivityItem = {
   id: string;
@@ -1018,35 +1019,31 @@ export function SilentWorkspaceRoom({
           ))}
 
           {/* In-stage compact profile popover. Anchored near the tapped
-              actor so the room context stays visible behind it. */}
+              actor so the room context stays visible behind it.
+              重要：popover は React Portal で document.body 直下に
+              レンダーする。stage 内の overflow:hidden / z-index 競合 /
+              stacking context の不整合の影響を完全に排除でき、Android
+              系の端末でも popover 内のタップが確実に届く。 */}
           {selectedMemberId && memberPanel
             ? (() => {
                 const target = members.find((m) => m.userId === selectedMemberId);
-                // target が members から見つからない（直前に退室、もしくは
-                // 一時的なデータ欠損）場合はステージ中央配置の "centered" 版に
-                // フォールバック。何も見えない/変な位置に出る、を防ぐ。
-                if (!target) {
-                  return (
-                    <>
-                      <button
-                        type="button"
-                        className="workspace-popover-backdrop"
-                        aria-label="閉じる"
-                        onClick={onPanelClose}
-                      />
-                      <div
-                        className="workspace-stage-popover workspace-member-popover is-centered"
-                        role="dialog"
-                        aria-modal="true"
-                      >
-                        {memberPanel}
-                      </div>
-                    </>
-                  );
-                }
-                const anchorX = target.x;
-                const anchorY = target.y;
-                return (
+                const popoverContent = !target ? (
+                  <>
+                    <button
+                      type="button"
+                      className="workspace-popover-backdrop"
+                      aria-label="閉じる"
+                      onClick={onPanelClose}
+                    />
+                    <div
+                      className="workspace-stage-popover workspace-member-popover is-centered"
+                      role="dialog"
+                      aria-modal="true"
+                    >
+                      {memberPanel}
+                    </div>
+                  </>
+                ) : (
                   <>
                     <button
                       type="button"
@@ -1058,15 +1055,15 @@ export function SilentWorkspaceRoom({
                       className={[
                         "workspace-stage-popover",
                         "workspace-member-popover",
-                        anchorX > 55 ? "anchor-right" : "",
-                        anchorY < 42 ? "anchor-below" : "",
+                        target.x > 55 ? "anchor-right" : "",
+                        target.y < 42 ? "anchor-below" : "",
                       ]
                         .filter(Boolean)
                         .join(" ")}
                       style={
                         {
-                          "--anchor-x": `${anchorX}%`,
-                          "--anchor-y": `${anchorY}%`,
+                          "--anchor-x": `${target.x}%`,
+                          "--anchor-y": `${target.y}%`,
                         } as CSSProperties
                       }
                       role="dialog"
@@ -1076,65 +1073,77 @@ export function SilentWorkspaceRoom({
                     </div>
                   </>
                 );
+                return typeof document !== "undefined"
+                  ? createPortal(popoverContent, document.body)
+                  : popoverContent;
               })()
             : null}
 
-          {/* Floor-note detail / compose popover (centered). */}
-          {floorNotePanel ? (
-            <>
-              <button
-                type="button"
-                className="workspace-popover-backdrop"
-                aria-label="閉じる"
-                onClick={onPanelClose}
-              />
-              <div
-                className="workspace-stage-popover workspace-note-popover is-centered"
-                role="dialog"
-                aria-modal="true"
-              >
-                {floorNotePanel}
-              </div>
-            </>
-          ) : null}
+          {/* Floor-note detail / compose popover (centered, Portal化). */}
+          {floorNotePanel && typeof document !== "undefined"
+            ? createPortal(
+                <>
+                  <button
+                    type="button"
+                    className="workspace-popover-backdrop"
+                    aria-label="閉じる"
+                    onClick={onPanelClose}
+                  />
+                  <div
+                    className="workspace-stage-popover workspace-note-popover is-centered"
+                    role="dialog"
+                    aria-modal="true"
+                  >
+                    {floorNotePanel}
+                  </div>
+                </>,
+                document.body,
+              )
+            : null}
 
-          {/* Monument detail popover (centered). */}
-          {monumentPanel ? (
-            <>
-              <button
-                type="button"
-                className="workspace-popover-backdrop"
-                aria-label="閉じる"
-                onClick={onPanelClose}
-              />
-              <div
-                className="workspace-stage-popover workspace-monument-popover is-centered"
-                role="dialog"
-                aria-modal="true"
-              >
-                {monumentPanel}
-              </div>
-            </>
-          ) : null}
+          {/* Monument detail popover (centered, Portal化). */}
+          {monumentPanel && typeof document !== "undefined"
+            ? createPortal(
+                <>
+                  <button
+                    type="button"
+                    className="workspace-popover-backdrop"
+                    aria-label="閉じる"
+                    onClick={onPanelClose}
+                  />
+                  <div
+                    className="workspace-stage-popover workspace-monument-popover is-centered"
+                    role="dialog"
+                    aria-modal="true"
+                  >
+                    {monumentPanel}
+                  </div>
+                </>,
+                document.body,
+              )
+            : null}
 
-          {/* 分身の着替えポップオーバー (centered). */}
-          {appearancePanel ? (
-            <>
-              <button
-                type="button"
-                className="workspace-popover-backdrop"
-                aria-label="閉じる"
-                onClick={onPanelClose}
-              />
-              <div
-                className="workspace-stage-popover workspace-appearance-popover is-centered"
-                role="dialog"
-                aria-modal="true"
-              >
-                {appearancePanel}
-              </div>
-            </>
-          ) : null}
+          {/* 分身の着替えポップオーバー (centered, Portal化). */}
+          {appearancePanel && typeof document !== "undefined"
+            ? createPortal(
+                <>
+                  <button
+                    type="button"
+                    className="workspace-popover-backdrop"
+                    aria-label="閉じる"
+                    onClick={onPanelClose}
+                  />
+                  <div
+                    className="workspace-stage-popover workspace-appearance-popover is-centered"
+                    role="dialog"
+                    aria-modal="true"
+                  >
+                    {appearancePanel}
+                  </div>
+                </>,
+                document.body,
+              )
+            : null}
         </div>
 
         {/* 下部 HUD：FAB スピードダイヤル + 定型文トレイ。

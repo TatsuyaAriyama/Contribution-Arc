@@ -10205,9 +10205,11 @@
 
 /* ── In-stage popovers (profile / note / monument) ──────────────── */
 .workspace-popover-backdrop {
-  position: absolute;
+  /* Portal で document.body 直下にレンダーされるため、position: fixed で
+     viewport 相対にする。z-index は他のあらゆる UI に勝つ高い値を採用。 */
+  position: fixed;
   inset: 0;
-  z-index: 20;
+  z-index: 9998;
   padding: 0;
   border: 0;
   background: rgba(var(--ink-rgb), 0.06);
@@ -10225,8 +10227,10 @@
 }
 
 .workspace-stage-popover {
-  position: absolute;
-  z-index: 21;
+  /* Portal 化により document.body 直下なので fixed + 確実な z-index。
+     backdrop (9998) より上。 */
+  position: fixed;
+  z-index: 9999;
   animation: workspace-popover-rise 0.2s ease;
 }
 
