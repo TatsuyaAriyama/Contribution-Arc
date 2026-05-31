@@ -29664,3 +29664,25 @@ a[role="button"],
     display: inline-flex !important;
   }
 }
+
+/* =========================================================
+   モバイル：完全切替型 (入室中はステージのみ表示)
+   ユーザー要望：「作業部屋に入室したらルーム選択画面を一切表示せず、
+   入室中のステージに完全に入り込んだ演出にする」。
+   入室中フラグ (is-in-room) の時のみ、ルーム選択ヘッダー / カード /
+   一覧更新ボタン を完全非表示。ステージは画面いっぱいに広がる。
+   退出すれば is-in-room が外れて選択画面が復帰する。
+   ========================================================= */
+@media (max-width: 720px) {
+  .workspace-2d-card.is-in-room .workspace-room-strip {
+    display: none !important;
+  }
+  /* ステージカードの上余白も詰めて、フル没入感に */
+  .workspace-2d-card.is-in-room .workspace-room-canvas {
+    margin-top: 0 !important;
+  }
+  /* 既存の room-create-message (作成エラー等) も入室中は無関係なので隠す */
+  .workspace-2d-card.is-in-room .room-create-message {
+    display: none !important;
+  }
+}

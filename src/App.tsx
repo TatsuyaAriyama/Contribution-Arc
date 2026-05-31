@@ -16230,7 +16230,10 @@ function App() {
             </button>
           </div>
 
-          <section className="card silent-workspace workspace-2d-card" aria-label="Silent Workspace">
+          <section
+            className={`card silent-workspace workspace-2d-card${isInSelectedRoom ? " is-in-room" : ""}`}
+            aria-label="Silent Workspace"
+          >
             <div className="workspace-heading">
               <div>
                 <p className="card-kicker">Silent Workspace</p>
