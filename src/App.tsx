@@ -16520,7 +16520,18 @@ function App() {
                                       }`}
                                       onClick={() => {
                                         if (isLocked) {
-                                          setCurrentView("shop");
+                                          // ロック shape：いきなり画面遷移すると
+                                          // 「シルエット変えても反映されない」と
+                                          // 誤認されるので、トーストで明示してから
+                                          // confirm でショップ遷移を選ばせる。
+                                          showToast(
+                                            `${option.name} はショップで購入できます`,
+                                            { kind: "info" },
+                                          );
+                                          const ok = window.confirm(
+                                            `${option.name} ${option.romaji} はショップで購入できます。ショップへ行きますか？`,
+                                          );
+                                          if (ok) setCurrentView("shop");
                                         } else {
                                           chooseCharacterShape(option.value);
                                         }
