@@ -28930,26 +28930,49 @@ a[role="button"],
     grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)) !important;
     gap: 6px !important;
   }
-  /* close (×) ボタンを popover の上部に sticky 固定し、長いコンテンツを
-     スクロールしても常にタップ可能な位置に置く。pointer-events と
-     z-index も明示してスクロール領域に埋もれないようにする。 */
+  /* close (×) ボタンを popover の右上に固定。前回の sticky 方式は
+     "親の overflow scroll コンテナで stick" の仕様で popover 内の
+     room-appearance-card に対して期待通り動かないことがあったため、
+     popover 自体に対する position: absolute で右上に張り付ける。
+     popover (.workspace-stage-popover) には別途 padding-top で
+     ボタン分のスペースを確保する。 */
+  .workspace-stage-popover .room-member-card-close,
   .room-appearance-card .room-member-card-close,
-  .room-note-card .room-member-card-close {
-    position: sticky !important;
-    top: 4px !important;
-    right: 4px !important;
-    margin-left: auto !important;
-    z-index: 5 !important;
+  .room-note-card .room-member-card-close,
+  .workspace-stage-popover .room-member-card .room-member-card-close {
+    position: absolute !important;
+    top: 8px !important;
+    right: 8px !important;
+    left: auto !important;
+    margin: 0 !important;
+    z-index: 30 !important;
     pointer-events: auto !important;
-    /* タップ領域確実に 44x44 */
     width: 44px !important;
     height: 44px !important;
     min-height: 44px !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
+    background: rgba(var(--surface-rgb), 0.96) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 50% !important;
+    color: var(--ink) !important;
     font-size: 22px !important;
     line-height: 1 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+  }
+  .workspace-stage-popover .room-member-card-close:active {
+    transform: scale(0.92);
+  }
+
+  /* popover 内 article (room-appearance / room-note / room-member /
+     room-monument card) に close ボタン分の上余白を確保。 */
+  .workspace-stage-popover .room-appearance-card,
+  .workspace-stage-popover .room-note-card,
+  .workspace-stage-popover .room-member-card,
+  .workspace-stage-popover .room-monument-card {
+    position: relative !important;
+    padding-top: 60px !important;
   }
 }
 
