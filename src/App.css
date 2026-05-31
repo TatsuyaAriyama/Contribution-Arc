@@ -30621,3 +30621,151 @@ select:disabled {
     box-shadow: 0 14px 36px rgba(var(--green-rgb, 31, 111, 74), 0.22);
   }
 }
+
+/* =========================================================
+   Mobile 最終仕上げ：細部の最終ポリッシュ
+   - section heading の階層
+   - link / a の押下感
+   - 通知ボタンの未読バッジ位置
+   - keyboard 表示時の調整
+   ========================================================= */
+@media (max-width: 720px) {
+  /* (1) section-heading 統一 */
+  .section-heading {
+    margin-bottom: 8px !important;
+  }
+  .section-heading h2,
+  .section-heading h3 {
+    font-size: 16px !important;
+    font-weight: 800;
+    letter-spacing: 0;
+    line-height: 1.3;
+  }
+  .section-heading p {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* (2) 一般 link (a) の押下感 */
+  a {
+    -webkit-tap-highlight-color: rgba(var(--green-rgb, 31, 111, 74), 0.1);
+  }
+  a:active {
+    opacity: 0.8;
+    transition: opacity 0.06s ease-out;
+  }
+
+  /* (3) 通知ボタンの未読バッジを右上に確実に */
+  .notification-button.has-unread::after,
+  .notification-button .has-unread-badge {
+    top: -2px !important;
+    right: -2px !important;
+  }
+
+  /* (4) ソフトキーボード表示時に bottom-nav が画面の半分を占めるのを避ける
+         (Android で WebView がキーボードに反応しないとき) */
+  @supports (height: 100dvh) {
+    .app-shell {
+      min-height: 100dvh;
+    }
+  }
+
+  /* (5) inputs にフォーカスがある時の bottom-nav の透明化 (キーボード上方
+         に重ねたくない) ─ visual viewport API は CSS で完全対応できないので
+         単純な inset-bottom 増し戦略 */
+  body:has(input:focus, textarea:focus) .mobile-bottom-nav {
+    /* opacity を 0.5 にして "邪魔さ" を軽減 (タップは可能) */
+    opacity: 0.6;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
+  /* (6) iOS Safari の home indicator 領域の上に subtle gradient */
+  .mobile-bottom-nav::before {
+    content: "";
+    position: absolute;
+    top: -10px;
+    left: 0;
+    right: 0;
+    height: 10px;
+    background: linear-gradient(
+      to top,
+      rgba(var(--surface-rgb), 0.92),
+      transparent
+    );
+    pointer-events: none;
+  }
+  [data-theme="dark"] .mobile-bottom-nav::before {
+    background: linear-gradient(
+      to top,
+      rgba(20, 22, 24, 0.92),
+      transparent
+    );
+  }
+
+  /* (7) 入力フォーム内の長文 placeholder の折返し */
+  input::placeholder,
+  textarea::placeholder {
+    overflow-wrap: anywhere;
+    word-break: keep-all;
+  }
+
+  /* (8) details / summary (FAQ 等) の押下感 */
+  summary {
+    cursor: pointer;
+    min-height: 44px;
+    padding: 10px 12px;
+    border-radius: 8px;
+  }
+  summary:hover {
+    background: rgba(var(--ink-rgb), 0.04);
+  }
+
+  /* (9) progress bar の高さを 6px に揃える */
+  progress,
+  .progress-bar {
+    height: 6px !important;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  /* (10) error / success メッセージの色彩統一 */
+  .error-message,
+  .form-error,
+  .has-error {
+    color: #c0392b;
+    background: rgba(216, 76, 86, 0.06);
+    border: 1px solid rgba(216, 76, 86, 0.18);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .success-message,
+  .form-success {
+    color: #1f6f4a;
+    background: rgba(31, 111, 74, 0.06);
+    border: 1px solid rgba(31, 111, 74, 0.18);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+}
+
+/* =========================================================
+   Mobile 仕上げ：viewport を覆い隠す要素の z-index ヒエラルキー定義
+   修正履歴で z-index が散乱したのを整理して、決定的な階層を作る。
+   - 0-9   : 通常コンテンツ
+   - 10-50 : セクション内オーバーレイ (sticky header 等)
+   - 60-70 : 固定 nav (bottom-nav 70, topbar 60)
+   - 75    : 通知パネル
+   - 80    : toast (global)
+   - 100   : modal (settings 等)
+   - 200   : popover backdrop (workspace internal)
+   - 9000  : FAB (Portal)
+   - 9998  : popover backdrop (Portal)
+   - 9999  : popover (Portal)
+   - 99999 : skip-to-main link
+   ========================================================= */
