@@ -29299,3 +29299,46 @@ a[role="button"],
     inset: -10px;
   }
 }
+
+/* =========================================================
+   モバイル：アバター縮小
+   作業部屋の縦領域がスマホでは狭いため、アクター全体を 78% に
+   縮小して同時に複数人が見えるようにする。サイズを個別調整するより
+   `transform: scale()` で一括縮小する方が破綻が少ない。
+   入室時のドロップインアニメも scale を反映して滑らかに着地。
+   ========================================================= */
+@media (max-width: 720px) {
+  .workspace-actor {
+    transform: translate(-50%, -50%) scale(0.78);
+  }
+  /* 入室アニメは transform を上書きするので、scale を踏襲した
+     mobile 専用 keyframes を当てる。 */
+  .workspace-actor.is-just-joined {
+    animation: workspace-actor-arrive-mobile 540ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @keyframes workspace-actor-arrive-mobile {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, calc(-50% - 18px)) scale(0.68);
+    }
+    60% {
+      opacity: 1;
+      transform: translate(-50%, calc(-50% + 4px)) scale(0.82);
+    }
+    100% {
+      transform: translate(-50%, -50%) scale(0.78);
+    }
+  }
+  /* タップフィードバック (mobile-polish の button:active scale 0.97) も
+     scale 値を維持しつつ縮ませる。 */
+  .workspace-actor:active {
+    transform: translate(-50%, -50%) scale(0.74) !important;
+  }
+  /* hover/focus でホバー時拡大があると視覚的に違和感が出る場合は
+     抑制（PC のみのスタイルだが念のため）。 */
+  @media (hover: none) {
+    .workspace-actor:hover {
+      transform: translate(-50%, -50%) scale(0.78);
+    }
+  }
+}
