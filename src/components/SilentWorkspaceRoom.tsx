@@ -115,6 +115,11 @@ type SilentWorkspaceRoomProps = {
      親 (App.tsx) はこの座標を walk-loop の目的地として消費する。
      null/undefined ならタップ移動は無効化 (popover 開放中など)。 */
   onStageTap?: (x: number, y: number) => void;
+  /* タップ移動の視覚マーカー (id で 1.5s ごとにアニメをリセット)。
+     null なら非表示。 */
+  tapWalkMarker?: { x: number; y: number; id: number } | null;
+  /* タイマー終了時の通知 (親で state クリア)。 */
+  onTapWalkMarkerExpire?: (id: number) => void;
   onMemberOpen: (member: RoomActor) => void;
   onActivityOpen: (item: RoomActivityItem) => void;
   /* In-stage compact profile popover. When `selectedMemberId` matches a
@@ -238,6 +243,8 @@ export function SilentWorkspaceRoom({
   isPlayerWalking,
   activityItems,
   onStageTap,
+  tapWalkMarker = null,
+  onTapWalkMarkerExpire,
   onMemberOpen,
   onActivityOpen,
   selectedMemberId = null,
@@ -359,6 +366,41 @@ export function SilentWorkspaceRoom({
     };
   }, [hasOpenPopover]);
 
+  // タップ移動マーカーの自動消滅 (1500ms)。親 (App.tsx) に id を通知して
+  // state をクリアする。タップごとに id が変わるので連打しても確実に
+  // 再アニメ・再タイマーが走る。
+  useEffect(() => {
+    if (!tapWalkMarker || !onTapWalkMarkerExpire) return;
+    const id = window.setTimeout(() => onTapWalkMarkerExpire(tapWalkMarker.id), 1500);
+    return () => window.clearTimeout(id);
+  }, [tapWalkMarker, onTapWalkMarkerExpire]);
+
+  // 初回ヒント。スマホで入室直後に "床をタップで移動できます" を 5 秒だけ
+  // 表示する。localStorage で一度見た人には二度と表示しない。タッチ可能
+  // 端末でのみ表示し、PC では出さない (PC は WASD で動かす想定)。
+  const [showTapHint, setShowTapHint] = useState(false);
+  useEffect(() => {
+    if (!isJoined) return;
+    if (typeof window === "undefined") return;
+    const isTouchDevice = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+    if (!isTouchDevice) return;
+    try {
+      if (localStorage.getItem("ca:workspace-tap-hint-shown") === "1") return;
+    } catch {
+      /* localStorage 不可なら諦める */
+    }
+    setShowTapHint(true);
+    const timer = window.setTimeout(() => {
+      setShowTapHint(false);
+      try {
+        localStorage.setItem("ca:workspace-tap-hint-shown", "1");
+      } catch {
+        /* ignore */
+      }
+    }, 5000);
+    return () => window.clearTimeout(timer);
+  }, [isJoined]);
+
   const presetSlots = [...presetMessages, "", "", "", "", "", ""].slice(0, 6);
   const visiblePresetMessages = presetSlots.map((message) => message.trim()).filter(Boolean);
 
@@ -391,6 +433,18 @@ export function SilentWorkspaceRoom({
 
   const handleTaskChange = (event: ChangeEvent<HTMLInputElement>) => {
     onTaskChange(event.target.value);
+  };
+
+  // 触覚フィードバック (対応端末のみ)。
+  // - アクタータップ：12ms
+  // - 置き手紙/記念碑タップ：10ms
+  // 不対応 (iOS Safari など) は例外スローではなく undefined を返すだけ。
+  const buzz = (ms: number) => {
+    try {
+      navigator.vibrate?.(ms);
+    } catch {
+      /* ignore */
+    }
   };
 
   const handlePresetChange = (index: number, value: string) => {
@@ -496,6 +550,31 @@ export function SilentWorkspaceRoom({
           }}
         >
           <div className="workspace-floor-grid" aria-hidden="true" />
+
+          {/* タップ移動マーカー：タップ位置にリングを 1.5s だけ表示。
+              `key={tapWalkMarker.id}` で毎タップ強制再マウントしてアニメ
+              が必ず先頭から走るようにする (同じ位置への連打にも対応)。 */}
+          {tapWalkMarker ? (
+            <span
+              key={tapWalkMarker.id}
+              className="workspace-tap-marker"
+              style={
+                {
+                  "--actor-x": `${tapWalkMarker.x}%`,
+                  "--actor-y": `${tapWalkMarker.y}%`,
+                } as CSSProperties
+              }
+              aria-hidden="true"
+            />
+          ) : null}
+
+          {/* 初回タップ移動ヒント。タッチ端末のみ、初回入室時のみ 5 秒。 */}
+          {showTapHint ? (
+            <div className="workspace-tap-hint" role="status">
+              <span aria-hidden="true">👆</span>
+              床をタップして移動できます
+            </div>
+          ) : null}
 
           {!isFocusPresentation ? (
             <aside
@@ -725,7 +804,10 @@ export function SilentWorkspaceRoom({
                   isJustJoined ? "is-just-joined" : "",
                 ].filter(Boolean).join(" ")}
                 style={actorStyle}
-                onClick={() => onMemberOpen(member)}
+                onClick={() => {
+                  buzz(12);
+                  onMemberOpen(member);
+                }}
                 aria-label={`${member.name} ${member.currentTask}`}
               >
                 {(() => {
@@ -856,7 +938,10 @@ export function SilentWorkspaceRoom({
                   "--actor-color": monument.color || "var(--ink)",
                 } as CSSProperties
               }
-              onClick={() => onMonumentOpen?.(monument.id)}
+              onClick={() => {
+                buzz(10);
+                onMonumentOpen?.(monument.id);
+              }}
               aria-label={monument.label}
               title={monument.label}
             >
@@ -886,7 +971,10 @@ export function SilentWorkspaceRoom({
                   "--actor-color": note.color || "var(--ink)",
                 } as CSSProperties
               }
-              onClick={() => onFloorNoteOpen?.(note.id)}
+              onClick={() => {
+                buzz(10);
+                onFloorNoteOpen?.(note.id);
+              }}
               aria-label={`${note.name}さんの置き手紙`}
               title={`${note.name}さんの置き手紙`}
             >

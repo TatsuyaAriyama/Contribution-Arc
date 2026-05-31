@@ -28741,3 +28741,121 @@ a[role="button"],
   /* ステージ自体をタップした瞬間に subtle に押し込まれた感を出す */
   filter: brightness(0.99);
 }
+
+/* ───────── タップ移動マーカー ─────────
+   タップ位置にリングを 1.5s だけ表示。conic-gradient ではなく
+   シンプルな円 + 拡大 + フェードアウトで "ここに行く" を視覚化。
+   ステージ内座標 (--actor-x / --actor-y) で配置し、アクター系より
+   下層 (z-index 1) に置く。 */
+.workspace-tap-marker {
+  position: absolute;
+  left: var(--actor-x);
+  top: var(--actor-y);
+  width: 56px;
+  height: 56px;
+  margin-left: -28px;
+  margin-top: -28px;
+  border: 2px solid var(--green);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(var(--green-rgb, 31, 111, 74), 0.2) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 1;
+  animation: workspace-tap-marker 1.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  /* 透視で床に貼り付いて見えるよう少し傾ける */
+  transform: perspective(160px) rotateX(58deg);
+}
+@keyframes workspace-tap-marker {
+  0% {
+    opacity: 0;
+    transform: perspective(160px) rotateX(58deg) scale(0.3);
+  }
+  20% {
+    opacity: 1;
+    transform: perspective(160px) rotateX(58deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: perspective(160px) rotateX(58deg) scale(1.4);
+  }
+}
+
+/* ───────── 初回タップ移動ヒント ─────────
+   入室直後の 5 秒だけ表示。ステージ上部中央に控えめなピル。
+   pointer-events: none でタップ移動操作の邪魔をしない。 */
+.workspace-tap-hint {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 8;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(7, 16, 13, 0.84);
+  color: #f3f7f4;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  pointer-events: none;
+  animation: workspace-tap-hint-in 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    workspace-tap-hint-out 400ms ease-in 4600ms forwards;
+}
+@keyframes workspace-tap-hint-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -16px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+@keyframes workspace-tap-hint-out {
+  to {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+}
+
+/* ───────── 自分のアバター強調 ─────────
+   PC でも スマホでも、自分の actor が群衆の中で一目で見つかる
+   ように。sprite に薄い緑のリングを常時、ラベルにも "YOU"
+   バッジを表示する。"is-player" は既存クラス。 */
+.workspace-actor.is-player .actor-sprite {
+  box-shadow:
+    0 0 0 3px rgba(var(--green-rgb, 31, 111, 74), 0.6),
+    0 0 0 6px rgba(var(--green-rgb, 31, 111, 74), 0.18),
+    0 10px 18px rgba(0, 0, 0, 0.18);
+}
+.workspace-actor.is-player .actor-name::before {
+  content: "YOU · ";
+  color: var(--green);
+  font-weight: 900;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+}
+[data-theme="dark"] .workspace-actor.is-player .actor-sprite {
+  box-shadow:
+    0 0 0 3px rgba(91, 154, 117, 0.7),
+    0 0 0 6px rgba(91, 154, 117, 0.22),
+    0 10px 18px rgba(0, 0, 0, 0.32);
+}
+
+/* reduced-motion 配慮：マーカー/ヒントの装飾アニメを停止 */
+@media (prefers-reduced-motion: reduce) {
+  .workspace-tap-marker,
+  .workspace-tap-hint {
+    animation: none !important;
+    opacity: 1;
+  }
+}

@@ -4113,6 +4113,13 @@ function App() {
   // walk loop 内で処理され、目的地まで毎フレーム補間して移動する。
   // キー入力があれば即座にキャンセル（WASD 優先）。
   const tapWalkTargetRef = useRef<{ x: number; y: number } | null>(null);
+  // タップ移動した時の "ここに行きます" マーカー。視覚フィードバック用に
+  // 短時間（~1.5s）だけステージに ring を表示する。id でリセット可能。
+  const [tapWalkMarker, setTapWalkMarker] = useState<{
+    x: number;
+    y: number;
+    id: number;
+  } | null>(null);
   const syncedRoomPositionRef = useRef<string | null>(null);
   const graphSvgRef = useRef<SVGSVGElement | null>(null);
   const isApplyingRemoteRoomsRef = useRef(false);
@@ -16434,11 +16441,25 @@ function App() {
                         // タップした座標 (%) を目的地として walk loop に渡す。
                         // 自分が入室中かつポップオーバーが開いていない時のみ。
                         if (!canMoveInRoom) return;
-                        tapWalkTargetRef.current = {
-                          x: clampNumber(x, 7, 93),
-                          y: clampNumber(y, 14, 88),
-                        };
+                        const clampedX = clampNumber(x, 7, 93);
+                        const clampedY = clampNumber(y, 14, 88);
+                        tapWalkTargetRef.current = { x: clampedX, y: clampedY };
+                        // 視覚マーカー：1.5s 表示。同じ場所でも id が変わると
+                        // 再アニメするので、毎タップ確実にフィードバックが出る。
+                        setTapWalkMarker({ x: clampedX, y: clampedY, id: Date.now() });
+                        // 触覚フィードバック（対応端末のみ。8ms = 軽い ping）
+                        try {
+                          navigator.vibrate?.(8);
+                        } catch {
+                          /* iOS Safari は未対応・無視 */
+                        }
                       }}
+                      tapWalkMarker={tapWalkMarker}
+                      onTapWalkMarkerExpire={(id) =>
+                        setTapWalkMarker((current) =>
+                          current && current.id === id ? null : current,
+                        )
+                      }
                       onMemberOpen={handleRoomMemberTap}
                       onActivityOpen={handleRoomActivityOpen}
                       selectedMemberId={roomMemberPanel?.userId ?? null}
