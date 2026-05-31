@@ -3996,6 +3996,10 @@ function App() {
   const [isWorkspaceLoaded, setIsWorkspaceLoaded] = useState(false);
   const [isPageVisible, setIsPageVisible] = useState(!document.hidden);
   const [newRoomName, setNewRoomName] = useState("");
+  // モバイル時の "+ 部屋を作る" 折り畳み state。デフォルト false で
+  // 作成フォームを隠しておく ── 初見ユーザーが画面に圧倒されないよう
+  // 段階的に表示する設計。PC 側は CSS で常に展開済みにする。
+  const [isRoomCreatorOpen, setIsRoomCreatorOpen] = useState(false);
   /* Visibility picker for the new-room form. Defaults to public so
      the existing UX (anyone can find your room) is unchanged for solo
      users; org members get the "組織のみ" option which scopes the
@@ -16224,11 +16228,27 @@ function App() {
               {/* Compact room selector — pills along the top so the
                   character map below gets the full canvas. */}
               <div className="workspace-room-strip" aria-label={t("作業部屋")}>
+                {/* モバイル専用ヘッダー：タイトル + "+ 部屋を作る"
+                    トグル。PC 版では CSS で非表示。 */}
+                <div className="workspace-room-strip-header" aria-hidden="false">
+                  <h2 className="workspace-room-strip-title">{t("作業部屋")}</h2>
+                  <button
+                    type="button"
+                    className={`workspace-room-create-toggle${isRoomCreatorOpen ? " is-open" : ""}`}
+                    aria-expanded={isRoomCreatorOpen}
+                    onClick={() => setIsRoomCreatorOpen((open) => !open)}
+                  >
+                    {isRoomCreatorOpen ? t("閉じる") : `+ ${t("部屋を作る")}`}
+                  </button>
+                </div>
                 <form
-                  className="workspace-room-create"
+                  className={`workspace-room-create${isRoomCreatorOpen ? " is-open" : ""}`}
                   onSubmit={(event) => {
                     event.preventDefault();
                     handleRoomCreate();
+                    // 作成成功時はフォームを閉じる（クリーンな状態に戻す）。
+                    // 失敗してもメッセージは別箇所で表示されるので閉じて OK。
+                    setIsRoomCreatorOpen(false);
                   }}
                 >
                   <input
@@ -16305,12 +16325,24 @@ function App() {
                   </button>
                 </div>
 
-                <div className="workspace-room-pills" role="tablist" aria-label={t("作業部屋")}>
-                  {allWorkspaceRooms.map((room) => {
+                {/* ルーム一覧。モバイルでは "入室中" と "ほかのルーム" を
+                    セクションで分けて表示し、自分の現在地をひと目で把握
+                    できるようにする。各セクションタイトルは CSS で
+                    モバイルのみ表示。 */}
+                {(() => {
+                  const joinedRooms = allWorkspaceRooms.filter((room) =>
+                    (room.activeMembers || []).some((m) => m.userId === currentUser.uid),
+                  );
+                  const otherRooms = allWorkspaceRooms.filter(
+                    (room) =>
+                      !(room.activeMembers || []).some((m) => m.userId === currentUser.uid),
+                  );
+                  const renderRoom = (room: WorkspaceRoom) => {
                     const isActiveRoom = room.id === selectedRoom?.id;
                     const roomMembers = room.activeMembers || [];
-                    const isJoinedRoom = roomMembers.some((member) => member.userId === currentUser.uid);
-
+                    const isJoinedRoom = roomMembers.some(
+                      (member) => member.userId === currentUser.uid,
+                    );
                     return (
                       <button
                         key={room.id}
@@ -16344,8 +16376,43 @@ function App() {
                         </span>
                       </button>
                     );
-                  })}
-                </div>
+                  };
+                  return (
+                    <div
+                      className="workspace-room-pills"
+                      role="tablist"
+                      aria-label={t("作業部屋")}
+                    >
+                      {joinedRooms.length > 0 ? (
+                        <>
+                          <p
+                            className="workspace-room-section-title"
+                            aria-hidden="true"
+                          >
+                            {t("入室中")}
+                          </p>
+                          {joinedRooms.map(renderRoom)}
+                        </>
+                      ) : null}
+                      {otherRooms.length > 0 ? (
+                        <>
+                          <p
+                            className="workspace-room-section-title"
+                            aria-hidden="true"
+                          >
+                            {joinedRooms.length > 0 ? t("ほかのルーム") : t("ルーム一覧")}
+                          </p>
+                          {otherRooms.map(renderRoom)}
+                        </>
+                      ) : null}
+                      {joinedRooms.length === 0 && otherRooms.length === 0 ? (
+                        <p className="workspace-room-empty-hint">
+                          {t("まだ部屋がありません。上の「+ 部屋を作る」から作成しましょう。")}
+                        </p>
+                      ) : null}
+                    </div>
+                  );
+                })()}
               </div>
 
               {roomCreateMessage ? (

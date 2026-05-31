@@ -29471,3 +29471,191 @@ a[role="button"],
     padding-bottom: 12px !important;
   }
 }
+
+/* =========================================================
+   モバイル：作業部屋画面の "情報密度を整理する" 全面リファイン
+   初見ユーザーが「何をすればいいか」をひと目で把握できる構成に。
+   ・ Silent Workspace の冗長な説明文 / ← Home ボタンを撤去
+   ・ "+ 部屋を作る" は collapsible にしてデフォルト閉
+   ・ ルームを "入室中" と "ほかのルーム" のセクションで分離
+   ・ "一覧を更新" は footer 風の控えめなテキストボタン
+   ========================================================= */
+@media (max-width: 720px) {
+  /* (a) ヘッダー整理：← Home と Silent Workspace の説明文を撤去。
+         bottom-nav の "ホーム" タブで戻れるし、Silent Workspace の
+         説明文は initial onboarding tutorial で別途見せる前提。 */
+  .workspace-screen .profile-topbar {
+    display: none !important;
+  }
+  .workspace-screen .workspace-2d-card .workspace-heading {
+    display: none !important;
+  }
+  /* workspace-2d-card 自体の余白も詰める */
+  .workspace-screen .workspace-2d-card {
+    padding-top: 8px !important;
+  }
+
+  /* (b) モバイル専用 strip ヘッダー：タイトル + "+ 部屋を作る" */
+  .workspace-room-strip-header {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 4px 12px;
+  }
+  .workspace-room-strip-title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .workspace-room-create-toggle {
+    min-height: 40px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--green);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(var(--green-rgb, 31, 111, 74), 0.22);
+    transition: transform 0.12s ease, filter 0.16s ease;
+  }
+  .workspace-room-create-toggle:active {
+    transform: scale(0.96);
+  }
+  .workspace-room-create-toggle.is-open {
+    background: rgba(var(--ink-rgb), 0.08);
+    color: var(--ink);
+    box-shadow: none;
+  }
+
+  /* (c) 作成フォーム：デフォルト非表示、is-open でスライドダウン展開 */
+  .workspace-room-create {
+    display: none !important;
+  }
+  .workspace-room-create.is-open {
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin: 0 0 12px;
+    padding: 14px 14px 16px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: linear-gradient(
+      180deg,
+      rgba(var(--green-rgb, 31, 111, 74), 0.05),
+      transparent
+    );
+    animation: workspace-room-create-slide 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @keyframes workspace-room-create-slide {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .workspace-room-create.is-open input {
+    width: 100% !important;
+    height: 48px !important;
+    padding: 0 14px !important;
+    border-radius: 12px !important;
+    border: 1px solid var(--line) !important;
+    background: var(--surface) !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+  }
+  .workspace-room-create.is-open .workspace-room-create-visibility {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+  .workspace-room-create.is-open .workspace-room-create-visibility button {
+    flex: 1 1 auto;
+    min-height: 40px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: transparent;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .workspace-room-create.is-open .workspace-room-create-visibility button.is-active {
+    background: var(--green);
+    color: #fff;
+    border-color: var(--green);
+  }
+  .workspace-room-create.is-open button[type="submit"] {
+    min-height: 48px !important;
+    border-radius: 12px !important;
+    border: 0 !important;
+    background: var(--green) !important;
+    color: #fff !important;
+    font-size: 15px !important;
+    font-weight: 800 !important;
+    cursor: pointer;
+  }
+
+  /* (d) "一覧を更新"：footer 風の控えめなテキストボタン */
+  .workspace-room-refresh {
+    display: flex !important;
+    justify-content: center;
+    padding: 4px 0 12px;
+    order: 99; /* リスト末尾に */
+  }
+  .workspace-room-refresh-button {
+    background: transparent !important;
+    border: 0 !important;
+    color: var(--muted) !important;
+    font-size: 11.5px !important;
+    font-weight: 600 !important;
+    padding: 8px 12px !important;
+  }
+
+  /* (e) セクションタイトル "入室中 / ほかのルーム" */
+  .workspace-room-section-title {
+    margin: 12px 4px 6px !important;
+    color: var(--muted) !important;
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    grid-column: 1 / -1;
+  }
+  .workspace-room-section-title:first-child {
+    margin-top: 0 !important;
+  }
+
+  /* (f) 空状態のヒント */
+  .workspace-room-empty-hint {
+    margin: 16px 4px;
+    padding: 14px;
+    border: 1px dashed var(--line);
+    border-radius: 12px;
+    background: rgba(var(--ink-rgb), 0.02);
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    grid-column: 1 / -1;
+  }
+}
+
+/* PC では新規ヘッダー (workspace-room-strip-header) は不要なので隠す */
+@media (min-width: 721px) {
+  .workspace-room-strip-header,
+  .workspace-room-section-title,
+  .workspace-room-empty-hint {
+    display: none !important;
+  }
+  /* PC では作成フォームは常に展開状態 (折り畳み無効化) */
+  .workspace-room-create:not(.is-open) {
+    display: inline-flex !important;
+  }
+}
