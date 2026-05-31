@@ -30417,3 +30417,106 @@ a[role="button"],
     font-weight: 800;
   }
 }
+
+/* =========================================================
+   アクセシビリティ + ダークモード一貫性の補強
+   ========================================================= */
+
+/* (a) ダークモードでの focus-visible 色 */
+[data-theme="dark"] *:focus-visible {
+  outline: 2px solid #6cbb8b;
+  outline-offset: 2px;
+}
+
+/* (b) ダークモードでの selection color */
+[data-theme="dark"] ::selection {
+  background: rgba(91, 154, 117, 0.34);
+  color: #fff;
+}
+::selection {
+  background: rgba(31, 111, 74, 0.22);
+}
+
+/* (c) ダークモードでのスクロールバー */
+[data-theme="dark"] {
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+[data-theme="dark"] *::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* (d) ダークモードでの toast / notification */
+[data-theme="dark"] .toast {
+  background: rgba(40, 44, 48, 0.96);
+  color: #f3f7f4;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.48);
+}
+
+/* (e) ボタンの focus-visible に common ring を保証
+       既存の box-shadow 系も維持されるよう outline は補助線として */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+  outline-color: var(--green);
+}
+
+/* (f) skip-to-main link (キーボードユーザー用)
+       初出時に画面外、focus で画面内に。 */
+.skip-to-main {
+  position: fixed;
+  top: 0;
+  left: 0;
+  transform: translateY(-100%);
+  z-index: 99999;
+  padding: 8px 14px;
+  background: var(--green);
+  color: #fff;
+  font-weight: 800;
+  border-radius: 0 0 8px 0;
+  transition: transform 0.15s ease;
+}
+.skip-to-main:focus {
+  transform: translateY(0);
+}
+
+/* (g) モバイル：text-shadow を持つ要素 (actor-name など) の
+       ダークモード時のコントラスト微調整 */
+@media (max-width: 720px) {
+  [data-theme="dark"] .actor-name {
+    color: #1a2326 !important;
+    background: rgba(220, 232, 225, 0.96) !important;
+  }
+  [data-theme="dark"] .actor-task {
+    background: rgba(91, 154, 117, 0.92) !important;
+    color: #0b1411 !important;
+  }
+}
+
+/* (h) ボタンの :disabled 状態の見た目を統一 */
+button:disabled,
+button[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* (i) input 系 :disabled */
+input:disabled,
+textarea:disabled,
+select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: rgba(var(--ink-rgb), 0.04);
+}
+
+/* (j) prefers-color-scheme の自動検出に対応する補助
+       data-theme="dark" が明示されている場合のみ。 */
+@media (prefers-contrast: more) {
+  /* 高コントラスト要求のあるユーザー向け border 強化 */
+  .card,
+  .settings-modal,
+  .quicklog-popover,
+  .friends-modal {
+    border-width: 2px;
+  }
+}
