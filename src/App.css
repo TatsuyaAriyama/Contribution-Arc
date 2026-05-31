@@ -28723,3 +28723,21 @@ a[role="button"],
     box-sizing: border-box !important;
   }
 }
+
+/* =========================================================
+   Tap-to-walk: ステージ床がタップ可能なことを示すヒント
+   - PC ではホバーカーソルをポインターに（タップ可能を示唆）
+   - スマホはタップフィードバックを :active で軽く沈ませる
+   ========================================================= */
+.workspace-stage {
+  touch-action: manipulation;
+}
+@media (hover: hover) {
+  .workspace-stage {
+    cursor: pointer;
+  }
+}
+.workspace-stage:active {
+  /* ステージ自体をタップした瞬間に subtle に押し込まれた感を出す */
+  filter: brightness(0.99);
+}
