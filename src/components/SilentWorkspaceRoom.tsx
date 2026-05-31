@@ -274,6 +274,10 @@ export function SilentWorkspaceRoom({
   const isFocusPresentation = presentation === "focus";
   const [isPresetEditorOpen, setIsPresetEditorOpen] = useState(false);
   const [isPresetTrayOpen, setIsPresetTrayOpen] = useState(false);
+  // FAB (Floating Action Button) スピードダイヤルの開閉状態。
+  // 閉じた時は右下に "+" ボタン 1 つだけ表示してステージを邪魔しない。
+  // 開いた時は "定型文 / 置き手紙 / 着替え" が縦に展開。
+  const [isHudOpen, setIsHudOpen] = useState(false);
   // Mobile-only expand toggle for the in-stage room overlay. Desktop
   // CSS ignores this and always shows the full overlay; on phones the
   // overlay starts collapsed to a single-line pill (room name + meta)
@@ -374,6 +378,27 @@ export function SilentWorkspaceRoom({
     const id = window.setTimeout(() => onTapWalkMarkerExpire(tapWalkMarker.id), 1500);
     return () => window.clearTimeout(id);
   }, [tapWalkMarker, onTapWalkMarkerExpire]);
+
+  // popover (member/note/monument/appearance) が開いたら HUD は閉じる。
+  // FAB が popover の前に被ると操作不能になるので、明示的に退避させる。
+  useEffect(() => {
+    if (hasOpenPopover) {
+      setIsHudOpen(false);
+      setIsPresetTrayOpen(false);
+      setIsPresetEditorOpen(false);
+    }
+  }, [hasOpenPopover]);
+
+  // Esc / 外側タップで HUD 自体も閉じる。tap-to-walk の床タップとは
+  // 干渉しないよう、stage 直接の onPointerDown は別経路。
+  useEffect(() => {
+    if (!isHudOpen) return;
+    const handle = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsHudOpen(false);
+    };
+    window.addEventListener("keydown", handle);
+    return () => window.removeEventListener("keydown", handle);
+  }, [isHudOpen]);
 
   // 初回ヒント。スマホで入室直後に "床をタップで移動できます" を 5 秒だけ
   // 表示する。localStorage で一度見た人には二度と表示しない。タッチ可能
@@ -1107,46 +1132,99 @@ export function SilentWorkspaceRoom({
           ) : null}
         </div>
 
-        <div className={`preset-message-panel ${isPresetTrayOpen ? "is-open" : ""}`}>
-          <div className="preset-toggle-row">
-            {/* 休憩 toggle was moved into the in-stage room overlay
-                (top-left) where it sits next to the other room actions.
-                Keeping the preset-message panel for the chat-toggle and
-                preset bar only. */}
+        {/* 下部 HUD：FAB スピードダイヤル + 定型文トレイ。
+            通常時は右下に "+" 1 つだけ。タップで「定型文・置き手紙・着替え」
+            が縦に展開。各アクション選択で HUD は自動で閉じる。これで
+            ステージや popover の前に被って邪魔することがない。 */}
+        <div
+          className={[
+            "preset-message-panel",
+            "hud-fab",
+            isHudOpen ? "is-hud-open" : "",
+            isPresetTrayOpen ? "is-open" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          {/* HUD 展開時のバックドロップ。タップで HUD を閉じる。 */}
+          {isHudOpen ? (
             <button
               type="button"
-              className="preset-chat-toggle"
-              onClick={() => setIsPresetTrayOpen((isOpen) => !isOpen)}
-              aria-expanded={isPresetTrayOpen}
+              className="hud-fab-backdrop"
+              aria-label="メニューを閉じる"
+              onClick={() => {
+                setIsHudOpen(false);
+                setIsPresetTrayOpen(false);
+                setIsPresetEditorOpen(false);
+              }}
+            />
+          ) : null}
+
+          {/* スピードダイヤル展開時に上に出現する 3 アクション。
+              閉じた状態では DOM に存在するが CSS で hidden + scale 0。
+              展開時のみ visible + scale 1 + 順にフェードイン。 */}
+          <div className="hud-fab-actions" aria-hidden={!isHudOpen}>
+            <button
+              type="button"
+              className="hud-fab-action hud-fab-action-preset"
+              onClick={() => {
+                setIsPresetTrayOpen((isOpen) => !isOpen);
+              }}
+              aria-pressed={isPresetTrayOpen}
               aria-label={isPresetTrayOpen ? "定型文を閉じる" : "定型文を開く"}
+              tabIndex={isHudOpen ? 0 : -1}
             >
-              <span aria-hidden="true" />
-              <strong>{isPresetTrayOpen ? "閉じる" : "定型文"}</strong>
+              <span className="hud-fab-action-icon" aria-hidden="true">💬</span>
+              <span>{isPresetTrayOpen ? "定型文を閉じる" : "定型文"}</span>
             </button>
             {canDropFloorNote && isJoined && onComposeFloorNote ? (
               <button
                 type="button"
-                className="floor-note-drop-button"
-                onClick={onComposeFloorNote}
+                className="hud-fab-action hud-fab-action-note"
+                onClick={() => {
+                  setIsHudOpen(false);
+                  onComposeFloorNote();
+                }}
                 aria-label="置き手紙を残す"
+                tabIndex={isHudOpen ? 0 : -1}
               >
-                <span aria-hidden="true">✉</span>
-                <strong>置き手紙</strong>
+                <span className="hud-fab-action-icon" aria-hidden="true">✉</span>
+                <span>置き手紙を残す</span>
               </button>
             ) : null}
             {onComposeAppearance ? (
               <button
                 type="button"
-                className="floor-note-drop-button appearance-drop-button"
-                onClick={onComposeAppearance}
+                className="hud-fab-action hud-fab-action-appearance"
+                onClick={() => {
+                  setIsHudOpen(false);
+                  onComposeAppearance();
+                }}
                 aria-label="分身の見た目を変える"
+                tabIndex={isHudOpen ? 0 : -1}
               >
-                <span aria-hidden="true">✦</span>
-                <strong>着替え</strong>
+                <span className="hud-fab-action-icon" aria-hidden="true">✦</span>
+                <span>着替え</span>
               </button>
             ) : null}
           </div>
 
+          {/* 本体の FAB ボタン（右下、+ ⇔ ×）。 */}
+          <button
+            type="button"
+            className="hud-fab-toggle"
+            onClick={() => setIsHudOpen((open) => !open)}
+            aria-expanded={isHudOpen}
+            aria-label={isHudOpen ? "メニューを閉じる" : "メニューを開く"}
+          >
+            <span aria-hidden="true" className="hud-fab-toggle-icon">
+              {isHudOpen ? "×" : "+"}
+            </span>
+          </button>
+
+          {/* 定型文展開エリア。HUD action から開かれる。
+              PC でも従来どおり表示されるが、モバイルでは FAB の上に
+              スライドアップする ボトムシート風に CSS 側で再配置。 */}
           {isPresetTrayOpen ? (
             <div className="preset-message-bar" aria-label="定型コミュニケーション">
               {visiblePresetMessages.map((message, index) => (
