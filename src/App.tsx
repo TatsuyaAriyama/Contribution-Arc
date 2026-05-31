@@ -17792,37 +17792,19 @@ function App() {
             </svg>
             <span>{t("ホーム")}</span>
           </button>
-          {/* 作業部屋を中央CTAの隣（左）に配置。親指の自然な到達位置に
-              置くことで、入室への摩擦を下げる。在室者ドット + 数字も
-              添えて、気配を伝える（煽り表示にならないよう極小サイズ）。*/}
+          {/* ユーザー要望でホームの右に "日報" を配置。日々の振り返りが
+              ホームから 1 タップで届く位置に来る。 */}
           <button
             type="button"
-            className={`workspace-tab${currentView === "workspace" ? " is-active" : ""}${
-              activeMembers.length > 0 ? " has-presence" : ""
-            }`}
-            onClick={() => setCurrentView("workspace")}
-            aria-label={
-              activeMembers.length > 0
-                ? t("作業部屋 — 現在 {count} 人が作業中", { count: activeMembers.length })
-                : t("作業部屋")
-            }
+            className={currentView === "daily" ? "is-active" : ""}
+            onClick={() => setCurrentView("daily")}
+            aria-label="日報"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-              <path d="M4 10h16" fill="none" stroke="currentColor" strokeWidth="1.6" />
+              <rect x="4" y="5" width="16" height="15" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+              <path d="M4 10h16M9 3v4M15 3v4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
             </svg>
-            {activeMembers.length > 0 ? (
-              <span className="mobile-tab-presence-dot" aria-hidden="true" />
-            ) : null}
-            <span>
-              {t("作業部屋")}
-              {activeMembers.length > 0 ? (
-                <span className="mobile-tab-presence-count" aria-hidden="true">
-                  {" "}
-                  · {activeMembers.length}
-                </span>
-              ) : null}
-            </span>
+            <span>日報</span>
           </button>
           {/* Phase 10d: 中央CTA を「学習対象タブへの遷移」から「クイック
               記録ポップオーバーを開く」に変更. ボタンのラベルが「記録する」
@@ -17851,17 +17833,36 @@ function App() {
             </svg>
             <span>記録</span>
           </button>
+          {/* 作業部屋を右端へ移動 (ユーザー要望)。在室者ドット + 数字で
+              気配は引き続き伝える。 */}
           <button
             type="button"
-            className={currentView === "daily" ? "is-active" : ""}
-            onClick={() => setCurrentView("daily")}
-            aria-label="日報"
+            className={`workspace-tab${currentView === "workspace" ? " is-active" : ""}${
+              activeMembers.length > 0 ? " has-presence" : ""
+            }`}
+            onClick={() => setCurrentView("workspace")}
+            aria-label={
+              activeMembers.length > 0
+                ? t("作業部屋 — 現在 {count} 人が作業中", { count: activeMembers.length })
+                : t("作業部屋")
+            }
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <rect x="4" y="5" width="16" height="15" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-              <path d="M4 10h16M9 3v4M15 3v4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              <rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+              <path d="M4 10h16" fill="none" stroke="currentColor" strokeWidth="1.6" />
             </svg>
-            <span>日報</span>
+            {activeMembers.length > 0 ? (
+              <span className="mobile-tab-presence-dot" aria-hidden="true" />
+            ) : null}
+            <span>
+              {t("作業部屋")}
+              {activeMembers.length > 0 ? (
+                <span className="mobile-tab-presence-count" aria-hidden="true">
+                  {" "}
+                  · {activeMembers.length}
+                </span>
+              ) : null}
+            </span>
           </button>
         </nav>
       ) : null}
