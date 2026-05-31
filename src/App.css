@@ -30265,3 +30265,155 @@ a[role="button"],
     display: none;
   }
 }
+
+/* =========================================================
+   各 view の細部ブラッシュアップ (mobile)
+   ホーム / プロフィール / 日報 / 学習 / shop の境界を綺麗に。
+   ========================================================= */
+@media (max-width: 720px) {
+  /* ===== ホーム画面 ===== */
+  .status-card {
+    padding: 16px !important;
+    border-radius: 16px !important;
+  }
+  .status-card h3 {
+    font-size: 16px;
+    line-height: 1.4;
+  }
+  .status-card-meta {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .week-strip {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .week-strip-stat {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
+  }
+  .hero-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* ===== プロフィール画面 ===== */
+  .profile-header {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px !important;
+  }
+  .profile-avatar {
+    width: 64px !important;
+    height: 64px !important;
+  }
+  .profile-name {
+    font-size: 18px !important;
+    font-weight: 800;
+  }
+  .profile-handle {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .profile-section {
+    padding: 14px !important;
+    border-radius: 14px !important;
+  }
+  .profile-section h2,
+  .profile-section h3 {
+    font-size: 14px !important;
+    margin-bottom: 8px;
+  }
+
+  /* ===== 日報画面 ===== */
+  .daily-screen .daily-date-strip {
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  .daily-screen .daily-date-strip > * {
+    scroll-snap-align: start;
+  }
+  .daily-screen textarea,
+  .daily-detail-modal textarea {
+    font-size: 16px !important;
+    line-height: 1.55;
+    border-radius: 12px !important;
+    padding: 12px 14px !important;
+  }
+  .daily-screen .plan-checklist {
+    gap: 8px;
+  }
+  .daily-screen .plan-checklist-item {
+    padding: 10px 12px;
+    min-height: 44px;
+  }
+  .daily-screen .plan-checklist-text {
+    flex: 1 1 auto;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+  .daily-screen button[type="submit"],
+  .daily-screen .daily-save-button {
+    min-height: 48px !important;
+    font-size: 14px !important;
+    font-weight: 800;
+  }
+
+  /* ===== 学習 (learning) 画面 ===== */
+  .learning-screen .learning-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .learning-screen .learning-toolbar > * {
+    flex: 1 1 auto;
+  }
+  .learning-card {
+    padding: 12px !important;
+    border-radius: 14px !important;
+    margin-bottom: 8px;
+  }
+  .learning-card-name {
+    font-size: 15px !important;
+    font-weight: 700;
+  }
+  .learning-card-stats {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* ===== Shop 画面 ===== */
+  .shop-screen .shop-card {
+    padding: 14px !important;
+    border-radius: 14px !important;
+  }
+  .shop-screen .shop-card-actions button {
+    min-height: 44px;
+    padding: 0 14px;
+    border-radius: 999px;
+  }
+
+  /* ===== Toast (グローバル通知) の位置調整 ===== */
+  .toast-host {
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* ===== 共通：カード見出しの統一 ===== */
+  .card-kicker {
+    font-size: 11px !important;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+
+  /* ===== 一般：プライマリ submit ボタンのモバイル統一 ===== */
+  button[type="submit"]:not(.tutorial-hint-close):not(.workspace-room-create-toggle):not(.hud-fab-toggle) {
+    min-height: 48px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 800;
+  }
+}
