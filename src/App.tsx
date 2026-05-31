@@ -12534,7 +12534,12 @@ function App() {
             onClick={() => setIsSearchOpen(true)}
             aria-label={t("ユーザーを探す")}
           >
-            <span aria-hidden="true" />
+            <span aria-hidden="true" className="user-search-icon">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" strokeWidth="1.8" />
+                <path d="M20 20l-3.6-3.6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </span>
             <strong>Search</strong>
             <em>⌘K</em>
           </button>
