@@ -30215,3 +30215,53 @@ a[role="button"],
     height: 56px !important;
   }
 }
+
+/* =========================================================
+   Workspace stage polish (mobile)
+   ========================================================= */
+@media (max-width: 720px) {
+  /* (P1-12 / P1-18) Workspace stage の最小高さを確保。
+     入室後の "完全切替型" 演出と合わせて、ステージが必ず画面の主役に。 */
+  .workspace-2d-card.is-in-room .workspace-stage {
+    min-height: calc(100vh - 56px - 60px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    /* topbar 56px + bottom-nav 60px を引いた残り */
+  }
+
+  /* (P2-22) floor-note / monument の透明 hit area を 44px に */
+  .workspace-floor-note,
+  .workspace-monument {
+    position: relative;
+  }
+  .workspace-floor-note::before,
+  .workspace-monument::before {
+    content: "";
+    position: absolute;
+    inset: -8px;
+    pointer-events: auto;
+  }
+
+  /* (P3-33) Room notes (置き手紙) modal も popover Portal 化済みなので
+     z-index 確実に高く。 */
+  .room-note-card,
+  .room-monument-card,
+  .room-member-card {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* スマホで FAB の上 (定型文トレイ) に押し下げる margin */
+  .preset-message-bar {
+    margin-bottom: 4px;
+  }
+
+  /* presence ドット (在室バッジ) の左寄せ */
+  .workspace-room-pill.joined::after {
+    /* PR #79 で設定済みの "🟢 入室中" を中央寄せに */
+    justify-content: center;
+  }
+
+  /* workspace-room-canvas-actions (PC: title + edit) はモバイル省略 */
+  .workspace-2d-card.is-in-room .workspace-room-canvas-actions {
+    display: none;
+  }
+}
