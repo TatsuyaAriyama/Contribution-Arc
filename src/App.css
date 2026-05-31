@@ -30031,3 +30031,74 @@ a[role="button"],
     height: 22px;
   }
 }
+
+/* =========================================================
+   P1 batch B: modal 内のスクロール余白 / heatmap / placeholder
+   ========================================================= */
+@media (max-width: 720px) {
+  /* (P1-10) Friends modal の list が bottom-nav に隠れる
+     friends-modal-list 内の最終フレンドカードに余白を確保。 */
+  .friends-modal-list,
+  .topbar-popover-list,
+  .friends-modal {
+    padding-bottom: 24px;
+  }
+
+  /* (P1-15) Daily history も padding-bottom 確保 */
+  .daily-history-list,
+  .daily-history-grid {
+    padding-bottom: 60px;
+  }
+
+  /* (P2-20) Search input の placeholder 可読性 */
+  input::placeholder,
+  textarea::placeholder {
+    color: rgba(var(--ink-rgb), 0.5);
+  }
+
+  /* (P2-23) Quicklog popover の number input を 16px */
+  .quicklog-popover-row-input input[type="number"] {
+    font-size: 16px !important;
+  }
+
+  /* (P3-40) Contribution heatmap セルを大きく */
+  .contribution-arc-cell {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* (P3-41) Workspace recruitment modal の form action button が隠れる */
+  .recruitment-modal,
+  .recruitment-field {
+    padding-bottom: 24px;
+  }
+
+  /* (P3-42) Share-x の "画像生成中…" button が wrap で背が伸びる */
+  .share-x-actions button {
+    white-space: nowrap;
+    min-width: 120px;
+  }
+
+  /* (P3-45) Member profile の action button (follow/block) を 44px */
+  .friend-profile-actions button,
+  .friend-profile-actions a {
+    min-height: 44px;
+    padding: 0 16px;
+  }
+
+  /* (P1-28) フォームラベルの折返し対応 */
+  .settings-form label span {
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+  }
+
+  /* (P0-2 補強) topbar-context 内の date/time に対し max-width
+     360-380px の極狭機種で確実に切れるように。 */
+  .premium-dashboard-header .topbar-context .topbar-date,
+  .premium-dashboard-header .topbar-context .topbar-time {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
