@@ -14747,6 +14747,41 @@ function App() {
                 </fieldset>
               ) : null}
 
+              {!isOnboardingSettings ? (
+                <details className="settings-guide">
+                  <summary>
+                    <span className="settings-guide-title">{t("Contribution Arc の使い方")}</span>
+                    <span className="settings-guide-hint">{t("はじめての方へ")}</span>
+                  </summary>
+                  <dl className="settings-guide-body">
+                    <div className="settings-guide-item">
+                      <dt>{t("記録する")}</dt>
+                      <dd>{t("学んだことを記録すると、積み上げがグラフに残ります。まずはここから。")}</dd>
+                    </div>
+                    <div className="settings-guide-item">
+                      <dt>{t("日報")}</dt>
+                      <dd>{t("その日の予定と振り返りを書いて、仲間と共有できます。")}</dd>
+                    </div>
+                    <div className="settings-guide-item">
+                      <dt>{t("みんなの記録")}</dt>
+                      <dd>{t("フレンドや仲間の投稿・日報が流れてきます。ハートやリプライで反応できます。")}</dd>
+                    </div>
+                    <div className="settings-guide-item">
+                      <dt>{t("作業部屋")}</dt>
+                      <dd>{t("同じ部屋に入って一緒に作業できます。今やっていることがリアルタイムで共有されます。")}</dd>
+                    </div>
+                    <div className="settings-guide-item">
+                      <dt>{t("フレンド")}</dt>
+                      <dd>{t("相手のユーザーIDで申請し、承認されるとつながります。申請はお知らせに届きます。")}</dd>
+                    </div>
+                    <div className="settings-guide-item">
+                      <dt>{t("組織")}</dt>
+                      <dd>{t("会社やチームで使うときは、組織を作って招待リンクで仲間を招きます。組織限定の作業部屋が作れます。")}</dd>
+                    </div>
+                  </dl>
+                </details>
+              ) : null}
+
               {settingsError ? <p className="settings-error">{t(settingsError)}</p> : null}
 
               <div className="settings-actions">
