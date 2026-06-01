@@ -36,10 +36,248 @@
         } catch (e) {}
       })();
     </script>
-    <script type="module" crossorigin src="/Contribution-Arc/assets/index-BT_BHMDp.js"></script>
-    <link rel="stylesheet" crossorigin href="/Contribution-Arc/assets/index-C0kjCCui.css">
+    <!--
+      Inline splash screen (起動時のローディング)
+      JS バンドルがロードされる前に DOM だけで表示する。React mount 後に
+      main.tsx 側で `data-state="hide"` を立て、300-500ms のフェードアウト
+      ののち DOM から remove する。
+      テーマは `<html data-theme="...">` (上のブロックで設定済み) に追従。
+    -->
+    <style>
+      #app-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: env(safe-area-inset-top) env(safe-area-inset-right)
+          env(safe-area-inset-bottom) env(safe-area-inset-left);
+        background:
+          radial-gradient(circle at 50% 40%, rgba(31, 111, 74, 0.16), transparent 60%),
+          #0f1110;
+        color: #ecf3ef;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN",
+          "ヒラギノ角ゴ ProN W3", "Yu Gothic UI", "Yu Gothic", Roboto, "Helvetica Neue", Arial,
+          sans-serif;
+        opacity: 1;
+        transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+        pointer-events: auto;
+      }
+      html[data-theme="light"] #app-splash {
+        background:
+          radial-gradient(circle at 50% 38%, rgba(31, 111, 74, 0.1), transparent 58%),
+          linear-gradient(180deg, #fafaf8 0%, #eef1ec 100%);
+        color: #1f2429;
+      }
+      #app-splash[data-state="hide"] {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .app-splash-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+        max-width: 320px;
+        text-align: center;
+        animation: app-splash-fade-in 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .app-splash-logo-wrap {
+        position: relative;
+        width: 96px;
+        height: 96px;
+        animation: app-splash-bob 3.4s ease-in-out infinite;
+      }
+      .app-splash-logo-wrap::after {
+        /* 後光：脈動する subtle 緑グロー */
+        content: "";
+        position: absolute;
+        inset: -18%;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle,
+          rgba(91, 154, 117, 0.32) 0%,
+          rgba(91, 154, 117, 0) 65%
+        );
+        animation: app-splash-halo 2.6s ease-in-out infinite;
+        z-index: -1;
+      }
+      .app-splash-logo {
+        width: 100%;
+        height: 100%;
+        display: block;
+        filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.45));
+        animation: app-splash-pulse 2.6s ease-in-out infinite;
+      }
+      html[data-theme="light"] .app-splash-logo {
+        filter: drop-shadow(0 8px 22px rgba(31, 111, 74, 0.24));
+      }
+      .app-splash-title {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: -0.005em;
+        line-height: 1.2;
+      }
+      .app-splash-subtitle {
+        margin: 0;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        opacity: 0.5;
+        text-transform: uppercase;
+      }
+      .app-splash-progress {
+        width: 132px;
+        height: 3px;
+        margin-top: 6px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        overflow: hidden;
+        position: relative;
+      }
+      html[data-theme="light"] .app-splash-progress {
+        background: rgba(31, 36, 41, 0.08);
+      }
+      .app-splash-progress-bar {
+        display: block;
+        width: 40%;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #1f6f4a 0%, #5b9a75 40%, #b6e08a 100%);
+        animation: app-splash-progress 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+      }
+
+      @keyframes app-splash-fade-in {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @keyframes app-splash-pulse {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.045);
+        }
+      }
+      @keyframes app-splash-bob {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-4px);
+        }
+      }
+      @keyframes app-splash-halo {
+        0%,
+        100% {
+          opacity: 0.7;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1.06);
+        }
+      }
+      @keyframes app-splash-progress {
+        0% {
+          transform: translateX(-160%);
+        }
+        100% {
+          transform: translateX(360%);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #app-splash,
+        .app-splash-inner,
+        .app-splash-logo-wrap,
+        .app-splash-logo,
+        .app-splash-progress-bar,
+        .app-splash-logo-wrap::after {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+    </style>
+    <script type="module" crossorigin src="/Contribution-Arc/assets/index-B9XZx727.js"></script>
+    <link rel="stylesheet" crossorigin href="/Contribution-Arc/assets/index-BwitrN37.css">
   </head>
   <body>
+    <!-- Splash: JS バンドルロード前 / 後初期 render 中 / 認証チェック中まで
+         表示。React mount 後に main.tsx が data-state="hide" を立てて
+         フェードアウト → DOM remove する。 -->
+    <div id="app-splash" role="status" aria-label="読み込み中">
+      <div class="app-splash-inner">
+        <div class="app-splash-logo-wrap" aria-hidden="true">
+          <svg
+            class="app-splash-logo"
+            viewBox="0 0 160 160"
+            xmlns="http://www.w3.org/2000/svg"
+            focusable="false"
+          >
+            <defs>
+              <radialGradient id="splashBg" cx="0.5" cy="0.36" r="0.82">
+                <stop offset="0" stop-color="#1A1A1A" />
+                <stop offset="0.55" stop-color="#0A0A0A" />
+                <stop offset="1" stop-color="#020202" />
+              </radialGradient>
+              <linearGradient id="splashFrame" x1="22" y1="138" x2="138" y2="22" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="#1F6F4A" />
+                <stop offset="0.5" stop-color="#4FA362" />
+                <stop offset="1" stop-color="#B6E08A" />
+              </linearGradient>
+              <linearGradient id="splashT1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1B5A39" /><stop offset="1" stop-color="#0A2C1B" /></linearGradient>
+              <linearGradient id="splashT2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#206B43" /><stop offset="1" stop-color="#0E3A24" /></linearGradient>
+              <linearGradient id="splashT3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#27794D" /><stop offset="1" stop-color="#11472C" /></linearGradient>
+              <linearGradient id="splashT4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#308757" /><stop offset="1" stop-color="#165633" /></linearGradient>
+              <linearGradient id="splashT5" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3F9A63" /><stop offset="1" stop-color="#1F663F" /></linearGradient>
+              <linearGradient id="splashT6" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#57B070" /><stop offset="1" stop-color="#2E7848" /></linearGradient>
+              <linearGradient id="splashT7" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7FC881" /><stop offset="1" stop-color="#478B55" /></linearGradient>
+              <linearGradient id="splashT8" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#BAE38C" /><stop offset="1" stop-color="#65A363" /></linearGradient>
+              <radialGradient id="splashBloom" cx="0.5" cy="0.5" r="0.5">
+                <stop offset="0" stop-color="#B6E08A" stop-opacity="0.32" />
+                <stop offset="0.55" stop-color="#4FA362" stop-opacity="0.1" />
+                <stop offset="1" stop-color="#1F6F4A" stop-opacity="0" />
+              </radialGradient>
+              <clipPath id="splashPlate">
+                <rect width="160" height="160" rx="36" />
+              </clipPath>
+            </defs>
+            <rect width="160" height="160" rx="36" fill="url(#splashBg)" />
+            <g clip-path="url(#splashPlate)">
+              <ellipse cx="120" cy="48" rx="56" ry="46" fill="url(#splashBloom)" />
+              <g>
+                <rect x="33" y="110" width="11" height="11" rx="2.6" fill="url(#splashT1)" />
+                <rect x="46" y="106" width="11" height="11" rx="2.6" fill="url(#splashT2)" />
+                <rect x="59" y="99" width="11" height="11" rx="2.6" fill="url(#splashT3)" />
+                <rect x="72" y="89" width="11" height="11" rx="2.6" fill="url(#splashT4)" />
+                <rect x="85" y="77" width="11" height="11" rx="2.6" fill="url(#splashT5)" />
+                <rect x="98" y="64" width="11" height="11" rx="2.6" fill="url(#splashT6)" />
+                <rect x="111" y="52" width="11" height="11" rx="2.6" fill="url(#splashT7)" />
+                <rect x="124" y="43" width="11" height="11" rx="2.6" fill="url(#splashT8)" />
+              </g>
+            </g>
+            <rect x="13" y="13" width="134" height="134" rx="32" fill="none" stroke="url(#splashFrame)" stroke-width="6.5" stroke-linejoin="round" />
+            <rect x="22.5" y="22.5" width="115" height="115" rx="26" fill="none" stroke="#FFFFFF" stroke-opacity="0.05" />
+            <rect x="0.5" y="0.5" width="159" height="159" rx="35.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.07" />
+          </svg>
+        </div>
+        <h1 class="app-splash-title">Contribution Arc</h1>
+        <p class="app-splash-subtitle">Learning &amp; Contribution Records</p>
+        <div class="app-splash-progress" aria-hidden="true">
+          <span class="app-splash-progress-bar"></span>
+        </div>
+      </div>
+    </div>
     <div id="root"></div>
   </body>
 </html>
