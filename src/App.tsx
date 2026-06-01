@@ -3743,74 +3743,98 @@ function App() {
   const [friendMessage, setFriendMessage] = useState("");
   // Pinned friends（ローカルだけで保持）。お気に入りの友達を一覧の上位に
   // 固定する。Firestore 同期は P2 でやる予定 ── ひとまずデバイス毎の
-  // 設定として動作させる。配列順は保持しない（Set で扱う）。
-  const [pinnedFriendUids, setPinnedFriendUids] = useState<string[]>(() => {
-    try {
-      const raw = localStorage.getItem("ca:pinned-friends");
-      return raw ? (JSON.parse(raw) as string[]) : [];
-    } catch {
-      return [];
-    }
-  });
+  // 設定として動作させる。
+  // 重要：複数アカウントの相互混入防止のため、uid scope なキーで保存。
+  // currentUser が未確定の初期化時は空で開始し、useEffect で uid 確定後に
+  // localStorage から hydrate する。
+  const [pinnedFriendUids, setPinnedFriendUids] = useState<string[]>([]);
+  const [mutedFriendUids, setMutedFriendUids] = useState<string[]>([]);
+  const [blockedFriendUids, setBlockedFriendUids] = useState<string[]>([]);
+  const [encouragementsSent, setEncouragementsSent] = useState<Set<string>>(() => new Set());
+
+  // uid 確定後 (ログイン後) に localStorage から hydrate。
   useEffect(() => {
-    try {
-      localStorage.setItem("ca:pinned-friends", JSON.stringify(pinnedFriendUids));
-    } catch {
-      /* localStorage 不可なら諦める */
+    if (!currentUser?.uid) {
+      // ログアウト時は state をクリア (他ユーザーへの leak 防止)
+      setPinnedFriendUids([]);
+      setMutedFriendUids([]);
+      setBlockedFriendUids([]);
+      setEncouragementsSent(new Set());
+      return;
     }
-  }, [pinnedFriendUids]);
-  // ミュート：関係は残したまま、その人からの通知音 / デスクトップ通知 /
-  // 通知バッジを抑制する。"切りたくはないけどしばらく静かに" 用。
-  const [mutedFriendUids, setMutedFriendUids] = useState<string[]>(() => {
+    const uid = currentUser.uid;
     try {
-      const raw = localStorage.getItem("ca:muted-friends");
-      return raw ? (JSON.parse(raw) as string[]) : [];
+      const raw = localStorage.getItem(`ca:pinned-friends:${uid}`);
+      setPinnedFriendUids(raw ? (JSON.parse(raw) as string[]) : []);
     } catch {
-      return [];
+      setPinnedFriendUids([]);
     }
-  });
+    try {
+      const raw = localStorage.getItem(`ca:muted-friends:${uid}`);
+      setMutedFriendUids(raw ? (JSON.parse(raw) as string[]) : []);
+    } catch {
+      setMutedFriendUids([]);
+    }
+    try {
+      const raw = localStorage.getItem(`ca:blocked-friends:${uid}`);
+      setBlockedFriendUids(raw ? (JSON.parse(raw) as string[]) : []);
+    } catch {
+      setBlockedFriendUids([]);
+    }
+    try {
+      const raw = localStorage.getItem(`ca:encouragements-sent:${uid}`);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { date: string; uids: string[] };
+        const today = new Date().toISOString().slice(0, 10);
+        setEncouragementsSent(parsed.date === today ? new Set(parsed.uids) : new Set());
+      } else {
+        setEncouragementsSent(new Set());
+      }
+    } catch {
+      setEncouragementsSent(new Set());
+    }
+  }, [currentUser?.uid]);
+
+  // state 変化時の保存 (uid scope)。
   useEffect(() => {
+    if (!currentUser?.uid) return;
     try {
-      localStorage.setItem("ca:muted-friends", JSON.stringify(mutedFriendUids));
+      localStorage.setItem(
+        `ca:pinned-friends:${currentUser.uid}`,
+        JSON.stringify(pinnedFriendUids),
+      );
     } catch {
       /* ignore */
     }
-  }, [mutedFriendUids]);
-  // ブロック：相手からのフレンド申請を自動で隠す。検索・推薦からも除外。
-  const [blockedFriendUids, setBlockedFriendUids] = useState<string[]>(() => {
-    try {
-      const raw = localStorage.getItem("ca:blocked-friends");
-      return raw ? (JSON.parse(raw) as string[]) : [];
-    } catch {
-      return [];
-    }
-  });
+  }, [pinnedFriendUids, currentUser?.uid]);
   useEffect(() => {
+    if (!currentUser?.uid) return;
     try {
-      localStorage.setItem("ca:blocked-friends", JSON.stringify(blockedFriendUids));
+      localStorage.setItem(
+        `ca:muted-friends:${currentUser.uid}`,
+        JSON.stringify(mutedFriendUids),
+      );
     } catch {
       /* ignore */
     }
-  }, [blockedFriendUids]);
-  // 応援 (👏) クールダウン。同一 recipient に対して 1 日 1 回まで。
-  // ローカル + Firestore doc id で二重防止。
-  const [encouragementsSent, setEncouragementsSent] = useState<Set<string>>(() => {
-    try {
-      const raw = localStorage.getItem("ca:encouragements-sent");
-      if (!raw) return new Set();
-      const parsed = JSON.parse(raw) as { date: string; uids: string[] };
-      const today = new Date().toISOString().slice(0, 10);
-      if (parsed.date !== today) return new Set();
-      return new Set(parsed.uids);
-    } catch {
-      return new Set();
-    }
-  });
+  }, [mutedFriendUids, currentUser?.uid]);
   useEffect(() => {
+    if (!currentUser?.uid) return;
+    try {
+      localStorage.setItem(
+        `ca:blocked-friends:${currentUser.uid}`,
+        JSON.stringify(blockedFriendUids),
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [blockedFriendUids, currentUser?.uid]);
+  useEffect(() => {
+    if (!currentUser?.uid) return;
     try {
       const today = new Date().toISOString().slice(0, 10);
       localStorage.setItem(
-        "ca:encouragements-sent",
+        `ca:encouragements-sent:${currentUser.uid}`,
         JSON.stringify({ date: today, uids: Array.from(encouragementsSent) }),
       );
     } catch {
