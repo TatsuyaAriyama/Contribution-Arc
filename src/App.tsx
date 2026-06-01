@@ -7742,6 +7742,12 @@ function App() {
     void togglePostLikeInCloud(db, post.id, currentUser.uid, isLiked).catch((error) => {
       console.info("Post like sync skipped.", error);
       setPostError("リアクションを保存できませんでした。");
+      // 楽観的更新を rollback。元の post を該当 id で復元する。
+      // (onSnapshot でいずれサーバー値が同期されるが、瞬間的な不整合と
+      //  カウンタの逆ズレを防ぐ)
+      setPosts((items) =>
+        items.map((item) => (item.id === post.id ? post : item)),
+      );
     });
   };
 
