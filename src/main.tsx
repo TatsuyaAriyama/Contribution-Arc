@@ -28,6 +28,35 @@ createRoot(document.getElementById("root") as HTMLElement).render(
   </StrictMode>
 );
 
+/* index.html に inline で埋め込んだ起動 splash (`#app-splash`) を、
+   React mount 後にフェードアウトして DOM から取り除く。
+   - 2 連続 rAF：1 度目で React の first paint を fire、2 度目でその
+     paint がコミット完了したフレームで `data-state="hide"` を立てる。
+   - フェード 450ms 後に setTimeout で element を remove (cleanup)。
+   - reduced-motion ユーザーは即時 remove (CSS で transition: none)。
+   - 失敗時 (要素が存在しない) は安全に no-op。 */
+if (typeof document !== "undefined") {
+  const splash = document.getElementById("app-splash");
+  if (splash) {
+    const hide = () => {
+      splash.setAttribute("data-state", "hide");
+      const prefersReducedMotion =
+        typeof window !== "undefined" &&
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const cleanupDelay = prefersReducedMotion ? 0 : 500;
+      window.setTimeout(() => {
+        if (splash.parentNode) splash.parentNode.removeChild(splash);
+      }, cleanupDelay);
+    };
+    // first paint が確実に走った後で hide。requestAnimationFrame の 2 段
+    // ネストで「render → commit → paint → hide trigger」の順序を保証。
+    requestAnimationFrame(() => {
+      requestAnimationFrame(hide);
+    });
+  }
+}
+
 /* Register the minimal service worker so Chrome / Edge will fire
    `beforeinstallprompt` and our install banner can appear. Scoped to the
    Vite base (`/Contribution-Arc/` on web). Skipped on file:// (Electron),
