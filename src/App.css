@@ -10897,27 +10897,65 @@
   left: auto;
 }
 
-/* Frost shape — 霜 Shimo. A small humanoid with spiky white hair,
-   crimson magatama eye-marks and a sullen mouth. The body square uses
-   --actor-color (read as clothing) so each user's tint still carries
-   through, while hair / skin / marks stay fixed so the character reads
-   the same at any color. */
+/* Frost shape — 霜 Shimo. 銀白の髪・緋色の勾玉・憂いの口元という
+   "顔" のテーマに合わせて下半身も銀白の羽織 + 黒袴のシルエットに統一。
+   親 actor-sprite の四角い背景 (デフォルトはユーザーカラーの塗り潰し)
+   は霜では非表示にし、代わりに sprite-body 自身が小さな羽織として
+   描画される。ユーザーが選んだ --actor-color は obi 帯のアクセントと
+   して残し "個性は残しつつ霜らしさを保つ" 方針。 */
 .actor-sprite.shape-frost {
-  border-radius: 12px 12px 16px 16px;
-  background: var(--actor-color);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    0 10px 18px rgba(0, 0, 0, 0.22);
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
   overflow: visible;
 }
 
 .actor-sprite.shape-frost .sprite-body {
   position: absolute;
-  inset: 13px 7px 8px;
-  border-radius: 8px;
+  inset: auto;
+  top: 11px;
+  left: 50%;
+  width: 32px;
+  height: 25px;
+  transform: translateX(-50%);
+  border-radius: 14px 14px 9px 9px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent 60%),
-    rgba(255, 255, 255, 0.1);
+    linear-gradient(180deg, #fbfbfe 0%, #e7e7f0 58%, #cccdda 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -3px 5px rgba(0, 0, 0, 0.06),
+    0 7px 14px rgba(0, 0, 0, 0.22);
+}
+
+/* Obi 帯：ユーザーが選んだ --actor-color を細い横帯として残す。
+   キャラの個性 (緋色を上で添えてあるので) と被らないよう、--actor-color
+   は襷/腰帯のロールに割り当てる。 */
+.actor-sprite.shape-frost .sprite-body::after {
+  content: "";
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  top: 12px;
+  height: 4px;
+  background: var(--actor-color);
+  border-radius: 2px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 1px 0 rgba(0, 0, 0, 0.18);
+}
+
+/* V 字の襟元：顔の真下に小さな影を落として羽織の合わせを表現。 */
+.actor-sprite.shape-frost .sprite-body::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 5px 4px 0 4px;
+  border-color: rgba(70, 75, 92, 0.36) transparent transparent transparent;
+  transform: translateX(-50%);
 }
 
 .actor-sprite.shape-frost .sprite-head {
@@ -10932,6 +10970,7 @@
     #f4d9c0;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
   transform: translateX(-50%);
+  z-index: 2;
 }
 
 /* White hair cap covering the crown and upper face. */
@@ -11004,21 +11043,22 @@
   transform: translateX(-50%);
 }
 
-/* Black trousers / boots. */
+/* 黒袴 / 足袋。羽織の裾から自然に伸びるよう位置を再調整。 */
 .actor-sprite.shape-frost .sprite-leg {
-  width: 8px;
-  height: 12px;
+  width: 9px;
+  height: 11px;
   border-radius: 3px 3px 4px 4px;
-  background: #16171c;
-  bottom: -8px;
+  background: linear-gradient(180deg, #2a2c34 0%, #15161b 100%);
+  bottom: -5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .actor-sprite.shape-frost .sprite-leg-left {
-  left: 12px;
+  left: 11px;
 }
 
 .actor-sprite.shape-frost .sprite-leg-right {
-  right: 12px;
+  right: 11px;
   left: auto;
 }
 
