@@ -717,6 +717,56 @@ export function SilentWorkspaceRoom({
                 ) : null}
               </div>
 
+              {/* コミュニケーション系のクイックアクション。
+                  以前は画面右下に "+ メニュー" FAB として浮かせていたが、
+                  ステージ上のキャラクターと頻繁に被って "邪魔" になる
+                  との報告。ルームカード内に小さなアイコン列として
+                  埋め込んで、画面に同居する形に変更。
+                  3 つとも親側の handler を呼ぶだけで、popover / トレイ
+                  オープン経路は FAB 経由と完全に共通。 */}
+              {(onComposeAppearance || (canDropFloorNote && onComposeFloorNote) || visiblePresetMessages.length > 0) ? (
+                <div
+                  className="workspace-room-overlay-comm"
+                  role="group"
+                  aria-label="ルーム内アクション"
+                >
+                  {visiblePresetMessages.length > 0 ? (
+                    <button
+                      type="button"
+                      className={`workspace-room-overlay-comm-button${isPresetTrayOpen ? " is-active" : ""}`}
+                      onClick={() => setIsPresetTrayOpen((open) => !open)}
+                      aria-pressed={isPresetTrayOpen}
+                      aria-label={isPresetTrayOpen ? "定型文を閉じる" : "定型文を開く"}
+                    >
+                      <span aria-hidden="true">💬</span>
+                      <small>定型文</small>
+                    </button>
+                  ) : null}
+                  {canDropFloorNote && isJoined && onComposeFloorNote ? (
+                    <button
+                      type="button"
+                      className="workspace-room-overlay-comm-button"
+                      onClick={onComposeFloorNote}
+                      aria-label="置き手紙を残す"
+                    >
+                      <span aria-hidden="true">✉</span>
+                      <small>置き手紙</small>
+                    </button>
+                  ) : null}
+                  {onComposeAppearance ? (
+                    <button
+                      type="button"
+                      className="workspace-room-overlay-comm-button"
+                      onClick={onComposeAppearance}
+                      aria-label="分身の見た目を変える"
+                    >
+                      <span aria-hidden="true">✦</span>
+                      <small>着替え</small>
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+
               {/* Owner / admin sub-actions. Surfaced inside the overlay
                   so the mobile layout has a single place for room
                   management — the parent's `.workspace-room-canvas-
