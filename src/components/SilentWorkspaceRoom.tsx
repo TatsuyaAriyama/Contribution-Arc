@@ -275,10 +275,14 @@ export function SilentWorkspaceRoom({
   const isFocusPresentation = presentation === "focus";
   const [isPresetEditorOpen, setIsPresetEditorOpen] = useState(false);
   const [isPresetTrayOpen, setIsPresetTrayOpen] = useState(false);
-  // FAB (Floating Action Button) スピードダイヤルの開閉状態。
-  // 閉じた時は右下に "+" ボタン 1 つだけ表示してステージを邪魔しない。
-  // 開いた時は "定型文 / 置き手紙 / 着替え" が縦に展開。
-  const [isHudOpen, setIsHudOpen] = useState(false);
+  // HUD の開閉状態。モバイルでは FAB トグルで開閉する。PC では常時開き
+  // 状態で固定 (ステージ下部中央の横長ツールバーとして常時表示する)。
+  // 初期値を viewport 幅で分岐させることで PC では最初から actions が
+  // tabIndex 0 / aria-hidden=false になり、キーボード操作も成立する。
+  const [isHudOpen, setIsHudOpen] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(min-width: 721px)").matches;
+  });
   // Mobile-only expand toggle for the in-stage room overlay. Desktop
   // CSS ignores this and always shows the full overlay; on phones the
   // overlay starts collapsed to a single-line pill (room name + meta)
@@ -387,11 +391,17 @@ export function SilentWorkspaceRoom({
 
   // popover (member/note/monument/appearance) が開いたら HUD は閉じる。
   // FAB が popover の前に被ると操作不能になるので、明示的に退避させる。
+  // popover が閉じた時、PC では HUD を再オープン (常時表示が PC の正)。
   useEffect(() => {
     if (hasOpenPopover) {
       setIsHudOpen(false);
       setIsPresetTrayOpen(false);
       setIsPresetEditorOpen(false);
+    } else if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(min-width: 721px)").matches
+    ) {
+      setIsHudOpen(true);
     }
   }, [hasOpenPopover]);
 
