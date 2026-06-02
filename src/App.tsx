@@ -381,7 +381,7 @@ type RoomUserStatus = "working" | "deep-work" | "on-break";
    (round head with ear tufts, big amber eyes, beak; ground-hops
    instead of walks; ambient ~270° head turn). New shapes can be
    added here. */
-type CharacterShape = "default" | "ghost" | "owl";
+type CharacterShape = "default" | "ghost" | "owl" | "frost";
 
 type RoomUser = {
   id: string;
@@ -694,6 +694,13 @@ const characterShapeOptions: {
     tagline: "夜更けの番人",
     intro: "夜更けをひとり見守る、静かな番人。",
   },
+  {
+    value: "frost",
+    name: "霜",
+    romaji: "Shimo",
+    tagline: "群れぬ白銀",
+    intro: "逆立つ白銀の髪に緋の勾玉。群れずに夜を駆ける、孤高の一匹。",
+  },
 ];
 
 // Shop catalog. "default" is intentionally not listed — every account
@@ -720,6 +727,13 @@ const shapeShopCatalog: ShapeShopItem[] = [
     name: "宵 Yoi",
     tagline: "夜更けの番人",
     description: "丸い頭に大きな琥珀の眼。深夜にひとり手を動かす時間のお供に。",
+    price: 500,
+  },
+  {
+    shape: "frost",
+    name: "霜 Shimo",
+    tagline: "群れぬ白銀",
+    description: "逆立つ白銀の髪に緋色の勾玉の印。群れずに夜を駆ける、孤高の相棒。",
     price: 500,
   },
 ];
@@ -1546,7 +1560,7 @@ function getSafeCharacterColor(color: string | undefined): string {
 /* Allow-list guard for character shape. Anything outside the known
    set (including legacy `undefined` from older profile docs) falls
    back to "default" — the original humanoid silhouette. */
-const CHARACTER_SHAPES: readonly CharacterShape[] = ["default", "ghost", "owl"];
+const CHARACTER_SHAPES: readonly CharacterShape[] = ["default", "ghost", "owl", "frost"];
 function getSafeCharacterShape(shape: unknown): CharacterShape {
   return typeof shape === "string" && (CHARACTER_SHAPES as readonly string[]).includes(shape)
     ? (shape as CharacterShape)
@@ -2202,12 +2216,13 @@ function ProfileCharacterPreview({
 }) {
   const isGhost = shape === "ghost";
   const isOwl = shape === "owl";
-  const isCustomShape = isGhost || isOwl;
+  const isFrost = shape === "frost";
+  const isCustomShape = isGhost || isOwl || isFrost;
   return (
     <div
       className={`profile-character-preview${
         isGhost ? " is-ghost" : ""
-      }${isOwl ? " is-owl" : ""}`}
+      }${isOwl ? " is-owl" : ""}${isFrost ? " is-frost" : ""}`}
       style={{ "--actor-color": color || characterColorOptions[0].value } as CSSProperties}
       aria-hidden="true"
     >
@@ -2224,6 +2239,22 @@ function ProfileCharacterPreview({
             <span className="sprite-body" />
             <span className="sprite-wing sprite-wing-left" />
             <span className="sprite-wing sprite-wing-right" />
+            <span className="sprite-leg sprite-leg-left" />
+            <span className="sprite-leg sprite-leg-right" />
+          </>
+        ) : isFrost ? (
+          <>
+            <span className="sprite-head">
+              <span className="sprite-hair">
+                <span className="sprite-hair-spike sprite-hair-spike-left" />
+                <span className="sprite-hair-spike sprite-hair-spike-mid" />
+                <span className="sprite-hair-spike sprite-hair-spike-right" />
+              </span>
+              <span className="sprite-mark sprite-mark-left" />
+              <span className="sprite-mark sprite-mark-right" />
+              <span className="sprite-mouth" />
+            </span>
+            <span className="sprite-body" />
             <span className="sprite-leg sprite-leg-left" />
             <span className="sprite-leg sprite-leg-right" />
           </>
