@@ -29479,6 +29479,100 @@ body.workspace-popover-active .preset-message-panel.hud-fab,
   display: none !important;
 }
 
+/* === PC (≥721px) 向け：FAB スピードダイヤルではなく、ステージ下部中央の
+   常時表示ツールバーとして再配置する。マウス前提のデスクトップでは
+   "+" を一度押してから選ぶ FAB は冗長で、3 アクションが常に見えている
+   方が高速かつ視覚的に明快。 */
+@media (min-width: 721px) {
+  div.preset-message-panel.hud-fab,
+  .workspace-screen .workspace-2d-shell .preset-message-panel.hud-fab,
+  .preset-message-panel.hud-fab {
+    bottom: 22px !important;
+    right: auto !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 8px !important;
+    background:
+      linear-gradient(180deg, rgba(var(--surface-rgb), 0.96), rgba(var(--surface-rgb), 0.86)),
+      rgba(var(--surface-rgb), 0.78) !important;
+    border: 1px solid rgba(var(--ink-rgb), 0.08) !important;
+    border-radius: 999px !important;
+    box-shadow:
+      0 18px 40px rgba(15, 23, 42, 0.16),
+      inset 0 1px 0 rgba(var(--surface-rgb), 0.94) !important;
+    backdrop-filter: blur(16px) saturate(1.1) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(1.1) !important;
+    pointer-events: auto !important;
+  }
+
+  /* トグル & バックドロップは PC では不要 (常時展開のため) */
+  .hud-fab-toggle,
+  .hud-fab-backdrop {
+    display: none !important;
+  }
+
+  /* アクション群は常時表示・横並び */
+  .hud-fab-actions {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 6px !important;
+    opacity: 1 !important;
+    transform: none !important;
+    pointer-events: auto !important;
+    transition: none !important;
+  }
+  .hud-fab-action {
+    opacity: 1 !important;
+    transform: none !important;
+    min-height: 40px;
+    padding: 0 14px 0 10px;
+    border: 1px solid rgba(var(--ink-rgb), 0.06);
+    background: var(--surface);
+    box-shadow: none;
+    font-size: 13px;
+    transition:
+      transform 0.16s ease,
+      border-color 0.16s ease,
+      background 0.16s ease,
+      box-shadow 0.16s ease;
+  }
+  .hud-fab-action:hover {
+    transform: translateY(-1px);
+    border-color: rgba(var(--green-rgb, 31, 111, 74), 0.28);
+    background: rgba(var(--green-rgb, 31, 111, 74), 0.06);
+    box-shadow: 0 10px 22px rgba(var(--ink-rgb), 0.08);
+  }
+  .hud-fab-action:active {
+    transform: scale(0.97);
+  }
+
+  /* 定型文トレイは HUD バーの「真上」に出すフローティングカードへ。
+     ボトムシート的な貼り付きはモバイル限定。 */
+  .preset-message-panel.hud-fab.is-open .preset-message-bar,
+  .preset-message-panel.hud-fab.is-open .preset-message-editor {
+    position: fixed !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: 86px !important;
+    transform: translateX(-50%);
+    width: min(560px, calc(100vw - 48px)) !important;
+    max-width: 560px !important;
+    padding: 12px !important;
+    border: 1px solid var(--line);
+    border-radius: 16px !important;
+    background: var(--surface);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+    z-index: 61;
+    animation: hud-fab-tray-up 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .preset-message-panel.hud-fab.is-open .preset-message-editor {
+    bottom: 150px !important;
+  }
+}
+
 @media (max-width: 720px) {
   /* モバイル：bottom-nav 分の余白を取り、右端も詰める */
   div.preset-message-panel.hud-fab,
