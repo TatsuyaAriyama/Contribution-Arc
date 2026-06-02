@@ -12362,24 +12362,28 @@
     border-radius: 18px;
   }
 
+  /* モバイル版のキャラクターサイズ。以前は actor-sprite 36x46 + 外側
+     72x88 で「他ユーザー (default shape の色塗り四角) が大きすぎ」と
+     報告。frost / ghost / owl などの薄い造形と並ぶと特に違和感が
+     あったので、全シェイプ共通で 1 段絞って統一感を出す。 */
   .workspace-2d-shell:not(.focus-presentation) .workspace-actor {
-    width: 72px;
-    min-height: 88px;
+    width: 60px;
+    min-height: 74px;
   }
 
   .workspace-2d-shell:not(.focus-presentation) .workspace-actor .actor-sprite {
-    width: 36px;
-    height: 46px;
+    width: 30px;
+    height: 36px;
   }
 
   .workspace-2d-shell:not(.focus-presentation) .workspace-actor .actor-shadow {
-    top: 44px;
-    width: 38px;
-    height: 12px;
+    top: 34px;
+    width: 32px;
+    height: 10px;
   }
 
   .workspace-2d-shell:not(.focus-presentation) .workspace-actor .actor-name {
-    max-width: 72px;
+    max-width: 60px;
     font-size: 11px;
   }
 
@@ -24229,9 +24233,14 @@ a[role="button"],
      when not interacting with the overlay. */
   .workspace-screen .workspace-room-overlay.is-collapsed .workspace-room-overlay-task,
   .workspace-screen .workspace-room-overlay.is-collapsed .workspace-room-overlay-actions,
-  .workspace-screen .workspace-room-overlay.is-collapsed .workspace-room-overlay-comm,
   .workspace-screen .workspace-room-overlay.is-collapsed .workspace-room-overlay-admin {
     display: none;
+  }
+  /* comm 行 (定型文 / 置き手紙 / 着替え) は collapsed でも常時表示。
+     ここを隠してしまうとメニューが事実上どこにも見えない状態になる。 */
+  .workspace-screen .workspace-room-overlay.is-collapsed .workspace-room-overlay-comm {
+    display: grid;
+    margin-top: 6px;
   }
 
   /* When expanded, drop a subtle separator so the overlay reads as a
