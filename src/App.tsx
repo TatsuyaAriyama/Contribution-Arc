@@ -15238,8 +15238,7 @@ function App() {
                       onClick={handleCarryOverUnfinished}
                       title={t("過去の未完了タスクを今日に持ち越す")}
                     >
-                      <span aria-hidden="true">↻</span>
-                      <span>{t("未完了を持ち越し")}</span>
+                      {t("未完了を持ち越し")}
                     </button>
                     <button
                       type="button"
@@ -15247,8 +15246,7 @@ function App() {
                       onClick={handleCopyPreviousDayPlan}
                       title={t("前日の計画をすべて今日にコピー")}
                     >
-                      <span aria-hidden="true">📋</span>
-                      <span>{t("前日の計画をコピー")}</span>
+                      {t("前日の計画をコピー")}
                     </button>
                   </div>
                 ) : null}
