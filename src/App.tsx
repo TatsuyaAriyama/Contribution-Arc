@@ -9047,7 +9047,7 @@ function App() {
         recipientUid: recipient.uid,
         createdAt: new Date().toISOString(),
       });
-      showToast(`👏 ${recipient.name} に応援を送りました`, { kind: "success" });
+      showToast(`${recipient.name} に応援を送りました`, { kind: "success" });
     } catch (error) {
       console.info("Encouragement send skipped (likely duplicate).", error);
     }
@@ -10895,7 +10895,7 @@ function App() {
           <div className="player-heading-chips">
             {studyStreak > 0 ? (
               <span className="player-chip player-chip-streak" title={`${studyStreak}日連続で学習中`}>
-                🔥 {studyStreak}日連続
+                {studyStreak}日連続
               </span>
             ) : null}
             {todayStudyMinutes > 0 ? (
@@ -10905,7 +10905,7 @@ function App() {
             ) : null}
             {currentOrganization ? (
               <span className="player-chip player-chip-org" title={`${currentOrganization.name}所属`}>
-                🏢 {currentOrganization.name}
+                {currentOrganization.name}
               </span>
             ) : null}
             {hasGithub ? (
@@ -11272,7 +11272,7 @@ function App() {
                       {connectionLabel}
                     </span>
                     {liveStreak > 0 ? (
-                      <span className="player-chip player-chip-streak">🔥 {liveStreak}日連続</span>
+                      <span className="player-chip player-chip-streak">{liveStreak}日連続</span>
                     ) : null}
                     {liveProfile?.githubUsername ? (
                       <a
@@ -11424,7 +11424,7 @@ function App() {
                 {connectionLabel}
               </span>
               {liveStreak > 0 ? (
-                <span className="player-chip player-chip-streak">🔥 {liveStreak}日連続</span>
+                <span className="player-chip player-chip-streak">{liveStreak}日連続</span>
               ) : null}
             </div>
           </div>
@@ -11546,7 +11546,7 @@ function App() {
                 {connectionLabel}
               </span>
               {liveStreak > 0 ? (
-                <span className="player-chip player-chip-streak">🔥 {liveStreak}日連続</span>
+                <span className="player-chip player-chip-streak">{liveStreak}日連続</span>
               ) : null}
               {liveProfile.githubUsername ? (
                 <span className="player-chip player-chip-github">
@@ -11625,7 +11625,7 @@ function App() {
                 onClick={() => handleToggleFriendMute(profile.uid)}
                 title={mutedFriendUids.includes(profile.uid) ? "ミュート解除" : "通知をミュート"}
               >
-                {mutedFriendUids.includes(profile.uid) ? "🔔 ミュート解除" : "🔕 ミュート"}
+                {mutedFriendUids.includes(profile.uid) ? "ミュート解除" : "ミュート"}
               </button>
             </>
           ) : null}
@@ -11649,7 +11649,7 @@ function App() {
                   if (ok) void handleBlockUser({ uid: profile.uid, name: profile.displayName || "ユーザー" });
                 }}
               >
-                🚫 ブロック
+                ブロック
               </button>
             )
           ) : null}
@@ -13007,7 +13007,7 @@ function App() {
                   }
                 />
                 <span>
-                  <strong>📕 書籍として記録する</strong>
+                  <strong>書籍として記録する</strong>
                   <small>チェックするとページ数で進捗を追える</small>
                 </span>
               </label>
@@ -13574,14 +13574,14 @@ function App() {
                             <strong>
                               {friend.name}
                               {isPinned ? <span className="friends-modal-pin-mark" aria-hidden="true">★</span> : null}
-                              {isMuted ? <span className="friends-modal-mute-mark" aria-hidden="true" title="ミュート中">🔕</span> : null}
+                              {isMuted ? <span className="friends-modal-mute-mark" aria-hidden="true" title="ミュート中">M</span> : null}
                             </strong>
                             {friend.userId ? <small>@{friend.userId}</small> : null}
                             <small>{friend.activity}</small>
                             {(level > 0 || streak > 0 || friendsSinceDays !== null || lastActiveDays !== null) ? (
                               <span className="friends-modal-stats">
                                 {level > 0 ? <em>Lv {level}</em> : null}
-                                {streak > 0 ? <em>🔥 {streak}d</em> : null}
+                                {streak > 0 ? <em>{streak}d</em> : null}
                                 {friendsSinceDays !== null ? (
                                   <em title={`Friends since ${friendsSinceDays} day(s) ago`}>
                                     {friendsSinceDays === 0 ? "今日成立" : `${friendsSinceDays}日目`}
@@ -13592,7 +13592,7 @@ function App() {
                                     className="friends-modal-stale"
                                     title={`Last active ${lastActiveDays} days ago`}
                                   >
-                                    🕯 {lastActiveDays}d
+                                    {lastActiveDays}日前
                                   </em>
                                 ) : null}
                               </span>
@@ -13611,7 +13611,7 @@ function App() {
                                 void handleSendEncouragement({ uid: friend.uid, name: friend.name })
                               }
                             >
-                              👏
+                              応援
                             </button>
                             <button
                               type="button"
@@ -13620,7 +13620,7 @@ function App() {
                               title={isMuted ? "ミュート解除" : "通知をミュート"}
                               onClick={() => handleToggleFriendMute(friend.uid)}
                             >
-                              {isMuted ? "🔔" : "🔕"}
+                              {isMuted ? "通知ON" : "ミュート"}
                             </button>
                             <button
                               type="button"
@@ -13657,7 +13657,7 @@ function App() {
                                 if (ok) void handleBlockUser({ uid: friend.uid, name: friend.name });
                               }}
                             >
-                              🚫
+                              ブロック
                             </button>
                             <button
                               type="button"
@@ -15153,7 +15153,7 @@ function App() {
                     (新規ユーザーへのプレッシャーを抑制)。 */}
                 {dailyReportStreak > 0 ? (
                   <p className="daily-streak-badge" aria-label={`${dailyReportStreak}日連続で日報を書いています`}>
-                    🔥 {dailyReportStreak}日連続
+                    {dailyReportStreak}日連続
                   </p>
                 ) : null}
               </div>
@@ -15752,7 +15752,7 @@ function App() {
                         <div className="learning-card-head">
                           {isBook ? (
                             <span className="learning-card-badge" aria-hidden="true">
-                              📕
+                              書籍
                             </span>
                           ) : null}
                           <strong>{item.name}</strong>
@@ -15883,7 +15883,7 @@ function App() {
               title="みんなの記録 — 仲間の積み上げが流れる場所"
               body="他のユーザーが今日何をしているかをタイムラインで追えます。"
               bullets={[
-                "投稿に❤︎ で応援、返信で対話",
+                "投稿にいいねで応援、返信で対話",
                 "「Following / All」タブで自分のフォロー先だけに絞れます",
                 "気になる人をフォローすると、その人の投稿が優先で流れる",
                 "あなたの学習を投稿すると、誰かの励みになります",
@@ -16068,7 +16068,6 @@ function App() {
                     className="profile-quick-action"
                     onClick={handleSettingsOpen}
                   >
-                    <span aria-hidden="true">✏️</span>
                     プロフィールを編集
                   </button>
                   <button
@@ -16076,7 +16075,6 @@ function App() {
                     className="profile-quick-action"
                     onClick={() => setCurrentView("shop")}
                   >
-                    <span aria-hidden="true">🛍</span>
                     ショップ
                   </button>
                   {userId ? (
@@ -16094,7 +16092,6 @@ function App() {
                         }
                       }}
                     >
-                      <span aria-hidden="true">🔗</span>
                       プロフィールリンクをコピー
                     </button>
                   ) : null}
@@ -16562,7 +16559,7 @@ function App() {
               bullets={[
                 t("「今やってること」を入力 → 入室すると 2D 部屋にあなたのキャラが現れます"),
                 t("他の人のキャラをタップするとプロフィールが見られます"),
-                t("「📣 募集する」で同じ時間に集まる仲間を呼べます"),
+                t("「募集する」で同じ時間に集まる仲間を呼べます"),
                 t("退室すると今回の作業時間が記録され、EXP として加算されます"),
               ]}
             />
@@ -16909,7 +16906,7 @@ function App() {
                             >
                               ×
                             </button>
-                            <span className="room-note-card-kicker">✦ 分身を変える</span>
+                            <span className="room-note-card-kicker">分身を変える</span>
                             <div className="room-appearance-preview">
                               <ProfileCharacterPreview
                                 color={playerCharacterColor}
@@ -17056,7 +17053,7 @@ function App() {
                               >
                                 ×
                               </button>
-                              <span className="room-note-card-kicker">✉ 置き手紙を残す</span>
+                              <span className="room-note-card-kicker">置き手紙を残す</span>
                               <textarea
                                 value={floorNoteDraft}
                                 onChange={(event) => {
@@ -17105,7 +17102,7 @@ function App() {
                               >
                                 ×
                               </button>
-                              <span className="room-note-card-kicker">✉ 置き手紙</span>
+                              <span className="room-note-card-kicker">置き手紙</span>
                               <span className="room-note-card-author">
                                 <i style={{ background: note.color || "var(--ink)" }} />
                                 {note.name}
@@ -17149,7 +17146,7 @@ function App() {
                             >
                               ×
                             </button>
-                            <span className="room-monument-card-kicker">🏛️ 記念碑</span>
+                            <span className="room-monument-card-kicker">記念碑</span>
                             <span className="room-monument-card-icon">{monument.icon}</span>
                             <h3>{monument.name}</h3>
                             <p>{monument.detail}</p>
@@ -17191,11 +17188,11 @@ function App() {
                         const isUpcoming = feedNowTick < startAtMs;
                         return {
                           stateLabel: isUpcoming
-                            ? `🗓 ${new Date(mine.startAt).toLocaleTimeString("ja-JP", {
+                            ? `${new Date(mine.startAt).toLocaleTimeString("ja-JP", {
                                 hour: "2-digit",
                                 minute: "2-digit",
                               })}開始予定`
-                            : "🔴 募集中",
+                            : "募集中",
                           joinedCount: mine.joinedUserIds.length,
                           onCancel: () => handleCancelRecruitment(mine),
                         };
@@ -17843,7 +17840,7 @@ function App() {
               onClick={() => handleJoinByDomain(org)}
               disabled={isOrgWorking}
             >
-              <span className="home-teams-ribbon-icon" aria-hidden="true">🏢</span>
+              <span className="home-teams-ribbon-icon" aria-hidden="true">●</span>
               <span className="home-teams-ribbon-copy">
                 <strong>{org.name} に参加する</strong>
                 <small>あなたのメールドメインが許可されています — タップで参加</small>
