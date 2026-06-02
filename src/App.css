@@ -13058,8 +13058,18 @@
     width: 100%;
   }
 
+  /* モバイル版では bell column の右に avatar column が来るため、
+     notification-wrap 基準の right: 0 だとパネル(幅 ~340px)が左に
+     はみ出して画面外に出てしまう。viewport 基準の fixed 配置に切り
+     替え、画面右端から safe-area 込みの余白を取って収める。
+     top は sticky header (top: 8px) の高さ + 行高 + gap から逆算。 */
   .notification-panel {
-    right: 0;
+    position: fixed;
+    top: calc(8px + env(safe-area-inset-top, 0px) + 60px);
+    right: max(12px, env(safe-area-inset-right));
+    left: auto;
+    width: min(360px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
   }
 
   .premium-dashboard-header .user-search-button em {
