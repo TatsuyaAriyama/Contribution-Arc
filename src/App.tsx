@@ -172,6 +172,7 @@ import {
 import {
   derivePlanText,
   getCarriedOverItems,
+  makePlanItem,
   normalizePlanItems,
   type PlanItem,
   planItemsFromLegacyText,
@@ -8017,6 +8018,64 @@ function App() {
     setDailyMessage("");
   };
 
+  /* 過去日の未完了タスクを今日の plan draft に追加する。
+     既存 draft の text と完全一致する item は重複しないよう skip。
+     getCarriedOverItems は "今日の前で最も新しい日報" の未完了を取るので、
+     昨日のものに限らず数日前の漏れも拾える。 */
+  const handleCarryOverUnfinished = () => {
+    const candidates = getCarriedOverItems(dailyReports, selectedDailyDate);
+    if (candidates.length === 0) {
+      showToast("持ち越せる未完了タスクはありません", { kind: "info" });
+      return;
+    }
+    const existingTexts = new Set(
+      dailyPlanItemsDraft.map((item) => item.text.trim()).filter(Boolean),
+    );
+    const newItems = candidates.filter(
+      (item) => !existingTexts.has(item.text.trim()),
+    );
+    if (newItems.length === 0) {
+      showToast("未完了タスクはすでに含まれています", { kind: "info" });
+      return;
+    }
+    setDailyPlanItemsDraft((prev) => [...prev, ...newItems]);
+    showToast(`${newItems.length}件の未完了タスクを追加しました`, { kind: "success" });
+  };
+
+  /* 昨日 (= 選択日の前日) の plan items 全部を today に複製。
+     未完了/完了問わず "同じことを今日もやる" 用。done は全て false に
+     リセットしてから追加。重複は skip。 */
+  const handleCopyPreviousDayPlan = () => {
+    const prior = dailyReports
+      .filter((report) => report.date && report.date < selectedDailyDate)
+      .sort((a, b) => b.date.localeCompare(a.date))[0];
+    if (!prior) {
+      showToast("前日の計画が見つかりません", { kind: "info" });
+      return;
+    }
+    const sourceItems =
+      prior.planItems && prior.planItems.length > 0
+        ? prior.planItems
+        : planItemsFromLegacyText(prior.plan || "");
+    if (sourceItems.length === 0) {
+      showToast("前日の計画が空です", { kind: "info" });
+      return;
+    }
+    const existingTexts = new Set(
+      dailyPlanItemsDraft.map((item) => item.text.trim()).filter(Boolean),
+    );
+    const newItems = sourceItems
+      .filter((item) => item.text.trim().length > 0)
+      .filter((item) => !existingTexts.has(item.text.trim()))
+      .map((item) => makePlanItem({ text: item.text, done: false }));
+    if (newItems.length === 0) {
+      showToast("前日の計画はすでに含まれています", { kind: "info" });
+      return;
+    }
+    setDailyPlanItemsDraft((prev) => [...prev, ...newItems]);
+    showToast(`${newItems.length}件を前日からコピーしました`, { kind: "success" });
+  };
+
   const handleDailyReportSectionSave = async (section: "plan" | "reflection") => {
     if (!currentUser || isSavingDailyReport) {
       return;
@@ -15169,6 +15228,30 @@ function App() {
                     {t("1行1タスク。完了したらチェックして、必要なら一言メモを残せます。")}
                   </small>
                 </div>
+                {/* クイックアクション：過去の plan items を再利用。
+                    実用面で最も需要が高い「持ち越し」「前日コピー」を 1 タップで。 */}
+                {canEditSelectedDailyReport ? (
+                  <div className="daily-plan-quick-actions" role="group" aria-label={t("過去の計画から引き継ぎ")}>
+                    <button
+                      type="button"
+                      className="daily-plan-quick-action"
+                      onClick={handleCarryOverUnfinished}
+                      title={t("過去の未完了タスクを今日に持ち越す")}
+                    >
+                      <span aria-hidden="true">↻</span>
+                      <span>{t("未完了を持ち越し")}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="daily-plan-quick-action"
+                      onClick={handleCopyPreviousDayPlan}
+                      title={t("前日の計画をすべて今日にコピー")}
+                    >
+                      <span aria-hidden="true">📋</span>
+                      <span>{t("前日の計画をコピー")}</span>
+                    </button>
+                  </div>
+                ) : null}
                 {/* Plan items の完了率 progress bar。1 件以上の項目がある時
                     だけ表示。視覚的に「今日どれだけ進んだか」を可視化。 */}
                 {planProgress.total > 0 ? (

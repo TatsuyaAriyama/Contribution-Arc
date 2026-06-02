@@ -31057,3 +31057,54 @@ select:disabled {
     padding: 4px 9px;
   }
 }
+
+/* =========================================================
+   日報 plan のクイックアクション
+   "未完了を持ち越し" "前日の計画をコピー" 2 ボタン。daily-entry-card
+   内、checklist の前に配置。
+   ========================================================= */
+.daily-plan-quick-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 8px 0 12px;
+}
+.daily-plan-quick-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.14s ease, border-color 0.14s ease, transform 0.1s ease-out;
+}
+.daily-plan-quick-action:hover {
+  background: rgba(var(--green-rgb, 31, 111, 74), 0.06);
+  border-color: rgba(var(--green-rgb, 31, 111, 74), 0.28);
+  color: var(--green);
+}
+.daily-plan-quick-action:active {
+  transform: scale(0.97);
+}
+.daily-plan-quick-action > span[aria-hidden] {
+  font-size: 13px;
+  line-height: 1;
+}
+@media (max-width: 720px) {
+  .daily-plan-quick-actions {
+    gap: 6px;
+  }
+  .daily-plan-quick-action {
+    min-height: 38px;
+    padding: 0 12px;
+    font-size: 12.5px;
+    flex: 1 1 calc(50% - 3px);
+    justify-content: center;
+  }
+}
