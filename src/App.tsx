@@ -10895,7 +10895,7 @@ function App() {
           <div className="player-heading-chips">
             {studyStreak > 0 ? (
               <span className="player-chip player-chip-streak" title={`${studyStreak}日連続で学習中`}>
-                {studyStreak}日連続
+                🔥 {studyStreak}日連続
               </span>
             ) : null}
             {todayStudyMinutes > 0 ? (
@@ -11272,7 +11272,7 @@ function App() {
                       {connectionLabel}
                     </span>
                     {liveStreak > 0 ? (
-                      <span className="player-chip player-chip-streak">{liveStreak}日連続</span>
+                      <span className="player-chip player-chip-streak">🔥 {liveStreak}日連続</span>
                     ) : null}
                     {liveProfile?.githubUsername ? (
                       <a
@@ -11424,7 +11424,7 @@ function App() {
                 {connectionLabel}
               </span>
               {liveStreak > 0 ? (
-                <span className="player-chip player-chip-streak">{liveStreak}日連続</span>
+                <span className="player-chip player-chip-streak">🔥 {liveStreak}日連続</span>
               ) : null}
             </div>
           </div>
@@ -11546,7 +11546,7 @@ function App() {
                 {connectionLabel}
               </span>
               {liveStreak > 0 ? (
-                <span className="player-chip player-chip-streak">{liveStreak}日連続</span>
+                <span className="player-chip player-chip-streak">🔥 {liveStreak}日連続</span>
               ) : null}
               {liveProfile.githubUsername ? (
                 <span className="player-chip player-chip-github">
@@ -13581,7 +13581,7 @@ function App() {
                             {(level > 0 || streak > 0 || friendsSinceDays !== null || lastActiveDays !== null) ? (
                               <span className="friends-modal-stats">
                                 {level > 0 ? <em>Lv {level}</em> : null}
-                                {streak > 0 ? <em>{streak}d</em> : null}
+                                {streak > 0 ? <em>🔥 {streak}d</em> : null}
                                 {friendsSinceDays !== null ? (
                                   <em title={`Friends since ${friendsSinceDays} day(s) ago`}>
                                     {friendsSinceDays === 0 ? "今日成立" : `${friendsSinceDays}日目`}
@@ -15153,7 +15153,7 @@ function App() {
                     (新規ユーザーへのプレッシャーを抑制)。 */}
                 {dailyReportStreak > 0 ? (
                   <p className="daily-streak-badge" aria-label={`${dailyReportStreak}日連続で日報を書いています`}>
-                    {dailyReportStreak}日連続
+                    🔥 {dailyReportStreak}日連続
                   </p>
                 ) : null}
               </div>
@@ -16906,7 +16906,7 @@ function App() {
                             >
                               ×
                             </button>
-                            <span className="room-note-card-kicker">分身を変える</span>
+                            <span className="room-note-card-kicker">✦ 分身を変える</span>
                             <div className="room-appearance-preview">
                               <ProfileCharacterPreview
                                 color={playerCharacterColor}
@@ -17053,7 +17053,7 @@ function App() {
                               >
                                 ×
                               </button>
-                              <span className="room-note-card-kicker">置き手紙を残す</span>
+                              <span className="room-note-card-kicker">✉ 置き手紙を残す</span>
                               <textarea
                                 value={floorNoteDraft}
                                 onChange={(event) => {
@@ -17102,7 +17102,7 @@ function App() {
                               >
                                 ×
                               </button>
-                              <span className="room-note-card-kicker">置き手紙</span>
+                              <span className="room-note-card-kicker">✉ 置き手紙</span>
                               <span className="room-note-card-author">
                                 <i style={{ background: note.color || "var(--ink)" }} />
                                 {note.name}
@@ -17146,7 +17146,7 @@ function App() {
                             >
                               ×
                             </button>
-                            <span className="room-monument-card-kicker">記念碑</span>
+                            <span className="room-monument-card-kicker">🏛️ 記念碑</span>
                             <span className="room-monument-card-icon">{monument.icon}</span>
                             <h3>{monument.name}</h3>
                             <p>{monument.detail}</p>
