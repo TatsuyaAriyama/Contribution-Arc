@@ -509,7 +509,7 @@ type RoomCreateState = "idle" | "saving" | "saved" | "offline";
 
 type NotificationItem = {
   id: string;
-  type: "dailyLog" | "post" | "friendRequest" | "reply" | "workspaceInvite";
+  type: "dailyLog" | "post" | "friendRequest" | "reply" | "workspaceInvite" | "like";
   title: string;
   body: string;
   createdAt: string;
@@ -824,6 +824,7 @@ const notificationSoundSources = {
   reply: `${import.meta.env.BASE_URL}sounds/notification-soft.mp3`,
   friendRequest: `${import.meta.env.BASE_URL}sounds/notification-soft.mp3`,
   workspaceInvite: `${import.meta.env.BASE_URL}sounds/notification-soft.mp3`,
+  like: `${import.meta.env.BASE_URL}sounds/notification-soft.mp3`,
 } as const;
 const workspaceActorSlots = [
   { x: 28, y: 54 },
@@ -2090,6 +2091,8 @@ function getNotificationSourceText(type: NotificationItem["type"]) {
   if (type === "dailyLog") return "日報";
   if (type === "post") return "投稿";
   if (type === "workspaceInvite") return "作業部屋への招待";
+  if (type === "like") return "いいね";
+  if (type === "reply") return "返信";
   return "フレンド申請";
 }
 
@@ -4207,6 +4210,21 @@ function App() {
   const seenNotificationKeysRef = useRef<Set<string>>(new Set());
   const notificationCooldownRef = useRef<Record<string, number>>({});
   const lastNotificationSoundAtRef = useRef(0);
+  // FEED の post に対する like 通知用。すでに見た (postId, likerUid)
+  // ペアを保持し、初回ハイドレート時の bulk 通知を抑制する。
+  // 連続 like/unlike では同 id で upsert するので、Set への add 自体は
+  // しない (= 何度でも upsert 通知を発火可能)。一方、初回 hydrate 時に
+  // 既存 like を全部 "seen" として登録し、起動直後にずらっと通知が出る
+  // 事故を防ぐ。
+  // 前回 render での "post id → likedUserIds の Set" スナップショット。
+  // 差分検出で「新しく like を付けた瞬間」のみ通知を発火する。
+  // unlike → 通知発火しない (既存通知はそのまま残る)
+  // re-like → 前回 (= unlike 後) には居なかった likerUid が現れる →
+  //          upsertAppNotification で同 id を最新位置に置き換える
+  // この設計により「連続で like/unlike を繰り返しても最新の 1 通知
+  // だけが残る」を実現する。
+  const prevLikedSnapshotRef = useRef<Map<string, Set<string>>>(new Map());
+  const likeNotificationsInitializedRef = useRef(false);
   const notificationBootedRef = useRef(false);
   const notificationStartedAtRef = useRef(Date.now());
 
@@ -7244,6 +7262,20 @@ function App() {
       return [item, ...items].slice(0, 40);
     });
   };
+
+  /* like 通知専用の upsert。pushAppNotification は同 id がある時 skip
+     する dedup 動作だが、like は「連続で付けたり消したりしても最新の
+     ものだけが残る」要件があるので、同 id があったら除去してから先頭に
+     append する形に変える (＝最新位置に上書き)。 */
+  const upsertAppNotification = (item: NotificationItem) => {
+    // ブロック中のユーザーからの通知は完全に無視 (push と同条件)
+    if (blockedFriendUids.includes(item.sourceUserId)) return;
+    setAppNotifications((items) => {
+      const filtered = items.filter((existing) => existing.id !== item.id);
+      return [item, ...filtered].slice(0, 40);
+    });
+  };
+
   const handleNotificationsToggle = () => {
     const nextIsOpen = !isNotificationsOpen;
     setIsNotificationsOpen(nextIsOpen);
@@ -7326,6 +7358,48 @@ function App() {
         desktopNotificationSettings.post,
       );
     });
+
+    // Like notifications — 自分の post に他人が like を付けた瞬間に通知。
+    //  - 初回ハイドレート時はスナップショットだけ保存、通知は出さない
+    //    (起動時に既存 like がずらっと並ぶのを避ける)
+    //  - 2回目以降は「前回には居なかった likerUid」を差分検知
+    //  - 通知 id を `like:${postId}:${likerUid}` で固定して upsert
+    //  - 再 like ( unlike → like ) は前回に居ないので新規通知として再発火
+    //    upsert により同 id の既存通知が最新位置に置換される
+    //    → 「連続で付けたり消したりしても最新だけが残る」を実現
+    if (!likeNotificationsInitializedRef.current) {
+      posts.forEach((post) => {
+        prevLikedSnapshotRef.current.set(post.id, new Set(post.likedUserIds));
+      });
+      likeNotificationsInitializedRef.current = true;
+    } else {
+      posts.forEach((post) => {
+        const prevLikers = prevLikedSnapshotRef.current.get(post.id) || new Set<string>();
+        const currentLikers = new Set(post.likedUserIds);
+        if (post.userId === currentUserUid) {
+          // 自分の投稿に新規 like が付いた liker を抽出
+          currentLikers.forEach((likerUid) => {
+            if (likerUid === currentUserUid) return;
+            if (prevLikers.has(likerUid)) return; // 前回も like 済み → diff なし
+            const likerProfile = workspaceProfiles[likerUid];
+            const likerName = likerProfile?.displayName || "Developer";
+            const preview = post.text.slice(0, 40) || "あなたの投稿";
+            upsertAppNotification({
+              id: `like:${post.id}:${likerUid}`,
+              type: "like",
+              title: `${likerName} がいいねしました`,
+              body: preview,
+              createdAt: new Date().toISOString(),
+              read: false,
+              sourceUserId: likerUid,
+            });
+          });
+        }
+        // すべての post でスナップショットを更新 (自分以外の post も
+        // 差分追跡しておかないと、後で自分の post になった時に bulk 通知)
+        prevLikedSnapshotRef.current.set(post.id, currentLikers);
+      });
+    }
 
     // Reply notifications — fire when someone else replies to one
     // of the current user's own posts. Map post.userId once up front
