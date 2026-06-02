@@ -7378,7 +7378,8 @@
   font-size: 13px;
 }
 
-.study-log-delete-button {
+.study-log-delete-button,
+.study-log-rename-button {
   min-height: 26px;
   padding: 0 9px;
   border: 1px solid rgba(var(--ink-rgb), 0.08);
@@ -7396,12 +7397,43 @@
 }
 
 .study-log-delete-button:hover,
-.study-log-delete-button:focus-visible {
+.study-log-delete-button:focus-visible,
+.study-log-rename-button:hover,
+.study-log-rename-button:focus-visible {
   transform: translateY(-1px);
   border-color: rgba(var(--ink-rgb), 0.16);
   background: var(--bg);
   color: var(--ink);
   outline: none;
+}
+
+/* ✎ アイコン専用：font-size をやや大きく、文字を中央寄せ */
+.study-log-rename-button {
+  font-size: 14px;
+  font-weight: 700;
+  min-width: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+}
+/* hover で緑系に */
+.study-log-rename-button:hover,
+.study-log-rename-button:focus-visible {
+  color: var(--green);
+  border-color: rgba(var(--green-rgb, 31, 111, 74), 0.28);
+}
+/* モバイル：タップ領域 36px に */
+@media (max-width: 720px) {
+  .study-log-delete-button,
+  .study-log-rename-button {
+    min-height: 36px;
+    padding: 0 12px;
+  }
+  .study-log-rename-button {
+    min-width: 40px;
+    font-size: 16px;
+  }
 }
 
 .study-day-empty {

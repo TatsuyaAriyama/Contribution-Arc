@@ -10646,6 +10646,38 @@ function App() {
     });
   };
 
+  // 過去に記録した学習ログの subject 名を変更する。
+  // - 楽観的に local state を更新
+  // - cloud (Firestore studyLogs) に setDoc({ merge: true }) で同期
+  // - 失敗時は state を元に戻し、エラートーストを出す
+  // - 空文字は許可しない (空 → 何の subject か分からなくなる)
+  const handleStudyLogRename = (logId: string, nextSubject: string) => {
+    if (!currentUser) return;
+    const trimmed = nextSubject.trim().slice(0, 60);
+    if (!trimmed) {
+      showToast("名前を入力してください", { kind: "info" });
+      return;
+    }
+    const original = studyLogs.find((log) => log.id === logId);
+    if (!original) return;
+    if (original.subject === trimmed) return; // 変化なし
+
+    const updated: StudyLog = { ...original, subject: trimmed };
+    setStudyLogs((logs) => logs.map((log) => (log.id === logId ? updated : log)));
+    void saveStudyLogToCloud(db, currentUser.uid, updated, {
+      // 学習対象 (learningItemId) との連携は変更しない (学習対象自体は別管理)
+    })
+      .then(() => {
+        showToast(`「${trimmed}」に変更しました`, { kind: "success" });
+      })
+      .catch((error) => {
+        console.info("Study log rename cloud sync skipped.", error);
+        // rollback
+        setStudyLogs((logs) => logs.map((log) => (log.id === logId ? original : log)));
+        showToast("名前を変更できませんでした", { kind: "error" });
+      });
+  };
+
   const handleKnowledgeImport = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []).filter((file) => file.name.toLowerCase().endsWith(".md"));
     if (files.length === 0) {
@@ -16140,6 +16172,21 @@ function App() {
                                     <b>{log.subject}</b>
                                   </span>
                                   <strong>{formatStudyTime(log.minutes)}</strong>
+                                  <button
+                                    type="button"
+                                    className="study-log-rename-button"
+                                    onClick={() => {
+                                      const next = window.prompt(
+                                        "学習記録の名前を変更",
+                                        log.subject,
+                                      );
+                                      if (next !== null) handleStudyLogRename(log.id, next);
+                                    }}
+                                    aria-label={`${log.subject}の学習記録の名前を変更`}
+                                    title="名前を変更"
+                                  >
+                                    ✎
+                                  </button>
                                   <button
                                     type="button"
                                     className="study-log-delete-button"
