@@ -30918,3 +30918,142 @@ select:disabled {
    - 9999  : popover (Portal)
    - 99999 : skip-to-main link
    ========================================================= */
+
+/* =========================================================
+   日報システム改良：streak バッジ / 学習サマリー / progress bar
+   ========================================================= */
+
+/* 連続記録バッジ。kicker (Daily Report) の下に並べる subtle ピル。
+   炎絵文字 + 数字でゲーミフィケーション要素を付与しつつ、控えめに。 */
+.daily-streak-badge {
+  margin: 4px 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 152, 0, 0.16),
+    rgba(255, 87, 34, 0.18)
+  );
+  color: #c45a18;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+[data-theme="dark"] .daily-streak-badge {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 152, 0, 0.22),
+    rgba(255, 87, 34, 0.24)
+  );
+  color: #ffb678;
+}
+
+/* その日の学習サマリー。daily-editor-card の head 下、editor-form の上。
+   3 列 (or 2 列) のフラット行で、過剰装飾なくスッと読める情報密度に。 */
+.daily-day-summary {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin: 14px 0 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(var(--green-rgb, 31, 111, 74), 0.04);
+}
+.daily-day-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 12px;
+}
+.daily-day-summary-item:first-child {
+  padding-left: 0;
+}
+.daily-day-summary-item:last-child {
+  padding-right: 0;
+}
+.daily-day-summary-divider {
+  width: 1px;
+  background: rgba(var(--ink-rgb), 0.08);
+  flex: 0 0 1px;
+  margin: 2px 0;
+}
+.daily-day-summary-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.daily-day-summary-value {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.daily-day-summary-topic .daily-day-summary-value {
+  font-size: 13px; /* subject 名は短めに */
+}
+
+/* Plan progress bar。daily-entry-card 内の上部、checklist の前に。 */
+.daily-plan-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 10px;
+}
+.daily-plan-progress-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.daily-plan-progress-meta strong {
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 800;
+}
+.daily-plan-progress-track {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(var(--ink-rgb), 0.08);
+  overflow: hidden;
+}
+.daily-plan-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--green) 0%, #5b9a75 60%, #b6e08a 100%);
+  transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* モバイル：summary を縦に折返し可能に */
+@media (max-width: 720px) {
+  .daily-day-summary {
+    flex-wrap: wrap;
+    padding: 10px 12px;
+  }
+  .daily-day-summary-item {
+    flex: 1 1 calc(50% - 8px);
+    padding: 4px 8px;
+  }
+  .daily-day-summary-divider {
+    display: none;
+  }
+  .daily-day-summary-value {
+    font-size: 14px;
+  }
+  .daily-streak-badge {
+    font-size: 11.5px;
+    padding: 4px 9px;
+  }
+}

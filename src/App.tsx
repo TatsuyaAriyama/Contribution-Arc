@@ -1423,6 +1423,35 @@ function getStudyStreak(logs: StudyLog[]) {
   return streak;
 }
 
+/* 連続日報ストリーク。"date" フィールド (YYYY-MM-DD) ベースで今日から
+   遡って連続している日数を数える。drafts でも reports に含まれていれば
+   counter に入れる (=「書いた事実」を評価)。空 (plan も reflection も
+   空) のものは含めない。 */
+function getDailyReportStreak(reports: DailyReport[]) {
+  const writtenDates = new Set(
+    reports
+      .filter(
+        (report) =>
+          (report.planItems && report.planItems.length > 0) ||
+          (report.plan && report.plan.trim().length > 0) ||
+          (report.reflection && report.reflection.trim().length > 0),
+      )
+      .map((report) => report.date),
+  );
+  let cursor = new Date();
+  let streak = 0;
+  while (true) {
+    const year = cursor.getFullYear();
+    const month = String(cursor.getMonth() + 1).padStart(2, "0");
+    const day = String(cursor.getDate()).padStart(2, "0");
+    const key = `${year}-${month}-${day}`;
+    if (!writtenDates.has(key)) break;
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
 function getOutputExp() {
   return outputStats.commits * 90 + outputStats.contributions * 24 + outputStats.pullRequests * 160;
 }
@@ -7044,6 +7073,44 @@ function App() {
   const selectedDailyReport = dailyReports.find((report) => report.date === selectedDailyDate) || null;
   const currentLearnerDate = getLearnerDate(new Date(feedNowTick));
   const todayDailyReport = dailyReports.find((report) => report.date === currentLearnerDate) || null;
+  // 連続日報ストリーク (今日まで連続して書いた日数)
+  const dailyReportStreak = useMemo(() => getDailyReportStreak(dailyReports), [dailyReports]);
+  // 選択日の学習サマリー：その日の学習合計分とログ件数。
+  // 振り返り時に「今日どれだけ手を動かしたか」を即把握できるようにする。
+  const selectedDayStudySummary = useMemo(() => {
+    const dayStart = new Date(`${selectedDailyDate}T00:00:00`);
+    if (!Number.isFinite(dayStart.getTime())) {
+      return { totalMinutes: 0, logCount: 0, topSubject: "" };
+    }
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayEnd.getDate() + 1);
+    const dayLogs = studyLogs.filter((log) => {
+      const t = new Date(log.createdAt).getTime();
+      return t >= dayStart.getTime() && t < dayEnd.getTime();
+    });
+    const totalMinutes = dayLogs.reduce((sum, log) => sum + (log.minutes || 0), 0);
+    // 最長 subject (= "今日のメインテーマ")
+    const subjectTotals = new Map<string, number>();
+    dayLogs.forEach((log) => {
+      subjectTotals.set(log.subject, (subjectTotals.get(log.subject) || 0) + log.minutes);
+    });
+    let topSubject = "";
+    let topMinutes = 0;
+    subjectTotals.forEach((minutes, subject) => {
+      if (minutes > topMinutes) {
+        topMinutes = minutes;
+        topSubject = subject;
+      }
+    });
+    return { totalMinutes, logCount: dayLogs.length, topSubject };
+  }, [selectedDailyDate, studyLogs]);
+  // Plan items の完了率 (進捗バー用)
+  const planProgress = useMemo(() => {
+    const valid = dailyPlanItemsDraft.filter((item) => item.text.trim().length > 0);
+    if (valid.length === 0) return { total: 0, done: 0, ratio: 0 };
+    const done = valid.filter((item) => item.done).length;
+    return { total: valid.length, done, ratio: done / valid.length };
+  }, [dailyPlanItemsDraft]);
 
   /* 平日連続記録(ストリーク)。学習記録・日報・GitHub のいずれかが
      ある平日を連結して数える(土日は対象外・猶予なし)。既存データの
@@ -15023,6 +15090,13 @@ function App() {
             <div className="daily-editor-head">
               <div>
                 <p className="card-kicker">Daily Report</p>
+                {/* 連続記録ストリーク。1日以上連続なら表示。0日なら出さない
+                    (新規ユーザーへのプレッシャーを抑制)。 */}
+                {dailyReportStreak > 0 ? (
+                  <p className="daily-streak-badge" aria-label={`${dailyReportStreak}日連続で日報を書いています`}>
+                    🔥 {dailyReportStreak}日連続
+                  </p>
+                ) : null}
               </div>
               <label>
                 <span>{t("日付")}</span>
@@ -15032,6 +15106,40 @@ function App() {
                   onChange={(event) => handleDailyDateChange(event.target.value)}
                 />
               </label>
+            </div>
+
+            {/* 選択日の学習サマリー：何時間勉強したか、主に何をやったか。
+                振り返りの材料として常に上部に表示 (0分でも "まだ未記録" として
+                表示することで「書きたい」気持ちを引き出す)。 */}
+            <div className="daily-day-summary" aria-label={t("この日の学習サマリー")}>
+              <div className="daily-day-summary-item">
+                <span className="daily-day-summary-label">{t("学習時間")}</span>
+                <strong className="daily-day-summary-value">
+                  {selectedDayStudySummary.totalMinutes > 0
+                    ? formatStudyTimeJa(selectedDayStudySummary.totalMinutes)
+                    : "—"}
+                </strong>
+              </div>
+              <div className="daily-day-summary-divider" aria-hidden="true" />
+              <div className="daily-day-summary-item">
+                <span className="daily-day-summary-label">{t("記録")}</span>
+                <strong className="daily-day-summary-value">
+                  {selectedDayStudySummary.logCount > 0
+                    ? `${selectedDayStudySummary.logCount}件`
+                    : "—"}
+                </strong>
+              </div>
+              {selectedDayStudySummary.topSubject ? (
+                <>
+                  <div className="daily-day-summary-divider" aria-hidden="true" />
+                  <div className="daily-day-summary-item daily-day-summary-topic">
+                    <span className="daily-day-summary-label">{t("最も取り組んだ")}</span>
+                    <strong className="daily-day-summary-value">
+                      {selectedDayStudySummary.topSubject}
+                    </strong>
+                  </div>
+                </>
+              ) : null}
             </div>
 
             {!canEditSelectedDailyReport ? (
@@ -15061,6 +15169,31 @@ function App() {
                     {t("1行1タスク。完了したらチェックして、必要なら一言メモを残せます。")}
                   </small>
                 </div>
+                {/* Plan items の完了率 progress bar。1 件以上の項目がある時
+                    だけ表示。視覚的に「今日どれだけ進んだか」を可視化。 */}
+                {planProgress.total > 0 ? (
+                  <div
+                    className="daily-plan-progress"
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={planProgress.total}
+                    aria-valuenow={planProgress.done}
+                    aria-label={t("今日やることの進捗")}
+                  >
+                    <div className="daily-plan-progress-meta">
+                      <span>
+                        {planProgress.done}/{planProgress.total} 完了
+                      </span>
+                      <strong>{Math.round(planProgress.ratio * 100)}%</strong>
+                    </div>
+                    <div className="daily-plan-progress-track">
+                      <div
+                        className="daily-plan-progress-fill"
+                        style={{ width: `${Math.round(planProgress.ratio * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                ) : null}
                 <DailyPlanChecklist
                   items={dailyPlanItemsDraft}
                   onChange={setDailyPlanItemsDraft}
