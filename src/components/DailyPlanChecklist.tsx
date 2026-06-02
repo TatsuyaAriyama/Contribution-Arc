@@ -239,10 +239,14 @@ export function PlanChecklistPreview({
   }
   const shown = Number.isFinite(maxRows) ? items.slice(0, maxRows) : items;
   const hidden = items.length - shown.length;
+  // 重要：以前は <span> 構造で render していたが、inline 要素では grid /
+  // flex の挙動が一部端末で安定せず、長い日本語 text が改行された時に
+  // mark だけが独立して中央に表示される崩れが起きた (実機 Android で
+  // 報告)。block-level の <div> に統一して安定化させる。
   return (
-    <span className="plan-checklist-preview">
+    <div className="plan-checklist-preview">
       {shown.map((item) => (
-        <span
+        <div
           key={item.id}
           className={`plan-checklist-preview-row${item.done ? " is-done" : ""}`}
         >
@@ -253,11 +257,11 @@ export function PlanChecklistPreview({
             {item.text || "(空)"}
             {item.comment ? <small> — {item.comment}</small> : null}
           </span>
-        </span>
+        </div>
       ))}
       {hidden > 0 ? (
-        <span className="plan-checklist-preview-more">+{hidden}件</span>
+        <div className="plan-checklist-preview-more">+{hidden}件</div>
       ) : null}
-    </span>
+    </div>
   );
 }

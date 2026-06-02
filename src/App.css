@@ -5413,20 +5413,32 @@
   opacity: 0.5;
 }
 
-/* Read-only preview — Team Daily card and detail modal. */
+/* Read-only preview — Team Daily card and detail modal.
+   重要：以前はインライン要素 (<span>) で render していたが、日本語の
+   長文が改行されるケースで grid の 1fr カラムが 0 幅まで縮み、mark
+   "・" だけが独立して中央に浮いて見える崩れが Android で発生した。
+   render を <div> に統一しつつ、CSS でも:
+   - container と row に width: 100% を明示
+   - grid-template-columns の 1fr を minmax(0, 1fr) にして縮退防止
+   - mark カラムは align-self: start で text-top に合わせる */
 .plan-checklist-preview {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  width: 100%;
 }
 
 .plan-checklist-preview-row {
   display: grid;
-  grid-template-columns: 14px 1fr;
+  grid-template-columns: 14px minmax(0, 1fr);
   gap: 6px;
   align-items: baseline;
+  width: 100%;
   font-size: 13px;
   line-height: 1.55;
+  /* text が長くても row が wrap せず、grid セルが横並びを維持 */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 .plan-checklist-preview-row.is-done .plan-checklist-preview-text {
@@ -5439,7 +5451,12 @@
 .plan-checklist-preview-mark {
   color: var(--muted);
   font-size: 11px;
+  /* mark は 14px の専用 column 内で中央寄せ。row 全体の中央ではない。 */
   text-align: center;
+  align-self: start;
+  line-height: 1.55;
+  /* 万一 row の grid が崩れても、mark が画面中央に飛ばないよう */
+  flex: 0 0 14px;
 }
 
 .plan-checklist-preview-row.is-done .plan-checklist-preview-mark {
