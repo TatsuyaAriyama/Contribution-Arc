@@ -29134,238 +29134,247 @@ a[role="button"],
    PC では従来通り横長の floating HUD を維持する。
    ========================================================= */
 
-/* PC では従来の floating HUD を維持。FAB 系の UI は隠す。 */
-.hud-fab .hud-fab-toggle,
-.hud-fab .hud-fab-actions,
-.hud-fab .hud-fab-backdrop {
-  display: none;
+/* PC でも FAB を表示。以前は display:none で隠していたため、PC ユーザーは
+   作業部屋内から「定型文 / 置き手紙 / 着替え」のいずれにもアクセスできず、
+   キャラクター変更が事実上不能だった。モバイルと同じ FAB パターンを共有
+   する形に統一する。位置調整 (bottom-nav 分の余白など) のみ @media で分岐。 */
+
+/* === FAB 本体スタイル (PC / モバイル 共通) === */
+div.preset-message-panel.hud-fab,
+.workspace-screen .workspace-2d-shell .preset-message-panel.hud-fab,
+.preset-message-panel.hud-fab {
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  left: auto !important;
+  top: auto !important;
+  transform: none !important;
+  width: auto !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  z-index: 9000 !important;
+  display: flex !important;
+  flex-direction: column-reverse !important;
+  align-items: flex-end !important;
+  gap: 12px !important;
+  pointer-events: none !important;
+}
+div.preset-message-panel.hud-fab > *,
+.preset-message-panel.hud-fab > * {
+  pointer-events: auto;
+}
+
+.hud-fab-toggle {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 52px;
+  padding: 0 18px 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--green);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28), 0 0 0 3px rgba(var(--green-rgb, 31, 111, 74), 0.18);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  position: relative;
+  z-index: 2;
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.18s ease, background 0.18s ease;
+}
+.hud-fab-toggle:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32), 0 0 0 3px rgba(var(--green-rgb, 31, 111, 74), 0.22);
+}
+.hud-fab-toggle:active {
+  transform: scale(0.96);
+}
+.hud-fab-toggle-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.hud-fab-toggle::after {
+  content: "メニュー";
+}
+.hud-fab.is-hud-open .hud-fab-toggle {
+  background: rgba(7, 16, 13, 0.94);
+}
+.hud-fab.is-hud-open .hud-fab-toggle::after {
+  content: "閉じる";
+}
+.hud-fab.is-hud-open .hud-fab-toggle-icon {
+  transform: rotate(45deg);
+}
+
+.hud-fab-backdrop {
+  display: block !important;
+  position: fixed;
+  inset: 0;
+  border: 0;
+  background: rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 0;
+  cursor: default;
+  animation: hud-fab-backdrop-in 0.18s ease;
+}
+@keyframes hud-fab-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.hud-fab-actions {
+  display: flex !important;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 0.18s ease,
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.hud-fab.is-hud-open .hud-fab-actions {
+  pointer-events: auto;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hud-fab-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 16px 0 12px;
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 0.18s ease,
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.hud-fab.is-hud-open .hud-fab-action {
+  opacity: 1;
+  transform: translateY(0);
+}
+.hud-fab.is-hud-open .hud-fab-actions > *:nth-child(1) {
+  transition-delay: 0.04s;
+}
+.hud-fab.is-hud-open .hud-fab-actions > *:nth-child(2) {
+  transition-delay: 0.08s;
+}
+.hud-fab.is-hud-open .hud-fab-actions > *:nth-child(3) {
+  transition-delay: 0.12s;
+}
+.hud-fab-action:hover {
+  transform: translateY(-1px);
+  border-color: rgba(var(--green-rgb, 31, 111, 74), 0.32);
+}
+.hud-fab-action:active {
+  transform: scale(0.96);
+}
+.hud-fab-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(var(--green-rgb, 31, 111, 74), 0.12);
+  font-size: 15px;
+}
+.hud-fab-action-note .hud-fab-action-icon {
+  background: rgba(255, 196, 0, 0.18);
+}
+.hud-fab-action-appearance .hud-fab-action-icon {
+  background: rgba(150, 110, 220, 0.18);
+}
+
+/* PC では preset-message-bar をボトムシートではなく FAB 横のポップアウト
+   として配置。FAB の左に縦に展開する。 */
+.preset-message-panel.hud-fab.is-open .preset-message-bar,
+.preset-message-panel.hud-fab.is-open .preset-message-editor {
+  position: fixed;
+  right: 24px;
+  bottom: calc(96px + 24px);
+  left: auto;
+  width: min(420px, calc(100vw - 48px));
+  max-width: 420px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.22);
+  z-index: 61;
+  animation: hud-fab-tray-up 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.preset-message-panel.hud-fab.is-open .preset-message-editor {
+  bottom: calc(96px + 24px + 56px);
+}
+@keyframes hud-fab-tray-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* popover (member/note/monument/appearance) 開放中は FAB を完全非表示 */
+body.workspace-popover-active .preset-message-panel.hud-fab,
+.workspace-2d-shell:has(.workspace-stage-popover) .preset-message-panel.hud-fab {
+  display: none !important;
 }
 
 @media (max-width: 720px) {
-  /* モバイル：preset-message-panel を完全に FAB スピードダイヤルに
-     置き換える。既存の floating HUD スタイル (PC では absolute
-     bottom 16px center) を打ち消し、右下に固定する。
-     Portal で body 直下に来た時にも確実に勝てるよう、
-     div.preset-message-panel.hud-fab で specificity を上げる。 */
+  /* モバイル：bottom-nav 分の余白を取り、右端も詰める */
   div.preset-message-panel.hud-fab,
-  .workspace-screen .workspace-2d-shell .preset-message-panel,
+  .workspace-screen .workspace-2d-shell .preset-message-panel.hud-fab,
   .preset-message-panel.hud-fab {
-    position: fixed !important;
     bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
     right: 14px !important;
-    left: auto !important;
-    top: auto !important;
-    transform: none !important;
-    width: auto !important;
-    max-width: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background: transparent !important;
-    border: 0 !important;
-    box-shadow: none !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    z-index: 9000 !important;
-    /* 既存の grid 設定を flex に */
-    display: flex !important;
-    flex-direction: column-reverse !important;
-    align-items: flex-end !important;
-    gap: 12px !important;
-    pointer-events: none !important;
-  }
-  /* 内側のクリック可能要素だけ pointer-events を戻す */
-  div.preset-message-panel.hud-fab > *,
-  .preset-message-panel.hud-fab > * {
-    pointer-events: auto;
   }
 
-  /* FAB 本体ボタン（メニュー / ×）。
-     ラベル "メニュー" を併記して "何のための + か" を明示する。
-     開いた時は "閉じる" と "×" に変化、ユーザーに状態を伝える。 */
-  .hud-fab-toggle {
-    display: inline-flex !important;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    min-height: 52px;
-    padding: 0 18px 0 16px;
-    border: 0;
-    border-radius: 999px;
-    background: var(--green);
-    color: #fff;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28), 0 0 0 3px rgba(var(--green-rgb, 31, 111, 74), 0.18);
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 800;
-    letter-spacing: 0.02em;
-    /* バックドロップより上に置いてタップを確実に受け取る */
-    position: relative;
-    z-index: 2;
-    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.18s ease, background 0.18s ease;
-  }
-  .hud-fab-toggle:active {
-    transform: scale(0.96);
-  }
-  .hud-fab-toggle-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    font-size: 18px;
-    font-weight: 700;
-    line-height: 1;
-    transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  .hud-fab-toggle::after {
-    /* ラベル「メニュー / 閉じる」を疑似要素で出す。state に応じて
-       内容を切り替えるので JSX 側は触らずに済む。 */
-    content: "メニュー";
-  }
-  .hud-fab.is-hud-open .hud-fab-toggle {
-    background: rgba(7, 16, 13, 0.94);
-  }
-  .hud-fab.is-hud-open .hud-fab-toggle::after {
-    content: "閉じる";
-  }
-  .hud-fab.is-hud-open .hud-fab-toggle-icon {
-    transform: rotate(45deg);
-  }
-
-  /* バックドロップ（タップで閉じる）。actions / toggle より明確に下に。 */
-  .hud-fab-backdrop {
-    display: block !important;
-    position: fixed;
-    inset: 0;
-    border: 0;
-    background: rgba(0, 0, 0, 0.32);
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
-    z-index: 0;
-    cursor: default;
-    animation: hud-fab-backdrop-in 0.18s ease;
-  }
-  @keyframes hud-fab-backdrop-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-
-  /* 展開時のアクション群（バックドロップより上、タップを必ず受け取る） */
-  .hud-fab-actions {
-    display: flex !important;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 10px;
-    position: relative;
-    z-index: 2;
-    /* HUD 閉時は非表示 + アニメ準備状態 */
-    pointer-events: none;
-    opacity: 0;
-    transform: translateY(8px);
-    transition:
-      opacity 0.18s ease,
-      transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  .hud-fab.is-hud-open .hud-fab-actions {
-    pointer-events: auto;
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  .hud-fab-action {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    min-height: 44px;
-    padding: 0 16px 0 12px;
-    border: 1px solid rgba(var(--ink-rgb), 0.08);
-    border-radius: 999px;
-    background: var(--surface);
-    color: var(--ink);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 700;
-    white-space: nowrap;
-    opacity: 0;
-    transform: translateY(6px);
-    transition:
-      opacity 0.18s ease,
-      transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  .hud-fab.is-hud-open .hud-fab-action {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  /* 上のアクションほど遅れて出現（カスケード） */
-  .hud-fab.is-hud-open .hud-fab-actions > *:nth-child(1) {
-    transition-delay: 0.04s;
-  }
-  .hud-fab.is-hud-open .hud-fab-actions > *:nth-child(2) {
-    transition-delay: 0.08s;
-  }
-  .hud-fab.is-hud-open .hud-fab-actions > *:nth-child(3) {
-    transition-delay: 0.12s;
-  }
-  .hud-fab-action:active {
-    transform: scale(0.96);
-  }
-  .hud-fab-action-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: rgba(var(--green-rgb, 31, 111, 74), 0.12);
-    font-size: 15px;
-  }
-  .hud-fab-action-note .hud-fab-action-icon {
-    background: rgba(255, 196, 0, 0.18);
-  }
-  .hud-fab-action-appearance .hud-fab-action-icon {
-    background: rgba(150, 110, 220, 0.18);
-  }
-
-  /* 定型文トレイ展開時：FAB の上に "ボトムシート" として配置。
-     アクション群とは別レイヤーで、HUD 閉でも開いてれば見える。 */
+  /* モバイル：preset-tray は画面端から端のボトムシート */
   .preset-message-panel.hud-fab.is-open .preset-message-bar,
   .preset-message-panel.hud-fab.is-open .preset-message-editor {
-    position: fixed;
     left: 14px;
     right: 14px;
-    bottom: calc(150px + env(safe-area-inset-bottom, 0px));
     width: auto;
     max-width: none;
+    bottom: calc(150px + env(safe-area-inset-bottom, 0px));
     padding: 10px;
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    background: var(--surface);
-    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.22);
-    z-index: 61;
-    animation: hud-fab-tray-up 0.22s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .preset-message-panel.hud-fab.is-open .preset-message-editor {
     bottom: calc(220px + env(safe-area-inset-bottom, 0px));
-  }
-  @keyframes hud-fab-tray-up {
-    from {
-      opacity: 0;
-      transform: translateY(12px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  /* popover (member/note/monument/appearance) 開放中は FAB を完全非表示。
-     :has() でも、HUD 自体の State が popover 検知で false になるので、
-     "+" だけになるが、確実性のため CSS でも隠す。 */
-  /* :has() の Android 非サポート対策で body class も併用。 */
-  body.workspace-popover-active .preset-message-panel.hud-fab,
-  .workspace-2d-shell:has(.workspace-stage-popover) .preset-message-panel.hud-fab {
-    display: none !important;
   }
 }
 
