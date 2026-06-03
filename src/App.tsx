@@ -3538,6 +3538,12 @@ function LoginScreen() {
       </div>
 
       <section className="login-showcase-brand">
+        {/* App icon — タイトル直上に小さく配置し "アプリ" であることを
+            ストアレベルで伝える。Contribution Arc の SVG ロゴを再利用。 */}
+        <div className="login-showcase-appicon" aria-hidden="true">
+          <ContributionArcLogo />
+        </div>
+
         <svg
           className="showcase-brand-mark"
           viewBox="0 0 1100 300"
@@ -3580,7 +3586,7 @@ function LoginScreen() {
           </text>
         </svg>
         <p className="showcase-tagline">
-          一日のコミットが、いつかの自分の地層になる。
+          毎日のコミットが、あなたの軌跡を描く。
         </p>
 
         <div className="login-showcase-actions">
@@ -3672,6 +3678,10 @@ function LoginScreen() {
             {authError.code ? <code>{authError.code}</code> : null}
           </div>
         ) : null}
+
+        <p className="login-showcase-fineprint">
+          続行するとアカウントが自動的に作成されます。
+        </p>
       </section>
     </main>
   );
@@ -18496,7 +18506,7 @@ function App() {
               </text>
             </svg>
             <p className="showcase-tagline">
-              一日のコミットが、いつかの自分の地層になる。
+              毎日のコミットが、あなたの軌跡を描く。
             </p>
             <button
               type="button"
