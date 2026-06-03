@@ -261,6 +261,7 @@ type LearningItem = {
   color: string;
   totalPages?: number;
   currentPages?: number;
+  note?: string;
   archived: boolean;
   createdAt: string;
   updatedAt: string;
@@ -3706,9 +3707,13 @@ function App() {
     color: string;
     totalPages: string;
     currentPages: string;
+    note: string;
   } | null>(null);
   const [learningCategoryTab, setLearningCategoryTab] = useState<"all" | "book" | "archived">("all");
   const [learningSearchQuery, setLearningSearchQuery] = useState("");
+  // Library sort order. "recent" (default) keeps the active-work-first
+  // behaviour; the others let the user reorder without touching data.
+  const [learningSortMode, setLearningSortMode] = useState<"recent" | "total" | "name">("recent");
   const [isLearningDeleteConfirming, setIsLearningDeleteConfirming] = useState(false);
   const [studySubject, setStudySubject] = useState("React");
   const [studyAmount, setStudyAmount] = useState("1");
@@ -7751,6 +7756,7 @@ function App() {
       color: studyColorOptions[0].value,
       totalPages: "",
       currentPages: "",
+      note: "",
     });
   };
 
@@ -7764,6 +7770,7 @@ function App() {
       color: item.color,
       totalPages: typeof item.totalPages === "number" ? String(item.totalPages) : "",
       currentPages: typeof item.currentPages === "number" ? String(item.currentPages) : "",
+      note: item.note ?? "",
     });
   };
 
@@ -7784,6 +7791,16 @@ function App() {
     const totalPagesNum = Number(learningEditorState.totalPages);
     const currentPagesNum = Number(learningEditorState.currentPages);
     const isBook = learningEditorState.category === "book";
+    const hasTotal = isBook && Number.isFinite(totalPagesNum) && totalPagesNum > 0;
+    // Clamp current page to [0, total] so progress can never exceed 100%
+    // or go negative from a stray keystroke.
+    const clampedCurrent =
+      isBook && Number.isFinite(currentPagesNum) && currentPagesNum >= 0
+        ? hasTotal
+          ? Math.min(currentPagesNum, totalPagesNum)
+          : currentPagesNum
+        : undefined;
+    const trimmedNote = learningEditorState.note.trim().slice(0, 280);
 
     if (learningEditorState.mode === "create") {
       const newItem: LearningItem = {
@@ -7795,8 +7812,9 @@ function App() {
         archived: false,
         createdAt: nowIso,
         updatedAt: nowIso,
-        ...(isBook && Number.isFinite(totalPagesNum) && totalPagesNum > 0 ? { totalPages: totalPagesNum } : {}),
-        ...(isBook && Number.isFinite(currentPagesNum) && currentPagesNum >= 0 ? { currentPages: currentPagesNum } : {}),
+        ...(hasTotal ? { totalPages: totalPagesNum } : {}),
+        ...(clampedCurrent !== undefined ? { currentPages: clampedCurrent } : {}),
+        ...(trimmedNote ? { note: trimmedNote } : {}),
       };
       setLearningItems((items) => [...items, newItem]);
       void saveLearningItemToCloud(db, newItem).catch((error) => {
@@ -7813,12 +7831,9 @@ function App() {
         category: learningEditorState.category,
         color: learningEditorState.color,
         updatedAt: nowIso,
-        ...(isBook && Number.isFinite(totalPagesNum) && totalPagesNum > 0
-          ? { totalPages: totalPagesNum }
-          : { totalPages: undefined }),
-        ...(isBook && Number.isFinite(currentPagesNum) && currentPagesNum >= 0
-          ? { currentPages: currentPagesNum }
-          : { currentPages: undefined }),
+        note: trimmedNote || undefined,
+        ...(hasTotal ? { totalPages: totalPagesNum } : { totalPages: undefined }),
+        ...(clampedCurrent !== undefined ? { currentPages: clampedCurrent } : { currentPages: undefined }),
       };
       setLearningItems((items) => items.map((item) => (item.id === updated.id ? updated : item)));
       void saveLearningItemToCloud(db, updated).catch((error) => {
@@ -13490,6 +13505,19 @@ function App() {
                 </div>
               ) : null}
 
+              <label className="learning-note-field">
+                <span>{t("メモ")}</span>
+                <textarea
+                  value={learningEditorState.note}
+                  onChange={(event) =>
+                    setLearningEditorState((state) => (state ? { ...state, note: event.target.value } : state))
+                  }
+                  placeholder={t("学んでいる目的、今読んでいる章、次にやることなど")}
+                  maxLength={280}
+                  rows={3}
+                />
+              </label>
+
               <div className="learning-modal-actions">
                 {learningEditorState.mode === "edit" ? (
                   <button
@@ -15984,6 +16012,18 @@ function App() {
               <p className="card-kicker">Learning Items</p>
               <h2>{t("ライブラリ")}</h2>
               <small>{t("カードのチップから直接時間を残せます。詳細な記録はプロフィール画面の学習ログから。")}</small>
+              {(() => {
+                // Quiet inventory summary — counts only, no streaks or
+                // targets. Helps the user gauge library size at a glance.
+                const active = learningItems.filter((item) => !item.archived);
+                const bookCount = active.filter((item) => item.category === "book").length;
+                const archivedCount = learningItems.length - active.length;
+                if (learningItems.length === 0) return null;
+                const parts = [t("{count}件", { count: active.length })];
+                if (bookCount > 0) parts.push(t("うち書籍{count}", { count: bookCount }));
+                if (archivedCount > 0) parts.push(t("アーカイブ{count}", { count: archivedCount }));
+                return <p className="learning-count-summary">{parts.join(" · ")}</p>;
+              })()}
             </div>
             <button type="button" className="learning-add-button" onClick={() => openLearningEditorForCreate("")}>
               + {t("追加")}
@@ -16017,6 +16057,18 @@ function App() {
               value={learningSearchQuery}
               onChange={(event) => setLearningSearchQuery(event.target.value)}
             />
+            <select
+              className="learning-sort"
+              value={learningSortMode}
+              onChange={(event) =>
+                setLearningSortMode(event.target.value as "recent" | "total" | "name")
+              }
+              aria-label={t("並び替え")}
+            >
+              <option value="recent">{t("最近の記録順")}</option>
+              <option value="total">{t("累計時間順")}</option>
+              <option value="name">{t("名前順")}</option>
+            </select>
           </div>
 
           {(() => {
@@ -16081,14 +16133,24 @@ function App() {
               }
             });
 
-            // Sort priority:
-            //   1. Recently logged items float to the top so the user sees
-            //      what they're currently working on.
-            //   2. Among items with the same "never logged" state (no logs
-            //      at all), fall back to total minutes — keeps big dormant
-            //      projects above brand-new empty ones.
-            //   3. Finally createdAt desc so newest-added wins ties.
+            // Sort order depends on the user's chosen mode:
+            //   - "recent" (default): recently logged float up, then total
+            //     minutes, then createdAt desc — surfaces active work.
+            //   - "total": cumulative minutes desc.
+            //   - "name": locale-aware A→Z (Japanese collation included).
+            // All modes fall back to createdAt desc to keep ties stable.
             const sorted = filtered.slice().sort((a, b) => {
+              if (learningSortMode === "name") {
+                const byName = a.name.localeCompare(b.name, "ja");
+                if (byName !== 0) return byName;
+                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+              }
+              if (learningSortMode === "total") {
+                const aMin = totalsByItem.get(a.id) || 0;
+                const bMin = totalsByItem.get(b.id) || 0;
+                if (aMin !== bMin) return bMin - aMin;
+                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+              }
               const aLast = lastLoggedByItem.get(a.id) || 0;
               const bLast = lastLoggedByItem.get(b.id) || 0;
               if (aLast !== bLast) return bLast - aLast;
@@ -16139,6 +16201,8 @@ function App() {
                   const progressPercent = hasProgress
                     ? Math.min(100, Math.round(((item.currentPages || 0) / (item.totalPages || 1)) * 100))
                     : 0;
+                  const isFinishedBook = hasProgress && progressPercent >= 100;
+                  const noteText = item.note?.trim() || "";
                   const lastTs = lastLoggedByItem.get(item.id);
                   const lastLabel = formatLearningLastLogged(lastTs, todayMidnight.getTime(), dayMs);
                   const isFreshToday = !!lastTs && lastTs >= todayMidnight.getTime();
@@ -16184,6 +16248,9 @@ function App() {
                             </span>
                           ) : null}
                           <strong>{item.name}</strong>
+                          {isFinishedBook ? (
+                            <span className="learning-card-done">{t("読了")}</span>
+                          ) : null}
                         </div>
                         <div className="learning-card-meta">
                           <span>{t("累計")} {totalLabel}</span>
@@ -16220,6 +16287,7 @@ function App() {
                             </small>
                           </div>
                         ) : null}
+                        {noteText ? <span className="learning-card-note">{noteText}</span> : null}
                       </button>
                       {!item.archived ? (
                         isQuickLogOpen ? (

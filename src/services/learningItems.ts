@@ -21,6 +21,7 @@ export type LearningItemRecord = {
   color: string;
   totalPages?: number;
   currentPages?: number;
+  note?: string;
   archived: boolean;
   createdAt: string;
   updatedAt: string;
@@ -59,6 +60,7 @@ function mapLearningItemDocs(snapshot: QuerySnapshot, userId: string): LearningI
       const data = entry.data();
       const totalPages = readNumber(data.totalPages);
       const currentPages = readNumber(data.currentPages);
+      const note = readString(data.note);
       return {
         id: entry.id,
         userId: readString(data.userId, userId),
@@ -67,6 +69,7 @@ function mapLearningItemDocs(snapshot: QuerySnapshot, userId: string): LearningI
         color: readString(data.color, "#888"),
         totalPages,
         currentPages,
+        ...(note ? { note } : {}),
         archived: Boolean(data.archived),
         createdAt: readCreatedAt(data.createdAt),
         updatedAt: readCreatedAt(data.updatedAt),
@@ -110,6 +113,9 @@ export async function saveLearningItemToCloud(db: Firestore, item: LearningItemR
   if (typeof item.currentPages === "number") {
     payload.currentPages = item.currentPages;
   }
+  // Always write note (even empty) so clearing it propagates — with
+  // merge:true an omitted field would leave the stale value in place.
+  payload.note = typeof item.note === "string" ? item.note.trim().slice(0, 280) : "";
   await setDoc(doc(db, "learningItems", item.id), payload, { merge: true });
 }
 

@@ -187,6 +187,17 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "学習対象を追加":              "Add learning subject",
   "学習対象を編集":              "Edit learning subject",
   "学習対象":                    "Learning subject",
+  "メモ":                        "Note",
+  "学んでいる目的、今読んでいる章、次にやることなど":
+    "Your goal, the chapter you're on, what's next, etc.",
+  "並び替え":                    "Sort",
+  "最近の記録順":                "Recently logged",
+  "累計時間順":                  "Total time",
+  "名前順":                      "Name",
+  "読了":                        "Finished",
+  "{count}件":                   "{count} items",
+  "うち書籍{count}":             "{count} books",
+  "アーカイブ{count}":           "{count} archived",
 
   // ─── Workspace & Rooms ──────────────────────────────────────
   "Silent Workspace":            "Silent Workspace",
