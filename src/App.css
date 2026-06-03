@@ -27435,6 +27435,277 @@ a[role="button"],
   border-color: var(--line);
 }
 
+/* ===============================================================
+   Contribution Arc 世界観 showcase 画面 (Jungle 系インスパイア)
+   フルブリードのダーク背景 + 中央に手書き風 SVG ロゴ + コミットの
+   "森" を擬地形として配置。既存画面とは独立した full-bleed の演出
+   レイヤー。CSS のみで完結させてアセット 0 のまま深さを表現する。
+   =============================================================== */
+.app-view-showcase {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #06120c;
+  color: #ecf3ef;
+  isolation: isolate;
+  animation: showcase-fade-in 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes showcase-fade-in {
+  from { opacity: 0; transform: scale(1.015); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.app-view-showcase-close {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top));
+  right: max(16px, env(safe-area-inset-right));
+  z-index: 4;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: #ecf3ef;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.app-view-showcase-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+.app-view-showcase-close:active {
+  transform: scale(0.96);
+}
+.app-view-showcase-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* === Scene 全体 (背景 + 中央人物 + 前景) === */
+.showcase-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+}
+
+/* 夜空 — 上から下へグラデ。深い緑 → ほぼ黒。 */
+.showcase-sky {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(91, 154, 117, 0.22), transparent 55%),
+    linear-gradient(180deg, #0c2218 0%, #061410 55%, #03090c 100%);
+}
+
+/* 樹冠（キャノピー） — 上部に重なる暗い葉のシルエットを SVG mask
+   なしで radial gradient の塊を並べて表現する。 */
+.showcase-canopy {
+  position: absolute;
+  top: 0;
+  left: -10%;
+  right: -10%;
+  height: 38%;
+  background:
+    radial-gradient(ellipse 22% 70% at 15% 0%, #0a2a1c 60%, transparent 65%),
+    radial-gradient(ellipse 28% 80% at 38% -10%, #082417 60%, transparent 65%),
+    radial-gradient(ellipse 26% 70% at 62% -5%, #0a2a1c 60%, transparent 65%),
+    radial-gradient(ellipse 30% 80% at 88% 0%, #082417 60%, transparent 65%);
+  filter: blur(0.3px);
+}
+
+/* 中間層の霧。動かない静かな白い帯。 */
+.showcase-mist {
+  position: absolute;
+  left: -5%;
+  right: -5%;
+  top: 42%;
+  height: 28%;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 50%, rgba(191, 231, 204, 0.06), transparent 70%);
+}
+
+/* contribution grid を地形のテラスとして配置。
+   18 列 × 7 行のセルが下から積み上がって "地層" を作る。 */
+.showcase-grid {
+  position: absolute;
+  left: 50%;
+  bottom: 19%;
+  display: grid;
+  grid-template-columns: repeat(18, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
+  gap: 4px;
+  width: min(92vw, 460px);
+  aspect-ratio: 18 / 7;
+  transform: translateX(-50%) perspective(560px) rotateX(54deg);
+  transform-origin: center bottom;
+  z-index: 2;
+  opacity: 0.94;
+  filter: drop-shadow(0 12px 24px rgba(11, 50, 32, 0.55));
+}
+.showcase-grid-cell {
+  display: block;
+  border-radius: 3px;
+  background: rgba(91, 154, 117, calc(0.18 + var(--cell-intensity) * 0.62));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  animation: showcase-grid-pulse 4.6s ease-in-out infinite;
+  animation-delay: var(--cell-delay, 0s);
+}
+@keyframes showcase-grid-pulse {
+  0%, 100% { opacity: calc(0.6 + var(--cell-intensity) * 0.4); }
+  50% { opacity: 1; }
+}
+
+/* 中央人物 (プロフィールキャラ) — グリッドの中央少し奥に立つ。 */
+.showcase-figure {
+  position: absolute;
+  left: 50%;
+  bottom: 30%;
+  transform: translate(-50%, 0) scale(1.35);
+  z-index: 3;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
+  animation: showcase-figure-bob 5.6s ease-in-out infinite;
+}
+@keyframes showcase-figure-bob {
+  0%, 100% { transform: translate(-50%, 0) scale(1.35); }
+  50% { transform: translate(-50%, -4px) scale(1.35); }
+}
+
+/* 手前のシルエット — 画面下に立ち上がる暗い "シダ" の輪郭。 */
+.showcase-foreground {
+  position: absolute;
+  left: -8%;
+  right: -8%;
+  bottom: -2%;
+  height: 24%;
+  background:
+    radial-gradient(ellipse 26% 80% at 8% 100%, #050d09 65%, transparent 70%),
+    radial-gradient(ellipse 32% 90% at 30% 105%, #04130c 65%, transparent 72%),
+    radial-gradient(ellipse 30% 85% at 60% 100%, #02100a 65%, transparent 70%),
+    radial-gradient(ellipse 28% 80% at 88% 105%, #050d09 65%, transparent 70%);
+  z-index: 4;
+}
+
+/* === Brand block (ロゴ + コピー + CTA) === */
+.showcase-brand {
+  position: relative;
+  z-index: 5;
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  padding: 0 24px;
+  text-align: center;
+  transform: translateY(-22%);
+  animation: showcase-brand-rise 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes showcase-brand-rise {
+  from { opacity: 0; transform: translateY(-14%); }
+  to { opacity: 1; transform: translateY(-22%); }
+}
+
+.showcase-brand-mark {
+  width: min(86vw, 520px);
+  height: auto;
+  filter: drop-shadow(0 10px 28px rgba(0, 0, 0, 0.55));
+}
+
+.showcase-tagline {
+  margin: 0;
+  max-width: 22ch;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.65;
+  color: rgba(236, 243, 239, 0.78);
+}
+
+.showcase-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 50px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, #1f6f4a 0%, #145238 100%);
+  color: #ecf3ef;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  box-shadow:
+    0 10px 24px rgba(31, 111, 74, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  transition:
+    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+}
+.showcase-cta:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(180deg, #287d56 0%, #195e3e 100%);
+  box-shadow:
+    0 14px 30px rgba(31, 111, 74, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+.showcase-cta:active { transform: scale(0.97); }
+
+/* 世界観への入口リンク (Contribution Arc カードの kicker 右脇) */
+.contribution-arc-showcase-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 10px;
+  padding: 2px 9px;
+  border: 1px solid rgba(var(--green-rgb, 31, 111, 74), 0.24);
+  border-radius: 999px;
+  background: rgba(var(--green-rgb, 31, 111, 74), 0.08);
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    transform 0.12s ease;
+}
+.contribution-arc-showcase-link:hover {
+  background: rgba(var(--green-rgb, 31, 111, 74), 0.16);
+  border-color: rgba(var(--green-rgb, 31, 111, 74), 0.42);
+}
+.contribution-arc-showcase-link:active { transform: scale(0.96); }
+
+@media (prefers-reduced-motion: reduce) {
+  .app-view-showcase,
+  .showcase-grid-cell,
+  .showcase-figure,
+  .showcase-brand {
+    animation: none !important;
+  }
+}
+
+/* スマホ向けの小サイズ調整 */
+@media (max-width: 540px) {
+  .showcase-brand { transform: translateY(-18%); padding: 0 18px; }
+  .showcase-brand-mark { width: min(90vw, 420px); }
+  .showcase-tagline { font-size: 12px; }
+  .showcase-grid { width: min(94vw, 380px); bottom: 22%; }
+  .showcase-figure { bottom: 32%; transform: translate(-50%, 0) scale(1.2); }
+  @keyframes showcase-figure-bob {
+    0%, 100% { transform: translate(-50%, 0) scale(1.2); }
+    50% { transform: translate(-50%, -4px) scale(1.2); }
+  }
+}
+
 /* FEED 単独画面（スマホ版のみ） */
 .app-view-feed {
   display: flex;
