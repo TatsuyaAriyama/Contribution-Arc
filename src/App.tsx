@@ -6002,7 +6002,17 @@ function App() {
           : remoteOthers;
         finalRoomMap.set(
           remoteRoom.id,
-          normalizeWorkspaceRoom({ ...remoteRoom, activeMembers: mergedMembers }),
+          // Keep the remote room as the base for server-owned fields
+          // (totalMinutes, history, other members…), but let a pending local
+          // edit win for the owner-controlled `name` so an in-flight rename
+          // doesn't snap back to the old title before the write lands. For
+          // every non-rename handler pendingLocal.name === remoteRoom.name,
+          // so this is a no-op there.
+          normalizeWorkspaceRoom({
+            ...remoteRoom,
+            name: pendingLocal.name,
+            activeMembers: mergedMembers,
+          }),
         );
       });
 
@@ -10943,11 +10953,39 @@ function App() {
       return;
     }
 
-    setCustomRooms((rooms) =>
-      rooms.map((room) => (room.id === editingRoomId ? { ...room, name: nextName } : room)),
-    );
+    const targetId = editingRoomId;
     setEditingRoomId("");
     setEditingRoomName("");
+
+    const target = customRooms.find((room) => room.id === targetId);
+    if (!target || target.name === nextName) {
+      return;
+    }
+
+    const nextRoom = normalizeWorkspaceRoom({ ...target, name: nextName });
+    // Register the optimistic rename so the active-room onSnapshot merge
+    // (applyRemoteRooms) doesn't snap the name back to the remote copy that
+    // still has the old value before our write lands. Every other
+    // room-mutating handler does this; rename was the only one missing it,
+    // which is why renames flickered / reverted.
+    pendingWorkspaceRoomsRef.current.set(nextRoom.id, nextRoom);
+    setCustomRooms((rooms) =>
+      rooms.map((room) => (room.id === nextRoom.id ? nextRoom : room)),
+    );
+
+    if (currentUser) {
+      // Persist immediately rather than leaning on the generic customRooms
+      // write effect — that effect can be suppressed (isApplyingRemoteRoomsRef)
+      // when a presence snapshot interleaves, which would silently drop the
+      // rename.
+      void saveWorkspaceRoomToCloud(nextRoom, currentUser.uid)
+        .then(() => {
+          pendingWorkspaceRoomsRef.current.delete(nextRoom.id);
+        })
+        .catch((error) => {
+          console.info("Workspace room rename cloud sync skipped.", error);
+        });
+    }
   };
 
   const handleRoomDelete = (roomId: string) => {
