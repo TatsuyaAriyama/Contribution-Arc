@@ -205,7 +205,6 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "記録日数":                    "Days logged",
   "{count}日":                   "{count} days",
   "最終記録":                    "Last logged",
-  "この13週間":                  "Last 13 weeks",
   "最近の記録":                  "Recent activity",
   "{name}の詳細":                "{name} details",
   "現在のページ":                "Current page",

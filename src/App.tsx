@@ -13676,7 +13676,6 @@ function App() {
         const weekStartMs = today.getTime() - 6 * dayMsLocal;
         let thisWeekMinutes = 0;
         const loggedDays = new Set<string>();
-        const minutesByDay = new Map<string, number>();
         const dayKey = (date: Date) =>
           `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
         itemLogs.forEach((log) => {
@@ -13684,9 +13683,7 @@ function App() {
           if (Number.isNaN(ts.getTime())) return;
           const midnight = new Date(ts);
           midnight.setHours(0, 0, 0, 0);
-          const key = dayKey(midnight);
-          loggedDays.add(key);
-          minutesByDay.set(key, (minutesByDay.get(key) || 0) + log.minutes);
+          loggedDays.add(dayKey(midnight));
           if (ts.getTime() >= weekStartMs) thisWeekMinutes += log.minutes;
         });
         const lastTs = itemLogs.length ? new Date(itemLogs[0].createdAt).getTime() : undefined;
@@ -13697,25 +13694,6 @@ function App() {
         const progressPercent = hasProgress
           ? Math.min(100, Math.round(((item.currentPages || 0) / (item.totalPages || 1)) * 100))
           : 0;
-        // 13-week contribution-style grid, column-major (each column is a
-        // week, rows = Sun..Sat). Aligned to week boundaries.
-        const gridEnd = new Date(today);
-        gridEnd.setDate(gridEnd.getDate() + (6 - gridEnd.getDay()));
-        const gridStart = new Date(gridEnd);
-        gridStart.setDate(gridStart.getDate() - (13 * 7 - 1));
-        const heatCells: { key: string; level: number; isToday: boolean; future: boolean }[] = [];
-        for (let cursor = new Date(gridStart); cursor <= gridEnd; cursor.setDate(cursor.getDate() + 1)) {
-          const key = dayKey(cursor);
-          const minutes = minutesByDay.get(key) || 0;
-          const level =
-            minutes <= 0 ? 0 : minutes < 30 ? 1 : minutes < 60 ? 2 : minutes < 120 ? 3 : 4;
-          heatCells.push({
-            key,
-            level,
-            isToday: key === dayKey(today),
-            future: cursor.getTime() > today.getTime(),
-          });
-        }
         const recentLogs = itemLogs.slice(0, 8);
         const closeDetail = () => setLearningDetailId(null);
         return (
@@ -13788,20 +13766,6 @@ function App() {
               {item.note?.trim() ? (
                 <p className="learning-detail-note">{item.note.trim()}</p>
               ) : null}
-
-              <div className="learning-detail-section">
-                <p className="learning-detail-section-title">{t("この13週間")}</p>
-                <div className="learning-detail-heatmap" aria-hidden="true">
-                  {heatCells.map((cell) => (
-                    <span
-                      key={cell.key}
-                      className={`learning-detail-heatcell lv-${cell.level}${
-                        cell.isToday ? " is-today" : ""
-                      }${cell.future ? " is-future" : ""}`}
-                    />
-                  ))}
-                </div>
-              </div>
 
               <div className="learning-detail-section">
                 <p className="learning-detail-section-title">{t("最近の記録")}</p>

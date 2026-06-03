@@ -21601,44 +21601,6 @@ body {
   margin: 0 0 8px;
 }
 
-.learning-detail-heatmap {
-  display: grid;
-  grid-template-rows: repeat(7, 1fr);
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  gap: 3px;
-}
-
-.learning-detail-heatcell {
-  aspect-ratio: 1 / 1;
-  border-radius: 2px;
-  background: var(--learning-card-color, var(--ink));
-  opacity: 0;
-  border: 1px solid transparent;
-}
-
-.learning-detail-heatcell.lv-0 {
-  opacity: 1;
-  background: transparent;
-  border-color: var(--border);
-}
-
-.learning-detail-heatcell.lv-1 { opacity: 0.3; }
-.learning-detail-heatcell.lv-2 { opacity: 0.5; }
-.learning-detail-heatcell.lv-3 { opacity: 0.75; }
-.learning-detail-heatcell.lv-4 { opacity: 1; }
-
-.learning-detail-heatcell.is-today {
-  outline: 1px solid var(--ink);
-  outline-offset: 0;
-}
-
-.learning-detail-heatcell.is-future {
-  opacity: 0;
-  background: transparent;
-  border-color: transparent;
-}
-
 .learning-detail-logs {
   list-style: none;
   margin: 0;
