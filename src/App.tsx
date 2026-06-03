@@ -11775,7 +11775,19 @@ function App() {
     <section className="contribution-arc-card" aria-label="Contribution Arc">
         <div className="contribution-arc-head">
           <div className="contribution-arc-head-title">
-            <p className="card-kicker">Contribution Arc</p>
+            <p className="card-kicker">
+              Contribution Arc
+              <button
+                type="button"
+                className="contribution-arc-showcase-link"
+                onClick={() => setCurrentView("showcase")}
+                aria-label="世界観を見る"
+                title="世界観を見る"
+              >
+                <span aria-hidden="true">✦</span>
+                <span>世界観</span>
+              </button>
+            </p>
             <strong>
               {t("{hours}時間 学習", { hours: Math.round(contributionArc.totalMinutes / 60) })}
               {githubContributionArc ? ` · ${githubContributionArc.total} commit` : ""}
@@ -18204,6 +18216,125 @@ function App() {
           </header>
           <div className="feed-view-content">
             {feedSection}
+          </div>
+        </article>
+      ) : null}
+
+      {/* 没入型 "ブランド" トップ画面。Jungle 系のフルブリードな
+          イラストレーション + 手書きロゴを参考に、Contribution Arc の
+          世界観を一枚絵で見せる演出スクリーン。
+          既存のホーム/プロフィール/作業部屋等とは完全に別レイヤーで、
+          ボタンから入って戻るボタンで抜けるだけ。データへの副作用なし。 */}
+      {currentView === "showcase" ? (
+        <article className="app-view-showcase" aria-label="Contribution Arc の世界">
+          <button
+            type="button"
+            className="app-view-showcase-close"
+            aria-label="閉じる"
+            onClick={() => setCurrentView("home")}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          </button>
+
+          {/* 背景：深い夜の森を模した多層グラデーション + 微細ノイズ。
+              CSS だけで完結させてアセット 0、初回表示 0ms を狙う。 */}
+          <div className="showcase-scene" aria-hidden="true">
+            <div className="showcase-sky" />
+            <div className="showcase-canopy" />
+            <div className="showcase-mist" />
+
+            {/* contribution grid を "地形" として下層に配置。
+                各セルが脈動して "コミットの星座" として読める。 */}
+            <div className="showcase-grid" role="presentation">
+              {Array.from({ length: 7 * 18 }).map((_, idx) => {
+                const col = idx % 18;
+                const row = Math.floor(idx / 18);
+                const intensity =
+                  ((col * 7 + row * 13 + (col % 3) * 5) % 5) /
+                  4;
+                return (
+                  <span
+                    key={idx}
+                    className="showcase-grid-cell"
+                    style={
+                      {
+                        "--cell-intensity": intensity.toFixed(2),
+                        "--cell-delay": `${(col * 0.08 + row * 0.05).toFixed(2)}s`,
+                      } as CSSProperties
+                    }
+                  />
+                );
+              })}
+            </div>
+
+            {/* 中央のシルエット：分身がコミットの森を見上げる姿。
+                プロフィールで選んだキャラクターを使う前提だが、
+                それが未選択でも default 形状で破綻しない。 */}
+            <div className="showcase-figure">
+              <ProfileCharacterPreview
+                color={playerCharacterColor}
+                shape={playerCharacterShape}
+              />
+            </div>
+
+            {/* 手前のシダ風オーバーレイ。下から立ち上がる輪郭で
+                "画面の中に入り込む" 没入感を与える。 */}
+            <div className="showcase-foreground" />
+          </div>
+
+          {/* ロゴ / コピー。SVG で手書き感のあるカーブを表現。 */}
+          <div className="showcase-brand">
+            <svg
+              className="showcase-brand-mark"
+              viewBox="0 0 540 180"
+              role="img"
+              aria-label="Contribution"
+              focusable="false"
+            >
+              <defs>
+                <linearGradient id="showcaseInk" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stopColor="#f0fff5" />
+                  <stop offset="1" stopColor="#bfe7cc" />
+                </linearGradient>
+              </defs>
+              <text
+                x="50%"
+                y="58%"
+                textAnchor="middle"
+                fontFamily="'Caveat', 'Pacifico', 'Brush Script MT', cursive"
+                fontSize="148"
+                fontWeight="700"
+                fill="url(#showcaseInk)"
+                style={{ letterSpacing: "0.01em" }}
+              >
+                Contribution
+              </text>
+              <text
+                x="50%"
+                y="86%"
+                textAnchor="middle"
+                fontFamily="'Caveat', 'Pacifico', 'Brush Script MT', cursive"
+                fontSize="46"
+                fontWeight="600"
+                fill="#bfe7cc"
+                opacity="0.86"
+              >
+                — arc —
+              </text>
+            </svg>
+            <p className="showcase-tagline">
+              一日のコミットが、いつかの自分の地層になる。
+            </p>
+            <button
+              type="button"
+              className="showcase-cta"
+              onClick={() => setCurrentView("home")}
+            >
+              はじめる
+              <span aria-hidden="true">→</span>
+            </button>
           </div>
         </article>
       ) : null}
