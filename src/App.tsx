@@ -7510,6 +7510,48 @@ function App() {
       setAppNotifications((items) => items.map((item) => ({ ...item, read: true })));
     }
   };
+  // 退出忘れ対策の在室上限ウォッチャー。入室から maxWorkspacePresenceMinutes
+  // （＝20時間）が経過したら自動退室させる。タブ非表示中も「裏で作業中」と
+  // みなすので無操作では退室させない。markActivity は EXP 計測（入室〜最終操作）
+  // 用に最終操作時刻を記録するだけで、退室判定には使わない。
+  // フック順序を一定に保つため、必ず early return より前のこの位置に置く。
+  useEffect(() => {
+    const joinedAt = currentPresence?.joinedAt;
+    if (
+      !currentUser ||
+      currentView !== "workspace" ||
+      !selectedRoomId ||
+      !isInSelectedRoom ||
+      !joinedAt
+    ) {
+      return;
+    }
+    const roomId = selectedRoomId;
+    const joinedAtMs = new Date(joinedAt).getTime();
+    lastWorkspaceActivityRef.current = Date.now();
+    const markActivity = () => {
+      lastWorkspaceActivityRef.current = Date.now();
+    };
+    const activityEvents: (keyof WindowEventMap)[] = [
+      "mousemove",
+      "keydown",
+      "pointerdown",
+      "wheel",
+      "touchstart",
+    ];
+    activityEvents.forEach((event) =>
+      window.addEventListener(event, markActivity, { passive: true }),
+    );
+    const interval = window.setInterval(() => {
+      if (Date.now() - joinedAtMs >= maxWorkspacePresenceMinutes * 60000) {
+        closeWorkspaceSessionRef.current(roomId, { auto: true });
+      }
+    }, 60000);
+    return () => {
+      activityEvents.forEach((event) => window.removeEventListener(event, markActivity));
+      window.clearInterval(interval);
+    };
+  }, [currentUser, currentView, selectedRoomId, isInSelectedRoom, currentPresence?.joinedAt]);
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
       return;
@@ -9969,56 +10011,9 @@ function App() {
     }
   };
 
-  // idle 監視 effect から、毎レンダー再生成されるこの関数の最新版を呼べるよう参照を更新。
+  // idle 監視 effect（早期 return より前に配置）から、毎レンダー再生成される
+  // この関数の最新版を呼べるよう参照を更新する。
   closeWorkspaceSessionRef.current = closeWorkspaceSession;
-
-  // === 退出忘れ対策（在室上限による自動退室）===
-  // 在室中はユーザーの操作で「最後に操作した時刻」を更新し続けるだけで、無操作や
-  // タブ非表示では退室させない（Arc を裏に回して別アプリで作業しているケースを
-  // 尊重する）。歯止めは入室から maxWorkspacePresenceMinutes（＝20時間）の在室上限
-  // のみで、ここに達したら自動退室する。EXP は closeWorkspaceSession 側で「入室〜
-  // 最終操作時刻」で確定するので、退室を忘れて放置していても放置分は計上されない。
-  useEffect(() => {
-    const joinedAt = currentPresence?.joinedAt;
-    if (
-      !currentUser ||
-      currentView !== "workspace" ||
-      !selectedRoomId ||
-      !isInSelectedRoom ||
-      !joinedAt
-    ) {
-      return;
-    }
-    const roomId = selectedRoomId;
-    const joinedAtMs = new Date(joinedAt).getTime();
-    // 在室開始（もしくは部屋切替）の瞬間を「最後の操作」の初期値とする。
-    lastWorkspaceActivityRef.current = Date.now();
-
-    const markActivity = () => {
-      lastWorkspaceActivityRef.current = Date.now();
-    };
-    const activityEvents: (keyof WindowEventMap)[] = [
-      "mousemove",
-      "keydown",
-      "pointerdown",
-      "wheel",
-      "touchstart",
-    ];
-    activityEvents.forEach((event) =>
-      window.addEventListener(event, markActivity, { passive: true }),
-    );
-
-    const interval = window.setInterval(() => {
-      if (Date.now() - joinedAtMs >= maxWorkspacePresenceMinutes * 60000) {
-        closeWorkspaceSessionRef.current(roomId, { auto: true });
-      }
-    }, 60000);
-
-    return () => {
-      activityEvents.forEach((event) => window.removeEventListener(event, markActivity));
-      window.clearInterval(interval);
-    };
-  }, [currentUser, currentView, selectedRoomId, isInSelectedRoom, currentPresence?.joinedAt]);
 
   const resetWorkspacePresence = () => {
     pressedWorkspaceKeysRef.current.clear();
