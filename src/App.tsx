@@ -3731,6 +3731,10 @@ function App() {
   const [quickLogMinutesById, setQuickLogMinutesById] = useState<Record<string, string>>({});
   const [selectedStudyDay, setSelectedStudyDay] = useState(dayLabels[(new Date().getDay() + 6) % 7]);
   const [selectedArcDayKey, setSelectedArcDayKey] = useState<string | null>(null);
+  /* Donut legend インライン編集中の subject。null=非編集。
+     draft はそのまま input の controlled value。 */
+  const [editingDonutSubject, setEditingDonutSubject] = useState<string | null>(null);
+  const [editingDonutDraft, setEditingDonutDraft] = useState("");
   const [hoveredArcCell, setHoveredArcCell] = useState<
     { day: ContributionArcDay; left: number; top: number; placement: "above" | "below" } | null
   >(null);
@@ -11062,6 +11066,49 @@ function App() {
       });
   };
 
+  /* Donut legend / ジャンル一覧 から同じ subject の study log をまとめて
+     リネーム。「開発」「やあ」など重複・誤入力をユーザーが後から
+     掃除できるようにする。
+     - 楽観更新 → 全該当 log を並列で saveStudyLogToCloud
+     - 1 件でも失敗したら全件 rollback (一貫性のため)
+     - 空文字 / 同一文字列は no-op */
+  const handleSubjectBulkRename = (oldSubject: string, nextSubject: string) => {
+    if (!currentUser) return;
+    const trimmed = nextSubject.trim().slice(0, 60);
+    if (!trimmed) {
+      showToast("名前を入力してください", { kind: "info" });
+      return;
+    }
+    if (oldSubject === trimmed) return;
+
+    const affected = studyLogs.filter((log) => log.subject === oldSubject);
+    if (affected.length === 0) return;
+
+    const affectedIds = new Set(affected.map((log) => log.id));
+    setStudyLogs((logs) =>
+      logs.map((log) => (affectedIds.has(log.id) ? { ...log, subject: trimmed } : log)),
+    );
+
+    void Promise.all(
+      affected.map((original) =>
+        saveStudyLogToCloud(db, currentUser.uid, { ...original, subject: trimmed }, {}),
+      ),
+    )
+      .then(() => {
+        showToast(
+          `${affected.length}件を「${trimmed}」に変更しました`,
+          { kind: "success" },
+        );
+      })
+      .catch((error) => {
+        console.info("Subject bulk rename cloud sync skipped.", error);
+        setStudyLogs((logs) =>
+          logs.map((log) => (affectedIds.has(log.id) ? { ...log, subject: oldSubject } : log)),
+        );
+        showToast("名前を変更できませんでした", { kind: "error" });
+      });
+  };
+
   const handleKnowledgeImport = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []).filter((file) => file.name.toLowerCase().endsWith(".md"));
     if (files.length === 0) {
@@ -12208,12 +12255,63 @@ function App() {
               <ul className="contribution-arc-donut-legend">
                 {donutDisplay.items.map((item) => {
                   const pct = Math.round((item.minutes / donutDisplay.total) * 100);
+                  const isEditing = editingDonutSubject === item.subject;
+                  /* 「その他」は複数 subject の集約結果なのでリネーム
+                     できない (どれを直すか曖昧) */
+                  const isRenameable = item.subject !== "その他";
+                  const commitRename = () => {
+                    const draft = editingDonutDraft;
+                    setEditingDonutSubject(null);
+                    setEditingDonutDraft("");
+                    if (draft && draft.trim() && draft.trim() !== item.subject) {
+                      handleSubjectBulkRename(item.subject, draft);
+                    }
+                  };
                   return (
-                    <li key={item.subject}>
+                    <li key={item.subject} className={isEditing ? "is-editing" : ""}>
                       <i style={{ background: item.color }} aria-hidden="true" />
-                      <strong className="legend-name">{item.subject}</strong>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          className="legend-name-input"
+                          value={editingDonutDraft}
+                          autoFocus
+                          maxLength={60}
+                          onChange={(event) => setEditingDonutDraft(event.target.value)}
+                          onBlur={commitRename}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              commitRename();
+                            } else if (event.key === "Escape") {
+                              event.preventDefault();
+                              setEditingDonutSubject(null);
+                              setEditingDonutDraft("");
+                            }
+                          }}
+                          aria-label={`${item.subject}の名前を編集`}
+                        />
+                      ) : (
+                        <strong className="legend-name">{item.subject}</strong>
+                      )}
                       <span className="legend-pct">{pct}%</span>
                       <span className="legend-time">{formatStudyTimeJa(item.minutes)}</span>
+                      {isRenameable && !isEditing ? (
+                        <button
+                          type="button"
+                          className="legend-edit-button"
+                          onClick={() => {
+                            setEditingDonutSubject(item.subject);
+                            setEditingDonutDraft(item.subject);
+                          }}
+                          aria-label={`${item.subject}の名前を編集`}
+                          title="名前を編集"
+                        >
+                          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M14.5 4.5l5 5L8 21H3v-5L14.5 4.5z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+                      ) : null}
                     </li>
                   );
                 })}
