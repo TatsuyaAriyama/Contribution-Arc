@@ -32206,3 +32206,59 @@ select:disabled {
     min-width: 0;
   }
 }
+
+/* === Home hero: immersive 夜の森 world-view (login 画面と統一) ===
+ * ホームの主役「Contribution Arc」カードだけを、ログイン画面の没入夜の森
+ * に世界観を合わせる。カード配下のテーマ変数をローカルで再定義することで、
+ * heatmap / donut / stats / legend が自動で森のパレットに追従する
+ * (ダークモードが同じ変数 flip で成り立っているのと同じ手法)。
+ *
+ * 機能カード (日報 / 作業部屋 / 積み上げ) は明るいミニマルのまま据え置き、
+ * 低彩度デザイン方針との両立を保つ。スコープを .home-screen に閉じるので
+ * logs 画面で再利用される同じ section には一切影響しない。 */
+.home-screen .contribution-arc-card {
+  /* カード内ローカルテーマ — 子孫の var(--ink) 等がここで森色に切り替わる */
+  --ink: #ecf3ef;
+  --ink-rgb: 236, 243, 239;
+  --ink-strong: #f0fff5;
+  --muted: rgba(191, 231, 204, 0.66);
+  --surface: #0c2218;
+  --surface-rgb: 16, 42, 30;
+  --line: rgba(120, 200, 150, 0.16);
+  --green: #59e08a;
+  --green-rgb: 89, 224, 138;
+  /* tooltip は背景 var(--ink) / 文字 var(--cta-fg-rgb)。ink を明るくしたので
+   * 文字色を暗側に倒して可読性を保つ。 */
+  --cta-fg-rgb: 6, 18, 12;
+
+  position: relative;
+  border: 1px solid rgba(120, 200, 150, 0.16);
+  background:
+    radial-gradient(120% 140% at 50% -10%, rgba(40, 110, 76, 0.28), transparent 60%),
+    linear-gradient(165deg, #0c2218 0%, #07160e 55%, #03090c 100%);
+  color: #ecf3ef;
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(150, 220, 180, 0.07),
+    0 18px 44px rgba(3, 12, 8, 0.45);
+}
+
+/* 地形グリッド (heatmap) を暗背景で発光させる。ライト用の淡い緑だと沈むので
+ * ダークモードと同じ森の発光グリーンに揃える。最上位 lv-4 だけ淡く発光。 */
+.home-screen .contribution-arc-card .contribution-arc-cell.lv-1,
+.home-screen .contribution-arc-card .contribution-arc-legend i.lv-1 {
+  background: #0e3d24;
+}
+.home-screen .contribution-arc-card .contribution-arc-cell.lv-2,
+.home-screen .contribution-arc-card .contribution-arc-legend i.lv-2 {
+  background: #1f6a3a;
+}
+.home-screen .contribution-arc-card .contribution-arc-cell.lv-3,
+.home-screen .contribution-arc-card .contribution-arc-legend i.lv-3 {
+  background: #3aa55a;
+}
+.home-screen .contribution-arc-card .contribution-arc-cell.lv-4,
+.home-screen .contribution-arc-card .contribution-arc-legend i.lv-4 {
+  background: #59e08a;
+  box-shadow: 0 0 10px rgba(89, 224, 138, 0.4);
+}
