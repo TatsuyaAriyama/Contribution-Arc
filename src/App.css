@@ -27779,9 +27779,17 @@ a[role="button"],
    ブランドビジュアル中央 + GitHub/Google CTA + 折りたたみメール認証。
    =============================================================== */
 .login-shell.login-shell-showcase {
-  position: relative;
+  position: fixed;
+  inset: 0;
+  /* 基底 .login-shell の width: min(1180px,…) + margin:0 を打ち消し、
+     没入シーンをビューポート全面に広げる（右側の白い余白を防ぐ）。 */
+  width: 100%;
+  max-width: none;
   min-height: 100svh;
   display: grid;
+  /* 基底 .login-shell の 2 カラム (1.08fr / 0.92fr) を解除。これが残ると
+     ブランドが左カラムに入り中央寄せにならない。 */
+  grid-template-columns: 1fr;
   place-items: center;
   padding: 0;
   margin: 0;
@@ -27802,6 +27810,27 @@ a[role="button"],
    用は画面下に逃がす。 */
 .login-shell-showcase .showcase-foreground {
   height: 18%;
+}
+
+/* 分身キャラ：ブランド下の余白〜グリッド上に立たせる。bob アニメは
+   showcase-figure-bob (scale 1.35) を共有するので bottom のみ調整。 */
+.login-shell-showcase .showcase-figure-login {
+  bottom: 12%;
+  z-index: 3;
+}
+/* プロフィール用プレビューの白カード装飾を剥がし、没入シーンに直接
+   立つシルエットにする（浮いた「アプリアイコン」感を消す）。 */
+.login-shell-showcase .showcase-figure-login .profile-character-preview {
+  width: 100px;
+  height: 100px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  overflow: visible;
+}
+@media (max-width: 540px) {
+  .login-shell-showcase .showcase-figure-login { bottom: 11%; }
 }
 
 .login-showcase-brand {

@@ -3506,8 +3506,8 @@ function LoginScreen() {
   return (
     <main className="login-shell login-shell-showcase" aria-label="Contribution Arc login">
       {/* showcase 画面と共通の没入背景。Sky / Canopy / Mist / Grid /
-          Foreground の 5 層で深さを作る。中央キャラはログイン前なので
-          省略 (代わりにブランドコピー + 認証 CTA を主役に置く)。 */}
+          Figure / Foreground の層で深さを作る。中央キャラはコミットの
+          地層を見上げる「分身」として、ブランドの下の余白に立たせる。 */}
       <div className="showcase-scene" aria-hidden="true">
         <div className="showcase-sky" />
         <div className="showcase-canopy" />
@@ -3530,6 +3530,9 @@ function LoginScreen() {
               />
             );
           })}
+        </div>
+        <div className="showcase-figure showcase-figure-login">
+          <ProfileCharacterPreview shape="frost" />
         </div>
         <div className="showcase-foreground" />
       </div>
