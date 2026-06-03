@@ -9685,6 +9685,15 @@
   gap: 2px;
 }
 
+/* 名前と時刻(11:02〜 7時間19分)を縦に積む。strong/span はどちらも
+   インライン要素なので、包む div を grid 化しないと同じ行に流れて
+   見づらくなる。時刻はルーム名の下の行に出す。 */
+.workspace-room-overlay-head-text {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
 .workspace-room-overlay-name {
   color: var(--ink);
   font-size: 13px;
