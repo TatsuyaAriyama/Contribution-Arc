@@ -27777,39 +27777,44 @@ a[role="button"],
    Showcase 風ログイン画面 — login-shell-showcase
    通常の二段カードレイアウトを、showcase の没入シーンに置き換える。
    ブランドビジュアル中央 + GitHub/Google CTA + 折りたたみメール認証。
-   =============================================================== */
+   親 .login-shell の grid + max-width 1180px を全打ち消しして
+   ビューポート全面 (100vw × 100svh) に展開する。 */
 .login-shell.login-shell-showcase {
   position: fixed;
   inset: 0;
-  /* 基底 .login-shell の width: min(1180px,…) + margin:0 を打ち消し、
-     没入シーンをビューポート全面に広げる（右側の白い余白を防ぐ）。 */
-  width: 100%;
+  /* 基底 .login-shell の width: min(1180px,…) + grid 2 カラム + margin
+     を完全打ち消し、没入シーンをビューポート全面 (100vw × 100svh) に
+     展開する (右の白い余白を防ぐ + ブランドを中央寄せ) */
+  width: 100vw;
+  height: 100svh;
   max-width: none;
-  min-height: 100svh;
+  margin: 0;
+  padding: max(24px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
   display: grid;
-  /* 基底 .login-shell の 2 カラム (1.08fr / 0.92fr) を解除。これが残ると
-     ブランドが左カラムに入り中央寄せにならない。 */
   grid-template-columns: 1fr;
   place-items: center;
-  padding: 0;
-  margin: 0;
+  gap: 0;
   background: #06120c;
   color: #ecf3ef;
   overflow: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   isolation: isolate;
 }
 
 /* グリッド地形を控えめに (ログイン画面では装飾優先、目を引きすぎない) */
 .login-shell-showcase .showcase-grid-login {
-  bottom: 8%;
-  opacity: 0.6;
+  bottom: 6%;
+  width: min(72vw, 540px);
+  opacity: 0.55;
   filter: drop-shadow(0 12px 24px rgba(11, 50, 32, 0.55));
 }
 
 /* showcase-grid の元の bottom: 19% が文字とぶつかるので、ログイン
    用は画面下に逃がす。 */
 .login-shell-showcase .showcase-foreground {
-  height: 18%;
+  height: 22%;
 }
 
 /* 分身キャラ：ブランド下の余白〜グリッド上に立たせる。bob アニメは
@@ -27838,11 +27843,45 @@ a[role="button"],
   z-index: 5;
   display: grid;
   justify-items: center;
-  gap: 18px;
-  width: min(520px, 100% - 32px);
-  padding: 32px 8px;
+  gap: 16px;
+  width: min(440px, 100% - 32px);
+  padding: 0;
   text-align: center;
   animation: showcase-brand-rise 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* App icon (タイトル直上) — ContributionArcLogo の SVG を再利用。
+   既存の brand-logo-stage は profile/onboarding 用の固定サイズだが、
+   ログイン画面では小さく抑えてタイトルを主役にする。 */
+.login-showcase-appicon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  padding: 6px;
+  margin-bottom: -6px;
+}
+.login-showcase-appicon .brand-logo-stage,
+.login-showcase-appicon .brand-logo-mark {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.login-showcase-fineprint {
+  margin: 4px 0 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: rgba(236, 243, 239, 0.4);
 }
 
 .login-shell-showcase .showcase-brand-mark {
