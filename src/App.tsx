@@ -3751,6 +3751,11 @@ function App() {
     return stored === "dark" ? "dark" : "light";
   });
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("idle");
+  // Final onboarding step ("firstPost"): the user must write a greeting
+  // AND their 決意 (resolution) before any other operation is possible.
+  // Both are captured in a blocking modal; the post combines the two.
+  const [onboardingGreeting, setOnboardingGreeting] = useState("初めまして！");
+  const [onboardingResolve, setOnboardingResolve] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   // FEED right-pane visibility. Defaults open (matches previous
   // behaviour); the value is persisted to localStorage so a deliberate
@@ -7766,14 +7771,17 @@ function App() {
     setLearningEditorState(null);
   };
 
-  const handlePostSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handlePostSubmit = async (
+    event?: FormEvent<HTMLFormElement>,
+    overrideText?: string,
+  ) => {
+    event?.preventDefault();
 
     if (!currentUser || isPosting) {
       return;
     }
 
-    const text = postDraft.trim();
+    const text = (overrideText ?? postDraft).trim();
     if (!text) {
       setPostError("ログ内容を入力してください。");
       return;
@@ -7837,7 +7845,36 @@ function App() {
 
     if (onboardingStep === "firstPost") {
       safeSetLocalStorage(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
+      // Persist the 決意 the user just wrote as their profile determination,
+      // so it lives on in the profile "決意" card rather than only inside
+      // the first post. Mirrors handleDeterminationSubmit.
+      const firstResolve = onboardingResolve.trim();
+      if (firstResolve) {
+        setDetermination(firstResolve);
+        setDraftDetermination(firstResolve);
+        const accountScope = getAccountStorageScope(currentUser.uid, userId);
+        safeSetLocalStorage(getAccountStorageKey(accountScope, "determination"), firstResolve);
+        if (userId) {
+          void setDoc(
+            doc(db, "users", currentUser.uid),
+            {
+              uid: currentUser.uid,
+              userId,
+              displayName: playerName,
+              photoURL: playerAvatar,
+              determination: firstResolve,
+              characterColor: playerCharacterColor,
+              searchName: playerName.toLowerCase(),
+              updatedAt: serverTimestamp(),
+            },
+            { merge: true },
+          ).catch((error) => {
+            console.info("Onboarding determination sync skipped.", error);
+          });
+        }
+      }
       setOnboardingStep("idle");
+      setOnboardingResolve("");
     }
 
     try {
@@ -12247,26 +12284,11 @@ function App() {
           <span>{sorted.length.toLocaleString()} 件</span>
         </header>
 
-        {onboardingStep === "firstPost" ? (
-          <div className="onboarding-firstpost-banner" role="status" aria-live="polite">
-            <div className="onboarding-firstpost-copy">
-              <p className="card-kicker">チュートリアル · 最後のステップ</p>
-              <h3>「初めまして！」と投稿してみよう</h3>
-              <p>
-                下のフォームに <strong>初めまして！</strong> と入力して、最初の投稿を送信しましょう。投稿が完了するとチュートリアルは終わりです。
-              </p>
-            </div>
-            <span className="onboarding-firstpost-arrow" aria-hidden="true">↓</span>
-          </div>
-        ) : null}
-
         <section
-          className={`home-feed-composer is-living${
-            onboardingStep === "firstPost" ? " is-onboarding-highlight" : ""
-          }`}
+          className="home-feed-composer is-living"
           aria-label="投稿を作成"
         >
-          <form className="log-composer" onSubmit={handlePostSubmit}>
+          <form className="log-composer" onSubmit={(event) => void handlePostSubmit(event)}>
             <ProfileCharacterPreview color={playerCharacterColor} />
             <div>
               <textarea
@@ -12275,11 +12297,7 @@ function App() {
                   setPostDraft(event.target.value);
                   setPostError("");
                 }}
-                placeholder={
-                  onboardingStep === "firstPost"
-                    ? "初めまして！ と入力してみよう"
-                    : "What are you building tonight?"
-                }
+                placeholder="What are you building tonight?"
                 maxLength={280}
                 rows={1}
               />
@@ -12461,6 +12479,85 @@ function App() {
             <h1>{t("ようこそContribution Arcへ")}</h1>
             <span>{t("最初にあなたのプロフィールを整えます。")}</span>
           </section>
+        </div>
+      ) : null}
+
+      {/* Final onboarding step. A full-screen blocking modal: the user
+          must write a greeting AND their 決意 before any other operation
+          is possible. The backdrop sits above every other UI layer
+          (FAB / HUD etc.) so nothing else is interactable until they post. */}
+      {onboardingStep === "firstPost" ? (
+        <div
+          className="onboarding-firstpost-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="onboarding-firstpost-title"
+        >
+          <form
+            className="onboarding-firstpost-card"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const greeting = onboardingGreeting.trim();
+              const resolve = onboardingResolve.trim();
+              if (!greeting || !resolve) {
+                setPostError("あいさつと決意の両方を入力してください。");
+                return;
+              }
+              void handlePostSubmit(undefined, `${greeting}\n\n${resolve}`);
+            }}
+          >
+            <p className="card-kicker">チュートリアル · 最後のステップ</p>
+            <h1 id="onboarding-firstpost-title">あいさつと、あなたの決意</h1>
+            <p className="onboarding-firstpost-lead">
+              最初の一歩として、あいさつとこれからの決意を書いて投稿しましょう。
+              投稿するまで他の操作はできません。
+            </p>
+
+            <label className="onboarding-firstpost-field">
+              <span>あいさつ</span>
+              <input
+                type="text"
+                value={onboardingGreeting}
+                onChange={(event) => {
+                  setOnboardingGreeting(event.target.value);
+                  setPostError("");
+                }}
+                placeholder="初めまして！"
+                maxLength={40}
+                autoFocus
+              />
+            </label>
+
+            <label className="onboarding-firstpost-field">
+              <span>あなたの決意</span>
+              <textarea
+                value={onboardingResolve}
+                onChange={(event) => {
+                  setOnboardingResolve(event.target.value);
+                  setPostError("");
+                }}
+                placeholder="これから挑戦したいこと・続けたいこと（例: 毎日少しでもコミットを積み上げる）"
+                maxLength={200}
+                rows={3}
+              />
+            </label>
+
+            {postError ? (
+              <p className="onboarding-firstpost-error" role="alert">
+                {postError}
+              </p>
+            ) : null}
+
+            <button
+              type="submit"
+              className="onboarding-firstpost-cta"
+              disabled={
+                isPosting || !onboardingGreeting.trim() || !onboardingResolve.trim()
+              }
+            >
+              {isPosting ? "送信中…" : "この決意を投稿して始める"}
+            </button>
+          </form>
         </div>
       ) : null}
 
