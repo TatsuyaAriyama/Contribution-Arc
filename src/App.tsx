@@ -12303,17 +12303,17 @@ function App() {
                 ×
               </button>
             </div>
-            {selectedArcDayLogs.length > 0 ? (
+            {selectedArcDaySubjectTotals && selectedArcDaySubjectTotals.items.length > 0 ? (
               <ul className="contribution-arc-detail-list">
-                {selectedArcDayLogs.map((log) => (
-                  <li key={log.id}>
+                {selectedArcDaySubjectTotals.items.map((entry, index) => (
+                  <li key={`${entry.subject}-${index}`}>
                     <span
                       className="contribution-arc-detail-dot"
-                      style={{ background: log.color || "rgba(31,111,74,0.7)" }}
+                      style={{ background: entry.color || "rgba(31,111,74,0.7)" }}
                       aria-hidden="true"
                     />
-                    <strong>{log.subject}</strong>
-                    <small>{formatStudyTime(log.minutes)}</small>
+                    <strong>{entry.subject}</strong>
+                    <small>{formatStudyTime(entry.minutes)}</small>
                   </li>
                 ))}
               </ul>
