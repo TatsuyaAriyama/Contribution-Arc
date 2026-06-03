@@ -7349,7 +7349,7 @@
 
 .study-day-detail-list article {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   align-items: center;
   gap: 8px;
   min-width: 0;
@@ -7396,7 +7396,8 @@
 }
 
 .study-log-delete-button,
-.study-log-rename-button {
+.study-log-rename-button,
+.study-log-time-button {
   min-height: 26px;
   padding: 0 9px;
   border: 1px solid rgba(var(--ink-rgb), 0.08);
@@ -7416,12 +7417,33 @@
 .study-log-delete-button:hover,
 .study-log-delete-button:focus-visible,
 .study-log-rename-button:hover,
-.study-log-rename-button:focus-visible {
+.study-log-rename-button:focus-visible,
+.study-log-time-button:hover,
+.study-log-time-button:focus-visible {
   transform: translateY(-1px);
   border-color: rgba(var(--ink-rgb), 0.16);
   background: var(--bg);
   color: var(--ink);
   outline: none;
+}
+
+/* 学習時間ボタン：strong だったテキストを button にしたので、
+   元の color/font-size を踏襲して "編集できる時間" に見せる。 */
+.study-log-time-button {
+  flex: 0 0 auto;
+  color: var(--green);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  border-color: transparent;
+  background: transparent;
+  padding: 0 6px;
+  border-radius: 8px;
+}
+.study-log-time-button:hover,
+.study-log-time-button:focus-visible {
+  color: var(--green);
+  background: rgba(var(--green-rgb, 31, 111, 74), 0.1);
+  border-color: rgba(var(--green-rgb, 31, 111, 74), 0.24);
 }
 
 /* ✎ アイコン専用：font-size をやや大きく、文字を中央寄せ */
@@ -7443,13 +7465,17 @@
 /* モバイル：タップ領域 36px に */
 @media (max-width: 720px) {
   .study-log-delete-button,
-  .study-log-rename-button {
+  .study-log-rename-button,
+  .study-log-time-button {
     min-height: 36px;
     padding: 0 12px;
   }
   .study-log-rename-button {
     min-width: 40px;
     font-size: 16px;
+  }
+  .study-log-time-button {
+    font-size: 14px;
   }
 }
 

@@ -11101,6 +11101,30 @@ function App() {
   // - cloud (Firestore studyLogs) に setDoc({ merge: true }) で同期
   // - 失敗時は state を元に戻し、エラートーストを出す
   // - 空文字は許可しない (空 → 何の subject か分からなくなる)
+  /* 過去の学習記録の時間 (minutes) を変更する。
+     - 1〜1440 分の範囲でクランプ (1日を超えない)
+     - 楽観更新 → saveStudyLogToCloud → 失敗時 rollback */
+  const handleStudyLogMinutesEdit = (logId: string, nextMinutes: number) => {
+    if (!currentUser) return;
+    if (!Number.isFinite(nextMinutes)) return;
+    const clamped = Math.max(1, Math.min(24 * 60, Math.round(nextMinutes)));
+    const original = studyLogs.find((log) => log.id === logId);
+    if (!original) return;
+    if (original.minutes === clamped) return;
+
+    const updated: StudyLog = { ...original, minutes: clamped };
+    setStudyLogs((logs) => logs.map((log) => (log.id === logId ? updated : log)));
+    void saveStudyLogToCloud(db, currentUser.uid, updated, {})
+      .then(() => {
+        showToast(`${formatStudyTimeJa(clamped)}に変更しました`, { kind: "success" });
+      })
+      .catch((error) => {
+        console.info("Study log minutes edit cloud sync skipped.", error);
+        setStudyLogs((logs) => logs.map((log) => (log.id === logId ? original : log)));
+        showToast("時間を変更できませんでした", { kind: "error" });
+      });
+  };
+
   const handleStudyLogRename = (logId: string, nextSubject: string) => {
     if (!currentUser) return;
     const trimmed = nextSubject.trim().slice(0, 60);
@@ -17199,7 +17223,27 @@ function App() {
                                     <i style={{ background: log.color || studyColorOptions[0].value }} />
                                     <b>{log.subject}</b>
                                   </span>
-                                  <strong>{formatStudyTime(log.minutes)}</strong>
+                                  <button
+                                    type="button"
+                                    className="study-log-time-button"
+                                    onClick={() => {
+                                      const next = window.prompt(
+                                        `学習時間（分）を入力\n現在 ${log.minutes}分 (${formatStudyTime(log.minutes)})`,
+                                        String(log.minutes),
+                                      );
+                                      if (next === null) return;
+                                      const parsed = parseInt(next.trim(), 10);
+                                      if (!Number.isFinite(parsed) || parsed <= 0) {
+                                        showToast("正の数値を入力してください", { kind: "info" });
+                                        return;
+                                      }
+                                      handleStudyLogMinutesEdit(log.id, parsed);
+                                    }}
+                                    aria-label={`${log.subject}の学習時間を変更（現在 ${formatStudyTime(log.minutes)}）`}
+                                    title="時間を変更"
+                                  >
+                                    {formatStudyTime(log.minutes)}
+                                  </button>
                                   <button
                                     type="button"
                                     className="study-log-rename-button"
