@@ -10968,7 +10968,10 @@
 .actor-sprite.shape-frost {
   background: transparent;
   box-shadow: none;
-  border-radius: 0;
+  /* Keep a rounded box so the global "this is you" player halo
+     (.workspace-actor.is-player の緑リング) reads as a soft rounded
+     glow like every other character — NOT a hard square frame. */
+  border-radius: 13px;
   overflow: visible;
 }
 
@@ -11106,22 +11109,22 @@
   transform: translateX(-50%);
 }
 
-/* 黒袴 / 足袋。羽織の裾から自然に伸びるよう位置を再調整。 */
+/* 黒袴 / 足袋。羽織の裾から自然に伸びる細身のシルエット。 */
 .actor-sprite.shape-frost .sprite-leg {
-  width: 6px;
-  height: 13px;
-  border-radius: 3px 3px 4px 4px;
+  width: 5px;
+  height: 14px;
+  border-radius: 2.5px 2.5px 4px 4px;
   background: linear-gradient(180deg, #2a2c34 0%, #15161b 100%);
-  bottom: -6px;
+  bottom: -7px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .actor-sprite.shape-frost .sprite-leg-left {
-  left: 12px;
+  left: 14px;
 }
 
 .actor-sprite.shape-frost .sprite-leg-right {
-  right: 12px;
+  right: 14px;
   left: auto;
 }
 
