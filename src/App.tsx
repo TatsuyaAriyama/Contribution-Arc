@@ -3586,7 +3586,7 @@ function LoginScreen() {
           </text>
         </svg>
         <p className="showcase-tagline">
-          毎日のコミットが、あなたの軌跡を描く。
+          日々のコミットが、あなたの軌跡を描く。
         </p>
 
         <div className="login-showcase-actions">
@@ -18506,7 +18506,7 @@ function App() {
               </text>
             </svg>
             <p className="showcase-tagline">
-              毎日のコミットが、あなたの軌跡を描く。
+              日々のコミットが、あなたの軌跡を描く。
             </p>
             <button
               type="button"
