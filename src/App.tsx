@@ -834,6 +834,12 @@ type Announcement = {
 
 const ANNOUNCEMENTS: Announcement[] = [
   {
+    id: "2026-06-03-friend-request",
+    date: "2026.06.03",
+    title: "フレンド申請の不具合を修正しました",
+    body: "フレンド申請が正常に動作せずに届かない不具合を修正しました。",
+  },
+  {
     id: "2026-06-03-rooms",
     date: "2026.06.03",
     title: "作業部屋まわりを改善しました",
@@ -7661,6 +7667,15 @@ function App() {
       });
     }
 
+    // フレンド申請は「相手がオフラインの間に届く」のが普通なので、他の通知
+    // とは扱いを変える。セッション開始後に来た申請 (recent) はデスクトップ
+    // 通知込みで知らせ、開く前に届いていて未読の申請 (backlog) は通知ベルに
+    // だけ積む。既読化済み (通知パネルを開いた時刻 lastNotificationReadAt
+    // 以前) の申請は通知しない。lastNotificationReadAt が空のときは基準 0 =
+    // 全 pending を未読扱いにして拾う。
+    const notificationReadAtMs = lastNotificationReadAt
+      ? new Date(lastNotificationReadAt).getTime()
+      : 0;
     friendRequests
       .filter((request) => request.direction === "incoming" && request.status === "pending")
       .forEach((request) => {
@@ -7669,7 +7684,9 @@ function App() {
           return;
         }
 
-        if (!isRecentEnough(request.createdAt)) {
+        const recent = isRecentEnough(request.createdAt);
+        const unreadBacklog = new Date(request.createdAt).getTime() > notificationReadAtMs;
+        if (!recent && !unreadBacklog) {
           seenNotificationKeysRef.current.add(notificationId);
           return;
         }
@@ -7684,7 +7701,9 @@ function App() {
             read: false,
             sourceUserId: request.profile.uid,
           },
-          desktopNotificationSettings.friendRequest,
+          // backlog (過去の未読) はベルに積むだけ。デスクトップ通知 / 音は
+          // セッション中に届いた新規申請に限定し、再ログイン時の通知洪水を防ぐ。
+          recent && desktopNotificationSettings.friendRequest,
         );
       });
 
@@ -7725,6 +7744,7 @@ function App() {
     friends,
     incomingInvites,
     isWorkspaceLoaded,
+    lastNotificationReadAt,
     notifiableUserIds,
     posts,
     postReplies,
@@ -9953,6 +9973,121 @@ function App() {
 
   // idle 監視 effect から、毎レンダー再生成されるこの関数の最新版を呼べるよう参照を更新。
   closeWorkspaceSessionRef.current = closeWorkspaceSession;
+
+  // === 退出忘れ対策（idle 自動休憩 → 自動退室）===
+  // 在室中に最終操作時刻まで活動を確定し、放置分は計上しない。Firestore への
+  // 書き込みは「休憩開始 / 復帰 / 退室」の遷移時のみ（操作ごとには書かない）。
+  // 手動休憩では autoBreakActiveRef を立てないので、idle 監視が勝手に復帰させる
+  // ことはない。
+  const enterAutoBreak = useCallback(
+    (roomId: string, lastActivityMs: number) => {
+      if (!currentUser) {
+        return;
+      }
+      autoBreakActiveRef.current = true;
+      const breakIso = new Date(lastActivityMs).toISOString();
+      setCustomRooms((rooms) =>
+        rooms.map((room) => {
+          const normalizedRoom = normalizeWorkspaceRoom(room);
+          if (normalizedRoom.id !== roomId) {
+            return normalizedRoom;
+          }
+          const nextRoom = normalizeWorkspaceRoom({
+            ...normalizedRoom,
+            activeMembers: normalizedRoom.activeMembers.map((member) =>
+              member.userId === currentUser.uid && member.status !== "on-break"
+                ? {
+                    ...member,
+                    status: "on-break",
+                    // 最終操作時刻までを確定して計測停止（以降の放置分は計上しない）。
+                    accumulatedActiveMinutes: getWorkspaceActiveMinutes(member, lastActivityMs),
+                    activeStartedAt: "",
+                    breakStartedAt: breakIso,
+                  }
+                : member,
+            ),
+          });
+          pendingWorkspaceRoomsRef.current.set(roomId, nextRoom);
+          return nextRoom;
+        }),
+      );
+    },
+    [currentUser],
+  );
+
+  const resumeFromAutoBreak = useCallback(
+    (roomId: string) => {
+      if (!currentUser || !autoBreakActiveRef.current) {
+        return;
+      }
+      autoBreakActiveRef.current = false;
+      const nowIso = new Date().toISOString();
+      setCustomRooms((rooms) =>
+        rooms.map((room) => {
+          const normalizedRoom = normalizeWorkspaceRoom(room);
+          if (normalizedRoom.id !== roomId) {
+            return normalizedRoom;
+          }
+          const nextRoom = normalizeWorkspaceRoom({
+            ...normalizedRoom,
+            activeMembers: normalizedRoom.activeMembers.map((member) =>
+              member.userId === currentUser.uid && member.status === "on-break"
+                ? { ...member, status: "working", activeStartedAt: nowIso, breakStartedAt: "" }
+                : member,
+            ),
+          });
+          pendingWorkspaceRoomsRef.current.set(roomId, nextRoom);
+          return nextRoom;
+        }),
+      );
+    },
+    [currentUser],
+  );
+
+  useEffect(() => {
+    if (!currentUser || currentView !== "workspace" || !selectedRoomId || !isInSelectedRoom) {
+      return;
+    }
+    const roomId = selectedRoomId;
+    // 在室開始（もしくは部屋切替）の瞬間を「最後の操作」とみなす。
+    lastWorkspaceActivityRef.current = Date.now();
+    autoBreakActiveRef.current = false;
+
+    const markActivity = () => {
+      lastWorkspaceActivityRef.current = Date.now();
+      if (autoBreakActiveRef.current) {
+        // 自動休憩からの即時復帰（手動休憩には autoBreakActiveRef が立たない）。
+        resumeFromAutoBreak(roomId);
+      }
+    };
+    const activityEvents: (keyof WindowEventMap)[] = [
+      "mousemove",
+      "keydown",
+      "pointerdown",
+      "wheel",
+      "touchstart",
+    ];
+    activityEvents.forEach((event) =>
+      window.addEventListener(event, markActivity, { passive: true }),
+    );
+
+    const interval = window.setInterval(() => {
+      // タブ非表示中は操作イベントが来ないので、放置時間が idleMs に正しく積み上がる。
+      const idleMs = Date.now() - lastWorkspaceActivityRef.current;
+      if (idleMs >= idleAutoCloseMinutes * 60000) {
+        closeWorkspaceSessionRef.current(roomId, { auto: true });
+        return;
+      }
+      if (idleMs >= idleAutoBreakMinutes * 60000 && !autoBreakActiveRef.current) {
+        enterAutoBreak(roomId, lastWorkspaceActivityRef.current);
+      }
+    }, 30000);
+
+    return () => {
+      activityEvents.forEach((event) => window.removeEventListener(event, markActivity));
+      window.clearInterval(interval);
+    };
+  }, [currentUser, currentView, selectedRoomId, isInSelectedRoom, enterAutoBreak, resumeFromAutoBreak]);
 
   const resetWorkspacePresence = () => {
     pressedWorkspaceKeysRef.current.clear();
