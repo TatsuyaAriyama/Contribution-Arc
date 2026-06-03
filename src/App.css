@@ -27894,7 +27894,9 @@ a[role="button"],
 
 .login-shell-showcase .showcase-tagline {
   margin: 0;
-  max-width: 22ch;
+  /* タグラインは 1 行で表示する（折り返さない）。 */
+  max-width: none;
+  white-space: nowrap;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.04em;
