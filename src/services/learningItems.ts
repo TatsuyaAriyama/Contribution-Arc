@@ -13,6 +13,8 @@ import {
 
 export type LearningCategory = "book" | "stack";
 
+export type LearningStatus = "active" | "done" | "paused";
+
 export type LearningItemRecord = {
   id: string;
   userId: string;
@@ -22,6 +24,7 @@ export type LearningItemRecord = {
   totalPages?: number;
   currentPages?: number;
   note?: string;
+  status: LearningStatus;
   archived: boolean;
   createdAt: string;
   updatedAt: string;
@@ -37,6 +40,10 @@ function readNumber(value: unknown): number | undefined {
 
 function readCategory(value: unknown): LearningCategory {
   return value === "book" ? "book" : "stack";
+}
+
+function readStatus(value: unknown): LearningStatus {
+  return value === "done" || value === "paused" ? value : "active";
 }
 
 function readCreatedAt(value: unknown) {
@@ -70,6 +77,7 @@ function mapLearningItemDocs(snapshot: QuerySnapshot, userId: string): LearningI
         totalPages,
         currentPages,
         ...(note ? { note } : {}),
+        status: readStatus(data.status),
         archived: Boolean(data.archived),
         createdAt: readCreatedAt(data.createdAt),
         updatedAt: readCreatedAt(data.updatedAt),
@@ -103,6 +111,7 @@ export async function saveLearningItemToCloud(db: Firestore, item: LearningItemR
     name: item.name,
     category: item.category,
     color: item.color,
+    status: item.status,
     archived: item.archived,
     createdAt: item.createdAt,
     updatedAt: serverTimestamp(),

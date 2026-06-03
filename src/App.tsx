@@ -253,6 +253,11 @@ type StudyLog = {
 
 type LearningCategory = "book" | "stack";
 
+// Lifecycle status, independent of `archived` (which means "retired from
+// the active list"). Defaults to "active" for items saved before this
+// field existed — see readStatus in learningItems.ts.
+type LearningStatus = "active" | "done" | "paused";
+
 type LearningItem = {
   id: string;
   userId: string;
@@ -262,6 +267,7 @@ type LearningItem = {
   totalPages?: number;
   currentPages?: number;
   note?: string;
+  status: LearningStatus;
   archived: boolean;
   createdAt: string;
   updatedAt: string;
@@ -3708,13 +3714,21 @@ function App() {
     totalPages: string;
     currentPages: string;
     note: string;
+    status: LearningStatus;
   } | null>(null);
-  const [learningCategoryTab, setLearningCategoryTab] = useState<"all" | "book" | "archived">("all");
+  const [learningCategoryTab, setLearningCategoryTab] = useState<"all" | "active" | "done" | "archived">("all");
   const [learningSearchQuery, setLearningSearchQuery] = useState("");
   // Library sort order. "recent" (default) keeps the active-work-first
   // behaviour; the others let the user reorder without touching data.
   const [learningSortMode, setLearningSortMode] = useState<"recent" | "total" | "name">("recent");
   const [isLearningDeleteConfirming, setIsLearningDeleteConfirming] = useState(false);
+  // Item detail view (B-4): the learning item whose history/stats panel
+  // is open. null = closed. Read-only over existing studyLogs (no new reads).
+  const [learningDetailId, setLearningDetailId] = useState<string | null>(null);
+  // Inline page-progress quick edit (C-6): the book card id whose page
+  // input is open, plus the in-flight text value. null = closed.
+  const [learningPageEditId, setLearningPageEditId] = useState<string | null>(null);
+  const [learningPageEditValue, setLearningPageEditValue] = useState("");
   const [studySubject, setStudySubject] = useState("React");
   const [studyAmount, setStudyAmount] = useState("1");
   const [studyUnit, setStudyUnit] = useState<"hours" | "minutes">("hours");
@@ -4995,6 +5009,7 @@ function App() {
       name: entry.name.slice(0, 60),
       category: "stack",
       color: entry.color || studyColorOptions[0].value,
+      status: "active",
       archived: false,
       createdAt: nowIso,
       updatedAt: nowIso,
@@ -7757,6 +7772,7 @@ function App() {
       totalPages: "",
       currentPages: "",
       note: "",
+      status: "active",
     });
   };
 
@@ -7771,6 +7787,7 @@ function App() {
       totalPages: typeof item.totalPages === "number" ? String(item.totalPages) : "",
       currentPages: typeof item.currentPages === "number" ? String(item.currentPages) : "",
       note: item.note ?? "",
+      status: item.status ?? "active",
     });
   };
 
@@ -7809,6 +7826,7 @@ function App() {
         name: trimmedName.slice(0, 60),
         category: learningEditorState.category,
         color: learningEditorState.color,
+        status: learningEditorState.status,
         archived: false,
         createdAt: nowIso,
         updatedAt: nowIso,
@@ -7830,6 +7848,7 @@ function App() {
         name: trimmedName.slice(0, 60),
         category: learningEditorState.category,
         color: learningEditorState.color,
+        status: learningEditorState.status,
         updatedAt: nowIso,
         note: trimmedNote || undefined,
         ...(hasTotal ? { totalPages: totalPagesNum } : { totalPages: undefined }),
@@ -7876,6 +7895,34 @@ function App() {
     });
     setIsLearningDeleteConfirming(false);
     setLearningEditorState(null);
+  };
+
+  // C-6: persist a new current-page value for a book straight from the
+  // card, clamped to [0, totalPages]. Fire-and-forget like every other
+  // learning mutation. When the book reaches the last page we DON'T flip
+  // status to "done" automatically — that stays an explicit user choice
+  // (no surprise side effects), but the full progress bar makes it obvious.
+  const handleLearningPageUpdate = (itemId: string, rawPage: number) => {
+    const existing = learningItems.find((item) => item.id === itemId);
+    if (!existing) {
+      return;
+    }
+    if (!Number.isFinite(rawPage) || rawPage < 0) {
+      return;
+    }
+    const clamped =
+      typeof existing.totalPages === "number" && existing.totalPages > 0
+        ? Math.min(Math.round(rawPage), existing.totalPages)
+        : Math.round(rawPage);
+    const updated: LearningItem = {
+      ...existing,
+      currentPages: clamped,
+      updatedAt: new Date().toISOString(),
+    };
+    setLearningItems((items) => items.map((item) => (item.id === updated.id ? updated : item)));
+    void saveLearningItemToCloud(db, updated).catch((error) => {
+      console.info("Learning item cloud save skipped.", error);
+    });
   };
 
   const handlePostSubmit = async (
@@ -13476,6 +13523,30 @@ function App() {
                 </div>
               </div>
 
+              <div className="learning-status-field">
+                <span>{t("ステータス")}</span>
+                <div className="learning-status-segment" role="group" aria-label={t("ステータス")}>
+                  {(
+                    [
+                      { value: "active" as const, label: t("進行中") },
+                      { value: "done" as const, label: t("完了") },
+                      { value: "paused" as const, label: t("中断") },
+                    ]
+                  ).map((option) => (
+                    <button
+                      type="button"
+                      key={option.value}
+                      className={learningEditorState.status === option.value ? "active" : ""}
+                      onClick={() =>
+                        setLearningEditorState((state) => (state ? { ...state, status: option.value } : state))
+                      }
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {learningEditorState.category === "book" ? (
                 <div className="learning-book-fields">
                   <label>
@@ -13580,6 +13651,212 @@ function App() {
           </section>
         </div>
       ) : null}
+
+      {learningDetailId ? (() => {
+        // B-4 item detail view. Pure read over existing studyLogs — no
+        // new Firestore reads. Resolves this item's logs via the same two
+        // paths the card grid uses (learningItemId, else case-insensitive
+        // subject match) so historical free-typed logs still count.
+        const item = learningItems.find((entry) => entry.id === learningDetailId);
+        if (!item) {
+          return null;
+        }
+        const lowerName = item.name.trim().toLowerCase();
+        const itemLogs = studyLogs
+          .filter((log) =>
+            log.learningItemId
+              ? log.learningItemId === item.id
+              : (log.subject || "").trim().toLowerCase() === lowerName,
+          )
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        const totalMinutes = itemLogs.reduce((sum, log) => sum + log.minutes, 0);
+        const dayMsLocal = 24 * 60 * 60 * 1000;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const weekStartMs = today.getTime() - 6 * dayMsLocal;
+        let thisWeekMinutes = 0;
+        const loggedDays = new Set<string>();
+        const minutesByDay = new Map<string, number>();
+        const dayKey = (date: Date) =>
+          `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+        itemLogs.forEach((log) => {
+          const ts = new Date(log.createdAt);
+          if (Number.isNaN(ts.getTime())) return;
+          const midnight = new Date(ts);
+          midnight.setHours(0, 0, 0, 0);
+          const key = dayKey(midnight);
+          loggedDays.add(key);
+          minutesByDay.set(key, (minutesByDay.get(key) || 0) + log.minutes);
+          if (ts.getTime() >= weekStartMs) thisWeekMinutes += log.minutes;
+        });
+        const lastTs = itemLogs.length ? new Date(itemLogs[0].createdAt).getTime() : undefined;
+        const lastLabel = formatLearningLastLogged(lastTs, today.getTime(), dayMsLocal);
+        const status = item.status ?? "active";
+        const isBook = item.category === "book";
+        const hasProgress = isBook && typeof item.totalPages === "number" && item.totalPages > 0;
+        const progressPercent = hasProgress
+          ? Math.min(100, Math.round(((item.currentPages || 0) / (item.totalPages || 1)) * 100))
+          : 0;
+        // 13-week contribution-style grid, column-major (each column is a
+        // week, rows = Sun..Sat). Aligned to week boundaries.
+        const gridEnd = new Date(today);
+        gridEnd.setDate(gridEnd.getDate() + (6 - gridEnd.getDay()));
+        const gridStart = new Date(gridEnd);
+        gridStart.setDate(gridStart.getDate() - (13 * 7 - 1));
+        const heatCells: { key: string; level: number; isToday: boolean; future: boolean }[] = [];
+        for (let cursor = new Date(gridStart); cursor <= gridEnd; cursor.setDate(cursor.getDate() + 1)) {
+          const key = dayKey(cursor);
+          const minutes = minutesByDay.get(key) || 0;
+          const level =
+            minutes <= 0 ? 0 : minutes < 30 ? 1 : minutes < 60 ? 2 : minutes < 120 ? 3 : 4;
+          heatCells.push({
+            key,
+            level,
+            isToday: key === dayKey(today),
+            future: cursor.getTime() > today.getTime(),
+          });
+        }
+        const recentLogs = itemLogs.slice(0, 8);
+        const closeDetail = () => setLearningDetailId(null);
+        return (
+          <div className="settings-modal-backdrop" role="presentation" onClick={closeDetail}>
+            <section
+              className="settings-modal learning-detail"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="learning-detail-title"
+              style={{ "--learning-card-color": item.color } as CSSProperties}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="learning-detail-head">
+                <div>
+                  <p className="card-kicker">{isBook ? t("書籍") : "Learning Item"}</p>
+                  <h2 id="learning-detail-title">{item.name}</h2>
+                  <div className="learning-detail-badges">
+                    {status === "done" ? (
+                      <span className="learning-card-status is-done">{t("完了")}</span>
+                    ) : status === "paused" ? (
+                      <span className="learning-card-status is-paused">{t("中断")}</span>
+                    ) : (
+                      <span className="learning-card-status is-active">{t("進行中")}</span>
+                    )}
+                    {item.archived ? (
+                      <span className="learning-card-archived">{t("アーカイブ")}</span>
+                    ) : null}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="learning-detail-close"
+                  onClick={closeDetail}
+                  aria-label={t("閉じる")}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="learning-detail-stats">
+                <div>
+                  <small>{t("累計")}</small>
+                  <strong>{formatStudyTimeJa(totalMinutes)}</strong>
+                </div>
+                <div>
+                  <small>{t("今週")}</small>
+                  <strong>{formatStudyTimeJa(thisWeekMinutes)}</strong>
+                </div>
+                <div>
+                  <small>{t("記録日数")}</small>
+                  <strong>{t("{count}日", { count: loggedDays.size })}</strong>
+                </div>
+                <div>
+                  <small>{t("最終記録")}</small>
+                  <strong>{lastLabel}</strong>
+                </div>
+              </div>
+
+              {hasProgress ? (
+                <div className="learning-detail-progress">
+                  <div className="learning-card-progress" aria-label={`${progressPercent}%`}>
+                    <span style={{ width: `${progressPercent}%` }} />
+                    <small>
+                      {item.currentPages || 0}/{item.totalPages}p ({progressPercent}%)
+                    </small>
+                  </div>
+                </div>
+              ) : null}
+
+              {item.note?.trim() ? (
+                <p className="learning-detail-note">{item.note.trim()}</p>
+              ) : null}
+
+              <div className="learning-detail-section">
+                <p className="learning-detail-section-title">{t("この13週間")}</p>
+                <div className="learning-detail-heatmap" aria-hidden="true">
+                  {heatCells.map((cell) => (
+                    <span
+                      key={cell.key}
+                      className={`learning-detail-heatcell lv-${cell.level}${
+                        cell.isToday ? " is-today" : ""
+                      }${cell.future ? " is-future" : ""}`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="learning-detail-section">
+                <p className="learning-detail-section-title">{t("最近の記録")}</p>
+                {recentLogs.length ? (
+                  <ul className="learning-detail-logs">
+                    {recentLogs.map((log) => {
+                      const date = new Date(log.createdAt);
+                      const dateLabel = Number.isNaN(date.getTime())
+                        ? "—"
+                        : `${date.getMonth() + 1}/${date.getDate()}`;
+                      return (
+                        <li key={log.id}>
+                          <span className="learning-detail-log-date">{dateLabel}</span>
+                          <span className="learning-detail-log-min">{formatStudyTimeJa(log.minutes)}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p className="learning-detail-empty">{t("まだ記録なし")}</p>
+                )}
+              </div>
+
+              <div className="learning-detail-actions">
+                {!item.archived ? (
+                  <div className="learning-detail-quicklog" role="group" aria-label={t("クイック記録")}>
+                    {[15, 30, 60].map((minutes) => (
+                      <button
+                        key={minutes}
+                        type="button"
+                        className="learning-card-quicklog-chip"
+                        onClick={() => handleLearningQuickLog(item, minutes)}
+                      >
+                        +{minutes < 60 ? `${minutes}m` : `${minutes / 60}h`}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <span aria-hidden="true" />
+                )}
+                <button
+                  type="button"
+                  className="learning-save-button"
+                  onClick={() => {
+                    closeDetail();
+                    openLearningEditorForEdit(item);
+                  }}
+                >
+                  {t("編集")}
+                </button>
+              </div>
+            </section>
+          </div>
+        );
+      })() : null}
 
       {expandedDailyReport ? (() => {
         const report = expandedDailyReport;
@@ -16015,12 +16292,12 @@ function App() {
               {(() => {
                 // Quiet inventory summary — counts only, no streaks or
                 // targets. Helps the user gauge library size at a glance.
-                const active = learningItems.filter((item) => !item.archived);
-                const bookCount = active.filter((item) => item.category === "book").length;
-                const archivedCount = learningItems.length - active.length;
+                const live = learningItems.filter((item) => !item.archived);
+                const doneCount = live.filter((item) => (item.status ?? "active") === "done").length;
+                const archivedCount = learningItems.length - live.length;
                 if (learningItems.length === 0) return null;
-                const parts = [t("{count}件", { count: active.length })];
-                if (bookCount > 0) parts.push(t("うち書籍{count}", { count: bookCount }));
+                const parts = [t("{count}件", { count: live.length })];
+                if (doneCount > 0) parts.push(t("完了{count}", { count: doneCount }));
                 if (archivedCount > 0) parts.push(t("アーカイブ{count}", { count: archivedCount }));
                 return <p className="learning-count-summary">{parts.join(" · ")}</p>;
               })()}
@@ -16035,7 +16312,8 @@ function App() {
               {(
                 [
                   { value: "all" as const, label: t("すべて") },
-                  { value: "book" as const, label: t("書籍") },
+                  { value: "active" as const, label: t("進行中") },
+                  { value: "done" as const, label: t("完了") },
                   { value: "archived" as const, label: t("アーカイブ") },
                 ]
               ).map((tab) => (
@@ -16079,7 +16357,11 @@ function App() {
                   return item.archived;
                 }
                 if (item.archived) return false;
-                if (learningCategoryTab === "book") return item.category === "book";
+                const status = item.status ?? "active";
+                // "進行中" groups active + paused (i.e. not finished); the
+                // card badge still distinguishes 中断. "完了" is done-only.
+                if (learningCategoryTab === "active") return status !== "done";
+                if (learningCategoryTab === "done") return status === "done";
                 return true;
               })
               .filter((item) => !lowerQuery || item.name.toLowerCase().includes(lowerQuery));
@@ -16201,8 +16483,9 @@ function App() {
                   const progressPercent = hasProgress
                     ? Math.min(100, Math.round(((item.currentPages || 0) / (item.totalPages || 1)) * 100))
                     : 0;
-                  const isFinishedBook = hasProgress && progressPercent >= 100;
+                  const status = item.status ?? "active";
                   const noteText = item.note?.trim() || "";
+                  const isPageEditOpen = learningPageEditId === item.id;
                   const lastTs = lastLoggedByItem.get(item.id);
                   const lastLabel = formatLearningLastLogged(lastTs, todayMidnight.getTime(), dayMs);
                   const isFreshToday = !!lastTs && lastTs >= todayMidnight.getTime();
@@ -16238,8 +16521,8 @@ function App() {
                       <button
                         type="button"
                         className="learning-card-trigger"
-                        onClick={() => openLearningEditorForEdit(item)}
-                        aria-label={t("{name}の設定", { name: item.name })}
+                        onClick={() => setLearningDetailId(item.id)}
+                        aria-label={t("{name}の詳細", { name: item.name })}
                       >
                         <div className="learning-card-head">
                           {isBook ? (
@@ -16248,8 +16531,10 @@ function App() {
                             </span>
                           ) : null}
                           <strong>{item.name}</strong>
-                          {isFinishedBook ? (
-                            <span className="learning-card-done">{t("読了")}</span>
+                          {status === "done" ? (
+                            <span className="learning-card-status is-done">{t("完了")}</span>
+                          ) : status === "paused" ? (
+                            <span className="learning-card-status is-paused">{t("中断")}</span>
                           ) : null}
                         </div>
                         <div className="learning-card-meta">
@@ -16289,6 +16574,78 @@ function App() {
                         ) : null}
                         {noteText ? <span className="learning-card-note">{noteText}</span> : null}
                       </button>
+                      {isBook && hasProgress && !item.archived ? (
+                        isPageEditOpen ? (
+                          <div className="learning-card-pageedit is-input" role="group" aria-label={t("現在ページを更新")}>
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              min="0"
+                              max={item.totalPages}
+                              step="1"
+                              value={learningPageEditValue}
+                              autoFocus
+                              onChange={(event) => setLearningPageEditValue(event.target.value)}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") {
+                                  event.preventDefault();
+                                  handleLearningPageUpdate(item.id, Number(learningPageEditValue));
+                                  setLearningPageEditId(null);
+                                } else if (event.key === "Escape") {
+                                  event.preventDefault();
+                                  setLearningPageEditId(null);
+                                }
+                              }}
+                              aria-label={t("現在のページ")}
+                            />
+                            <span className="learning-card-pageedit-unit">/ {item.totalPages}p</span>
+                            <button
+                              type="button"
+                              className="learning-card-pageedit-submit"
+                              onClick={() => {
+                                handleLearningPageUpdate(item.id, Number(learningPageEditValue));
+                                setLearningPageEditId(null);
+                              }}
+                            >
+                              {t("更新")}
+                            </button>
+                            <button
+                              type="button"
+                              className="learning-card-pageedit-cancel"
+                              onClick={() => setLearningPageEditId(null)}
+                              aria-label={t("閉じる")}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="learning-card-pageedit" role="group" aria-label={t("ページ進捗")}>
+                            {[5, 10, 25].map((delta) => (
+                              <button
+                                key={delta}
+                                type="button"
+                                className="learning-card-pageedit-chip"
+                                onClick={() =>
+                                  handleLearningPageUpdate(item.id, (item.currentPages || 0) + delta)
+                                }
+                              >
+                                +{delta}p
+                              </button>
+                            ))}
+                            <button
+                              type="button"
+                              className="learning-card-pageedit-chip is-set"
+                              onClick={() => {
+                                setLearningPageEditId(item.id);
+                                setLearningPageEditValue(String(item.currentPages || 0));
+                              }}
+                              aria-label={t("ページ数を直接入力")}
+                            >
+                              {t("ページ")}…
+                            </button>
+                          </div>
+                        )
+                      ) : null}
                       {!item.archived ? (
                         isQuickLogOpen ? (
                           <div className="learning-card-quicklog is-custom" role="group" aria-label={t("時間を指定して記録")}>

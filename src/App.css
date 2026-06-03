@@ -21095,6 +21095,118 @@ body {
   color: var(--ink);
 }
 
+/* C-6: inline page-progress quick update on book cards. Sits between the
+   trigger and the time quicklog; visually lighter so time logging stays
+   the primary action. */
+.learning-card-pageedit {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-top: 1px dashed var(--border);
+}
+
+.learning-card-pageedit-chip {
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--muted);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: border-color 120ms ease-out, color 120ms ease-out;
+}
+
+.learning-card-pageedit-chip:hover {
+  border-color: var(--learning-card-color, var(--ink));
+  color: var(--learning-card-color, var(--ink));
+}
+
+.learning-card-pageedit-chip.is-set {
+  margin-left: auto;
+  letter-spacing: 0;
+}
+
+.learning-card-pageedit.is-input {
+  gap: 6px;
+}
+
+.learning-card-pageedit input[type="number"] {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+
+.learning-card-pageedit input[type="number"]:focus {
+  outline: none;
+  border-color: var(--learning-card-color, var(--ink));
+}
+
+.learning-card-pageedit-unit {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.learning-card-pageedit-submit {
+  padding: 4px 12px;
+  border: none;
+  border-radius: 6px;
+  background: var(--learning-card-color, var(--ink));
+  color: var(--bg);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.learning-card-pageedit-cancel {
+  padding: 2px 6px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.learning-card-pageedit-cancel:hover {
+  color: var(--ink);
+}
+
+/* Quiet lifecycle status chips, shared by card head and detail header. */
+.learning-card-status {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.learning-card-status.is-done {
+  border-color: color-mix(in srgb, var(--learning-card-color, var(--ink)) 45%, var(--border));
+  color: var(--learning-card-color, var(--ink));
+}
+
+.learning-card-status.is-paused {
+  opacity: 0.85;
+}
+
 .learning-card-head {
   display: flex;
   align-items: center;
@@ -21115,17 +21227,6 @@ body {
   white-space: nowrap;
 }
 
-.learning-card-done {
-  flex-shrink: 0;
-  margin-left: auto;
-  font-size: 10px;
-  font-weight: 500;
-  padding: 2px 7px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  color: var(--muted);
-  letter-spacing: 0.04em;
-}
 
 .learning-card-note {
   margin: 8px 0 0;
@@ -21360,6 +21461,232 @@ body {
 .learning-note-field textarea:focus {
   outline: none;
   border-color: var(--ink);
+}
+
+/* Status segmented control in the editor modal. */
+.learning-status-field > span {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.learning-status-segment {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px;
+  background: var(--bg);
+  gap: 2px;
+}
+
+.learning-status-segment button {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 6px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.learning-status-segment button.active {
+  background: var(--cta-bg);
+  color: var(--bg);
+}
+
+/* ─── B-4 Item detail view ─────────────────────────────────── */
+.learning-detail {
+  max-width: 460px;
+  gap: 18px;
+}
+
+.learning-detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.learning-detail-head h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 4px 0 0;
+}
+
+.learning-detail-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.learning-detail-badges .learning-card-status {
+  margin-left: 0;
+}
+
+.learning-detail-badges .learning-card-status.is-active {
+  border-color: color-mix(in srgb, var(--learning-card-color, var(--ink)) 35%, var(--border));
+  color: var(--learning-card-color, var(--ink));
+}
+
+.learning-detail-close {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.learning-detail-close:hover {
+  color: var(--ink);
+  background: var(--border);
+}
+
+.learning-detail-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.learning-detail-stats > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(var(--ink-rgb), 0.015);
+}
+
+.learning-detail-stats small {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.03em;
+}
+
+.learning-detail-stats strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.learning-detail-progress .learning-card-progress {
+  margin: 0;
+}
+
+.learning-detail-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+  padding: 10px 12px;
+  border-left: 2px solid var(--learning-card-color, var(--border));
+  background: rgba(var(--ink-rgb), 0.02);
+  border-radius: 0 8px 8px 0;
+  white-space: pre-wrap;
+}
+
+.learning-detail-section-title {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  margin: 0 0 8px;
+}
+
+.learning-detail-heatmap {
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 3px;
+}
+
+.learning-detail-heatcell {
+  aspect-ratio: 1 / 1;
+  border-radius: 2px;
+  background: var(--learning-card-color, var(--ink));
+  opacity: 0;
+  border: 1px solid transparent;
+}
+
+.learning-detail-heatcell.lv-0 {
+  opacity: 1;
+  background: transparent;
+  border-color: var(--border);
+}
+
+.learning-detail-heatcell.lv-1 { opacity: 0.3; }
+.learning-detail-heatcell.lv-2 { opacity: 0.5; }
+.learning-detail-heatcell.lv-3 { opacity: 0.75; }
+.learning-detail-heatcell.lv-4 { opacity: 1; }
+
+.learning-detail-heatcell.is-today {
+  outline: 1px solid var(--ink);
+  outline-offset: 0;
+}
+
+.learning-detail-heatcell.is-future {
+  opacity: 0;
+  background: transparent;
+  border-color: transparent;
+}
+
+.learning-detail-logs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.learning-detail-logs li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 2px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.learning-detail-logs li:last-child {
+  border-bottom: none;
+}
+
+.learning-detail-log-date {
+  color: var(--muted);
+}
+
+.learning-detail-log-min {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.learning-detail-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.learning-detail-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.learning-detail-quicklog {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .learning-modal-actions {
