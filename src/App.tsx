@@ -3430,6 +3430,11 @@ function LoginScreen() {
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState<AuthErrorDetail | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  /* showcase 風のログイン画面ではメール認証フォームを折りたたみで保持。
+     初期表示では GitHub / Google の 2 ボタンだけ見せて、メール派は
+     「メールで続行」を開いてから記入する。視線をブランドビジュアル
+     から逸らさない狙い。 */
+  const [isEmailFormOpen, setIsEmailFormOpen] = useState(false);
 
   const handleEmailAuth = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -3499,81 +3504,92 @@ function LoginScreen() {
   };
 
   return (
-    <main className="login-shell">
-      <section className="login-hero-panel" aria-label="Contribution Arc login">
-        <ContributionArcLogo />
-
-        <div className="login-brand">
-          <p className="eyebrow">Developer Learning Graph</p>
-          <h1>Contribution Arc</h1>
-          <p>学習の積み重ねを記録し、仲間と進捗を共有するための場所。</p>
+    <main className="login-shell login-shell-showcase" aria-label="Contribution Arc login">
+      {/* showcase 画面と共通の没入背景。Sky / Canopy / Mist / Grid /
+          Foreground の 5 層で深さを作る。中央キャラはログイン前なので
+          省略 (代わりにブランドコピー + 認証 CTA を主役に置く)。 */}
+      <div className="showcase-scene" aria-hidden="true">
+        <div className="showcase-sky" />
+        <div className="showcase-canopy" />
+        <div className="showcase-mist" />
+        <div className="showcase-grid showcase-grid-login" role="presentation">
+          {Array.from({ length: 7 * 18 }).map((_, idx) => {
+            const col = idx % 18;
+            const row = Math.floor(idx / 18);
+            const intensity = ((col * 7 + row * 13 + (col % 3) * 5) % 5) / 4;
+            return (
+              <span
+                key={idx}
+                className="showcase-grid-cell"
+                style={
+                  {
+                    "--cell-intensity": intensity.toFixed(2),
+                    "--cell-delay": `${(col * 0.08 + row * 0.05).toFixed(2)}s`,
+                  } as CSSProperties
+                }
+              />
+            );
+          })}
         </div>
-      </section>
+        <div className="showcase-foreground" />
+      </div>
 
-      <div className="login-side-stack">
-      <section className="card login-card">
-        <header className="login-card-head">
-          <p className="card-kicker">Sign in</p>
-          <h2>アカウントにログイン</h2>
-        </header>
-        <p className="login-copy">
-          メール、Google、GitHub のいずれかでログインできます。
+      <section className="login-showcase-brand">
+        <svg
+          className="showcase-brand-mark"
+          viewBox="0 0 1100 300"
+          preserveAspectRatio="xMidYMid meet"
+          role="img"
+          aria-label="Contribution"
+          focusable="false"
+        >
+          <defs>
+            <linearGradient id="loginShowcaseInk" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#f0fff5" />
+              <stop offset="1" stopColor="#bfe7cc" />
+            </linearGradient>
+          </defs>
+          <text
+            x="50%"
+            y="62%"
+            textAnchor="middle"
+            fontFamily="'Caveat', 'Pacifico', 'Brush Script MT', cursive"
+            fontSize="200"
+            fontWeight="700"
+            fill="url(#loginShowcaseInk)"
+            textLength="980"
+            lengthAdjust="spacingAndGlyphs"
+            style={{ letterSpacing: "0.01em" }}
+          >
+            Contribution
+          </text>
+          <text
+            x="50%"
+            y="92%"
+            textAnchor="middle"
+            fontFamily="'Caveat', 'Pacifico', 'Brush Script MT', cursive"
+            fontSize="64"
+            fontWeight="600"
+            fill="#bfe7cc"
+            opacity="0.86"
+          >
+            — arc —
+          </text>
+        </svg>
+        <p className="showcase-tagline">
+          一日のコミットが、いつかの自分の地層になる。
         </p>
 
-        <div className="auth-mode-tabs" aria-label="認証モード">
+        <div className="login-showcase-actions">
           <button
             type="button"
-            className={authMode === "login" ? "active" : ""}
-            onClick={() => setAuthMode("login")}
+            className="provider-button github"
+            onClick={() => handleProviderLogin("github")}
+            disabled={isSubmitting}
           >
-            Login
+            <GitHubIcon />
+            <span>GitHubで続行</span>
           </button>
-          <button
-            type="button"
-            className={authMode === "signup" ? "active" : ""}
-            onClick={() => setAuthMode("signup")}
-          >
-            Sign up
-          </button>
-        </div>
-
-        <form className="login-form" onSubmit={handleEmailAuth}>
-          <label>
-            <span>Email</span>
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="ari@example.com"
-              autoComplete="email"
-              required
-            />
-          </label>
-          <label>
-            <span>Password</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              autoComplete={authMode === "signup" ? "new-password" : "current-password"}
-              minLength={6}
-              required
-            />
-          </label>
-          <button className="login-submit" type="submit" disabled={isSubmitting}>
-            {isSubmitting
-              ? "Connecting..."
-              : authMode === "signup"
-                ? "Create account"
-                : "Login with email"}
-          </button>
-        </form>
-
-        <div className="login-divider">
-          <span>or continue with</span>
-        </div>
-
-        <div className="provider-grid">
           <button
             type="button"
             className="provider-button google"
@@ -3585,17 +3601,68 @@ function LoginScreen() {
           </button>
           <button
             type="button"
-            className="provider-button github"
-            onClick={() => handleProviderLogin("github")}
-            disabled={isSubmitting}
+            className="login-email-toggle"
+            onClick={() => setIsEmailFormOpen((prev) => !prev)}
+            aria-expanded={isEmailFormOpen}
           >
-            <GitHubIcon />
-            <span>GitHubで続行</span>
+            {isEmailFormOpen ? "メールフォームを閉じる" : "メールで続行"}
           </button>
         </div>
 
+        {isEmailFormOpen ? (
+          <div className="login-showcase-email">
+            <div className="auth-mode-tabs" aria-label="認証モード">
+              <button
+                type="button"
+                className={authMode === "login" ? "active" : ""}
+                onClick={() => setAuthMode("login")}
+              >
+                Login
+              </button>
+              <button
+                type="button"
+                className={authMode === "signup" ? "active" : ""}
+                onClick={() => setAuthMode("signup")}
+              >
+                Sign up
+              </button>
+            </div>
+            <form className="login-form" onSubmit={handleEmailAuth}>
+              <label>
+                <span>Email</span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="ari@example.com"
+                  autoComplete="email"
+                  required
+                />
+              </label>
+              <label>
+                <span>Password</span>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  autoComplete={authMode === "signup" ? "new-password" : "current-password"}
+                  minLength={6}
+                  required
+                />
+              </label>
+              <button className="login-submit" type="submit" disabled={isSubmitting}>
+                {isSubmitting
+                  ? "Connecting..."
+                  : authMode === "signup"
+                    ? "Create account"
+                    : "Login with email"}
+              </button>
+            </form>
+          </div>
+        ) : null}
+
         {authError ? (
-          <div className="auth-error" role="alert">
+          <div className="auth-error login-showcase-error" role="alert">
             <strong>{authError.title}</strong>
             <span>{authError.message}</span>
             {authError.action ? <span>{authError.action}</span> : null}
@@ -3603,8 +3670,6 @@ function LoginScreen() {
           </div>
         ) : null}
       </section>
-
-      </div>
     </main>
   );
 }
