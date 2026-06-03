@@ -12720,7 +12720,7 @@ function App() {
             className={currentView === "learning" ? "is-active" : ""}
             onClick={() => setCurrentView("learning")}
           >
-            {t("記録する")}
+            {t("ライブラリ")}
           </button>
           <button
             type="button"
@@ -12753,7 +12753,7 @@ function App() {
             <span className="topbar-quicklog-label">
               {todayStudyMinutes > 0
                 ? t("今日 {duration}", { duration: formatStudyTimeJa(todayStudyMinutes) })
-                : t("記録")}
+                : t("記録する")}
             </span>
           </button>
           {/* 平日連続記録. 煽らず静かに数字だけ出す. 0 のときは何も
@@ -15273,7 +15273,7 @@ function App() {
                   </summary>
                   <dl className="settings-guide-body">
                     <div className="settings-guide-item">
-                      <dt>{t("記録する")}</dt>
+                      <dt>{t("ライブラリ")}</dt>
                       <dd>{t("学んだことを記録すると、積み上げがグラフに残ります。まずはここから。")}</dd>
                     </div>
                     <div className="settings-guide-item">
@@ -15862,7 +15862,7 @@ function App() {
       ) : currentView === "learning" ? (
         <motion.section
           className="learning-screen"
-          aria-label={t("記録する")}
+          aria-label={t("ライブラリ")}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={SPRING_SNAPPY}
@@ -15871,7 +15871,7 @@ function App() {
             <TutorialHint
               uid={currentUser.uid}
               feature="learning"
-              title={t("記録する — 学びの時間を積み上げる中心")}
+              title={t("ライブラリ — 学びの時間を積み上げる中心")}
               body={t("勉強・読書・アウトプットの時間を残すと、ホームのグラフに反映されます。")}
               bullets={[
                 t("「学習対象」をジャンルと色で登録(例: React=青、英語=橙)"),
@@ -15884,7 +15884,7 @@ function App() {
           <header className="learning-header">
             <div>
               <p className="card-kicker">Learning Items</p>
-              <h2>{t("記録する")}</h2>
+              <h2>{t("ライブラリ")}</h2>
               <small>{t("カードのチップから直接時間を残せます。詳細な記録はプロフィール画面の学習ログから。")}</small>
             </div>
             <button type="button" className="learning-add-button" onClick={() => openLearningEditorForCreate("")}>
@@ -18350,7 +18350,7 @@ function App() {
               <strong>{t("最近の積み上げ")}</strong>
             </div>
             <button type="button" onClick={() => setCurrentView("learning")}>
-              {t("記録する")}
+              {t("ライブラリ")}
             </button>
           </div>
           {(() => {

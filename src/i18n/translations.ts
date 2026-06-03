@@ -115,6 +115,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "ホーム":              "Home",
   "作業部屋":            "Workroom",
   "記録する":            "Log",
+  "ライブラリ":          "Library",
   "日報":                "Daily",
   "ショップ":            "Shop",
   "ショップ ({coins} Arc)": "Shop ({coins} Arc)",
