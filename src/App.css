@@ -10972,6 +10972,7 @@
   overflow: visible;
 }
 
+/* The torso carries the per-user tint now (no surrounding frame). */
 .actor-sprite.shape-frost .sprite-body {
   position: absolute;
   inset: auto;
@@ -11107,20 +11108,20 @@
 
 /* 黒袴 / 足袋。羽織の裾から自然に伸びるよう位置を再調整。 */
 .actor-sprite.shape-frost .sprite-leg {
-  width: 9px;
-  height: 11px;
+  width: 6px;
+  height: 13px;
   border-radius: 3px 3px 4px 4px;
   background: linear-gradient(180deg, #2a2c34 0%, #15161b 100%);
-  bottom: -5px;
+  bottom: -6px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .actor-sprite.shape-frost .sprite-leg-left {
-  left: 11px;
+  left: 12px;
 }
 
 .actor-sprite.shape-frost .sprite-leg-right {
-  right: 11px;
+  right: 12px;
   left: auto;
 }
 
