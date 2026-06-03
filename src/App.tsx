@@ -863,12 +863,10 @@ const betaWorkspaceRoomId = "beta-room";
 const legacyDeepWorkStudioRoomId = "deep-work-studio";
 const minaUserId = "npc-mina";
 const nishimiyaUserId = "npc-nishimiya";
-const maxWorkspacePresenceMinutes = 12 * 60;
-// 退出忘れ対策。無操作（＋タブ非表示）がこの分数続いたら自動で休憩に入れ、
-// 活動時間の計上を止める（放置はEXPに乗らない）。さらに放置が続いたら
-// 最終操作時刻までを確定して自動退室する。書き込みは遷移時のみ。
-const idleAutoBreakMinutes = 15;
-const idleAutoCloseMinutes = 60;
+// 退出忘れ対策の在室上限。入室からこの分数（＝20時間）が経過したユーザーは
+// 自動退室させる。タブ非表示中も「裏で作業中」とみなして退室はさせないので、
+// この上限だけがゴースト在室（退室し忘れた在席）の歯止めになる。
+const maxWorkspacePresenceMinutes = 20 * 60;
 const onboardingMessage = "ようこそContribution Arcへ";
 const workspacePresenceResetVersion = "2026-05-20-clear-stuck-presence";
 const workspaceMovementKeys = new Set(["w", "a", "s", "d", "arrowup", "arrowleft", "arrowdown", "arrowright"]);
@@ -4259,11 +4257,10 @@ function App() {
   const [customRooms, setCustomRooms] = useState<WorkspaceRoom[]>([]);
   const [isWorkspaceLoaded, setIsWorkspaceLoaded] = useState(false);
   const [isPageVisible, setIsPageVisible] = useState(!document.hidden);
-  // 退出忘れ対策の作業時間トラッキング。lastWorkspaceActivityRef は最終操作時刻、
-  // autoBreakActiveRef は「自動休憩中か（手動休憩と区別）」、closeWorkspaceSessionRef
-  // は idle 監視 effect から最新の closeWorkspaceSession を呼ぶための参照。
+  // 退出忘れ対策の作業時間トラッキング。lastWorkspaceActivityRef は最後にユーザーが
+  // 操作した時刻（EXP はここまでで確定）、closeWorkspaceSessionRef は在室上限の監視
+  // effect から最新の closeWorkspaceSession を呼ぶための参照。
   const lastWorkspaceActivityRef = useRef(Date.now());
-  const autoBreakActiveRef = useRef(false);
   const closeWorkspaceSessionRef = useRef<(roomId: string, options?: { auto?: boolean }) => void>(
     () => {},
   );
@@ -9864,11 +9861,12 @@ function App() {
     }
 
     const isAutoLeave = options?.auto ?? false;
-    // 自動・手動どちらの退室でも放置トラッキングは解除する。
-    autoBreakActiveRef.current = false;
 
     const leftAt = new Date().toISOString();
-    const minutes = getWorkspaceActiveMinutes(member);
+    // EXP は「入室〜最後に操作した時刻」で確定。最終操作以降の放置分は計上せず、
+    // 手動休憩は getWorkspaceActiveMinutes 側で従来通り除外される。
+    const lastActivityMs = Math.min(lastWorkspaceActivityRef.current, Date.now());
+    const minutes = getWorkspaceActiveMinutes(member, lastActivityMs);
     const session: WorkspaceSessionHistory = {
       id: crypto.randomUUID(),
       userId: currentUser.uid,
@@ -9974,91 +9972,30 @@ function App() {
   // idle 監視 effect から、毎レンダー再生成されるこの関数の最新版を呼べるよう参照を更新。
   closeWorkspaceSessionRef.current = closeWorkspaceSession;
 
-  // === 退出忘れ対策（idle 自動休憩 → 自動退室）===
-  // 在室中に最終操作時刻まで活動を確定し、放置分は計上しない。Firestore への
-  // 書き込みは「休憩開始 / 復帰 / 退室」の遷移時のみ（操作ごとには書かない）。
-  // 手動休憩では autoBreakActiveRef を立てないので、idle 監視が勝手に復帰させる
-  // ことはない。
-  const enterAutoBreak = useCallback(
-    (roomId: string, lastActivityMs: number) => {
-      if (!currentUser) {
-        return;
-      }
-      autoBreakActiveRef.current = true;
-      const breakIso = new Date(lastActivityMs).toISOString();
-      setCustomRooms((rooms) =>
-        rooms.map((room) => {
-          const normalizedRoom = normalizeWorkspaceRoom(room);
-          if (normalizedRoom.id !== roomId) {
-            return normalizedRoom;
-          }
-          const nextRoom = normalizeWorkspaceRoom({
-            ...normalizedRoom,
-            activeMembers: normalizedRoom.activeMembers.map((member) =>
-              member.userId === currentUser.uid && member.status !== "on-break"
-                ? {
-                    ...member,
-                    status: "on-break",
-                    // 最終操作時刻までを確定して計測停止（以降の放置分は計上しない）。
-                    accumulatedActiveMinutes: getWorkspaceActiveMinutes(member, lastActivityMs),
-                    activeStartedAt: "",
-                    breakStartedAt: breakIso,
-                  }
-                : member,
-            ),
-          });
-          pendingWorkspaceRoomsRef.current.set(roomId, nextRoom);
-          return nextRoom;
-        }),
-      );
-    },
-    [currentUser],
-  );
-
-  const resumeFromAutoBreak = useCallback(
-    (roomId: string) => {
-      if (!currentUser || !autoBreakActiveRef.current) {
-        return;
-      }
-      autoBreakActiveRef.current = false;
-      const nowIso = new Date().toISOString();
-      setCustomRooms((rooms) =>
-        rooms.map((room) => {
-          const normalizedRoom = normalizeWorkspaceRoom(room);
-          if (normalizedRoom.id !== roomId) {
-            return normalizedRoom;
-          }
-          const nextRoom = normalizeWorkspaceRoom({
-            ...normalizedRoom,
-            activeMembers: normalizedRoom.activeMembers.map((member) =>
-              member.userId === currentUser.uid && member.status === "on-break"
-                ? { ...member, status: "working", activeStartedAt: nowIso, breakStartedAt: "" }
-                : member,
-            ),
-          });
-          pendingWorkspaceRoomsRef.current.set(roomId, nextRoom);
-          return nextRoom;
-        }),
-      );
-    },
-    [currentUser],
-  );
-
+  // === 退出忘れ対策（在室上限による自動退室）===
+  // 在室中はユーザーの操作で「最後に操作した時刻」を更新し続けるだけで、無操作や
+  // タブ非表示では退室させない（Arc を裏に回して別アプリで作業しているケースを
+  // 尊重する）。歯止めは入室から maxWorkspacePresenceMinutes（＝20時間）の在室上限
+  // のみで、ここに達したら自動退室する。EXP は closeWorkspaceSession 側で「入室〜
+  // 最終操作時刻」で確定するので、退室を忘れて放置していても放置分は計上されない。
   useEffect(() => {
-    if (!currentUser || currentView !== "workspace" || !selectedRoomId || !isInSelectedRoom) {
+    const joinedAt = currentPresence?.joinedAt;
+    if (
+      !currentUser ||
+      currentView !== "workspace" ||
+      !selectedRoomId ||
+      !isInSelectedRoom ||
+      !joinedAt
+    ) {
       return;
     }
     const roomId = selectedRoomId;
-    // 在室開始（もしくは部屋切替）の瞬間を「最後の操作」とみなす。
+    const joinedAtMs = new Date(joinedAt).getTime();
+    // 在室開始（もしくは部屋切替）の瞬間を「最後の操作」の初期値とする。
     lastWorkspaceActivityRef.current = Date.now();
-    autoBreakActiveRef.current = false;
 
     const markActivity = () => {
       lastWorkspaceActivityRef.current = Date.now();
-      if (autoBreakActiveRef.current) {
-        // 自動休憩からの即時復帰（手動休憩には autoBreakActiveRef が立たない）。
-        resumeFromAutoBreak(roomId);
-      }
     };
     const activityEvents: (keyof WindowEventMap)[] = [
       "mousemove",
@@ -10072,22 +10009,16 @@ function App() {
     );
 
     const interval = window.setInterval(() => {
-      // タブ非表示中は操作イベントが来ないので、放置時間が idleMs に正しく積み上がる。
-      const idleMs = Date.now() - lastWorkspaceActivityRef.current;
-      if (idleMs >= idleAutoCloseMinutes * 60000) {
+      if (Date.now() - joinedAtMs >= maxWorkspacePresenceMinutes * 60000) {
         closeWorkspaceSessionRef.current(roomId, { auto: true });
-        return;
       }
-      if (idleMs >= idleAutoBreakMinutes * 60000 && !autoBreakActiveRef.current) {
-        enterAutoBreak(roomId, lastWorkspaceActivityRef.current);
-      }
-    }, 30000);
+    }, 60000);
 
     return () => {
       activityEvents.forEach((event) => window.removeEventListener(event, markActivity));
       window.clearInterval(interval);
     };
-  }, [currentUser, currentView, selectedRoomId, isInSelectedRoom, enterAutoBreak, resumeFromAutoBreak]);
+  }, [currentUser, currentView, selectedRoomId, isInSelectedRoom, currentPresence?.joinedAt]);
 
   const resetWorkspacePresence = () => {
     pressedWorkspaceKeysRef.current.clear();
