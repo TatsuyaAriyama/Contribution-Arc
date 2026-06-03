@@ -32227,9 +32227,6 @@ select:disabled {
   --line: rgba(120, 200, 150, 0.16);
   --green: #59e08a;
   --green-rgb: 89, 224, 138;
-  /* tooltip は背景 var(--ink) / 文字 var(--cta-fg-rgb)。ink を明るくしたので
-   * 文字色を暗側に倒して可読性を保つ。 */
-  --cta-fg-rgb: 6, 18, 12;
 
   position: relative;
   border: 1px solid rgba(120, 200, 150, 0.16);
@@ -32261,4 +32258,24 @@ select:disabled {
 .home-screen .contribution-arc-card .contribution-arc-legend i.lv-4 {
   background: #59e08a;
   box-shadow: 0 0 10px rgba(89, 224, 138, 0.4);
+}
+
+/* heatmap セルをタップした時の日別ツールチップ (学習内容 / commit / EXP) を
+ * 森ガラスに。没入カードでは --ink を明るくしているが、--cta-fg-rgb は素の
+ * 白のまま保っているので、tooltip 内の rgba(var(--cta-fg-rgb), …) 文字は
+ * 暗い森背景の上で白く読める。背景だけ cta-bg の紺から森トーンへ寄せる。 */
+.home-screen .contribution-arc-card .contribution-arc-tooltip {
+  background: rgba(7, 22, 14, 0.97);
+  border: 1px solid rgba(120, 200, 150, 0.18);
+}
+.home-screen .contribution-arc-card .contribution-arc-tooltip::after {
+  background: rgba(7, 22, 14, 0.97);
+}
+
+/* arc-stat のツールチップは背景 var(--ink) / 文字 var(--cta-fg-rgb)。ink を
+ * 明るくしたので、ここだけ暗い森ガラス背景 + 明文字に個別で戻す。 */
+.home-screen .contribution-arc-card .arc-stat[data-tooltip]::after {
+  background: rgba(7, 22, 14, 0.97);
+  color: rgba(236, 243, 239, 0.96);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
 }
