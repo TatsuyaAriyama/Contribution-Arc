@@ -18381,11 +18381,15 @@ function App() {
             <div className="showcase-foreground" />
           </div>
 
-          {/* ロゴ / コピー。SVG で手書き感のあるカーブを表現。 */}
+          {/* ロゴ / コピー。SVG で手書き感のあるカーブを表現。
+              viewBox を 1100x300 に広げて、長い "Contribution" が
+              端で切れないよう textLength + lengthAdjust で確実に
+              枠内に収める。 */}
           <div className="showcase-brand">
             <svg
               className="showcase-brand-mark"
-              viewBox="0 0 540 180"
+              viewBox="0 0 1100 300"
+              preserveAspectRatio="xMidYMid meet"
               role="img"
               aria-label="Contribution"
               focusable="false"
@@ -18398,22 +18402,24 @@ function App() {
               </defs>
               <text
                 x="50%"
-                y="58%"
+                y="62%"
                 textAnchor="middle"
                 fontFamily="'Caveat', 'Pacifico', 'Brush Script MT', cursive"
-                fontSize="148"
+                fontSize="200"
                 fontWeight="700"
                 fill="url(#showcaseInk)"
+                textLength="980"
+                lengthAdjust="spacingAndGlyphs"
                 style={{ letterSpacing: "0.01em" }}
               >
                 Contribution
               </text>
               <text
                 x="50%"
-                y="86%"
+                y="92%"
                 textAnchor="middle"
                 fontFamily="'Caveat', 'Pacifico', 'Brush Script MT', cursive"
-                fontSize="46"
+                fontSize="64"
                 fontWeight="600"
                 fill="#bfe7cc"
                 opacity="0.86"
