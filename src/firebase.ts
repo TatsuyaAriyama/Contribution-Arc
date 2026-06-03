@@ -6,7 +6,7 @@ import {
   GoogleAuthProvider,
   setPersistence,
 } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore } from "firebase/firestore";
 import { getFunctions } from "firebase/functions";
 
 const firebaseConfig = {
@@ -22,7 +22,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+// ignoreUndefinedProperties: profiles built via normalizeUserProfile carry
+// undefined org fields (organizationId/Name/Role) for users with no org.
+// Without this, any setDoc embedding such a profile (e.g. friend requests'
+// fromProfile/toProfile) throws on the undefined value, silently dropping
+// the write — which made friend requests never reach the recipient.
+export const db = initializeFirestore(app, { ignoreUndefinedProperties: true });
 export const functions = getFunctions(app, "us-central1");
 export const googleProvider = new GoogleAuthProvider();
 export const githubProvider = new GithubAuthProvider();
