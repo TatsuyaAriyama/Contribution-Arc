@@ -2821,6 +2821,82 @@
   }
 }
 
+/* 運営からのお知らせ — 旧 hero-grid を置き換えた告知欄。低彩度・
+   余白重視で、煽らず静かに読める縦リスト（MEMORY のデザイン方針）。
+   .card のベース枠の上に内側の余白とリストを重ねる。 */
+.home-announcements {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px 20px;
+  margin-bottom: 12px;
+}
+
+.home-announcements-head .card-kicker {
+  margin: 0 0 2px;
+}
+
+.home-announcements-head strong {
+  font-size: 15px;
+  font-weight: 850;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+}
+
+.home-announcements-empty {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(var(--ink-rgb), 0.55);
+}
+
+.home-announcements-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-announcement-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 0;
+  border-top: 1px solid rgba(var(--ink-rgb), 0.08);
+}
+
+.home-announcement-item:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.home-announcement-item:last-child {
+  padding-bottom: 0;
+}
+
+.home-announcement-date {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgba(var(--ink-rgb), 0.45);
+}
+
+.home-announcement-title {
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.home-announcement-body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: rgba(var(--ink-rgb), 0.62);
+}
+
 .status-card,
 .map-card,
 .hours-card,

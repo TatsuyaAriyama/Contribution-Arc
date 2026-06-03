@@ -805,6 +805,39 @@ const outputStats = {
 };
 
 const workspaceRooms: WorkspaceRoom[] = [];
+
+/**
+ * 運営からのお知らせ（ホーム上部に表示）。
+ *
+ * 設計: Firestore ではなくコードに直書きで管理する。お知らせは運営
+ * （= 開発者本人）が書くものなので、更新時はこの配列を編集して
+ * デプロイすれば反映される。新規 Firestore 読み取りを増やさない
+ * ための意図的な選択（MEMORY の Firestore コスト規律に沿う）。
+ *
+ * 表示順は配列の上から。新しいお知らせほど上に追加する。
+ * date は表示用文字列（"YYYY.MM.DD" など自由）。
+ */
+type Announcement = {
+  id: string;
+  date: string;
+  title: string;
+  body: string;
+};
+
+const ANNOUNCEMENTS: Announcement[] = [
+  {
+    id: "2026-06-03-rooms",
+    date: "2026.06.03",
+    title: "作業部屋まわりを改善しました",
+    body: "作業部屋の名前変更が反映されない不具合を修正し、ヘッダーの表示も見やすく整えました。",
+  },
+  {
+    id: "2026-06-01-welcome",
+    date: "2026.06.01",
+    title: "Contribution Arc をご利用いただきありがとうございます",
+    body: "学習の積み上げを静かに記録し、仲間とゆるくつながれる場所です。ご要望があればお気軽にお寄せください。",
+  },
+];
 const sanitizeStoragePart = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9_.-]/g, "_");
 const getAccountStorageScope = (uid: string, registeredUserId: string) =>
   sanitizeStoragePart(registeredUserId) || `uid-${uid}`;
@@ -18800,141 +18833,35 @@ function App() {
         })()}
       </AnimatePresence>
 
-      <section className="hero-grid" aria-label="Contribution Arc overview">
-        <div className="overview-stack">
-          <article className="card daily-today-card">
-            <div>
-              <p className="card-kicker">{t("今日の日報")}</p>
-              <strong>{todayDailyReport?.plan ? t("今日やることあり") : t("今日やることは未入力")}</strong>
-              <span>{todayDailyReport?.reflection ? t("振り返り済み") : t("振り返りを記録")}</span>
-            </div>
-            <button type="button" onClick={() => setCurrentView("daily")}>
-              {t("日報を書く")}
-            </button>
-          </article>
-          {/* Workspace summary card — 在室者が居るときは「気配アバター」を
-              チラ見せして、自然に作業部屋へ誘導。煽らないために最大4人、
-              低彩度の小さな円のみ。誰も居ない時はその領域ごと消す。 */}
-          <article
-            className={`card workspace-summary-card${
-              activeMembers.length > 0 ? " has-live-presence" : ""
-            }`}
-          >
-            <div>
-              <p className="card-kicker">{t("作業部屋")}</p>
-              <strong>{selectedRoom?.name || t("作業部屋")}</strong>
-              <span>
-                {isInSelectedRoom
-                  ? t("入室中") + (currentStayMinutes > 0 ? ` ${formatStayTime(currentStayMinutes)}` : "")
-                  : activeMembers.length > 0
-                    ? t("今 {count} 人が作業中", { count: activeMembers.length })
-                    : t("今は静かです")}
-              </span>
-            </div>
-            {activeMembers.length > 0 && !isInSelectedRoom ? (
-              <div
-                className="workspace-summary-presence"
-                aria-hidden="true"
-                title={t("現在 {count} 人が作業中", { count: activeMembers.length })}
+      {/* 運営からのお知らせ。以前ここにあった「今日の日報 / 作業部屋 /
+          あしあと」の 3 カード(hero-grid)はユーザー要望で撤去し、運営
+          からの告知を静かに一覧する欄に置き換えた。中身は ANNOUNCEMENTS
+          (モジュール冒頭の定数) をそのまま描画するだけで、新規 Firestore
+          読み取りは発生しない。低彩度・煽らないデザイン方針を踏襲。 */}
+      <section className="home-announcements card" aria-label={t("運営からのお知らせ")}>
+        <header className="home-announcements-head">
+          <p className="card-kicker">{t("お知らせ")}</p>
+          <strong>{t("運営からのお知らせ")}</strong>
+        </header>
+        {ANNOUNCEMENTS.length === 0 ? (
+          <p className="home-announcements-empty">{t("いまは新しいお知らせはありません。")}</p>
+        ) : (
+          <ol className="home-announcements-list">
+            {ANNOUNCEMENTS.map((announcement, index) => (
+              <motion.li
+                key={announcement.id}
+                className="home-announcement-item"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1], delay: index * 0.05 }}
               >
-                {activeMembers.slice(0, 4).map((member, index) => (
-                  <span
-                    className="workspace-summary-presence-avatar"
-                    key={`${member.userId}-${index}`}
-                    style={{
-                      backgroundColor: member.color || "var(--ink-soft)",
-                    }}
-                  >
-                    {member.avatar ? (
-                      <img src={member.avatar} alt="" />
-                    ) : (
-                      <span>{(member.name || "?").slice(0, 1)}</span>
-                    )}
-                  </span>
-                ))}
-                {activeMembers.length > 4 ? (
-                  <span className="workspace-summary-presence-more">
-                    +{activeMembers.length - 4}
-                  </span>
-                ) : null}
-              </div>
-            ) : null}
-            <button type="button" onClick={() => setCurrentView("workspace")}>
-              {isInSelectedRoom
-                ? t("作業部屋へ戻る")
-                : activeMembers.length > 0
-                  ? t("見てみる")
-                  : t("作業部屋へ")}
-            </button>
-          </article>
-        </div>
-        {/* 最近の積み上げ（あしあと）— hero-grid の右カラムは長らく空いて
-            いて、左下に大きな余白を生んでいた。右ペインの FEED が「みんな」
-            を担うので、ホーム左は「あなた」で一貫させる。自分の直近の
-            学習ログ(studyLogs)を静かに振り返る縦タイムライン。煽らない・
-            低彩度・ストリークや順位は出さない (MEMORY のデザイン方針)。
-            既存 state の再利用なので新規 Firestore 読み取りは発生しない。 */}
-        <article className="card home-footprints-card" aria-label={t("最近の積み上げ")}>
-          <div className="home-footprints-head">
-            <div>
-              <p className="card-kicker">{t("あしあと")}</p>
-              <strong>{t("最近の積み上げ")}</strong>
-            </div>
-            <button type="button" onClick={() => setCurrentView("learning")}>
-              {t("ライブラリ")}
-            </button>
-          </div>
-          {(() => {
-            const todayMidnight = new Date();
-            todayMidnight.setHours(0, 0, 0, 0);
-            const dayMs = 24 * 60 * 60 * 1000;
-            const footprints = [...studyLogs]
-              .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
-              .slice(0, 6);
-            if (footprints.length === 0) {
-              return (
-                <div className="home-footprints-empty">
-                  <p>{t("まだ記録がありません。最初の積み上げを残してみましょう。")}</p>
-                  <button type="button" onClick={() => setCurrentView("learning")}>
-                    {t("学習を記録する")}
-                  </button>
-                </div>
-              );
-            }
-            return (
-              <ol className="home-footprints-list">
-                {footprints.map((log, index) => {
-                  const ts = new Date(log.createdAt).getTime();
-                  const whenLabel = Number.isFinite(ts)
-                    ? formatLearningLastLogged(ts, todayMidnight.getTime(), dayMs)
-                    : "";
-                  return (
-                    <motion.li
-                      key={log.id}
-                      className="home-footprint-item"
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1], delay: index * 0.05 }}
-                    >
-                      <span
-                        className="home-footprint-dot"
-                        style={{ background: log.color || "rgba(31,111,74,0.7)" }}
-                        aria-hidden="true"
-                      />
-                      <div className="home-footprint-body">
-                        <strong>{log.subject}</strong>
-                        <span>{formatStudyTimeJa(log.minutes)}</span>
-                      </div>
-                      {whenLabel ? (
-                        <small className="home-footprint-when">{whenLabel}</small>
-                      ) : null}
-                    </motion.li>
-                  );
-                })}
-              </ol>
-            );
-          })()}
-        </article>
+                <span className="home-announcement-date">{announcement.date}</span>
+                <strong className="home-announcement-title">{announcement.title}</strong>
+                <p className="home-announcement-body">{announcement.body}</p>
+              </motion.li>
+            ))}
+          </ol>
+        )}
       </section>
 
       </motion.div>
