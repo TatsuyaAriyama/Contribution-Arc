@@ -18702,7 +18702,35 @@ function App() {
         transition={SPRING_SNAPPY}
       >
 
-      {contributionArcCardSection}
+      {/* 運営からのお知らせ。ホーム最上部に表示する告知欄。中身は
+          ANNOUNCEMENTS (モジュール冒頭の定数) をそのまま描画するだけで、
+          新規 Firestore 読み取りは発生しない。低彩度・煽らないデザイン
+          方針を踏襲。GitHub コントリビューションマップは下段へ移した。 */}
+      <section className="home-announcements card" aria-label={t("運営からのお知らせ")}>
+        <header className="home-announcements-head">
+          <p className="card-kicker">{t("お知らせ")}</p>
+          <strong>{t("運営からのお知らせ")}</strong>
+        </header>
+        {ANNOUNCEMENTS.length === 0 ? (
+          <p className="home-announcements-empty">{t("いまは新しいお知らせはありません。")}</p>
+        ) : (
+          <ol className="home-announcements-list">
+            {ANNOUNCEMENTS.map((announcement, index) => (
+              <motion.li
+                key={announcement.id}
+                className="home-announcement-item"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1], delay: index * 0.05 }}
+              >
+                <span className="home-announcement-date">{announcement.date}</span>
+                <strong className="home-announcement-title">{announcement.title}</strong>
+                <p className="home-announcement-body">{announcement.body}</p>
+              </motion.li>
+            ))}
+          </ol>
+        )}
+      </section>
 
       {currentUser ? (
         <TutorialHint
@@ -18833,36 +18861,9 @@ function App() {
         })()}
       </AnimatePresence>
 
-      {/* 運営からのお知らせ。以前ここにあった「今日の日報 / 作業部屋 /
-          あしあと」の 3 カード(hero-grid)はユーザー要望で撤去し、運営
-          からの告知を静かに一覧する欄に置き換えた。中身は ANNOUNCEMENTS
-          (モジュール冒頭の定数) をそのまま描画するだけで、新規 Firestore
-          読み取りは発生しない。低彩度・煽らないデザイン方針を踏襲。 */}
-      <section className="home-announcements card" aria-label={t("運営からのお知らせ")}>
-        <header className="home-announcements-head">
-          <p className="card-kicker">{t("お知らせ")}</p>
-          <strong>{t("運営からのお知らせ")}</strong>
-        </header>
-        {ANNOUNCEMENTS.length === 0 ? (
-          <p className="home-announcements-empty">{t("いまは新しいお知らせはありません。")}</p>
-        ) : (
-          <ol className="home-announcements-list">
-            {ANNOUNCEMENTS.map((announcement, index) => (
-              <motion.li
-                key={announcement.id}
-                className="home-announcement-item"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1], delay: index * 0.05 }}
-              >
-                <span className="home-announcement-date">{announcement.date}</span>
-                <strong className="home-announcement-title">{announcement.title}</strong>
-                <p className="home-announcement-body">{announcement.body}</p>
-              </motion.li>
-            ))}
-          </ol>
-        )}
-      </section>
+      {/* GitHub / 学習のコントリビューションマップ。お知らせをホーム最上部に
+          出す方針に変えたので、このマップは下段へ移動した。 */}
+      {contributionArcCardSection}
 
       </motion.div>
       )}
