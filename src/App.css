@@ -27782,11 +27782,13 @@ a[role="button"],
 .login-shell.login-shell-showcase {
   position: fixed;
   inset: 0;
-  /* 基底 .login-shell の width: min(1180px,…) + grid 2 カラム + margin
-     を完全打ち消し、没入シーンをビューポート全面 (100vw × 100svh) に
-     展開する (右の白い余白を防ぐ + ブランドを中央寄せ) */
-  width: 100vw;
-  height: 100svh;
+  /* 基底 .login-shell の width: min(1180px,…) + grid 2 カラム + margin を
+     打ち消す。サイズは inset:0 のみで決める (width:auto/height:auto)。
+     100vw はスクロールバー幅を含み、また一部環境で実ビューポートと
+     ずれて右下に白い余白を生むため使わない。inset:0 なら fixed 要素は
+     ビューポート四辺ぴったりに広がる。 */
+  width: auto;
+  height: auto;
   max-width: none;
   margin: 0;
   padding: max(24px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right))
