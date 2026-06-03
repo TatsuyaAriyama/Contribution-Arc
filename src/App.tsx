@@ -354,6 +354,14 @@ type UserProfile = {
   githubUsername?: string;
   contributionCount?: number;
   lastSyncedAt?: string;
+  /* Minutes studied during the user's current week (Sunday-start, matching
+     the contribution-arc grid). Paired with weekKey so the weekly
+     leaderboard can treat values left over from a previous week as zero. */
+  weekMinutes?: number;
+  /* Identifies which week weekMinutes belongs to — the YYYY-M-D of that
+     week's Sunday. When it doesn't match the current week, weekMinutes is
+     stale and counts as zero on the leaderboard. */
+  weekKey?: string;
   /* Preferred UI language. Defaults to "ja" when missing for
      backward compatibility with pre-i18n accounts. */
   language?: Language;
@@ -850,6 +858,11 @@ const legacyDeepWorkStudioRoomId = "deep-work-studio";
 const minaUserId = "npc-mina";
 const nishimiyaUserId = "npc-nishimiya";
 const maxWorkspacePresenceMinutes = 12 * 60;
+// 退出忘れ対策。無操作（＋タブ非表示）がこの分数続いたら自動で休憩に入れ、
+// 活動時間の計上を止める（放置はEXPに乗らない）。さらに放置が続いたら
+// 最終操作時刻までを確定して自動退室する。書き込みは遷移時のみ。
+const idleAutoBreakMinutes = 15;
+const idleAutoCloseMinutes = 60;
 const onboardingMessage = "ようこそContribution Arcへ";
 const workspacePresenceResetVersion = "2026-05-20-clear-stuck-presence";
 const workspaceMovementKeys = new Set(["w", "a", "s", "d", "arrowup", "arrowleft", "arrowdown", "arrowright"]);
@@ -1040,6 +1053,19 @@ function getWeekStart(date = new Date()) {
   weekStart.setDate(weekStart.getDate() + mondayOffset);
   weekStart.setHours(0, 0, 0, 0);
   return weekStart;
+}
+
+/* Sunday-start week key (YYYY-M-D of the week's Sunday). Deliberately
+   matches the contribution-arc grid's week boundary (getDay()-based,
+   Sunday = 0), NOT getWeekStart() which is Monday-start. This keeps the
+   key aligned with `contributionArc.thisWeekMinutes` so the weekly
+   leaderboard treats a profile's weekMinutes as current iff its weekKey
+   equals this value. */
+function getCurrentWeekKey(date = new Date()): string {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - d.getDay());
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
 function normalizeKnowledgeTitle(value: string) {
@@ -1587,6 +1613,11 @@ function normalizeUserProfile(uid: string, data: Partial<UserProfile>): UserProf
     githubUsername: data.githubUsername || "",
     contributionCount: data.contributionCount || 0,
     lastSyncedAt: data.lastSyncedAt || "",
+    weekMinutes:
+      typeof data.weekMinutes === "number" && Number.isFinite(data.weekMinutes)
+        ? Math.max(0, Math.floor(data.weekMinutes))
+        : 0,
+    weekKey: typeof data.weekKey === "string" ? data.weekKey : "",
     language: getSafeLanguage(data.language),
   };
 }
@@ -4222,6 +4253,14 @@ function App() {
   const [customRooms, setCustomRooms] = useState<WorkspaceRoom[]>([]);
   const [isWorkspaceLoaded, setIsWorkspaceLoaded] = useState(false);
   const [isPageVisible, setIsPageVisible] = useState(!document.hidden);
+  // 退出忘れ対策の作業時間トラッキング。lastWorkspaceActivityRef は最終操作時刻、
+  // autoBreakActiveRef は「自動休憩中か（手動休憩と区別）」、closeWorkspaceSessionRef
+  // は idle 監視 effect から最新の closeWorkspaceSession を呼ぶための参照。
+  const lastWorkspaceActivityRef = useRef(Date.now());
+  const autoBreakActiveRef = useRef(false);
+  const closeWorkspaceSessionRef = useRef<(roomId: string, options?: { auto?: boolean }) => void>(
+    () => {},
+  );
   const [newRoomName, setNewRoomName] = useState("");
   // モバイル時の "+ 部屋を作る" 折り畳み state。デフォルト false で
   // 作成フォームを隠しておく ── 初見ユーザーが画面に圧倒されないよう
@@ -8701,6 +8740,11 @@ function App() {
       githubId,
       githubUsername,
       contributionCount: outputStats.contributions,
+      // Current-week study minutes + the Sunday-start week key they belong
+      // to, so friends can build a weekly leaderboard without any extra
+      // reads. weekKey lets a stale (previous-week) value count as zero.
+      weekMinutes: contributionArc.thisWeekMinutes,
+      weekKey: getCurrentWeekKey(),
       // Mirror the current org membership into the periodic progress
       // write so the user doc converges to one consistent shape even
       // if the user just joined/left via the dedicated helpers.
@@ -9792,12 +9836,16 @@ function App() {
     window.localStorage.removeItem(getAccountStorageKey(accountScope, "avatar"));
   };
 
-  const closeWorkspaceSession = (roomId: string) => {
+  const closeWorkspaceSession = (roomId: string, options?: { auto?: boolean }) => {
     const room = customRooms.map(normalizeWorkspaceRoom).find((item) => item.id === roomId);
     const member = room?.activeMembers.find((item) => item.userId === currentUser.uid);
     if (!room || !member) {
       return;
     }
+
+    const isAutoLeave = options?.auto ?? false;
+    // 自動・手動どちらの退室でも放置トラッキングは解除する。
+    autoBreakActiveRef.current = false;
 
     const leftAt = new Date().toISOString();
     const minutes = getWorkspaceActiveMinutes(member);
@@ -9879,12 +9927,32 @@ function App() {
     // The toast surfaces the reward immediately so the action feels
     // rewarding rather than empty.
     if (session.durationMinutes > 0) {
-      showToast(
-        `退室しました ・ ${formatStayTime(session.durationMinutes)} で +${session.earnedExp} EXP`,
-        { kind: "success" },
-      );
+      if (isAutoLeave) {
+        // 放置による自動退室。本人は画面を見ていないので、すぐ消えるトーストでは
+        // なく一覧に残るアプリ内通知で「最終操作までを記録した」ことを控えめに伝える。
+        pushAppNotification(
+          {
+            id: `workspace-auto-leave-${session.id}`,
+            type: "dailyLog",
+            title: "作業部屋を自動退室しました",
+            body: `無操作が続いたため、最終操作までの${formatStayTime(session.durationMinutes)}（+${session.earnedExp} EXP）を記録しました。`,
+            createdAt: session.leftAt,
+            read: false,
+            sourceUserId: currentUser.uid,
+          },
+          false,
+        );
+      } else {
+        showToast(
+          `退室しました ・ ${formatStayTime(session.durationMinutes)} で +${session.earnedExp} EXP`,
+          { kind: "success" },
+        );
+      }
     }
   };
+
+  // idle 監視 effect から、毎レンダー再生成されるこの関数の最新版を呼べるよう参照を更新。
+  closeWorkspaceSessionRef.current = closeWorkspaceSession;
 
   const resetWorkspacePresence = () => {
     pressedWorkspaceKeysRef.current.clear();
@@ -14110,6 +14178,8 @@ function App() {
             effortExp: profile?.effortExp || 0,
             outputExp: profile?.outputExp || 0,
             determination: profile?.determination || "",
+            weekMinutes: profile?.weekMinutes || 0,
+            weekKey: profile?.weekKey || "",
             friendsSinceDays,
             lastActiveDays,
             isPinned: pinSet.has(friend.uid),
@@ -14188,6 +14258,29 @@ function App() {
 
         const onlineCount = enrichedFriends.filter(({ friend }) => friend.status === "online").length;
 
+        // 今週のランキング: 自分 + フレンドを「今週の学習分数」降順で並べる。
+        // フレンドの weekMinutes は本人が最後に同期した週のもの。weekKey が
+        // 今週と一致しない（＝今週まだ動いていない）人は 0 分扱い。週がまたぐと
+        // weekKey が変わって全員自動リセットされる（明示的なリセット処理は不要）。
+        const currentWeekKey = getCurrentWeekKey();
+        const weeklyLeaderboard = [
+          {
+            uid: currentUserUid,
+            name: playerName,
+            avatar: playerAvatar,
+            weekMinutes: contributionArc.thisWeekMinutes,
+            isSelf: true,
+          },
+          ...enrichedFriends.map(({ friend, weekMinutes, weekKey }) => ({
+            uid: friend.uid,
+            name: friend.name,
+            avatar: friend.avatar,
+            weekMinutes: weekKey === currentWeekKey ? weekMinutes : 0,
+            isSelf: false,
+          })),
+        ].sort((a, b) => b.weekMinutes - a.weekMinutes);
+        const selfRank = weeklyLeaderboard.findIndex((entry) => entry.isSelf) + 1;
+
         return (
           <div
             className="settings-modal-backdrop"
@@ -14230,6 +14323,56 @@ function App() {
                   "作業部屋を選ぶと、フレンドを招待できます。"
                 )}
               </p>
+
+              {/* 今週のランキング。自分 + フレンドを今週の学習時間で並べる。 */}
+              {weeklyLeaderboard.length > 1 ? (
+                <section className="friends-leaderboard" aria-label="今週のランキング">
+                  <header className="friends-leaderboard-head">
+                    <div>
+                      <p className="card-kicker">This week</p>
+                      <strong>今週のランキング</strong>
+                    </div>
+                    <span className="friends-leaderboard-myrank">あなた {selfRank}位</span>
+                  </header>
+                  <ol className="friends-leaderboard-list">
+                    {weeklyLeaderboard.slice(0, 10).map((entry, index) => (
+                      <li
+                        key={entry.uid}
+                        className={`friends-leaderboard-row${entry.isSelf ? " is-self" : ""}`}
+                      >
+                        <span
+                          className="friends-leaderboard-rank"
+                          data-top={index < 3 ? "true" : undefined}
+                        >
+                          {index === 0
+                            ? "🥇"
+                            : index === 1
+                              ? "🥈"
+                              : index === 2
+                                ? "🥉"
+                                : index + 1}
+                        </span>
+                        <span className="friends-leaderboard-avatar" aria-hidden="true">
+                          {entry.avatar ? (
+                            <img src={entry.avatar} alt="" />
+                          ) : (
+                            <span>{entry.name.slice(0, 1)}</span>
+                          )}
+                        </span>
+                        <span className="friends-leaderboard-name">
+                          {entry.name}
+                          {entry.isSelf ? (
+                            <span className="friends-leaderboard-you">あなた</span>
+                          ) : null}
+                        </span>
+                        <span className="friends-leaderboard-minutes">
+                          {entry.weekMinutes > 0 ? formatStudyTimeJa(entry.weekMinutes) : "—"}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              ) : null}
 
               {/* 検索 + ソート + 一括選択モード。 */}
               {enrichedFriends.length > 0 ? (
