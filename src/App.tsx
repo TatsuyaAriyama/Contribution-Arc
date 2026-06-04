@@ -11401,11 +11401,18 @@ function App() {
 
   const handleRoomDelete = (roomId: string) => {
     const room = customRooms.find((item) => item.id === roomId);
-    if (!room || room.createdBy !== currentUser.uid) {
+    /* デベロッパーアカウント (ari.initx@gmail.com) は作成者でなくても
+       どの作業部屋でも解体できる。それ以外は従来通り作成者本人のみ。 */
+    if (!room || (room.createdBy !== currentUser.uid && !isDeveloperAccount)) {
       return;
     }
 
-    const isConfirmed = window.confirm(`${room.name}を解体しますか？このRoomは一覧から消えます。`);
+    const isOwnRoom = room.createdBy === currentUser.uid;
+    const isConfirmed = window.confirm(
+      isOwnRoom
+        ? `${room.name}を解体しますか？このRoomは一覧から消えます。`
+        : `[Dev] 他ユーザーが作成した「${room.name}」を解体しますか？この操作は取り消せません。`,
+    );
     if (!isConfirmed) {
       return;
     }
@@ -18186,13 +18193,18 @@ function App() {
                               >
                                 名前変更
                               </button>
-                              {isOwnRoom ? (
+                              {isOwnRoom || isDeveloperAccount ? (
                                 <button
                                   type="button"
                                   className="workspace-room-canvas-action danger"
                                   onClick={() => handleRoomDelete(selectedRoom.id)}
+                                  title={
+                                    isOwnRoom
+                                      ? "この部屋を解体"
+                                      : "[Dev] 他ユーザーの部屋を解体"
+                                  }
                                 >
-                                  解体
+                                  {isOwnRoom ? "解体" : "解体 (Dev)"}
                                 </button>
                               ) : null}
                             </>
@@ -18229,7 +18241,7 @@ function App() {
                       presetLog={presetLog}
                       onRoomRename={() => startRoomTitleEdit(selectedRoom)}
                       onRoomDelete={() => handleRoomDelete(selectedRoom.id)}
-                      canDeleteRoom={selectedRoom.createdBy === currentUser.uid}
+                      canDeleteRoom={selectedRoom.createdBy === currentUser.uid || isDeveloperAccount}
                       isPlayerWalking={isPlayerWalking}
                       activityItems={roomActivityItems}
                       onStageTap={(x, y) => {

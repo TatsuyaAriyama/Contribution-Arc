@@ -10,6 +10,16 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    // Developer account (the maintainer) — granted blanket access for
+    // moderation actions (e.g. dismantling stale / abandoned workspace
+    // rooms created by other users). Keep this list minimal; broadening
+    // it dilutes the trust boundary. Email is preferred over a hardcoded
+    // UID so the rule keeps working across re-auth / account migrations.
+    function isDeveloper() {
+      return signedIn()
+        && request.auth.token.email == "ari.initx@gmail.com";
+    }
+
     function validUserId(userId) {
       return userId is string
         && userId.size() >= 1
@@ -105,8 +115,10 @@ service cloud.firestore {
       allow update: if signedIn()
         && request.resource.data.createdBy == resource.data.createdBy
         && resource.data.createdBy == request.auth.uid;
+      // Developer can dismantle any room (moderation); otherwise only
+      // the creator may delete.
       allow delete: if signedIn()
-        && resource.data.createdBy == request.auth.uid;
+        && (resource.data.createdBy == request.auth.uid || isDeveloper());
 
       // 置き手紙 (floor notes): short messages members leave on the room
       // floor. Anyone signed in may read them (they're meant to be found
@@ -138,8 +150,10 @@ service cloud.firestore {
       allow update: if signedIn()
         && request.resource.data.createdBy == resource.data.createdBy
         && request.resource.data.name is string;
+      // Developer can dismantle any room (moderation); otherwise only
+      // the creator may delete.
       allow delete: if signedIn()
-        && resource.data.createdBy == request.auth.uid;
+        && (resource.data.createdBy == request.auth.uid || isDeveloper());
     }
 
     match /studyLogs/{logId} {
