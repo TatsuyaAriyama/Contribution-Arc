@@ -3091,6 +3091,35 @@ async function saveWorkspaceRoomToCloud(room: WorkspaceRoom, currentUserUid?: st
   });
 }
 
+// 開発者アカウント専用：任意のユーザーを作業部屋の在室リストから外す。通常の
+// saveWorkspaceRoomToCloud は「自分以外のメンバーは必ずリモートの値を維持」する
+// 設計なので他人を消せない。ここではリモートの activeMembers を読み、対象だけを
+// 取り除いて書き戻すトランザクションで、他メンバーの最新データを保ったまま退出させる。
+async function adminRemoveWorkspaceMemberFromCloud(roomId: string, targetUserId: string) {
+  const ref = doc(db, workspaceRoomsCollectionName, roomId);
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(ref);
+    if (!snap.exists()) {
+      return;
+    }
+    const remoteRoom = normalizeWorkspaceRoom({
+      ...((snap.data() as Partial<WorkspaceRoom>) || {}),
+      id: roomId,
+    });
+    const nextMembers = (remoteRoom.activeMembers || []).filter(
+      (member) => member.userId !== targetUserId,
+    );
+    transaction.set(
+      ref,
+      {
+        ...serializeWorkspaceRoom({ ...remoteRoom, activeMembers: nextMembers }),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true },
+    );
+  });
+}
+
 function getSubjectSummary(logs: StudyLog[]) {
   if (logs.length === 0) {
     return "No study logged yet";
@@ -6683,6 +6712,10 @@ function App() {
   const studyKnowledgeGraph = useMemo(() => buildStudyKnowledgeGraph(studyLogs), [studyLogs]);
 
   const currentUserUid = currentUser?.uid || "";
+  // 開発者（管理）アカウント。このアカウントだけが他ユーザーを作業部屋から
+  // 強制退出させられる。判定は profile ロード側（ADMIN_EMAIL）と同じメール。
+  const isDeveloperAccount =
+    (currentUser?.email || "").toLowerCase() === "ari.initx@gmail.com";
   const visibleTimelinePosts = useMemo(() => {
     if (timelineFilter === "all") {
       return posts;
@@ -9800,6 +9833,46 @@ function App() {
     setOpenMonumentId(null);
   };
 
+  // 開発者アカウント専用：任意のユーザーを作業部屋から強制退出させる。誤操作で
+  // 取り返しがつかないので、必ず window.confirm の確認フェーズを一度挟んでから
+  // 実行する。本人の EXP は当人の領域なので加算できず、ここでは在室表示だけを外す。
+  const handleAdminForceLeave = (member: WorkspaceMember, roomId: string) => {
+    if (!isDeveloperAccount) {
+      return;
+    }
+    const confirmed = window.confirm(
+      `${member.name} を作業部屋から強制退出させますか？この操作は取り消せません。`,
+    );
+    if (!confirmed) {
+      return;
+    }
+    handleCloseRoomPanels();
+    setCustomRooms((rooms) =>
+      rooms.map((item) => {
+        const normalizedRoom = normalizeWorkspaceRoom(item);
+        if (normalizedRoom.id !== roomId) {
+          return normalizedRoom;
+        }
+        const nextRoom = normalizeWorkspaceRoom({
+          ...normalizedRoom,
+          activeMembers: normalizedRoom.activeMembers.filter(
+            (activeMember) => activeMember.userId !== member.userId,
+          ),
+        });
+        pendingWorkspaceRoomsRef.current.set(roomId, nextRoom);
+        return nextRoom;
+      }),
+    );
+    void adminRemoveWorkspaceMemberFromCloud(roomId, member.userId)
+      .then(() => {
+        pendingWorkspaceRoomsRef.current.delete(roomId);
+      })
+      .catch((error) => {
+        console.error("Admin force-leave failed.", error);
+      });
+    showToast(`${member.name} を退出させました`, { kind: "success" });
+  };
+
   // Tapping an avatar *inside the workspace room*. Opens the same compact
   // in-stage profile card for every member — including yourself — so the
   // popover stays a consistent "tap a character to see who they are" gesture.
@@ -12140,6 +12213,15 @@ function App() {
           >
             詳細
           </button>
+          {isDeveloperAccount && !isSelf && memberRoom ? (
+            <button
+              type="button"
+              className="is-danger room-member-card-force-leave"
+              onClick={() => handleAdminForceLeave(member, memberRoom.id)}
+            >
+              退出させる
+            </button>
+          ) : null}
         </div>
 
         {friendMessage ? <p className="room-member-card-message">{friendMessage}</p> : null}

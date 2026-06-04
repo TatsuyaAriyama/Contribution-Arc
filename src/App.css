@@ -11971,6 +11971,18 @@
   color: var(--ink);
 }
 
+/* 開発者専用の強制退出ボタン。誤操作のリスクがある操作なので、危険色で
+   他のアクションと明確に区別する。 */
+.room-member-card-actions button.is-danger {
+  background: rgba(196, 50, 44, 0.1);
+  color: #c4322c;
+}
+
+.room-member-card-actions button.is-danger:hover:not(:disabled) {
+  background: rgba(196, 50, 44, 0.16);
+  filter: none;
+}
+
 .room-member-card-message {
   margin: 0;
   font-size: 11.5px;
