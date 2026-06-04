@@ -5358,12 +5358,40 @@
   list-style: none;
 }
 
+/* 行全体を button にして振り返り欄からも check できるよう
+   にしたので、既存の見た目をそのまま維持しつつ hover/focus 表現
+   を足す。disabled 時は cursor:not-allowed + 透過。 */
 .reflection-recap-row {
   display: grid;
   grid-template-columns: 16px 1fr;
   align-items: start;
   gap: 8px;
-  padding: 2px;
+  width: 100%;
+  padding: 4px;
+  margin: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.14s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.reflection-recap-row:hover:not(:disabled) {
+  background: rgba(var(--ink-rgb), 0.05);
+}
+.reflection-recap-row:focus-visible {
+  outline: 2px solid rgba(var(--green-rgb, 31, 111, 74), 0.5);
+  outline-offset: 1px;
+}
+.reflection-recap-row:active:not(:disabled) {
+  transform: scale(0.995);
+}
+.reflection-recap-row:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .reflection-recap-box {
