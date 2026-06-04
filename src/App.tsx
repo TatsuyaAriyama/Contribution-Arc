@@ -512,7 +512,7 @@ type Organization = {
 type OrganizationRole = "owner" | "admin" | "member";
 
 
-type OnboardingStep = "idle" | "language" | "welcome" | "settings" | "firstPost";
+type OnboardingStep = "idle" | "language" | "welcome" | "settings" | "firstPost" | "firstDailyPlan";
 
 function getSafeLanguage(value: unknown): Language {
   return typeof value === "string" && (SUPPORTED_LANGUAGES as string[]).includes(value)
@@ -3925,6 +3925,12 @@ function App() {
   // Both are captured in a blocking modal; the post combines the two.
   const [onboardingGreeting, setOnboardingGreeting] = useState("初めまして！");
   const [onboardingResolve, setOnboardingResolve] = useState("");
+  /* Tutorial step "firstDailyPlan" の入力。firstPost 完了後にこの step
+     へ遷移し、ユーザーに「今日やること」を 1〜2 行で書かせる。
+     保存後 onboarding-complete を立てて idle へ。 */
+  const [onboardingFirstPlanDraft, setOnboardingFirstPlanDraft] = useState("");
+  const [onboardingFirstPlanError, setOnboardingFirstPlanError] = useState("");
+  const [isSavingOnboardingFirstPlan, setIsSavingOnboardingFirstPlan] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   // FEED right-pane visibility. Defaults open (matches previous
   // behaviour); the value is persisted to localStorage so a deliberate
@@ -4914,6 +4920,11 @@ function App() {
           safeSetLocalStorage(`contribution-arc-user-id-${currentUser.uid}`, resolvedUserId);
           if (savedOnboardingComplete === "true") {
             setOnboardingStep("idle");
+          } else if ((profile.determination || "").trim()) {
+            // 既に 決意 が cloud に保存されている = firstPost は通過済み。
+            // チュートリアル後半 (今日やることを書く) からの再開へ。
+            setOnboardingStep("firstDailyPlan");
+            setCurrentView("daily");
           } else {
             setOnboardingStep("firstPost");
             setCurrentView("home");
@@ -8129,7 +8140,9 @@ function App() {
     }
 
     if (onboardingStep === "firstPost") {
-      safeSetLocalStorage(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
+      // チュートリアルの後半 (今日やることを書く) へ進む。
+      // onboarding-complete はそこを通過してから立てるので、ここでは
+      // まだ「完了済み」マークは付けない。
       // Persist the 決意 the user just wrote as their profile determination,
       // so it lives on in the profile "決意" card rather than only inside
       // the first post. Mirrors handleDeterminationSubmit.
@@ -8158,8 +8171,10 @@ function App() {
           });
         }
       }
-      setOnboardingStep("idle");
       setOnboardingResolve("");
+      // 日報画面へ移動して 今日やること を書かせる step に切替。
+      setCurrentView("daily");
+      setOnboardingStep("firstDailyPlan");
     }
 
     try {
@@ -8423,6 +8438,79 @@ function App() {
       setIsSavingDailyPrompt(false);
       setDailyPromptDraft("");
     }
+  };
+
+  /* チュートリアル "firstDailyPlan" の保存。今日の dailyReport の plan
+     として書き出してから onboarding を idle に戻し、完了マーク
+     (contribution-arc-onboarding-complete-${uid}) をやっと立てる。
+     失敗してもクラウド側だけがコケる形 (ローカルは入っている) なので
+     チュートリアルは進める。 */
+  const handleOnboardingFirstPlanSubmit = async () => {
+    if (!currentUser || isSavingOnboardingFirstPlan) return;
+    const planText = onboardingFirstPlanDraft.trim();
+    if (!planText) {
+      setOnboardingFirstPlanError("今日やることを 1 行で書いてみよう。");
+      return;
+    }
+
+    const date = getLearnerDate();
+    const now = new Date().toISOString();
+    const existingReport = dailyReports.find((report) => report.date === date);
+    const report: DailyReport = {
+      id: `${currentUser.uid}_${date}`,
+      userId: currentUser.uid,
+      userName: playerName,
+      characterColor: playerCharacterColor,
+      characterShape: playerCharacterShape,
+      currentTitle,
+      date,
+      plan: planText,
+      reflection: existingReport?.reflection || "",
+      createdAt: existingReport?.createdAt || now,
+      updatedAt: now,
+      syncStatus: "pending",
+      syncError: "",
+    };
+
+    setIsSavingOnboardingFirstPlan(true);
+    setOnboardingFirstPlanError("");
+    setDailyReports((reports) => {
+      const nextReports = [report, ...reports.filter((item) => item.id !== report.id)].sort(
+        (a, b) => b.date.localeCompare(a.date),
+      );
+      persistDailyReports(currentUser.uid, userId, nextReports);
+      return nextReports;
+    });
+    void putPersistentItem("dailyReports", report);
+
+    if (selectedDailyDate === date) {
+      setDailyPlanItemsDraft(planItemsFromLegacyText(planText));
+    }
+
+    try {
+      await withTimeout(
+        setDoc(
+          doc(db, "dailyReports", report.id),
+          {
+            ...dailyReportToCloudPayload(report),
+            updatedAt: report.updatedAt,
+            serverUpdatedAt: serverTimestamp(),
+          },
+          { merge: true },
+        ),
+        8000,
+        "daily-report-save-timeout",
+      );
+    } catch (error) {
+      console.info("Onboarding first plan cloud sync skipped.", error);
+    } finally {
+      setIsSavingOnboardingFirstPlan(false);
+    }
+
+    safeSetLocalStorage(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
+    setOnboardingStep("idle");
+    setOnboardingFirstPlanDraft("");
+    showToast("今日やることを記録しました。1日を始めましょう。", { kind: "success" });
   };
 
   const handleDailyDateChange = (date: string) => {
@@ -13018,6 +13106,65 @@ function App() {
               }
             >
               {isPosting ? "送信中…" : "この決意を投稿して始める"}
+            </button>
+          </form>
+        </div>
+      ) : null}
+
+      {/* チュートリアル後半：今日やることを書かせる。これを越えれば
+          onboarding-complete マークが立って通常のアプリ操作に入る。
+          1 行でも OK の軽い負荷にして "毎日の最初の一歩" を体験させる。 */}
+      {onboardingStep === "firstDailyPlan" ? (
+        <div
+          className="onboarding-firstpost-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="onboarding-firstplan-title"
+        >
+          <form
+            className="onboarding-firstpost-card"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleOnboardingFirstPlanSubmit();
+            }}
+          >
+            <p className="card-kicker">チュートリアル · 1 日を始める</p>
+            <h1 id="onboarding-firstplan-title">今日やることを 1 行で書こう</h1>
+            <p className="onboarding-firstpost-lead">
+              日報の「今日やること」として残ります。
+              <br />
+              短くて OK。書いてから 1 日が始まります。
+              <br />
+              <small>※ 1 日の終わりには「振り返り」も書けます (任意)。</small>
+            </p>
+
+            <label className="onboarding-firstpost-field">
+              <span>今日やること</span>
+              <textarea
+                value={onboardingFirstPlanDraft}
+                onChange={(event) => {
+                  setOnboardingFirstPlanDraft(event.target.value);
+                  setOnboardingFirstPlanError("");
+                }}
+                placeholder="例: DDIA Ch.7 を読み切る / API の設計をまとめる"
+                maxLength={300}
+                rows={3}
+                autoFocus
+              />
+            </label>
+
+            {onboardingFirstPlanError ? (
+              <p className="onboarding-firstpost-error" role="alert">
+                {onboardingFirstPlanError}
+              </p>
+            ) : null}
+
+            <button
+              type="submit"
+              className="onboarding-firstpost-cta"
+              disabled={isSavingOnboardingFirstPlan || !onboardingFirstPlanDraft.trim()}
+            >
+              {isSavingOnboardingFirstPlan ? "保存中…" : "今日を始める"}
             </button>
           </form>
         </div>
