@@ -8628,23 +8628,26 @@ function App() {
 
     const now = new Date().toISOString();
     const existingReport = dailyReports.find((report) => report.date === selectedDailyDate);
-    /* Plan section save replaces both `planItems` and the derived
-       `plan` text. Reflection section save preserves whatever the
-       existing report already had — including legacy text-only plans
-       that haven't yet been edited under the new checklist editor. */
+    /* セクション分割でセーブしていたが「振り返り」を保存した時に
+       既存の planItems がコピーされ、ユーザーがチェックリストで
+       チェックを入れた状態が失われていた (報告)。
+       現在の draft (trimmedPlanItems) には done 状態を含む最新の
+       チェック状態が反映されているので、draft が空でない限り常に
+       draft を採用する。空 draft はリセット扱いを避けて既存を維持。 */
     const nextPlanItems =
-      section === "plan" ? trimmedPlanItems : existingReport?.planItems || [];
+      trimmedPlanItems.length > 0 ? trimmedPlanItems : existingReport?.planItems || [];
     const nextPlan =
-      section === "plan"
-        ? planTextFromItems
-        : existingReport?.plan || "";
+      trimmedPlanItems.length > 0 ? planTextFromItems : existingReport?.plan || "";
     const nextReflection = section === "reflection" ? reflectionText : existingReport?.reflection || "";
     const isDraft = dailyIsDraftDraft;
     /* Mention extraction scans the plan checklist (text + per-item
        comments) plus the reflection body, so an `@alice` typed inside
-       an item comment still feeds the future mentions inbox. */
+       an item comment still feeds the future mentions inbox.
+       (旧: section==="plan" の時だけ items を走査していたが、上の
+        nextPlanItems が draft 由来になったので両 section で同じ
+        nextPlanItems を使う) */
     const planMentionScannable =
-      section === "plan"
+      nextPlanItems.length > 0
         ? planItemsToMentionScannable(nextPlanItems)
         : nextPlan;
     const report: DailyReport = {
