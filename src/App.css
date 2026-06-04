@@ -20327,22 +20327,6 @@ body {
   zoom: var(--ui-scale, 1);
 }
 
-/* モバイル端末で「リンクに入ったり / リロードしたら拡大される」報告
-   への対策。iOS Safari / Android Chrome は font-size を端末の "テキスト
-   サイズ" 設定で勝手に膨らませることがある。アプリ内 UI scale (設定 →
-   表示倍率) でだけ調整させたいので、ブラウザ側のテキスト膨張は完全
-   オフにする。あわせて touch-action でピンチズームも禁止。 */
-html {
-  -webkit-text-size-adjust: 100%;
-  -ms-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-  touch-action: pan-x pan-y;
-}
-html,
-body {
-  overscroll-behavior-y: none;
-}
-
 /* === Zoom slider (relocated into settings modal) ===
    The zoom control used to live in the topbar but was moved here to keep the
    header focused on identity/search/notifications. Visual language matches the
