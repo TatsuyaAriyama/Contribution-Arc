@@ -4267,9 +4267,9 @@ function App() {
   // 操作した時刻（EXP はここまでで確定）、closeWorkspaceSessionRef は在室上限の監視
   // effect から最新の closeWorkspaceSession を呼ぶための参照。
   const lastWorkspaceActivityRef = useRef(Date.now());
-  const closeWorkspaceSessionRef = useRef<(roomId: string, options?: { auto?: boolean }) => void>(
-    () => {},
-  );
+  const closeWorkspaceSessionRef = useRef<
+    (roomId: string, options?: { auto?: boolean; overrideMinutes?: number }) => void
+  >(() => {});
   const [newRoomName, setNewRoomName] = useState("");
   // モバイル時の "+ 部屋を作る" 折り畳み state。デフォルト false で
   // 作成フォームを隠しておく ── 初見ユーザーが画面に圧倒されないよう
@@ -7539,6 +7539,12 @@ function App() {
     }
     const roomId = selectedRoomId;
     const joinedAtMs = new Date(joinedAt).getTime();
+    // 起動時点で既に在室上限を超えている＝退出し忘れのゴースト在席。最終操作時刻が
+    // 残っていないため実測はできないので、一律 4 時間（240分）として強制退出させる。
+    if (Date.now() - joinedAtMs >= maxWorkspacePresenceMinutes * 60000) {
+      closeWorkspaceSessionRef.current(roomId, { auto: true, overrideMinutes: 240 });
+      return;
+    }
     lastWorkspaceActivityRef.current = Date.now();
     const markActivity = () => {
       lastWorkspaceActivityRef.current = Date.now();
@@ -9986,7 +9992,10 @@ function App() {
     window.localStorage.removeItem(getAccountStorageKey(accountScope, "avatar"));
   };
 
-  const closeWorkspaceSession = (roomId: string, options?: { auto?: boolean }) => {
+  const closeWorkspaceSession = (
+    roomId: string,
+    options?: { auto?: boolean; overrideMinutes?: number },
+  ) => {
     const room = customRooms.map(normalizeWorkspaceRoom).find((item) => item.id === roomId);
     const member = room?.activeMembers.find((item) => item.userId === currentUser.uid);
     if (!room || !member) {
@@ -9994,12 +10003,17 @@ function App() {
     }
 
     const isAutoLeave = options?.auto ?? false;
+    // overrideMinutes は退出し忘れゴーストの救済退出用。最終操作時刻が残って
+    // いないため EXP を実測できないので、一律の換算値を minutes として使う。
+    const isGhostCleanup = typeof options?.overrideMinutes === "number";
 
     const leftAt = new Date().toISOString();
     // EXP は「入室〜最後に操作した時刻」で確定。最終操作以降の放置分は計上せず、
     // 手動休憩は getWorkspaceActiveMinutes 側で従来通り除外される。
     const lastActivityMs = Math.min(lastWorkspaceActivityRef.current, Date.now());
-    const minutes = getWorkspaceActiveMinutes(member, lastActivityMs);
+    const minutes = isGhostCleanup
+      ? (options?.overrideMinutes ?? 0)
+      : getWorkspaceActiveMinutes(member, lastActivityMs);
     const session: WorkspaceSessionHistory = {
       id: crypto.randomUUID(),
       userId: currentUser.uid,
@@ -10080,13 +10094,16 @@ function App() {
     if (session.durationMinutes > 0) {
       if (isAutoLeave) {
         // 放置による自動退室。本人は画面を見ていないので、すぐ消えるトーストでは
-        // なく一覧に残るアプリ内通知で「最終操作までを記録した」ことを控えめに伝える。
+        // なく一覧に残るアプリ内通知で記録内容を控えめに伝える。ゴースト救済時は
+        // 実測ができないため「換算で記録した」旨を明示する。
         pushAppNotification(
           {
             id: `workspace-auto-leave-${session.id}`,
             type: "dailyLog",
             title: "作業部屋を自動退室しました",
-            body: `無操作が続いたため、最終操作までの${formatStayTime(session.durationMinutes)}（+${session.earnedExp} EXP）を記録しました。`,
+            body: isGhostCleanup
+              ? `在室時間が上限を超えていたため自動退室しました。今回は${formatStayTime(session.durationMinutes)}（+${session.earnedExp} EXP）として記録しています。`
+              : `無操作が続いたため、最終操作までの${formatStayTime(session.durationMinutes)}（+${session.earnedExp} EXP）を記録しました。`,
             createdAt: session.leftAt,
             read: false,
             sourceUserId: currentUser.uid,
