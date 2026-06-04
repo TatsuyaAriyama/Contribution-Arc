@@ -3636,7 +3636,9 @@ function LoginScreen() {
           })}
         </div>
         <div className="showcase-figure showcase-figure-login">
-          <ProfileCharacterPreview shape="frost" />
+          {/* ログイン画面の分身は、特別な frost（白髪）ではなく新規ユーザーが
+              最初に持つ初期キャラ（blocky の default shape）を見せる。 */}
+          <ProfileCharacterPreview shape="default" color="#7667a8" />
         </div>
         <div className="showcase-foreground" />
       </div>
