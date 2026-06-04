@@ -16430,17 +16430,38 @@ function App() {
                   if (recapItems.length === 0) {
                     return null;
                   }
+                  /* 振り返り欄からもチェックを付け外しできるように、
+                     行全体を button にする。state は dailyPlanItemsDraft
+                     を直接更新するので、上の「やること」セクションと
+                     完全に同期。保存は既存の save ボタンで一括。 */
+                  const toggleRecap = (id: string) => {
+                    if (!canEditSelectedDailyReport) return;
+                    setDailyPlanItemsDraft((items) =>
+                      items.map((item) =>
+                        item.id === id ? { ...item, done: !item.done } : item,
+                      ),
+                    );
+                  };
                   return (
                     <ul className="reflection-recap" aria-label={t("今日やること")}>
                       {recapItems.map((item) => (
-                        <li key={item.id} className="reflection-recap-row">
-                          <span
-                            className={`reflection-recap-box${item.done ? " is-checked" : ""}`}
-                            aria-hidden="true"
+                        <li key={item.id}>
+                          <button
+                            type="button"
+                            className={`reflection-recap-row${item.done ? " is-checked" : ""}`}
+                            onClick={() => toggleRecap(item.id)}
+                            disabled={!canEditSelectedDailyReport}
+                            aria-pressed={item.done}
+                            aria-label={`${item.text}${item.done ? " (完了)" : ""}`}
                           >
-                            {item.done ? "✓" : ""}
-                          </span>
-                          <span className="reflection-recap-text">{item.text}</span>
+                            <span
+                              className={`reflection-recap-box${item.done ? " is-checked" : ""}`}
+                              aria-hidden="true"
+                            >
+                              {item.done ? "✓" : ""}
+                            </span>
+                            <span className="reflection-recap-text">{item.text}</span>
+                          </button>
                         </li>
                       ))}
                     </ul>
