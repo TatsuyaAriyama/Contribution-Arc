@@ -23940,7 +23940,7 @@ select:focus-visible,
      friends 用 wrap だけは表示し続け、タップで modal を直接開く（onClick
      側で分岐済み）。Live など他の popover wrap は引き続き非表示。 */
   .premium-dashboard-header .topbar-nav,
-  .premium-dashboard-header .topbar-popover-wrap:not(.topbar-popover-wrap-friends) {
+  .premium-dashboard-header .topbar-popover-wrap:not(.topbar-popover-wrap-friends):not(.topbar-popover-wrap-search) {
     display: none;
   }
   /* モバイルでは Friends ボタンタップで popover は出ない（modal に
