@@ -13808,21 +13808,22 @@
     gap: 8px 10px;
     padding: 10px 12px;
     border-radius: 22px;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    grid-template-areas:
-      "meta bell avatar"
-      "search search search";
+    /* 報告：アイコン数が多くて右端の本人アバターが画面外で切れる。
+       grid 配置のままでは auto-place が崩れて avatar が押し出されるので、
+       flex-wrap で素直に「左から並べて、収まらなければ折返し」する形に。
+       avatar / bell は margin-left: auto で右端固定、search は別行扱い。 */
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
   }
 
   .premium-dashboard-header .topbar-context {
-    grid-area: meta;
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
     gap: 6px;
     min-width: 0;
+    flex: 1 1 auto;
     overflow: hidden;
   }
 
@@ -13843,13 +13844,19 @@
   }
 
   .premium-dashboard-header .notification-wrap {
-    grid-area: bell;
-    justify-self: end;
+    flex: 0 0 auto;
+    order: 80;
   }
 
   .premium-dashboard-header .user-menu-wrap {
-    grid-area: avatar;
-    justify-self: end;
+    flex: 0 0 auto;
+    order: 90;
+  }
+
+  /* search は最下行へ送る (flex-wrap 改行ポイント) */
+  .premium-dashboard-header .user-search-button {
+    order: 100;
+    flex: 1 1 100%;
   }
 
   .premium-dashboard-header .notification-wrap > .notification-button,
@@ -31813,36 +31820,37 @@ body.workspace-popover-active .preset-message-panel.hud-fab,
   }
 
   /* topbar-feed-toggle / shop-button / friends 等のアイコンボタン
-     報告：スマホでアイコンだけでは何のボタンか分からない。横幅は
-     現状維持 (端末の窮屈さを増やさない) で、縦方向に少し伸ばして
-     アイコン下に小さな日本語ラベルを併記する。 */
+     スマホでアイコンだけでは何のボタンか分からないため、ラベル併記
+     にしている。さらに右端の本人 avatar が入りきらない報告があったため、
+     icon サイズを 52→44 に詰めて並びの幅を抑える。 */
   .premium-dashboard-header .topbar-feed-toggle,
+  .premium-dashboard-header .topbar-workspace-button,
   .premium-dashboard-header .topbar-shop-button,
   .premium-dashboard-header .topbar-manager-button,
   .premium-dashboard-header .topbar-popover-wrap-friends > .topbar-icon-button,
   .premium-dashboard-header .topbar-popover-wrap > .topbar-icon-button {
-    width: 52px !important;
-    min-width: 52px !important;
-    height: 52px !important;
-    min-height: 52px !important;
-    padding: 4px 2px !important;
-    border-radius: 14px !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    padding: 3px 2px !important;
+    border-radius: 12px !important;
     flex: 0 0 auto !important;
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 2px !important;
+    gap: 1px !important;
   }
   .premium-dashboard-header .topbar-icon-button svg {
-    width: 20px !important;
-    height: 20px !important;
+    width: 18px !important;
+    height: 18px !important;
   }
   .premium-dashboard-header .topbar-icon-label {
     display: inline-block !important;
-    font-size: 9px !important;
+    font-size: 8px !important;
     font-weight: 800 !important;
-    letter-spacing: 0.02em;
+    letter-spacing: 0;
     line-height: 1;
     color: var(--muted);
     white-space: nowrap;
@@ -31850,6 +31858,28 @@ body.workspace-popover-active .preset-message-panel.hud-fab,
   /* 開いている状態のボタンは label をインクカラーに */
   .premium-dashboard-header .topbar-icon-button.is-open .topbar-icon-label {
     color: var(--ink);
+  }
+
+  /* === スマホでは FEED toggle を非表示 ===
+     ユーザー指示により FEED は bottom-nav の "投稿" タブに移動。topbar
+     からは外して横並びの幅を縮め、本人アバターが入りきるようにする。 */
+  .premium-dashboard-header .topbar-feed-toggle {
+    display: none !important;
+  }
+  /* Live Activity の popover は notifications 🔔 と機能が被るため
+     スマホでは隠してアバター用の幅を確保。PC では従来通り表示。 */
+  .premium-dashboard-header .user-session > .topbar-popover-wrap:not(.topbar-popover-wrap-friends) {
+    display: none !important;
+  }
+
+  /* === 在室者がいる時の "作業部屋" presence ドット ===
+     bottom-nav から移植したので topbar-workspace-button にも同じ
+     アクセントを乗せる (badge は別途) */
+  .premium-dashboard-header .topbar-workspace-button.has-presence {
+    border-color: rgba(31, 111, 74, 0.42) !important;
+  }
+  .premium-dashboard-header .topbar-workspace-button.has-presence .topbar-icon-label {
+    color: var(--green);
   }
 
   /* notification-wrap と user-menu-wrap を flex item に */
