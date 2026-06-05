@@ -13429,6 +13429,7 @@ function App() {
                 <circle cx="17" cy="10.5" r="1.2" fill="currentColor" />
                 <path d="M7 12.5v3 M17 12.5v3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
               </svg>
+              <span className="topbar-icon-label" aria-hidden="true">管理</span>
             </button>
           ) : null}
 
@@ -13474,6 +13475,7 @@ function App() {
                   strokeWidth="1.6"
                 />
               </svg>
+              <span className="topbar-icon-label" aria-hidden="true">FEED</span>
             </button>
           ) : null}
 
@@ -13513,6 +13515,7 @@ function App() {
                 {coins.toLocaleString()}
               </span>
             ) : null}
+            <span className="topbar-icon-label" aria-hidden="true">ショップ</span>
           </button>
 
           <div className="topbar-popover-wrap topbar-popover-wrap-friends" ref={friendsPopoverRef}>
@@ -13556,6 +13559,7 @@ function App() {
               {sidebarFriends.length > 0 ? (
                 <span className="topbar-icon-badge">{sidebarFriends.length}</span>
               ) : null}
+              <span className="topbar-icon-label" aria-hidden="true">フレンド</span>
             </button>
             {isFriendsPopoverOpen ? (
               <section className="topbar-popover topbar-popover-friends" aria-label="Friends">
@@ -13641,6 +13645,7 @@ function App() {
               {liveActivities.length > 0 ? (
                 <span className="topbar-icon-badge">{liveActivities.length}</span>
               ) : null}
+              <span className="topbar-icon-label" aria-hidden="true">ライブ</span>
             </button>
             {isLivePopoverOpen ? (
               <section className="topbar-popover topbar-popover-live" aria-label="Live Activity">
