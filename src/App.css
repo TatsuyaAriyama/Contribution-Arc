@@ -13805,15 +13805,18 @@
      children (search / bell / avatar) participate directly in the parent grid. */
   .premium-dashboard-header {
     top: 8px;
-    gap: 8px 10px;
-    padding: 10px 12px;
+    gap: 8px 8px !important;
+    padding: 10px 10px !important;
     border-radius: 22px;
     /* 報告：アイコン数が多くて右端の本人アバターが画面外で切れる。
-       grid 配置のままでは auto-place が崩れて avatar が押し出されるので、
-       flex-wrap で素直に「左から並べて、収まらなければ折返し」する形に。
-       avatar / bell は margin-left: auto で右端固定、search は別行扱い。 */
-    display: flex;
-    flex-wrap: wrap;
+       flex-wrap で 3 段にレイアウト分離：
+         row1: meta (左) + bell + avatar (右)
+         row2: 作業部屋 / ショップ / フレンド / 管理 など icon 群
+         row3: 検索バー
+       いずれの行も独立して overflow せず、avatar は必ず row1 の右端に
+       居続けるので、プロフィール/設定への動線が常に保たれる。 */
+    display: flex !important;
+    flex-wrap: wrap !important;
     align-items: center;
   }
 
@@ -13824,6 +13827,7 @@
     gap: 6px;
     min-width: 0;
     flex: 1 1 auto;
+    order: 1; /* row1 左端 */
     overflow: hidden;
   }
 
@@ -13843,20 +13847,46 @@
     display: contents;
   }
 
+  /* row1 右端: bell + avatar — 必ず viewport に残す */
   .premium-dashboard-header .notification-wrap {
     flex: 0 0 auto;
-    order: 80;
+    order: 2;
   }
-
   .premium-dashboard-header .user-menu-wrap {
     flex: 0 0 auto;
-    order: 90;
+    order: 3;
   }
 
-  /* search は最下行へ送る (flex-wrap 改行ポイント) */
+  /* row1 → row2 の改行を強制するため、::after pseudo を flex-basis
+     100% で挟む。order 5 で context/bell/avatar (1-3) と icon 群 (10)
+     の間に入り、自身が一行占有することで icon 群を次行に押し出す。
+     高さ 0 / 不可視で実視認には現れない。 */
+  .premium-dashboard-header::after {
+    content: "";
+    flex: 1 1 100%;
+    order: 5;
+    width: 100%;
+    height: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    pointer-events: none;
+  }
+
+  /* row2: icon 群を横並び・折返し可。order 10 で改行後の先頭グループ */
+  .premium-dashboard-header .topbar-manager-button,
+  .premium-dashboard-header .topbar-workspace-button,
+  .premium-dashboard-header .topbar-shop-button,
+  .premium-dashboard-header .topbar-popover-wrap-friends {
+    order: 10;
+    flex: 0 0 auto;
+  }
+
+  /* row3: 検索バー (flex-basis 100% で必ず別行) */
   .premium-dashboard-header .user-search-button {
     order: 100;
     flex: 1 1 100%;
+    width: 100%;
   }
 
   .premium-dashboard-header .notification-wrap > .notification-button,
