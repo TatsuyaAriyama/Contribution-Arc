@@ -552,6 +552,23 @@ export function SilentWorkspaceRoom({
           <button type="button" className="room-preview-join" onClick={onJoin}>
             入室する
           </button>
+
+          {/* 解体は入室せずに行えるようにする。以前は解体ボタンが
+              没入ステージ内オーバーレイ / canvas-actions 行にしか無く、
+              どちらもモバイルでは CSS で非表示 (App.css の
+              .workspace-room-canvas-actions / .workspace-room-overlay-admin)。
+              そのためプレビュー画面では「入室する」しか押せず、解体しよう
+              として入室してしまっていた。canDeleteRoom (= 作成者本人 or
+              開発者アカウント) の時だけ出す。 */}
+          {onRoomDelete && canDeleteRoom ? (
+            <button
+              type="button"
+              className="room-preview-dismantle"
+              onClick={onRoomDelete}
+            >
+              解体する
+            </button>
+          ) : null}
         </article>
       </div>
     );
