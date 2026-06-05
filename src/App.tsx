@@ -11861,10 +11861,15 @@ function App() {
 
   const postCard = (post: ContributionPostRecord, variant: "full" | "compact" = "full") => {
     const isLiked = post.likedUserIds.includes(currentUserUid);
-    const roomLabel = post.roomName || "Quiet log";
-    const studyLabel = post.studyMinutes > 0 ? `${formatStudyTimeJa(post.studyMinutes)} focused` : "quiet progress";
+    /* 投稿の下の小さなメタ。以前は studyMinutes が 0 / roomName が空の
+       時に "quiet progress" "Quiet log" という英語のプレースホルダーを
+       出していたが、意味が伝わらないと報告。データが無い時はそもそも
+       表示しない設計に統一する。 */
+    const studyLabel = post.studyMinutes > 0 ? `${formatStudyTimeJa(post.studyMinutes)} focused` : "";
+    const roomLabel = post.roomName || "";
     const contributionLabel =
       post.githubContributionCount > 0 ? `+${post.githubContributionCount.toLocaleString()} commits` : "";
+    const hasMeta = !!(studyLabel || roomLabel || contributionLabel);
     const replies = postReplies
       .filter((reply) => reply.postId === post.id)
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
@@ -11895,11 +11900,13 @@ function App() {
 
         <p>{post.text}</p>
 
-        <div className="log-post-meta">
-          <span>{studyLabel}</span>
-          {contributionLabel ? <span>{contributionLabel}</span> : null}
-          <span>{roomLabel}</span>
-        </div>
+        {hasMeta ? (
+          <div className="log-post-meta">
+            {studyLabel ? <span>{studyLabel}</span> : null}
+            {contributionLabel ? <span>{contributionLabel}</span> : null}
+            {roomLabel ? <span>{roomLabel}</span> : null}
+          </div>
+        ) : null}
 
         <div className="log-post-actions">
           <motion.button
