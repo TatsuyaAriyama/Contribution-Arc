@@ -14792,6 +14792,16 @@
   }
 }
 
+/* モバイル(≤720px)では FEED 右ペインを表示しない。ここより上の幅では
+   .two-pane-shell が縦積み(flex column)なので、ライブラリ/日報などの
+   左ペインのビューの真下に FEED が積み重なって出てしまう。スマホでは
+   FEED はホームのフィードセクションから辿れるため、ここでは畳む。 */
+@media (max-width: 720px) {
+  .two-pane-right {
+    display: none;
+  }
+}
+
 /* ===== Topbar: nav + popovers =====
    The topbar hosts the primary nav (4 buttons) and on-demand popovers
    for Friends and Live Activity. Search / Notifications / User menu
