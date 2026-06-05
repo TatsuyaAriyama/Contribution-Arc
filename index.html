@@ -2,7 +2,17 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- リンク遷移 / リロードで画面が拡大されてズレるとの報告。
+         原因は (a) iOS Safari の "入力フォーカスでオートズーム" の状態が
+         次のページに引き継がれる、(b) ブラウザ側のテキストサイズ自動拡大、
+         の 2 つ。pinch zoom 自体は本アプリでは設定 (UI scale) で
+         調整する方針なので maximum-scale=1.0 で固定する。
+         前回 touch-action / overscroll-behavior を一緒に入れたら
+         スワイプ系が壊れたので、それらは触らずに必要最小限の修正のみ。 -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover"
+    />
     <meta name="color-scheme" content="light dark" />
     <meta name="format-detection" content="telephone=no" />
     <meta
