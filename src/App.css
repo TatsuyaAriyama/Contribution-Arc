@@ -32007,8 +32007,12 @@ body.workspace-popover-active .preset-message-panel.hud-fab,
     display: none !important;
   }
   /* Live Activity の popover は notifications 🔔 と機能が被るため
-     スマホでは隠してアバター用の幅を確保。PC では従来通り表示。 */
-  .premium-dashboard-header .user-session > .topbar-popover-wrap:not(.topbar-popover-wrap-friends) {
+     スマホでは隠してアバター用の幅を確保。PC では従来通り表示。
+     注意：検索ボタンも .topbar-popover-wrap-search で包んでいるので
+     `:not(.topbar-popover-wrap-search)` で除外しないと検索アイコンまで
+     消える (実際に消えた報告あり)。 */
+  .premium-dashboard-header .user-session
+    > .topbar-popover-wrap:not(.topbar-popover-wrap-friends):not(.topbar-popover-wrap-search) {
     display: none !important;
   }
 
