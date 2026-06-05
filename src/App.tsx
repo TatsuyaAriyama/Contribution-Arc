@@ -365,6 +365,17 @@ type UserProfile = {
   /* Preferred UI language. Defaults to "ja" when missing for
      backward compatibility with pre-i18n accounts. */
   language?: Language;
+  /* デバイス間でユーザー設定を引き継ぐためのフラグ群。いずれも
+     localStorage の per-uid キーから昇格させた cross-device 同期版。
+     - onboardingCompletedAt: ISO 文字列。null/未設定なら未完了扱い。
+       新規デバイスでログインした時にチュートリアルを再開させない判断材料。
+     - pinnedFriendUids / mutedFriendUids / blockedFriendUids: それぞれ
+       友達ピン・ミュート・ブロックの uid 配列。ブロックは特に "片方の
+       デバイスだけで効く" のは安全機能としてダメなので必ず同期する。 */
+  onboardingCompletedAt?: string;
+  pinnedFriendUids?: string[];
+  mutedFriendUids?: string[];
+  blockedFriendUids?: string[];
 };
 
 type FriendRequestStatus = "pending" | "accepted" | "rejected";
@@ -1623,6 +1634,22 @@ function normalizeUserProfile(uid: string, data: Partial<UserProfile>): UserProf
         : 0,
     weekKey: typeof data.weekKey === "string" ? data.weekKey : "",
     language: getSafeLanguage(data.language),
+    /* cross-device 同期版フィールド。未設定は undefined / 空配列で
+       後方互換を保つ。文字列で来た場合や配列以外は黙って弾いて
+       既存ユーザーが壊れないように。 */
+    onboardingCompletedAt:
+      typeof data.onboardingCompletedAt === "string" && data.onboardingCompletedAt
+        ? data.onboardingCompletedAt
+        : undefined,
+    pinnedFriendUids: Array.isArray(data.pinnedFriendUids)
+      ? data.pinnedFriendUids.filter((value): value is string => typeof value === "string")
+      : undefined,
+    mutedFriendUids: Array.isArray(data.mutedFriendUids)
+      ? data.mutedFriendUids.filter((value): value is string => typeof value === "string")
+      : undefined,
+    blockedFriendUids: Array.isArray(data.blockedFriendUids)
+      ? data.blockedFriendUids.filter((value): value is string => typeof value === "string")
+      : undefined,
   };
 }
 
@@ -3943,6 +3970,14 @@ function App() {
   const [userId, setUserId] = useState("");
   const [draftUserId, setDraftUserId] = useState("");
   const [settingsError, setSettingsError] = useState("");
+  /* オンボーディング完了タイムスタンプ (ISO)。localStorage の per-uid
+     キーで持っていた "complete=true" を、cloud 同期可能な形に昇格させた版。
+     - 旧: contribution-arc-onboarding-complete-{uid} (boolean, 端末固有)
+     - 新: users/{uid}.onboardingCompletedAt (timestamp, cross-device)
+     localStorage は引き続き fast-path のローカルキャッシュとして残し、
+     新規デバイスでも cloud profile の onboardingCompletedAt が
+     立っていればスキップする。 */
+  const [cloudOnboardingCompletedAt, setCloudOnboardingCompletedAt] = useState<string>("");
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">(() => {
@@ -4068,7 +4103,26 @@ function App() {
     } catch {
       setEncouragementsSent(new Set());
     }
+    /* 投稿ドラフト / 既読 置き手紙 ID も uid scope で hydrate。
+       過去にレガシーな uid 非依存キーで書かれた値があれば優先で読み、
+       次回の write で uid scope キーに上書きされる migration 経路を残す。 */
+    try {
+      const scoped = localStorage.getItem(`ca:post-draft:${uid}`);
+      const legacy = localStorage.getItem("contribution-arc:post-draft");
+      setPostDraft(scoped || legacy || "");
+    } catch {
+      setPostDraft("");
+    }
+    try {
+      const scoped = localStorage.getItem(`ca:read-floor-notes:${uid}`);
+      const legacy = localStorage.getItem("ca:read-floor-notes");
+      const raw = scoped || legacy;
+      setReadFloorNoteIds(new Set(raw ? (JSON.parse(raw) as string[]) : []));
+    } catch {
+      setReadFloorNoteIds(new Set<string>());
+    }
   }, [currentUser?.uid]);
+
 
   // state 変化時の保存 (uid scope)。
   useEffect(() => {
@@ -4174,14 +4228,10 @@ function App() {
   const [roomMemberPanelUser, setRoomMemberPanelUser] = useState<UserProfile | null>(null);
   // Floor notes (置き手紙) + monuments (記念碑) popover state.
   const [floorNotes, setFloorNotes] = useState<FloorNoteRecord[]>([]);
-  const [readFloorNoteIds, setReadFloorNoteIds] = useState<Set<string>>(() => {
-    try {
-      const raw = localStorage.getItem("ca:read-floor-notes");
-      return new Set(raw ? (JSON.parse(raw) as string[]) : []);
-    } catch {
-      return new Set<string>();
-    }
-  });
+  /* 置き手紙の既読 ID 集合。以前は uid scope の無い "ca:read-floor-notes"
+     に書いていたため、複アカウント切替で既読状態が混在していた。
+     初期値は空にして、uid 確定後の useEffect で uid scope キーから hydrate。 */
+  const [readFloorNoteIds, setReadFloorNoteIds] = useState<Set<string>>(() => new Set());
   const [openFloorNoteId, setOpenFloorNoteId] = useState<string | null>(null);
   const [isComposingFloorNote, setIsComposingFloorNote] = useState(false);
   const [floorNoteDraft, setFloorNoteDraft] = useState("");
@@ -4340,13 +4390,26 @@ function App() {
   // Draft is hydrated from localStorage so that switching views or closing
   // the quick-capture modal (⌘K) never silently throws away what the user
   // was typing. Cleared explicitly on successful submit.
-  const [postDraft, setPostDraft] = useState(() => {
+  /* 投稿の下書き。以前は "contribution-arc:post-draft" の uid 非依存キーで
+     localStorage に書き戻していたため、同一ブラウザで A → B にアカウント
+     切替した時に A の下書きが B の投稿フォームに残るリークがあった。
+     初期値は常に空で、uid 確定後の useEffect で uid scope キーから復元する。 */
+  const [postDraft, setPostDraft] = useState("");
+  /* postDraft の per-uid 永続化。ログアウト時はクリア。 */
+  useEffect(() => {
+    if (!currentUser?.uid) return;
     try {
-      return window.localStorage.getItem("contribution-arc:post-draft") || "";
+      if (postDraft) {
+        localStorage.setItem(`ca:post-draft:${currentUser.uid}`, postDraft);
+      } else {
+        localStorage.removeItem(`ca:post-draft:${currentUser.uid}`);
+      }
+      // レガシー uid 非依存キーは害があるので削除しておく
+      localStorage.removeItem("contribution-arc:post-draft");
     } catch {
-      return "";
+      /* ignore */
     }
-  });
+  }, [postDraft, currentUser?.uid]);
   const [postError, setPostError] = useState("");
   const [isPosting, setIsPosting] = useState(false);
   // Quick Capture modal (⌘K / Ctrl+K). The textarea ref is used to focus
@@ -4599,6 +4662,9 @@ function App() {
       setProfileMember(null);
       setProfileUser(null);
       setOnboardingStep("idle");
+      /* ログアウト時は cross-device 同期 state も明示クリア。次のユーザーが
+         前のユーザーのスタンプを引きずって payload に書いてしまう事故を防ぐ。 */
+      setCloudOnboardingCompletedAt("");
       setIsSettingsOpen(false);
       setIsSearchOpen(false);
       setSearchQuery("");
@@ -4875,6 +4941,28 @@ function App() {
         if (profile.language) {
           setLanguage(profile.language);
         }
+        /* cross-device 同期：cloud profile に pin/mute/block の uid 配列
+           があれば適用。最初の "1 回読み" の time-of-flight 中に local
+           で書いた差分は、profile 適用直後に union を取り直す形にして、
+           PC とスマホで同時編集してもどちらかの追加が消えないようにする。 */
+        if (Array.isArray(profile.pinnedFriendUids)) {
+          setPinnedFriendUids((local) =>
+            Array.from(new Set([...local, ...(profile.pinnedFriendUids || [])])).sort(),
+          );
+        }
+        if (Array.isArray(profile.mutedFriendUids)) {
+          setMutedFriendUids((local) =>
+            Array.from(new Set([...local, ...(profile.mutedFriendUids || [])])).sort(),
+          );
+        }
+        if (Array.isArray(profile.blockedFriendUids)) {
+          setBlockedFriendUids((local) =>
+            Array.from(new Set([...local, ...(profile.blockedFriendUids || [])])).sort(),
+          );
+        }
+        if (profile.onboardingCompletedAt) {
+          setCloudOnboardingCompletedAt(profile.onboardingCompletedAt);
+        }
         resolvedUserId = profile.userId || resolvedUserId;
         setUserId(resolvedUserId);
         setDraftUserId(resolvedUserId);
@@ -4949,7 +5037,15 @@ function App() {
         );
         if (resolvedUserId) {
           safeSetLocalStorage(`contribution-arc-user-id-${currentUser.uid}`, resolvedUserId);
-          if (savedOnboardingComplete === "true") {
+          /* cross-device 同期：cloud profile に onboardingCompletedAt が
+             立っていれば、その新規デバイスではチュートリアル不要。 */
+          const cloudOnboardingDone = !!(profile.onboardingCompletedAt && profile.onboardingCompletedAt.trim());
+          if (cloudOnboardingDone) {
+            setCloudOnboardingCompletedAt(profile.onboardingCompletedAt!);
+            // 新規デバイスでも localStorage を mark し、次回からは fast-path
+            safeSetLocalStorage(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
+          }
+          if (savedOnboardingComplete === "true" || cloudOnboardingDone) {
             setOnboardingStep("idle");
           } else if ((profile.determination || "").trim()) {
             // 既に 決意 が cloud に保存されている = firstPost は通過済み。
@@ -8549,6 +8645,9 @@ function App() {
     }
 
     safeSetLocalStorage(`contribution-arc-onboarding-complete-${currentUser.uid}`, "true");
+    /* cross-device 同期：cloud profile にもタイムスタンプを書く。
+       これで他端末で新規ログインしてもチュートリアルが再開しない。 */
+    setCloudOnboardingCompletedAt(new Date().toISOString());
     setOnboardingStep("idle");
     setOnboardingFirstPlanDraft("");
     showToast("今日やることを記録しました。1日を始めましょう。", { kind: "success" });
@@ -8936,6 +9035,13 @@ function App() {
       // reads. weekKey lets a stale (previous-week) value count as zero.
       weekMinutes: contributionArc.thisWeekMinutes,
       weekKey: getCurrentWeekKey(),
+      /* cross-device 同期: 旧 localStorage 限定だった設定を user doc
+         にも常時 mirror する。スマホで設定したら PC で反映、その逆も。 */
+      language,
+      pinnedFriendUids: [...pinnedFriendUids].sort(),
+      mutedFriendUids: [...mutedFriendUids].sort(),
+      blockedFriendUids: [...blockedFriendUids].sort(),
+      onboardingCompletedAt: cloudOnboardingCompletedAt,
       // Mirror the current org membership into the periodic progress
       // write so the user doc converges to one consistent shape even
       // if the user just joined/left via the dedicated helpers.
@@ -9009,6 +9115,16 @@ function App() {
     lastFeedRewardDate,
     feedRewardArcEarned,
     currentOrganization,
+    /* cross-device 同期で新規に payload に乗せた依存。これらが変わる
+       たびに sync 再評価して、PC で変えた直後にスマホ側からも見えるよう
+       にする。 */
+    language,
+    pinnedFriendUids,
+    mutedFriendUids,
+    blockedFriendUids,
+    cloudOnboardingCompletedAt,
+    contributionArc.thisWeekMinutes,
+    outputStats.contributions,
   ]);
 
   /* Auto-join domain discovery (Phase 7). Fires when the user is
@@ -9906,7 +10022,10 @@ function App() {
       const next = new Set(prev);
       next.add(id);
       try {
-        localStorage.setItem("ca:read-floor-notes", JSON.stringify(Array.from(next)));
+        const key = currentUser?.uid
+          ? `ca:read-floor-notes:${currentUser.uid}`
+          : "ca:read-floor-notes";
+        localStorage.setItem(key, JSON.stringify(Array.from(next)));
       } catch {
         // localStorage unavailable (private mode) — unread state just
         // won't persist across reloads, which is acceptable.

@@ -77,6 +77,24 @@ export type UserProgressRecord = {
   organizationId?: string;
   organizationName?: string;
   organizationRole?: "owner" | "admin" | "member";
+  /* Sunday-start week minutes for the leaderboard (mirrored in the
+     profile doc so friends don't need a query per user). */
+  weekMinutes?: number;
+  weekKey?: string;
+  /* Cross-device sync fields. すべて optional で、未設定なら旧
+     localStorage 限定動作にフォールバックする (後方互換)。
+     - language: i18n の "ja" / "en" 等。スマホで切り替えた言語を PC
+       に持っていく
+     - onboardingCompletedAt: チュートリアル完了 ISO timestamp。
+       新規デバイスで再開させないための旗
+     - pinnedFriendUids / mutedFriendUids / blockedFriendUids: 友達の
+       ピン・ミュート・ブロック (ブロックは安全機能なので片方の端末
+       だけ効くのは事故になるため必ず同期) */
+  language?: string;
+  onboardingCompletedAt?: string;
+  pinnedFriendUids?: string[];
+  mutedFriendUids?: string[];
+  blockedFriendUids?: string[];
 };
 
 export type GitHubActivitySummary = {
@@ -450,6 +468,15 @@ export async function saveUserProgressToCloud(db: Firestore, profile: UserProgre
     ...(profile.organizationId ? { organizationId: profile.organizationId } : {}),
     ...(profile.organizationName ? { organizationName: profile.organizationName } : {}),
     ...(profile.organizationRole ? { organizationRole: profile.organizationRole } : {}),
+    // Cross-device 同期フィールド。値が空 / 未設定なら書かない (merge
+    // で残っている cloud 側の値を消さないため)。
+    ...(typeof profile.weekMinutes === "number" ? { weekMinutes: profile.weekMinutes } : {}),
+    ...(profile.weekKey ? { weekKey: profile.weekKey } : {}),
+    ...(profile.language ? { language: profile.language } : {}),
+    ...(profile.onboardingCompletedAt ? { onboardingCompletedAt: profile.onboardingCompletedAt } : {}),
+    ...(Array.isArray(profile.pinnedFriendUids) ? { pinnedFriendUids: profile.pinnedFriendUids } : {}),
+    ...(Array.isArray(profile.mutedFriendUids) ? { mutedFriendUids: profile.mutedFriendUids } : {}),
+    ...(Array.isArray(profile.blockedFriendUids) ? { blockedFriendUids: profile.blockedFriendUids } : {}),
   };
 
   // Build the dedup key from every meaningful field EXCEPT lastSyncedAt
