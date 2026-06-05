@@ -15100,6 +15100,11 @@
   height: 20px;
 }
 
+/* デフォルト (PC) ではラベル非表示。tooltip で十分。 */
+.topbar-icon-label {
+  display: none;
+}
+
 /* Instant hover tooltip for topbar icon buttons (and the notification
    bell). Native `title` has a ~1s delay; this fades in immediately so
    the user knows what each button does the moment they hover or focus
@@ -31807,15 +31812,44 @@ body.workspace-popover-active .preset-message-panel.hud-fab,
     color: rgba(232, 234, 237, 0.92);
   }
 
-  /* topbar-feed-toggle / shop-button / friends 等のアイコンボタン */
+  /* topbar-feed-toggle / shop-button / friends 等のアイコンボタン
+     報告：スマホでアイコンだけでは何のボタンか分からない。横幅は
+     現状維持 (端末の窮屈さを増やさない) で、縦方向に少し伸ばして
+     アイコン下に小さな日本語ラベルを併記する。 */
   .premium-dashboard-header .topbar-feed-toggle,
   .premium-dashboard-header .topbar-shop-button,
-  .premium-dashboard-header .topbar-popover-wrap-friends > .topbar-icon-button {
-    width: 40px !important;
-    min-width: 40px !important;
-    height: 40px !important;
-    min-height: 40px !important;
+  .premium-dashboard-header .topbar-manager-button,
+  .premium-dashboard-header .topbar-popover-wrap-friends > .topbar-icon-button,
+  .premium-dashboard-header .topbar-popover-wrap > .topbar-icon-button {
+    width: 52px !important;
+    min-width: 52px !important;
+    height: 52px !important;
+    min-height: 52px !important;
+    padding: 4px 2px !important;
+    border-radius: 14px !important;
     flex: 0 0 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 2px !important;
+  }
+  .premium-dashboard-header .topbar-icon-button svg {
+    width: 20px !important;
+    height: 20px !important;
+  }
+  .premium-dashboard-header .topbar-icon-label {
+    display: inline-block !important;
+    font-size: 9px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  /* 開いている状態のボタンは label をインクカラーに */
+  .premium-dashboard-header .topbar-icon-button.is-open .topbar-icon-label {
+    color: var(--ink);
   }
 
   /* notification-wrap と user-menu-wrap を flex item に */
