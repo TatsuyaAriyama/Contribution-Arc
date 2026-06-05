@@ -19568,16 +19568,18 @@ function App() {
             </svg>
             <span>記録する</span>
           </button>
+          {/* PC 版サイドバーと揃えて、ここを「ライブラリ」(learning ビュー)
+              への入口にする。みんなの記録 (logs) はホームから辿れる。 */}
           <button
             type="button"
-            className={currentView === "logs" ? "is-active" : ""}
-            onClick={() => setCurrentView("logs")}
-            aria-label="みんなの記録"
+            className={currentView === "learning" ? "is-active" : ""}
+            onClick={() => setCurrentView("learning")}
+            aria-label={t("ライブラリ")}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M4 7h16M4 12h16M4 17h10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              <path d="M5 4h4v16H5zM11 4h4v16h-4zM16.5 4.8l3.4.9-3 14.6-3.4-.9z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
             </svg>
-            <span>記録</span>
+            <span>{t("ライブラリ")}</span>
           </button>
           {/* 作業部屋を右端へ移動 (ユーザー要望)。在室者ドット + 数字で
               気配は引き続き伝える。 */}
