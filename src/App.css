@@ -20339,9 +20339,17 @@
 }
 
 /* Apply the user-controlled scale to the whole app. `zoom` reflows, unlike
-   transform: scale(), so layout stays sane at any value within the slider. */
-body {
-  zoom: var(--ui-scale, 1);
+   transform: scale(), so layout stays sane at any value within the slider.
+   モバイル (≤720px) では body { zoom } を適用しない:
+   - iOS Safari は body の CSS zoom と visual viewport の解釈にずれが
+     あり、リロード/リンク遷移直後に「画面が少し拡大されてズレる」原因
+     になっていた (報告ベース)。
+   - モバイルは元から responsive で密度調整が要らないので、UI scale は
+     PC 専用の機能として扱う。 */
+@media (min-width: 721px) {
+  body {
+    zoom: var(--ui-scale, 1);
+  }
 }
 
 /* === Zoom slider (relocated into settings modal) ===
@@ -28938,6 +28946,12 @@ a[role="button"],
      active state を別途用意するので二重表示を避ける目的。 */
   html {
     -webkit-tap-highlight-color: transparent;
+    /* 端末のテキストサイズ設定で font-size が勝手に膨らむのを抑止。
+       "リロード後に少し拡大されて見える" 現象の主因 (b) の対策。
+       maximum-scale=1 だけでは UA レベルの text-bloat は抑えられない。 */
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   /* ページ全体の横スクロールを禁止。あちこちの固定幅要素が
