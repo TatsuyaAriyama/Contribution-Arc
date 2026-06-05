@@ -15291,6 +15291,74 @@
   padding-right: 2px;
 }
 
+/* ===== 検索 popover (Friends/Live と同型) =====
+   旧モーダル時代は body をスクロール固定してオーバーレイで覆っていた
+   ので、開いた瞬間に画面が下にズレる感じがあった。Friends と同じく
+   アイコン直下にドロップする inline popover に統一する。 */
+.topbar-popover-search {
+  width: min(340px, 86vw);
+}
+.topbar-search-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+}
+.topbar-search-form input {
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(var(--ink-rgb), 0.12);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+}
+.topbar-search-form input:focus {
+  border-color: rgba(var(--green-rgb, 31, 111, 74), 0.5);
+  box-shadow: 0 0 0 3px rgba(var(--green-rgb, 31, 111, 74), 0.12);
+}
+.topbar-search-form button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--green);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.14s ease, transform 0.12s ease;
+}
+.topbar-search-form button:hover:not(:disabled) {
+  background: rgba(var(--green-rgb, 31, 111, 74), 0.92);
+}
+.topbar-search-form button:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.topbar-search-form button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* user-search-button が popover wrap の中に入ったので、開いた時の
+   状態表示 (Friends と同じく) を borders/background で示す */
+.topbar-popover-wrap-search > .user-search-button.is-open {
+  border-color: rgba(var(--green-rgb, 31, 111, 74), 0.36);
+  background: rgba(var(--green-rgb, 31, 111, 74), 0.06);
+}
+
+/* モバイル: 検索 popover はアイコン直下に right-align で、画面幅
+   一杯まで使える方が検索結果が見やすい */
+@media (max-width: 720px) {
+  .topbar-popover-search {
+    width: calc(100vw - 24px);
+    max-width: 360px;
+    right: max(-4px, calc(0px - env(safe-area-inset-right, 0px)));
+  }
+}
+
 .topbar-popover-row {
   display: grid;
   grid-template-columns: 36px minmax(0, 1fr);

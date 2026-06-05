@@ -3955,6 +3955,13 @@ function App() {
   }, [isFriendsPopoverOpen]);
   const [isLivePopoverOpen, setIsLivePopoverOpen] = useState(false);
   const livePopoverRef = useRef<HTMLDivElement>(null);
+  /* 検索ポップオーバーの outside-click 制御。
+     アイコン直下に inline で出す UX に統一 (旧フル画面モーダルだと
+     モバイルで画面が下にスクロールされて違和感があるとの報告)。
+     ref と effect だけここで宣言し、開閉フラグの isSearchOpen は
+     既存 state を流用する。effect 本体は isSearchOpen 宣言の後で
+     useEffect が呼ばれるので問題ないが、ref はここで先行宣言できる。 */
+  const searchPopoverRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!isLivePopoverOpen) return;
     const handler = (event: MouseEvent) => {
@@ -3998,6 +4005,16 @@ function App() {
   const [onboardingFirstPlanError, setOnboardingFirstPlanError] = useState("");
   const [isSavingOnboardingFirstPlan, setIsSavingOnboardingFirstPlan] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  useEffect(() => {
+    if (!isSearchOpen) return;
+    const handler = (event: MouseEvent) => {
+      if (searchPopoverRef.current && !searchPopoverRef.current.contains(event.target as Node)) {
+        setIsSearchOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [isSearchOpen]);
   // FEED right-pane visibility. Defaults open (matches previous
   // behaviour); the value is persisted to localStorage so a deliberate
   // collapse survives reloads. Hidden entirely during the workspace
@@ -13831,35 +13848,110 @@ function App() {
               </section>
             ) : null}
           </div>
-          <button
-            type="button"
-            className="user-search-button"
-            onClick={() => setIsSearchOpen(true)}
-            aria-label={t("ユーザーを探す")}
-          >
-            <span aria-hidden="true" className="user-search-icon">
-              {/* 検索アイコン (v2)。以前の SVG は CSS 側に残っていた
-                  古い ::after / border 装飾と二重描画になっていたため
-                  崩れて見えていた。CSS 装飾を完全撤去 + SVG も Lucide
-                  ベースの大き目 lens (r=8) + 短めの直線 handle に変更し、
-                  小さい表示サイズでも線が潰れず "それと分かる" 描画に。 */}
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                focusable="false"
-                aria-hidden="true"
+          <div className="topbar-popover-wrap topbar-popover-wrap-search" ref={searchPopoverRef}>
+            <button
+              type="button"
+              className={`user-search-button${isSearchOpen ? " is-open" : ""}`}
+              onClick={() => {
+                setIsSearchOpen((prev) => !prev);
+                setIsFriendsPopoverOpen(false);
+                setIsLivePopoverOpen(false);
+              }}
+              aria-label={t("ユーザーを探す")}
+              aria-expanded={isSearchOpen}
+            >
+              <span aria-hidden="true" className="user-search-icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  focusable="false"
+                  aria-hidden="true"
+                >
+                  <circle cx="10.5" cy="10.5" r="6.5" />
+                  <line x1="20" y1="20" x2="15.5" y2="15.5" />
+                </svg>
+              </span>
+              <strong>Search</strong>
+              <em>⌘K</em>
+            </button>
+            {isSearchOpen ? (
+              <section
+                className="topbar-popover topbar-popover-search"
+                aria-label={t("ユーザーを探す")}
               >
-                <circle cx="10.5" cy="10.5" r="6.5" />
-                <line x1="20" y1="20" x2="15.5" y2="15.5" />
-              </svg>
-            </span>
-            <strong>Search</strong>
-            <em>⌘K</em>
-          </button>
+                <div className="topbar-popover-head">
+                  <p className="card-kicker">User Search</p>
+                  <strong>{t("ユーザーを探す")}</strong>
+                </div>
+                <form className="topbar-search-form" onSubmit={handleUserSearch}>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value.toLowerCase())}
+                    placeholder="ari.dev"
+                    maxLength={30}
+                    autoFocus
+                    aria-label="ユーザーID"
+                  />
+                  <button type="submit" disabled={isSearching}>
+                    {isSearching ? "…" : "検索"}
+                  </button>
+                </form>
+                {!userId ? (
+                  <p className="topbar-popover-empty-text">
+                    {t("フォロー機能を使うには、設定から自分のユーザーIDを登録してください。")}
+                  </p>
+                ) : null}
+                {searchError ? (
+                  <p className="topbar-popover-empty-text" role="alert">
+                    {searchError}
+                  </p>
+                ) : null}
+                {searchResults.length > 0 ? (
+                  <div className="topbar-popover-list">
+                    {searchResults.slice(0, 6).map((profile) => {
+                      const isFriend = friends.some((friend) => friend.uid === profile.uid);
+                      const isPending = friendRequests.some(
+                        (request) =>
+                          request.profile.uid === profile.uid &&
+                          request.status === "pending",
+                      );
+                      return (
+                        <button
+                          type="button"
+                          key={profile.uid}
+                          className="topbar-popover-row"
+                          onClick={() => {
+                            handleUserProfileOpen(profile);
+                            setIsSearchOpen(false);
+                          }}
+                        >
+                          <span className="topbar-popover-avatar">
+                            {profile.photoURL ? (
+                              <img src={profile.photoURL} alt="" />
+                            ) : (
+                              (profile.displayName || profile.userId || "?").slice(0, 1).toUpperCase()
+                            )}
+                          </span>
+                          <span>
+                            <strong>{profile.displayName || profile.userId}</strong>
+                            <small>
+                              @{profile.userId}
+                              {isFriend ? " · フレンド" : isPending ? " · 申請中" : ""}
+                            </small>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </section>
+            ) : null}
+          </div>
           <div className="notification-wrap">
             <button
               type="button"
@@ -16386,75 +16478,11 @@ function App() {
         </div>
       ) : null}
 
-      {isSearchOpen ? (
-        <div className="settings-modal-backdrop" role="presentation">
-          <section className="user-search-modal" role="dialog" aria-modal="true" aria-labelledby="user-search-title">
-            <div className="user-search-head">
-              <div>
-                <p className="card-kicker">User Search</p>
-                <h2 id="user-search-title">ユーザーを探す</h2>
-              </div>
-              <button
-                type="button"
-                className="search-close-button"
-                onClick={() => setIsSearchOpen(false)}
-                aria-label="ユーザー検索を閉じる"
-              >
-                ×
-              </button>
-            </div>
-
-            <form className="user-search-form" onSubmit={handleUserSearch}>
-              <label>
-                <span>ユーザーID</span>
-                <input
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value.toLowerCase())}
-                  placeholder="ari.dev"
-                  maxLength={30}
-                  autoFocus
-                />
-              </label>
-              <button type="submit" disabled={isSearching}>
-                {isSearching ? "Searching" : "Search"}
-              </button>
-            </form>
-
-            {!userId ? (
-              <p className="search-note">フォロー機能を使うには、設定から自分のユーザーIDを登録してください。</p>
-            ) : null}
-            {searchError ? <p className="settings-error">{searchError}</p> : null}
-
-            <div className="user-search-results">
-              {searchResults.map((profile) => {
-                const isFriend = friends.some((friend) => friend.uid === profile.uid);
-                const isPending = friendRequests.some(
-                  (request) =>
-                    request.profile.uid === profile.uid &&
-                    request.status === "pending" &&
-                    (request.direction === "outgoing" || request.direction === "incoming"),
-                );
-                return (
-                  <article key={profile.uid} className="user-result-card">
-                    <button type="button" className="user-result-profile" onClick={() => handleUserProfileOpen(profile)}>
-                      <span className="user-result-avatar">
-                      {profile.photoURL ? <img src={profile.photoURL} alt="" /> : profile.displayName.slice(0, 1).toUpperCase()}
-                      </span>
-                      <span>
-                        <strong>{profile.displayName}</strong>
-                        <small>@{profile.userId}</small>
-                      </span>
-                    </button>
-                    <button type="button" onClick={() => handleFriendRequest(profile)} disabled={isFriend || isPending}>
-                      {isFriend ? "Friends" : isPending ? "Pending" : "Request"}
-                    </button>
-                  </article>
-                );
-              })}
-            </div>
-          </section>
-        </div>
-      ) : null}
+      {/* 旧 ユーザー検索フル画面モーダルは topbar のアイコン直下に
+          inline popover として吸収済み (Friends 同型)。モーダルだと
+          開いた瞬間 backdrop が body を覆って画面が下にスクロールされる
+          という報告があったため。コードはコミット履歴に残るので
+          ここでは復活させない。 */}
 
       {pendingJoinRoom ? (
         <div className="settings-modal-backdrop" role="presentation">
