@@ -13657,9 +13657,10 @@ function App() {
             aria-label={t("ユーザーを探す")}
           >
             <span aria-hidden="true" className="user-search-icon">
-              {/* Feather Icons 風の虫眼鏡。viewBox 24×24 / stroke 2 で
-                  サイズが変わっても線の比率が崩れない設計。
-                  stroke-linecap/join を round にして親しみやすい角に。 */}
+              {/* Lucide ベースのクリーンな虫眼鏡。以前は同位置の CSS が
+                  span に円形ボーダー + 取っ手 ::after を被せていて、
+                  SVG と二重描画で崩れていた。CSS は素のコンテナに
+                  しぼり、ここでは SVG だけで完結する。 */}
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -13670,8 +13671,8 @@ function App() {
                 focusable="false"
                 aria-hidden="true"
               >
-                <circle cx="10.5" cy="10.5" r="6.5" />
-                <line x1="20" y1="20" x2="16.05" y2="16.05" />
+                <circle cx="11" cy="11" r="7" />
+                <path d="M21 21l-4.3-4.3" />
               </svg>
             </span>
             <strong>Search</strong>
