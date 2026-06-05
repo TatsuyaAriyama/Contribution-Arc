@@ -11554,6 +11554,17 @@ function App() {
     }
 
     pendingWorkspaceRoomsRef.current.delete(roomId);
+    // Purge the in-memory remote caches too. Without this the next
+    // applyRemoteRooms() run (e.g. the active-room onSnapshot firing after we
+    // switch selectedRoomId) rebuilds customRooms from these stale caches and
+    // revives the just-deleted room in the lobby — the reason "解体" looked
+    // broken: the Firestore doc was gone but the room kept reappearing.
+    remoteWorkspaceRoomsRef.current.rooms = remoteWorkspaceRoomsRef.current.rooms.filter(
+      (item) => item.id !== roomId,
+    );
+    remoteWorkspaceRoomsRef.current.legacyRooms = remoteWorkspaceRoomsRef.current.legacyRooms.filter(
+      (item) => item.id !== roomId,
+    );
     const nextRooms = customRooms.filter((item) => item.id !== roomId);
     setCustomRooms(nextRooms);
     void deleteDoc(doc(db, workspaceRoomsCollectionName, roomId)).catch((error) => {
