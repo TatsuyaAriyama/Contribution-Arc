@@ -13437,7 +13437,10 @@ function App() {
               the right pane is already suppressed there because it
               would compete with the immersive 2D stage. On every
               other view this lets the user collapse the FEED to give
-              the main content the full canvas. */}
+              the main content the full canvas.
+              モバイルでは bottom-nav の "投稿" ボタンが FEED 単独画面を
+              開くので、このトグルは CSS で非表示にして avatar が右端に
+              入りきるよう topbar の幅を確保する。 */}
           {currentView !== "workspace" ? (
             <button
               type="button"
@@ -13478,6 +13481,34 @@ function App() {
               <span className="topbar-icon-label" aria-hidden="true">FEED</span>
             </button>
           ) : null}
+
+          {/* 作業部屋 ショートカット (モバイル限定で表示)。bottom-nav から
+              作業部屋を外した代わりに、上のバーへ移動する設計。 */}
+          <button
+            type="button"
+            className={`topbar-icon-button topbar-workspace-button${currentView === "workspace" ? " is-open" : ""}${activeMembers.length > 0 ? " has-presence" : ""}`}
+            aria-label={
+              activeMembers.length > 0
+                ? t("作業部屋 — 現在 {count} 人が作業中", { count: activeMembers.length })
+                : t("作業部屋")
+            }
+            data-tooltip={t("作業部屋")}
+            aria-pressed={currentView === "workspace"}
+            onClick={() => {
+              setCurrentView("workspace");
+              setIsFriendsPopoverOpen(false);
+              setIsLivePopoverOpen(false);
+            }}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+              <path d="M4 10h16" fill="none" stroke="currentColor" strokeWidth="1.6" />
+            </svg>
+            {activeMembers.length > 0 ? (
+              <span className="topbar-icon-badge">{activeMembers.length}</span>
+            ) : null}
+            <span className="topbar-icon-label" aria-hidden="true">作業部屋</span>
+          </button>
 
           <button
             type="button"
@@ -19613,36 +19644,29 @@ function App() {
             </svg>
             <span>{t("ライブラリ")}</span>
           </button>
-          {/* 作業部屋を右端へ移動 (ユーザー要望)。在室者ドット + 数字で
-              気配は引き続き伝える。 */}
+          {/* 旧 "作業部屋" の枠を "投稿" (= FEED 単独画面) に差し替え
+              (ユーザー要望)。作業部屋は topbar に専用ショートカットを
+              追加したため、ここでは外す。 */}
           <button
             type="button"
-            className={`workspace-tab${currentView === "workspace" ? " is-active" : ""}${
-              activeMembers.length > 0 ? " has-presence" : ""
-            }`}
-            onClick={() => setCurrentView("workspace")}
-            aria-label={
-              activeMembers.length > 0
-                ? t("作業部屋 — 現在 {count} 人が作業中", { count: activeMembers.length })
-                : t("作業部屋")
-            }
+            className={currentView === "feed" ? "is-active" : ""}
+            onClick={() => setCurrentView("feed")}
+            aria-label="投稿"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-              <path d="M4 10h16" fill="none" stroke="currentColor" strokeWidth="1.6" />
+              <rect
+                x="3"
+                y="5"
+                width="18"
+                height="14"
+                rx="2.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+              />
+              <path d="M7 10h10M7 14h6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
             </svg>
-            {activeMembers.length > 0 ? (
-              <span className="mobile-tab-presence-dot" aria-hidden="true" />
-            ) : null}
-            <span>
-              {t("作業部屋")}
-              {activeMembers.length > 0 ? (
-                <span className="mobile-tab-presence-count" aria-hidden="true">
-                  {" "}
-                  · {activeMembers.length}
-                </span>
-              ) : null}
-            </span>
+            <span>投稿</span>
           </button>
         </nav>
       ) : null}
