@@ -13657,22 +13657,23 @@ function App() {
             aria-label={t("ユーザーを探す")}
           >
             <span aria-hidden="true" className="user-search-icon">
-              {/* Lucide ベースのクリーンな虫眼鏡。以前は同位置の CSS が
-                  span に円形ボーダー + 取っ手 ::after を被せていて、
-                  SVG と二重描画で崩れていた。CSS は素のコンテナに
-                  しぼり、ここでは SVG だけで完結する。 */}
+              {/* 検索アイコン (v2)。以前の SVG は CSS 側に残っていた
+                  古い ::after / border 装飾と二重描画になっていたため
+                  崩れて見えていた。CSS 装飾を完全撤去 + SVG も Lucide
+                  ベースの大き目 lens (r=8) + 短めの直線 handle に変更し、
+                  小さい表示サイズでも線が潰れず "それと分かる" 描画に。 */}
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="2"
+                strokeWidth="2.2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 focusable="false"
                 aria-hidden="true"
               >
-                <circle cx="11" cy="11" r="7" />
-                <path d="M21 21l-4.3-4.3" />
+                <circle cx="10.5" cy="10.5" r="6.5" />
+                <line x1="20" y1="20" x2="15.5" y2="15.5" />
               </svg>
             </span>
             <strong>Search</strong>
