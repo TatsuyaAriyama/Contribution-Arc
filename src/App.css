@@ -29028,6 +29028,48 @@ a[role="button"],
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+  /* スマホで FEED 単独画面の中身がビューポート両端ベタ付きで「拡大
+     されすぎ」に見えるとの報告。content 側に横 padding を入れて
+     "適切" なサイズ感に。下は bottom-nav 分の余白を確保。 */
+  padding: 14px 14px calc(100px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+}
+
+/* スマホ単独 FEED 内の各セクションを適切なサイズに */
+.app-view-feed .home-feed-section {
+  gap: 12px;
+  margin-bottom: 0;
+}
+.app-view-feed .home-feed-head h2 {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+.app-view-feed .home-feed-head .card-kicker {
+  font-size: 10px;
+}
+.app-view-feed .home-feed-head span {
+  font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.app-view-feed .home-feed-composer {
+  padding: 8px 0 4px;
+}
+/* composer のキャラ preview が他より大きく見えていたので 40→34px に
+   揃え、テクストエリアは grid 内で 1fr で素直に詰まるように */
+.app-view-feed .log-composer {
+  gap: 10px;
+}
+.app-view-feed .log-composer .profile-character-preview {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+.app-view-feed .log-composer textarea {
+  font-size: 14px;
+  min-height: 56px;
+  padding: 10px 12px;
 }
 
 /* PC版では FEED 単独画面は表示しない */

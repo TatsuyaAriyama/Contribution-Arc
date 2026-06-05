@@ -19631,22 +19631,8 @@ function App() {
             </svg>
             <span>記録する</span>
           </button>
-          {/* PC 版サイドバーと揃えて、ここを「ライブラリ」(learning ビュー)
-              への入口にする。みんなの記録 (logs) はホームから辿れる。 */}
-          <button
-            type="button"
-            className={currentView === "learning" ? "is-active" : ""}
-            onClick={() => setCurrentView("learning")}
-            aria-label={t("ライブラリ")}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M5 4h4v16H5zM11 4h4v16h-4zM16.5 4.8l3.4.9-3 14.6-3.4-.9z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-            </svg>
-            <span>{t("ライブラリ")}</span>
-          </button>
-          {/* 旧 "作業部屋" の枠を "投稿" (= FEED 単独画面) に差し替え
-              (ユーザー要望)。作業部屋は topbar に専用ショートカットを
-              追加したため、ここでは外す。 */}
+          {/* ユーザー要望でライブラリと投稿の位置を入れ替え:
+              ホーム / 日報 / 記録する / 投稿 / ライブラリ の順 */}
           <button
             type="button"
             className={currentView === "feed" ? "is-active" : ""}
@@ -19667,6 +19653,17 @@ function App() {
               <path d="M7 10h10M7 14h6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
             </svg>
             <span>投稿</span>
+          </button>
+          <button
+            type="button"
+            className={currentView === "learning" ? "is-active" : ""}
+            onClick={() => setCurrentView("learning")}
+            aria-label={t("ライブラリ")}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M5 4h4v16H5zM11 4h4v16h-4zM16.5 4.8l3.4.9-3 14.6-3.4-.9z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+            </svg>
+            <span>{t("ライブラリ")}</span>
           </button>
         </nav>
       ) : null}
