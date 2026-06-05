@@ -4614,19 +4614,80 @@
 .log-delete-button {
   margin-left: auto;
   appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: 0;
   background: transparent;
   color: var(--muted);
   font-size: 12px;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: 4px 10px 4px 6px;
+  border-radius: 999px;
   transition: background 0.15s ease, color 0.15s ease;
 }
 
 .log-delete-button:hover {
   background: rgba(239, 68, 68, 0.06);
   color: #b91c1c;
+}
+.log-delete-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+}
+.log-delete-icon svg { display: block; }
+
+/* === Post action 共通ラベル (いいね / 返信 / 削除) ===
+   報告：スマホで「アイコンだけだと何のボタンか分からない」。
+   PC は data-tooltip / hover で意図が伝わるので、ラベルは
+   モバイル限定で出す。font は小さく muted にして主役 (count)
+   との階層を保つ。 */
+.log-action-label {
+  display: none;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: inherit;
+  opacity: 0.78;
+}
+@media (max-width: 720px) {
+  .log-action-label {
+    display: inline;
+  }
+  /* アイコンを少し大きくして、ラベルと並んでも視認性が落ちないように */
+  .log-like-icon,
+  .log-reply-icon,
+  .log-delete-icon {
+    width: 32px;
+    height: 32px;
+  }
+  .log-like-icon svg,
+  .log-reply-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+  .log-delete-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+  /* タップ領域も全体的に厚く */
+  .log-like-button,
+  .log-reply-toggle,
+  .log-delete-button {
+    min-height: 40px;
+    padding: 2px 12px 2px 4px;
+  }
+  /* 視認性向上のため reply / delete も hover 風の薄い背景を常時 */
+  .log-reply-toggle {
+    background: rgba(var(--ink-rgb), 0.04);
+  }
+  .log-delete-button {
+    background: rgba(239, 68, 68, 0.05);
+  }
 }
 
 .post-reply-area {

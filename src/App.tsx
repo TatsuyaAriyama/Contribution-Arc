@@ -11831,6 +11831,13 @@ function App() {
                 {post.likesCount.toLocaleString()}
               </motion.span>
             </AnimatePresence>
+            {/* スマホでアイコンの意味が分かりづらいとの報告。
+                PC は data-tooltip / hover ハロで意図が伝わるが、
+                モバイルはタッチで tooltip が出ない & ハートだけだと
+                "数値カウントが何を表しているか" 即座に判別できない。
+                小さな日本語ラベルを併記し (CSS でモバイルのみ表示)、
+                ボタンの意味を明示する。 */}
+            <small className="log-action-label">いいね</small>
           </motion.button>
 
           <button
@@ -11853,11 +11860,30 @@ function App() {
               </svg>
             </span>
             {replies.length > 0 ? <span>{replies.length.toLocaleString()}</span> : null}
+            <small className="log-action-label">{isReplyOpen ? "閉じる" : "返信"}</small>
           </button>
 
           {post.userId === currentUserUid ? (
-            <button type="button" className="log-delete-button" onClick={() => handlePostDelete(post)}>
-              削除
+            <button
+              type="button"
+              className="log-delete-button"
+              onClick={() => handlePostDelete(post)}
+              aria-label="投稿を削除"
+              data-tooltip="削除"
+            >
+              <span className="log-delete-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="16" height="16">
+                  <path
+                    d="M5 7h14M9 7V5.5c0-.83.67-1.5 1.5-1.5h3c.83 0 1.5.67 1.5 1.5V7M7.5 7l.7 11.6c.05.85.76 1.4 1.6 1.4h4.4c.84 0 1.55-.55 1.6-1.4L16.5 7"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+              <small className="log-action-label">削除</small>
             </button>
           ) : null}
         </div>
