@@ -12863,6 +12863,12 @@
     gap: 10px;
   }
 
+  .profile-layout > .status-card,
+  .profile-layout > .character-color-card {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+
   .card:hover {
     transform: none;
   }
@@ -29550,6 +29556,12 @@ a[role="button"],
      720-900px の間で窮屈になる。720px 以下では完全に 1 列固定。 */
   .profile-layout {
     grid-template-columns: 1fr;
+  }
+
+  .profile-layout > .status-card,
+  .profile-layout > .character-color-card {
+    grid-column: 1 / -1;
+    grid-row: auto;
   }
 
   /* ============= FEED 単独画面（モバイル） =============
