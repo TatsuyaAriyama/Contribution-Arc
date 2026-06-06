@@ -21,7 +21,6 @@ import {
 
 import { guardedOnSnapshot, scheduleDocWrite } from "./firebaseGuard";
 import { normalizePlanTier, type PlanTier } from "./plans";
-import type { AdventureProgress, OwnedTrophy } from "../adventure/types";
 
 export type StudyLogRecord = {
   id: string;
@@ -62,6 +61,16 @@ export type UserProgressRecord = {
   coins: number;
   lastFeedRewardDate: string;
   feedRewardArcEarned: number;
+  /* Poker chips — separated from Arc so the casino loop doesn't
+     inflate the spend-side currency. Optional for back-compat with
+     profiles created before poker shipped. */
+  pokerChips?: number;
+  focusChips?: number;
+  /* YYYY-MM-DD of the day the focus chip counters were last reset. */
+  focusChipsDate?: string;
+  /* `currentStayMinutes` snapshot at the last focus-chip grant, so we
+     award one chip every 25 stayed minutes without double-counting. */
+  focusStayMinutesSnapshot?: number;
   streak: number;
   determination: string;
   following: string[];
@@ -96,9 +105,6 @@ export type UserProgressRecord = {
   pinnedFriendUids?: string[];
   mutedFriendUids?: string[];
   blockedFriendUids?: string[];
-  /* 冒険(Adventure)RPG。未プレイなら null / 空配列。 */
-  adventureProgress?: AdventureProgress | null;
-  ownedTrophyItems?: OwnedTrophy[];
 };
 
 export type GitHubActivitySummary = {
@@ -455,6 +461,12 @@ export async function saveUserProgressToCloud(db: Firestore, profile: UserProgre
     coins: profile.coins,
     lastFeedRewardDate: profile.lastFeedRewardDate,
     feedRewardArcEarned: profile.feedRewardArcEarned,
+    ...(profile.pokerChips !== undefined ? { pokerChips: profile.pokerChips } : {}),
+    ...(profile.focusChips !== undefined ? { focusChips: profile.focusChips } : {}),
+    ...(profile.focusChipsDate ? { focusChipsDate: profile.focusChipsDate } : {}),
+    ...(profile.focusStayMinutesSnapshot !== undefined
+      ? { focusStayMinutesSnapshot: profile.focusStayMinutesSnapshot }
+      : {}),
     streak: profile.streak,
     determination: profile.determination,
     following: profile.following,
@@ -481,9 +493,6 @@ export async function saveUserProgressToCloud(db: Firestore, profile: UserProgre
     ...(Array.isArray(profile.pinnedFriendUids) ? { pinnedFriendUids: profile.pinnedFriendUids } : {}),
     ...(Array.isArray(profile.mutedFriendUids) ? { mutedFriendUids: profile.mutedFriendUids } : {}),
     ...(Array.isArray(profile.blockedFriendUids) ? { blockedFriendUids: profile.blockedFriendUids } : {}),
-    // 冒険: 進行は null も意味があるので存在チェックのみ。トロフィーは配列のみ書く。
-    ...(profile.adventureProgress !== undefined ? { adventureProgress: profile.adventureProgress } : {}),
-    ...(Array.isArray(profile.ownedTrophyItems) ? { ownedTrophyItems: profile.ownedTrophyItems } : {}),
   };
 
   // Build the dedup key from every meaningful field EXCEPT lastSyncedAt

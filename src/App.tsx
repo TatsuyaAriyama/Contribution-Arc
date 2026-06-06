@@ -193,13 +193,9 @@ import {
   type Language,
 } from "./i18n/translations";
 import "./App.css";
-import type {
-  AdventureProgress,
-  OwnedTrophy,
-} from "./adventure/types";
 
-// Phaser を含む冒険機能は開くまでロードしない（バンドル分割）。
-const AdventureView = lazy(() => import("./adventure/AdventureView"));
+// ポーカー（Jacks or Better）は開くまでロードしない（バンドル分割）。
+const PokerView = lazy(() => import("./poker/PokerView"));
 
 declare global {
   interface Window {
@@ -354,6 +350,12 @@ type UserProfile = {
      stops paying out. Independent of the actual coin balance — the
      user can spend Arc and the cap still applies. */
   feedRewardArcEarned?: number;
+  /* Poker chips — kept separate from Arc so casino swings can't
+     destabilise the spend-side economy. */
+  pokerChips?: number;
+  focusChips?: number;
+  focusChipsDate?: string;
+  focusStayMinutesSnapshot?: number;
   level?: number;
   effortExp?: number;
   outputExp?: number;
@@ -389,9 +391,6 @@ type UserProfile = {
   pinnedFriendUids?: string[];
   mutedFriendUids?: string[];
   blockedFriendUids?: string[];
-  /* 冒険(Adventure)RPG。未プレイなら null / 空配列にフォールバック。 */
-  adventureProgress?: AdventureProgress | null;
-  ownedTrophyItems?: OwnedTrophy[];
 };
 
 type FriendRequestStatus = "pending" | "accepted" | "rejected";
@@ -1645,6 +1644,19 @@ function normalizeUserProfile(uid: string, data: Partial<UserProfile>): UserProf
       typeof data.feedRewardArcEarned === "number" && Number.isFinite(data.feedRewardArcEarned)
         ? Math.max(0, Math.floor(data.feedRewardArcEarned))
         : 0,
+    pokerChips:
+      typeof data.pokerChips === "number" && Number.isFinite(data.pokerChips)
+        ? Math.max(0, Math.floor(data.pokerChips))
+        : 0,
+    focusChips:
+      typeof data.focusChips === "number" && Number.isFinite(data.focusChips)
+        ? Math.max(0, Math.floor(data.focusChips))
+        : 0,
+    focusChipsDate: typeof data.focusChipsDate === "string" ? data.focusChipsDate : "",
+    focusStayMinutesSnapshot:
+      typeof data.focusStayMinutesSnapshot === "number" && Number.isFinite(data.focusStayMinutesSnapshot)
+        ? Math.max(0, Math.floor(data.focusStayMinutesSnapshot))
+        : 0,
     organizationId: typeof data.organizationId === "string" && data.organizationId ? data.organizationId : undefined,
     organizationName: typeof data.organizationName === "string" ? data.organizationName : undefined,
     organizationRole:
@@ -1690,15 +1702,6 @@ function normalizeUserProfile(uid: string, data: Partial<UserProfile>): UserProf
     blockedFriendUids: Array.isArray(data.blockedFriendUids)
       ? data.blockedFriendUids.filter((value): value is string => typeof value === "string")
       : undefined,
-    /* 冒険(Adventure): 未プレイは null / 空配列。型を厳密に検証せず
-       shape だけ最低限ガード（破損データで全体が壊れないように）。 */
-    adventureProgress:
-      data.adventureProgress && typeof data.adventureProgress === "object"
-        ? (data.adventureProgress as AdventureProgress)
-        : null,
-    ownedTrophyItems: Array.isArray(data.ownedTrophyItems)
-      ? (data.ownedTrophyItems as OwnedTrophy[])
-      : [],
   };
 }
 
@@ -4332,9 +4335,6 @@ function App() {
   const [playerCharacterColor, setPlayerCharacterColor] = useState(characterColorOptions[0].value);
   const [playerCharacterShape, setPlayerCharacterShape] = useState<CharacterShape>("default");
   const [ownedCharacterShapes, setOwnedCharacterShapes] = useState<CharacterShape[]>(["default"]);
-  // 冒険(Adventure)RPG: 進行状況と所持トロフィー。Firestore の users doc に相乗り永続化。
-  const [adventureProgress, setAdventureProgress] = useState<AdventureProgress | null>(null);
-  const [ownedTrophyItems, setOwnedTrophyItems] = useState<OwnedTrophy[]>([]);
   // Set the moment the user picks a color/shape in this session. The
   // account-load effect runs an async `getDoc` whose `.then()` writes the
   // cloud's stored appearance back into local state — if that resolves
@@ -4361,6 +4361,15 @@ function App() {
      reward — exactly what the user asked for. */
   const [lastFeedRewardDate, setLastFeedRewardDate] = useState<string>("");
   const [feedRewardArcEarned, setFeedRewardArcEarned] = useState<number>(0);
+  /* Poker chip economy. `pokerChips` is the "normal" currency you buy
+     by spending Arc (1 Arc → 100 chips). `focusChips` are the
+     better-paying chips you earn by staying in a workspace room (25
+     min → 1 chip, capped at 8/day). Both are mirrored to the profile
+     doc through the existing debounced save path. */
+  const [pokerChips, setPokerChips] = useState<number>(0);
+  const [focusChips, setFocusChips] = useState<number>(0);
+  const [focusChipsDate, setFocusChipsDate] = useState<string>("");
+  const [focusStayMinutesSnapshot, setFocusStayMinutesSnapshot] = useState<number>(0);
   // Organization (tenant) state. `currentOrganization` mirrors the
   // joined org doc; the user's role + denormalized name sit on the
   // user profile but we cache the live doc here for use in settings.
@@ -5095,6 +5104,10 @@ function App() {
         setCoins(grantedCoins);
         setLastFeedRewardDate(profile.lastFeedRewardDate || "");
         setFeedRewardArcEarned(profile.feedRewardArcEarned || 0);
+        setPokerChips(profile.pokerChips ?? 0);
+        setFocusChips(profile.focusChips ?? 0);
+        setFocusChipsDate(profile.focusChipsDate ?? "");
+        setFocusStayMinutesSnapshot(profile.focusStayMinutesSnapshot ?? 0);
         // Sync the GitHub login from the cloud profile so devices that
         // never went through the OAuth popup (e.g. mobile after the user
         // linked on desktop) still resolve the right username for the
@@ -5127,9 +5140,6 @@ function App() {
             (first, second) => first - second,
           ),
         );
-        // 冒険(Adventure): cloud の進行・トロフィーを復元。
-        setAdventureProgress(profile.adventureProgress ?? null);
-        setOwnedTrophyItems(profile.ownedTrophyItems ?? []);
         if (resolvedUserId) {
           safeSetLocalStorage(`contribution-arc-user-id-${currentUser.uid}`, resolvedUserId);
           /* cross-device 同期：cloud profile に onboardingCompletedAt が
@@ -7391,6 +7401,50 @@ function App() {
   const visibleMembers = selectedRoom?.activeMembers || [];
   const currentPresence = visibleMembers.find((member) => member.userId === currentUserUid) || null;
   const currentStayMinutes = currentPresence ? getWorkspaceActiveMinutes(currentPresence, workspaceNow) : 0;
+
+  /* Focus Chip grant loop — every 25 minutes of in-room presence on a
+     given calendar day awards 1 chip, capped at 8/day. The snapshot
+     tracks "minutes already credited" so the user can leave and come
+     back without losing or double-claiming partial progress. Day
+     rollover (different `focusChipsDate`) zeroes both the chip count
+     and the snapshot so a streak from yesterday doesn't suddenly
+     materialise after midnight. */
+  useEffect(() => {
+    if (!currentUser) return;
+    const now = new Date();
+    const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
+      now.getDate(),
+    ).padStart(2, "0")}`;
+    if (focusChipsDate !== todayKey) {
+      setFocusChipsDate(todayKey);
+      setFocusChips(0);
+      // Yesterday's accumulated minutes don't count toward today.
+      setFocusStayMinutesSnapshot(currentStayMinutes);
+      return;
+    }
+    const FOCUS_CHIP_INTERVAL_MIN = 25;
+    const FOCUS_CHIP_DAILY_CAP = 8;
+    if (focusChips >= FOCUS_CHIP_DAILY_CAP) return;
+    const diff = currentStayMinutes - focusStayMinutesSnapshot;
+    if (diff < FOCUS_CHIP_INTERVAL_MIN) return;
+    const earnable = Math.floor(diff / FOCUS_CHIP_INTERVAL_MIN);
+    const room = FOCUS_CHIP_DAILY_CAP - focusChips;
+    const grant = Math.min(earnable, room);
+    if (grant <= 0) return;
+    setFocusChips((v) => v + grant);
+    setFocusStayMinutesSnapshot((v) => v + grant * FOCUS_CHIP_INTERVAL_MIN);
+    showToast(
+      `+${grant} Focus Chip 🔥（ポーカーで通常チップの 1.5× 配当 / 残り ${room - grant} 枚 ）`,
+      { kind: "success" },
+    );
+  }, [
+    currentStayMinutes,
+    focusChipsDate,
+    focusChips,
+    focusStayMinutesSnapshot,
+    currentUser,
+  ]);
+
   const resolvedVisibleMembers = visibleMembers.map((member) => {
     const profile = workspaceProfiles[member.userId];
     const isCurrentUserMember = member.userId === currentUserUid;
@@ -9226,6 +9280,10 @@ function App() {
       coins,
       lastFeedRewardDate,
       feedRewardArcEarned,
+      pokerChips,
+      focusChips,
+      focusChipsDate,
+      focusStayMinutesSnapshot,
       streak: studyStreak,
       determination,
       following: [...following].sort(),
@@ -9248,10 +9306,6 @@ function App() {
       mutedFriendUids: [...mutedFriendUids].sort(),
       blockedFriendUids: [...blockedFriendUids].sort(),
       onboardingCompletedAt: cloudOnboardingCompletedAt,
-      // 冒険(Adventure)RPG の進行・所持トロフィー。専用 onSnapshot を増やさず
-      // 既存の user doc 自動保存に相乗りさせる。
-      adventureProgress,
-      ownedTrophyItems,
       // Mirror the current org membership into the periodic progress
       // write so the user doc converges to one consistent shape even
       // if the user just joined/left via the dedicated helpers.
@@ -9324,6 +9378,10 @@ function App() {
     ownedCharacterShapes,
     lastFeedRewardDate,
     feedRewardArcEarned,
+    pokerChips,
+    focusChips,
+    focusChipsDate,
+    focusStayMinutesSnapshot,
     currentOrganization,
     /* cross-device 同期で新規に payload に乗せた依存。これらが変わる
        たびに sync 再評価して、PC で変えた直後にスマホ側からも見えるよう
@@ -10456,6 +10514,16 @@ function App() {
       }),
     );
 
+    // 退室をクラウドにも反映する。同期 effect は「自分が含まれる部屋」しか
+    // 書き戻さないため、抜けた部屋には自分が Firestore 上に残り続け、複数部屋
+    // 同時在席や解体後の復活の原因になっていた。自分を除いた room を直接書き戻す。
+    const leftRoom = pendingWorkspaceRoomsRef.current.get(roomId);
+    if (leftRoom) {
+      void saveWorkspaceRoomToCloud(leftRoom, currentUser.uid).catch((error) => {
+        console.info("Workspace leave cloud sync skipped.", error);
+      });
+    }
+
     const matchedSessionItem = learningItems.find(
       (item) => !item.archived && item.name.toLowerCase() === session.building.trim().toLowerCase(),
     );
@@ -10554,6 +10622,25 @@ function App() {
       setWorkspaceBubble("Roomデータを読み込めませんでした。");
       return;
     }
+
+    // 入室先以外で自分が在席している部屋からは退出扱いにし、Firestore 上も
+    // 自分を取り除く。これをしないと 1 人が複数の部屋に同時在席する状態が
+    // クラウドに残り、リロード時に解体済みの部屋まで自分ごと復活してしまう。
+    allWorkspaceRooms.forEach((room) => {
+      if (room.id === roomId) return;
+      if (!(room.activeMembers || []).some((member) => member.userId === currentUser.uid)) {
+        return;
+      }
+      const withoutSelf = normalizeWorkspaceRoom({
+        ...room,
+        activeMembers: (room.activeMembers || []).filter(
+          (member) => member.userId !== currentUser.uid,
+        ),
+      });
+      void saveWorkspaceRoomToCloud(withoutSelf, currentUser.uid).catch((error) => {
+        console.info("Leave previous room cloud sync skipped.", error);
+      });
+    });
 
     const nextMember = createWorkspaceMember({
       id: currentUser.uid,
@@ -18527,24 +18614,24 @@ function App() {
             )}
           </div>
         </motion.section>
-      ) : currentView === "adventure" ? (
+      ) : currentView === "poker" ? (
         <motion.section
-          className="adventure-screen"
-          aria-label="Adventure screen"
+          className="poker-screen"
+          aria-label="Poker screen"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={SPRING_SNAPPY}
         >
-          <Suspense fallback={<div className="adventure-loading">冒険を準備中…</div>}>
-            <AdventureView
-              adventureProgress={adventureProgress}
-              setAdventureProgress={setAdventureProgress}
-              ownedTrophyItems={ownedTrophyItems}
-              setOwnedTrophyItems={setOwnedTrophyItems}
-              studyLogs={studyLogs}
-              currentStayMinutes={currentStayMinutes}
-              playerCharacterColor={playerCharacterColor}
+          <Suspense fallback={<div className="poker-loading">ポーカーを準備中…</div>}>
+            <PokerView
               onBack={() => setCurrentView("workspace")}
+              arcBalance={coins}
+              pokerChips={pokerChips}
+              focusChips={focusChips}
+              setArcBalance={setCoins}
+              setPokerChips={setPokerChips}
+              setFocusChips={setFocusChips}
+              onOpenShop={() => setCurrentView("shop")}
             />
           </Suspense>
         </motion.section>
@@ -18576,10 +18663,18 @@ function App() {
             </button>
             <button
               type="button"
-              className="workspace-adventure-entry"
-              onClick={() => setCurrentView("adventure")}
+              className="workspace-poker-entry"
+              onClick={() => setCurrentView("poker")}
+              title={
+                focusChips > 0
+                  ? `Focus Chip ${focusChips}枚 — ポーカーで Arc を稼げます`
+                  : "25分集中で Focus Chip を獲得（ポーカーで配当 ×1.5）"
+              }
             >
-              ⚔ 冒険に出る
+              ♠ ポーカー
+              {focusChips > 0 ? (
+                <span className="workspace-poker-entry-focus">🔥 {focusChips}</span>
+              ) : null}
             </button>
           </div>
 
