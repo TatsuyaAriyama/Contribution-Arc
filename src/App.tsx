@@ -5771,10 +5771,44 @@ function App() {
     };
   }, [currentUser, posts, postReplies, dailyReports, sharedDailyReports]);
 
+  // 著者ごとの「代表アピアランス」。同一人物の投稿/返信が記録時点ごとに
+  // 違う色で保存されていても、最新レコードの色・形へ寄せて FEED 上で
+  // 統一する。users/{uid} の現在値 (live) が取れればそちらを最優先するので、
+  // キャラを変更すれば過去投稿のアイコンもまとめて現在の見た目に揃う。
+  const authorFallbackAppearances = useMemo(() => {
+    const records: { uid?: string; color?: string; shape?: string; createdAt?: string }[] = [
+      ...posts.map((p) => ({
+        uid: p.userId,
+        color: p.characterColor,
+        shape: p.characterShape,
+        createdAt: p.createdAt,
+      })),
+      ...postReplies.map((r) => ({
+        uid: r.userId,
+        color: r.characterColor,
+        shape: r.characterShape,
+        createdAt: r.createdAt,
+      })),
+    ];
+    records.sort(
+      (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime(),
+    );
+    const map: Record<string, { color: string; shape: string }> = {};
+    for (const rec of records) {
+      if (!rec.uid || map[rec.uid]) continue;
+      map[rec.uid] = {
+        color: typeof rec.color === "string" ? rec.color : "",
+        shape: typeof rec.shape === "string" ? rec.shape : "",
+      };
+    }
+    return map;
+  }, [posts, postReplies]);
+
   // Pick the avatar shape + color to render for a piece of authored
   // content. The current user always renders from their live equipped
   // state; everyone else resolves to their live profile when we've
-  // fetched it, falling back to whatever the record snapshotted.
+  // fetched it, then to that author's most-recent record so the same
+  // person never renders in two different colors across the feed.
   const resolveAuthorAppearance = useCallback(
     (
       authorUid: string | undefined,
@@ -5785,12 +5819,23 @@ function App() {
         return { color: playerCharacterColor, shape: playerCharacterShape };
       }
       const live = authorUid ? authorAppearances[authorUid] : undefined;
+      const rep = authorUid ? authorFallbackAppearances[authorUid] : undefined;
       return {
-        color: live?.characterColor || fallbackColor || "",
-        shape: getSafeCharacterShape(live?.characterShape || fallbackShape || "default"),
+        color: getSafeCharacterColor(
+          live?.characterColor || rep?.color || fallbackColor || "",
+        ),
+        shape: getSafeCharacterShape(
+          live?.characterShape || rep?.shape || fallbackShape || "default",
+        ),
       };
     },
-    [authorAppearances, currentUser, playerCharacterColor, playerCharacterShape],
+    [
+      authorAppearances,
+      authorFallbackAppearances,
+      currentUser,
+      playerCharacterColor,
+      playerCharacterShape,
+    ],
   );
 
   useEffect(() => {
