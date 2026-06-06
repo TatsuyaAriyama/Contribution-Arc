@@ -79,6 +79,16 @@ export function PremiumSidebar({
           <span />
           ホーム
         </button>
+        {/* メイン機能(作業記録)への導線。アプリの主役なのでナビ最上段の
+            ホーム直下に置き、唯一の CTA スタイルで一目で分かるようにする。 */}
+        <button
+          type="button"
+          className={`side-nav-record${currentView === "learning" ? " active" : ""}`}
+          onClick={() => handleNavigate(() => onViewChange("learning"))}
+        >
+          <span />
+          記録する
+        </button>
         <button
           type="button"
           className={currentView === "logs" ? "active" : ""}
@@ -94,14 +104,6 @@ export function PremiumSidebar({
         >
           <span />
           日報
-        </button>
-        <button
-          type="button"
-          className={currentView === "learning" ? "active" : ""}
-          onClick={() => handleNavigate(() => onViewChange("learning"))}
-        >
-          <span />
-          記録する
         </button>
         <button
           type="button"

@@ -16429,6 +16429,30 @@
   box-shadow: 0 0 0 5px rgba(31, 111, 74, 0.1);
 }
 
+/* 「記録する」はアプリの主役(作業記録)。ナビ内で唯一の CTA として
+   常に緑のアクセントを薄く敷き、他項目と一目で区別する。低彩度の
+   トーン(Linear/Arc 系)は崩さず、塗りではなく淡いティントで主張する。 */
+.side-nav button.side-nav-record {
+  color: var(--green);
+  background: rgba(31, 111, 74, 0.08);
+  border-color: rgba(31, 111, 74, 0.16);
+  font-weight: 880;
+}
+
+.side-nav button.side-nav-record span {
+  background: var(--green);
+  box-shadow: 0 0 0 4px rgba(31, 111, 74, 0.12);
+}
+
+.side-nav button.side-nav-record:hover,
+.side-nav button.side-nav-record.active {
+  transform: translateX(2px);
+  color: var(--green);
+  background: rgba(31, 111, 74, 0.14);
+  border-color: rgba(31, 111, 74, 0.3);
+  box-shadow: 0 12px 28px rgba(31, 111, 74, 0.12);
+}
+
 .sidebar-presence {
   display: grid;
   gap: 10px;
@@ -21824,6 +21848,32 @@
 
 .learning-add-button:hover {
   opacity: 0.85;
+}
+
+/* 「記録する」ビュー先頭の常設記録パネル。ナビを押したらまず目の前で
+   記録できる、という導線を作る主役ブロック。緑のアクセントを薄く敷いて
+   下のライブラリ(管理)より一段「主」に見せる。 */
+.learning-record-panel {
+  display: grid;
+  gap: 12px;
+  padding: 18px 18px 20px;
+  border: 1px solid rgba(31, 111, 74, 0.16);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(31, 111, 74, 0.05), rgba(31, 111, 74, 0)) ,
+    rgba(var(--surface-rgb), 0.6);
+  box-shadow: 0 18px 40px rgba(var(--ink-rgb), 0.05);
+}
+
+.learning-record-head h2 {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 4px 0 2px;
+}
+
+.learning-record-head small {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .learning-controls {

@@ -8268,6 +8268,116 @@ function App() {
     });
   };
 
+  // 学習記録の本フォーム。プロフィールの学習ログと「記録する」ビュー
+  // 先頭の両方で同じものを出す。導線を1本化して "記録する=ここで記録"
+  // という期待にそのまま応えるための共有レンダラ(views は排他なので
+  // datalist id / state 共有でも衝突しない)。
+  const renderStudyForm = () => (
+    <form className="study-form" onSubmit={handleStudySubmit}>
+      <label className="study-subject-field">
+        <span>{t("学習内容")}</span>
+        {(() => {
+          const activeItems = learningItems.filter((item) => !item.archived);
+          const recentItemIds: string[] = [];
+          for (let logIdx = studyLogs.length - 1; logIdx >= 0 && recentItemIds.length < 3; logIdx--) {
+            const logItemId = studyLogs[logIdx].learningItemId;
+            if (logItemId && !recentItemIds.includes(logItemId) && activeItems.some((item) => item.id === logItemId)) {
+              recentItemIds.push(logItemId);
+            }
+          }
+          const recentChips = recentItemIds
+            .map((id) => activeItems.find((item) => item.id === id))
+            .filter((item): item is LearningItem => Boolean(item));
+          const trimmedSubject = studySubject.trim();
+          const matchedItem = activeItems.find(
+            (item) => item.name.toLowerCase() === trimmedSubject.toLowerCase(),
+          );
+          const showGhostHint = trimmedSubject.length > 0 && !matchedItem;
+          return (
+            <>
+              {recentChips.length > 0 ? (
+                <div className="study-subject-chips" aria-label="最近使った学習対象">
+                  {recentChips.map((item) => (
+                    <button
+                      type="button"
+                      key={item.id}
+                      className={matchedItem?.id === item.id ? "active" : ""}
+                      onClick={() => {
+                        setStudySubject(item.name);
+                        setStudyColor(item.color);
+                      }}
+                      style={{ "--chip-color": item.color } as CSSProperties}
+                    >
+                      {item.name}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              <input
+                value={studySubject}
+                onChange={(event) => setStudySubject(event.target.value)}
+                placeholder="Java / React / 資格勉強"
+                list="learning-items-datalist"
+              />
+              <datalist id="learning-items-datalist">
+                {activeItems.map((item) => (
+                  <option key={item.id} value={item.name} />
+                ))}
+              </datalist>
+              {showGhostHint ? (
+                <button
+                  type="button"
+                  className="subject-ghost-hint"
+                  onClick={() => openLearningEditorForCreate(trimmedSubject)}
+                >
+                  + 「{trimmedSubject}」を記録に追加
+                </button>
+              ) : null}
+            </>
+          );
+        })()}
+      </label>
+      <label>
+        <span>時間</span>
+        <input
+          type="number"
+          min="0.1"
+          step="0.1"
+          value={studyAmount}
+          onChange={(event) => setStudyAmount(event.target.value)}
+        />
+      </label>
+      <label>
+        <span>単位</span>
+        <select
+          value={studyUnit}
+          onChange={(event) => setStudyUnit(event.target.value as "hours" | "minutes")}
+        >
+          <option value="hours">h</option>
+          <option value="minutes">m</option>
+        </select>
+      </label>
+      <fieldset className="study-color-field">
+        <legend>カラー</legend>
+        <div className="study-color-options">
+          {studyColorOptions.map((color) => (
+            <label key={color.value} title={color.name}>
+              <input
+                type="radio"
+                name="study-color"
+                value={color.value}
+                checked={studyColor === color.value}
+                onChange={(event) => setStudyColor(event.target.value)}
+              />
+              <span style={{ background: color.value }} />
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <button type="submit">記録 +EXP</button>
+    </form>
+  );
+
   const openLearningEditorForEdit = (item: LearningItem) => {
     setIsLearningDeleteConfirming(false);
     setLearningEditorState({
@@ -17528,7 +17638,7 @@ function App() {
       ) : currentView === "learning" ? (
         <motion.section
           className="learning-screen"
-          aria-label={t("ライブラリ")}
+          aria-label={t("記録する")}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={SPRING_SNAPPY}
@@ -17537,8 +17647,8 @@ function App() {
             <TutorialHint
               uid={currentUser.uid}
               feature="learning"
-              title={t("ライブラリ — 学びの時間を積み上げる中心")}
-              body={t("勉強・読書・アウトプットの時間を残すと、ホームのグラフに反映されます。")}
+              title={t("記録する — 学びの時間を積み上げる中心")}
+              body={t("学習内容と時間を入力して記録。残した時間はホームのグラフと EXP に反映されます。")}
               bullets={[
                 t("「学習対象」をジャンルと色で登録(例: React=青、英語=橙)"),
                 t("時間を入力すると、その分だけ Effort EXP が貯まります"),
@@ -17547,11 +17657,24 @@ function App() {
               ]}
             />
           ) : null}
+
+          {/* メインの記録導線。ナビ「記録する」を押したらまず目の前で
+              記録できる、という期待にそのまま応えるための常設フォーム。
+              下のライブラリ(学習対象の管理)より上に置く。 */}
+          <section className="learning-record-panel" aria-label={t("記録する")}>
+            <div className="learning-record-head">
+              <p className="card-kicker">Record</p>
+              <h2>{t("記録する")}</h2>
+              <small>{t("今日の学びを残そう。記録した時間はホームのグラフと EXP に反映されます。")}</small>
+            </div>
+            {renderStudyForm()}
+          </section>
+
           <header className="learning-header">
             <div>
               <p className="card-kicker">Learning Items</p>
               <h2>{t("ライブラリ")}</h2>
-              <small>{t("カードのチップから直接時間を残せます。詳細な記録はプロフィール画面の学習ログから。")}</small>
+              <small>{t("学習対象をジャンルと色で登録・整理する場所。記録は上のフォームから残せます。")}</small>
               {(() => {
                 // Quiet inventory summary — counts only, no streaks or
                 // targets. Helps the user gauge library size at a glance.
@@ -18480,109 +18603,7 @@ function App() {
                     </div>
 
                     <div className="progress-console">
-                      <form className="study-form" onSubmit={handleStudySubmit}>
-                        <label className="study-subject-field">
-                          <span>{t("学習内容")}</span>
-                          {(() => {
-                            const activeItems = learningItems.filter((item) => !item.archived);
-                            const recentItemIds: string[] = [];
-                            for (let logIdx = studyLogs.length - 1; logIdx >= 0 && recentItemIds.length < 3; logIdx--) {
-                              const logItemId = studyLogs[logIdx].learningItemId;
-                              if (logItemId && !recentItemIds.includes(logItemId) && activeItems.some((item) => item.id === logItemId)) {
-                                recentItemIds.push(logItemId);
-                              }
-                            }
-                            const recentChips = recentItemIds
-                              .map((id) => activeItems.find((item) => item.id === id))
-                              .filter((item): item is LearningItem => Boolean(item));
-                            const trimmedSubject = studySubject.trim();
-                            const matchedItem = activeItems.find(
-                              (item) => item.name.toLowerCase() === trimmedSubject.toLowerCase(),
-                            );
-                            const showGhostHint = trimmedSubject.length > 0 && !matchedItem;
-                            return (
-                              <>
-                                {recentChips.length > 0 ? (
-                                  <div className="study-subject-chips" aria-label="最近使った学習対象">
-                                    {recentChips.map((item) => (
-                                      <button
-                                        type="button"
-                                        key={item.id}
-                                        className={matchedItem?.id === item.id ? "active" : ""}
-                                        onClick={() => {
-                                          setStudySubject(item.name);
-                                          setStudyColor(item.color);
-                                        }}
-                                        style={{ "--chip-color": item.color } as CSSProperties}
-                                      >
-                                        {item.name}
-                                      </button>
-                                    ))}
-                                  </div>
-                                ) : null}
-                                <input
-                                  value={studySubject}
-                                  onChange={(event) => setStudySubject(event.target.value)}
-                                  placeholder="Java / React / 資格勉強"
-                                  list="learning-items-datalist"
-                                />
-                                <datalist id="learning-items-datalist">
-                                  {activeItems.map((item) => (
-                                    <option key={item.id} value={item.name} />
-                                  ))}
-                                </datalist>
-                                {showGhostHint ? (
-                                  <button
-                                    type="button"
-                                    className="subject-ghost-hint"
-                                    onClick={() => openLearningEditorForCreate(trimmedSubject)}
-                                  >
-                                    + 「{trimmedSubject}」を記録に追加
-                                  </button>
-                                ) : null}
-                              </>
-                            );
-                          })()}
-                        </label>
-                        <label>
-                          <span>時間</span>
-                          <input
-                            type="number"
-                            min="0.1"
-                            step="0.1"
-                            value={studyAmount}
-                            onChange={(event) => setStudyAmount(event.target.value)}
-                          />
-                        </label>
-                        <label>
-                          <span>単位</span>
-                          <select
-                            value={studyUnit}
-                            onChange={(event) => setStudyUnit(event.target.value as "hours" | "minutes")}
-                          >
-                            <option value="hours">h</option>
-                            <option value="minutes">m</option>
-                          </select>
-                        </label>
-                        <fieldset className="study-color-field">
-                          <legend>カラー</legend>
-                          <div className="study-color-options">
-                            {studyColorOptions.map((color) => (
-                              <label key={color.value} title={color.name}>
-                                <input
-                                  type="radio"
-                                  name="study-color"
-                                  value={color.value}
-                                  checked={studyColor === color.value}
-                                  onChange={(event) => setStudyColor(event.target.value)}
-                                />
-                                <span style={{ background: color.value }} />
-                              </label>
-                            ))}
-                          </div>
-                        </fieldset>
-                        <button type="submit">記録 +EXP</button>
-                      </form>
+                      {renderStudyForm()}
 
                       {selectedStudyDayData ? (
                         <div className="study-day-detail" aria-label={`${selectedStudyDayData.day}曜日の学習詳細`}>
