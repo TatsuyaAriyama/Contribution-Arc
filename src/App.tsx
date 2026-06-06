@@ -884,7 +884,12 @@ const ANNOUNCEMENTS: Announcement[] = [
     id: "2026-06-01-welcome",
     date: "2026.06.01",
     title: "Contribution Arc をご利用いただきありがとうございます",
-    body: "学習の積み上げを静かに記録し、仲間とゆるくつながれる場所です。ご要望があればお気軽にお寄せください。",
+    body:
+      "いつもご利用いただきありがとうございます。\n" +
+      "現在も、サービスをより良い形でユーザーのみなさまにご利用いただけるよう、日々改善に励んでおります。\n" +
+      "不具合のご報告や、追加してほしい機能などがございましたら、こちらの要望欄にご記載いただけますと幸いです。\n" +
+      "いただいたご意見は、今後の開発の参考にさせていただきます。\n" +
+      "引き続きよろしくお願いいたします。",
     pinned: true,
   },
 ];
@@ -3915,6 +3920,12 @@ function App() {
   /* お知らせ一覧モーダルの開閉。ホームには pinned + 最新 1 件だけ出し、
      過去のお知らせはここを開いて全件を見せる。 */
   const [isAnnouncementsModalOpen, setIsAnnouncementsModalOpen] = useState(false);
+  /* 要望フォーム。固定お知らせの「要望欄」CTA から開く。
+     送信内容は Firestore feedback/{id} に保存し、開発者だけが読める。 */
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [feedbackDraft, setFeedbackDraft] = useState("");
+  const [isSendingFeedback, setIsSendingFeedback] = useState(false);
+  const [feedbackError, setFeedbackError] = useState("");
   /* 各 Learning Item ごとに記入中の分数 (string) を保持する. プリセット
      チップは廃止し、最初から数値入力欄を表示してそのまま打ち込める
      ようにした (チップ → 「他の時間…」 と段階を踏ませる方が逆に遅い、
@@ -8535,6 +8546,44 @@ function App() {
   /* Team Daily の lazy load。「読み込む」ボタンから呼ばれて、最新 100 件
      の共有日報を一括取得する。リロードしたい時のために 2 回目以降も
      呼べる (loaded 状態は維持)。 */
+  /* 要望の送信。Firestore feedback/{auto-id} に書き込む。
+     - 本文 trim、1〜2000 字でクランプ
+     - uid / userId / displayName / createdAt / 環境情報を添えて保存
+     - rules で create は本人のみ、read は開発者のみに制限する */
+  const handleFeedbackSubmit = async () => {
+    if (!currentUser || isSendingFeedback) return;
+    const text = feedbackDraft.trim().slice(0, 2000);
+    if (!text) {
+      setFeedbackError("内容を入力してください。");
+      return;
+    }
+    setIsSendingFeedback(true);
+    setFeedbackError("");
+    try {
+      const ref = doc(collection(db, "feedback"));
+      await setDoc(ref, {
+        id: ref.id,
+        uid: currentUser.uid,
+        userId: userId || "",
+        displayName: playerName || "",
+        email: currentUser.email || "",
+        text,
+        userAgent: typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 300) : "",
+        createdAt: new Date().toISOString(),
+        serverCreatedAt: serverTimestamp(),
+        status: "open",
+      });
+      setFeedbackDraft("");
+      setIsFeedbackModalOpen(false);
+      showToast("ご要望を送信しました。ありがとうございます。", { kind: "success" });
+    } catch (error) {
+      console.info("Feedback submit failed.", error);
+      setFeedbackError("送信に失敗しました。時間をおいて再度お試しください。");
+    } finally {
+      setIsSendingFeedback(false);
+    }
+  };
+
   const handleLoadSharedDailyReports = async () => {
     if (!currentUser || isLoadingSharedDaily) return;
     setIsLoadingSharedDaily(true);
@@ -16673,12 +16722,96 @@ function App() {
                       </span>
                     </button>
                     {isOpen ? (
-                      <p className="home-announcement-body">{announcement.body}</p>
+                      <div className="home-announcement-body">
+                        <p className="home-announcement-body-text">{announcement.body}</p>
+                        {announcement.pinned ? (
+                          <button
+                            type="button"
+                            className="home-announcement-feedback-cta"
+                            onClick={() => {
+                              setFeedbackError("");
+                              setIsFeedbackModalOpen(true);
+                              setIsAnnouncementsModalOpen(false);
+                            }}
+                          >
+                            ✏️ {t("要望を書く")}
+                          </button>
+                        ) : null}
+                      </div>
                     ) : null}
                   </li>
                 );
               })}
             </ol>
+          </section>
+        </div>
+      ) : null}
+
+      {/* 要望フォームモーダル。固定お知らせの「要望を書く」から開く。
+          送信内容は Firestore feedback コレクションへ。 */}
+      {isFeedbackModalOpen ? (
+        <div
+          className="settings-modal-backdrop"
+          role="presentation"
+          onClick={() => setIsFeedbackModalOpen(false)}
+        >
+          <section
+            className="feedback-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="feedback-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="feedback-modal-head">
+              <div>
+                <p className="card-kicker">Feedback</p>
+                <h2 id="feedback-modal-title">{t("ご要望・不具合のご報告")}</h2>
+              </div>
+              <button
+                type="button"
+                className="announcements-modal-close"
+                onClick={() => setIsFeedbackModalOpen(false)}
+                aria-label={t("閉じる")}
+              >
+                ×
+              </button>
+            </header>
+            <p className="feedback-modal-lead">
+              {t("追加してほしい機能や不具合など、お気軽にお寄せください。今後の開発の参考にさせていただきます。")}
+            </p>
+            <form
+              className="feedback-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void handleFeedbackSubmit();
+              }}
+            >
+              <textarea
+                value={feedbackDraft}
+                onChange={(event) => {
+                  setFeedbackDraft(event.target.value);
+                  setFeedbackError("");
+                }}
+                placeholder={t("例: 日報にタグを付けられるようにしてほしい / ○○の画面で△△が起きる")}
+                maxLength={2000}
+                rows={6}
+                autoFocus
+              />
+              <div className="feedback-form-foot">
+                {feedbackError ? (
+                  <span className="feedback-form-error" role="alert">{feedbackError}</span>
+                ) : (
+                  <span className="feedback-form-count">{feedbackDraft.length}/2000</span>
+                )}
+                <button
+                  type="submit"
+                  className="feedback-form-submit"
+                  disabled={isSendingFeedback || !feedbackDraft.trim()}
+                >
+                  {isSendingFeedback ? t("送信中…") : t("送信する")}
+                </button>
+              </div>
+            </form>
           </section>
         </div>
       ) : null}
@@ -19705,12 +19838,24 @@ function App() {
                       </span>
                     </button>
                     {isOpen ? (
-                      <p
+                      <div
                         id={`announcement-body-${announcement.id}`}
                         className="home-announcement-body"
                       >
-                        {announcement.body}
-                      </p>
+                        <p className="home-announcement-body-text">{announcement.body}</p>
+                        {announcement.pinned ? (
+                          <button
+                            type="button"
+                            className="home-announcement-feedback-cta"
+                            onClick={() => {
+                              setFeedbackError("");
+                              setIsFeedbackModalOpen(true);
+                            }}
+                          >
+                            ✏️ {t("要望を書く")}
+                          </button>
+                        ) : null}
+                      </div>
                     ) : null}
                   </motion.li>
                 );
