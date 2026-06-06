@@ -3898,6 +3898,9 @@ function App() {
      タップで時間を残せるようにする. 同じ popover 内で各 Learning Item
      の「他の時間…」をインライン展開できる. */
   const [isQuickLogPopoverOpen, setIsQuickLogPopoverOpen] = useState(false);
+  /* ホーム上部の「お知らせ」をアコーディオン化する状態。
+     タップで body を開閉。同時に開けるのは 1 件まで。 */
+  const [openAnnouncementId, setOpenAnnouncementId] = useState<string | null>(null);
   /* 各 Learning Item ごとに記入中の分数 (string) を保持する. プリセット
      チップは廃止し、最初から数値入力欄を表示してそのまま打ち込める
      ようにした (チップ → 「他の時間…」 と段階を踏ませる方が逆に遅い、
@@ -19534,10 +19537,12 @@ function App() {
         transition={SPRING_SNAPPY}
       >
 
-      {/* 運営からのお知らせ。ホーム最上部に表示する告知欄。中身は
-          ANNOUNCEMENTS (モジュール冒頭の定数) をそのまま描画するだけで、
-          新規 Firestore 読み取りは発生しない。低彩度・煽らないデザイン
-          方針を踏襲。GitHub コントリビューションマップは下段へ移した。 */}
+      {/* 運営からのお知らせ。ホーム最上部に表示する告知欄。
+          リスト = 日付 + タイトル + 右端の chevron だけを並べ、
+          タップで body 詳細パネルを開閉する (Pokémon 系アプリの
+          おしらせ UI を参考)。中身は ANNOUNCEMENTS (モジュール冒頭
+          の定数) をそのまま描画するだけで新規 Firestore 読み取りは
+          発生しない。 */}
       <section className="home-announcements card" aria-label={t("運営からのお知らせ")}>
         <header className="home-announcements-head">
           <p className="card-kicker">{t("お知らせ")}</p>
@@ -19547,19 +19552,57 @@ function App() {
           <p className="home-announcements-empty">{t("いまは新しいお知らせはありません。")}</p>
         ) : (
           <ol className="home-announcements-list">
-            {ANNOUNCEMENTS.map((announcement, index) => (
-              <motion.li
-                key={announcement.id}
-                className="home-announcement-item"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1], delay: index * 0.05 }}
-              >
-                <span className="home-announcement-date">{announcement.date}</span>
-                <strong className="home-announcement-title">{announcement.title}</strong>
-                <p className="home-announcement-body">{announcement.body}</p>
-              </motion.li>
-            ))}
+            {ANNOUNCEMENTS.map((announcement, index) => {
+              const isOpen = openAnnouncementId === announcement.id;
+              return (
+                <motion.li
+                  key={announcement.id}
+                  className={`home-announcement-item${isOpen ? " is-open" : ""}`}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1], delay: index * 0.05 }}
+                >
+                  <button
+                    type="button"
+                    className="home-announcement-trigger"
+                    onClick={() =>
+                      setOpenAnnouncementId((current) =>
+                        current === announcement.id ? null : announcement.id,
+                      )
+                    }
+                    aria-expanded={isOpen}
+                    aria-controls={`announcement-body-${announcement.id}`}
+                  >
+                    <span className="home-announcement-row-text">
+                      <span className="home-announcement-date">{announcement.date}</span>
+                      <strong className="home-announcement-title">{announcement.title}</strong>
+                    </span>
+                    <span
+                      className={`home-announcement-chevron${isOpen ? " is-open" : ""}`}
+                      aria-hidden="true"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <path
+                          d="M9 6l6 6-6 6"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </span>
+                  </button>
+                  {isOpen ? (
+                    <p
+                      id={`announcement-body-${announcement.id}`}
+                      className="home-announcement-body"
+                    >
+                      {announcement.body}
+                    </p>
+                  ) : null}
+                </motion.li>
+              );
+            })}
           </ol>
         )}
       </section>
