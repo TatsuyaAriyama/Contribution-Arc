@@ -104,6 +104,19 @@ service cloud.firestore {
       allow delete: if signedIn() && resource.data.uid == request.auth.uid;
     }
 
+    // ユーザー要望 (フィードバック)。本人だけが自分名義で create でき、
+    // 読み取りは開発者のみ (運営が一覧して開発の参考にする)。編集・削除は
+    // 不可 (改ざん防止 / 監査ログ的に残す)。
+    match /feedback/{feedbackId} {
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 2000;
+      allow read: if isDeveloper();
+      allow update, delete: if false;
+    }
+
     match /workspaceRooms/{roomId} {
       allow read: if signedIn();
       // Bind createdBy to the requester so attackers can't seed rooms

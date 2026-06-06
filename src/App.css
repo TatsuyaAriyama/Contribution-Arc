@@ -3026,14 +3026,49 @@
   transform: rotate(90deg);
 }
 
-/* 展開時の body 段落：行間広め、少し muted。 */
+/* 展開時の body：行間広め、少し muted。本文の改行 (\n) を活かす。 */
 .home-announcement-body {
   margin: 0;
   padding: 0 22px 20px;
-  font-size: 13.5px;
-  line-height: 1.75;
-  color: rgba(var(--ink-rgb), 0.7);
   animation: home-announcement-body-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.home-announcement-body-text {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.8;
+  color: rgba(var(--ink-rgb), 0.72);
+  white-space: pre-line;
+}
+
+/* 固定お知らせ内の「要望を書く」CTA。緑 pill。 */
+.home-announcement-feedback-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  min-height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #1f6f4a 0%, #145238 100%);
+  color: #ecf3ef;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow:
+    0 8px 18px rgba(31, 111, 74, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+.home-announcement-feedback-cta:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 12px 24px rgba(31, 111, 74, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+.home-announcement-feedback-cta:active {
+  transform: scale(0.97);
 }
 @keyframes home-announcement-body-in {
   from {
@@ -3111,6 +3146,108 @@
   .announcements-modal {
     animation: none !important;
   }
+}
+
+/* === 要望フォームモーダル === */
+.feedback-modal {
+  position: relative;
+  width: min(520px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
+  box-shadow: 0 30px 80px rgba(var(--ink-rgb), 0.22);
+  overflow: hidden;
+  animation: announcements-modal-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.feedback-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 8px;
+}
+.feedback-modal-head h2 {
+  margin: 2px 0 0;
+  font-size: 17px;
+  font-weight: 850;
+  color: var(--ink);
+}
+.feedback-modal-lead {
+  margin: 0;
+  padding: 0 20px 12px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.feedback-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 20px 20px;
+}
+.feedback-form textarea {
+  width: 100%;
+  min-height: 130px;
+  resize: vertical;
+  padding: 14px;
+  border: 1px solid rgba(var(--ink-rgb), 0.14);
+  border-radius: 14px;
+  background: rgba(var(--surface-rgb), 0.7);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.6;
+  outline: none;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+.feedback-form textarea:focus {
+  border-color: rgba(31, 111, 74, 0.5);
+  box-shadow: 0 0 0 4px rgba(31, 111, 74, 0.12);
+  background: var(--surface);
+}
+.feedback-form-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.feedback-form-count {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.feedback-form-error {
+  font-size: 12px;
+  font-weight: 700;
+  color: #b91c1c;
+}
+.feedback-form-submit {
+  min-height: 44px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #1f6f4a 0%, #145238 100%);
+  color: #ecf3ef;
+  font-size: 14px;
+  font-weight: 850;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow:
+    0 10px 22px rgba(31, 111, 74, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+.feedback-form-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+.feedback-form-submit:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.feedback-form-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .status-card,
