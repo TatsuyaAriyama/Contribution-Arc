@@ -11894,12 +11894,27 @@ function App() {
           editing. */}
       <div className="player-determination">
         <span>決意</span>
-        {determinationText ? (
-          <p>{determinationText}</p>
+        {isInteractive ? (
+          determinationText ? (
+            <p>{determinationText}</p>
+          ) : (
+            <p className="player-determination-empty">
+              プロフィール設定で「決意」を一行書いておくと、起動時の合言葉になります。
+            </p>
+          )
         ) : (
-          <p className="player-determination-empty">
-            プロフィール設定で「決意」を一行書いておくと、起動時の合言葉になります。
-          </p>
+          // プロフィール画面では決意をその場で編集できるようにする。
+          // 単体の決意カードは廃止し、ステータスカード内に集約。
+          <form className="determination-form" onSubmit={handleDeterminationSubmit}>
+            <textarea
+              value={draftDetermination}
+              onChange={(event) => setDraftDetermination(event.target.value)}
+              rows={3}
+              placeholder="今の決意を一行で書いておこう"
+              aria-label="決意入力"
+            />
+            <button type="submit">保存</button>
+          </form>
         )}
       </div>
     </article>
@@ -17700,6 +17715,9 @@ function App() {
               userProfileCard(profileUser)
             ) : (
               <>
+                {/* Player Status はプロフィールの主役なので最上部に固定。 */}
+                {playerStatusCard(false)}
+
                 {/* Quick actions row — profile-screen specific. Lets
                     the user jump straight to common follow-ups
                     (edit settings, copy profile share link, shop)
@@ -17841,8 +17859,6 @@ function App() {
                     </div>
                   </div>
                 </article>
-
-                {playerStatusCard(false)}
 
                 {/* Lifetime stats — sum of every recorded study
                     minute (regardless of week) plus the most-
@@ -18182,24 +18198,6 @@ function App() {
                         </div>
                       ) : null}
                     </div>
-                  </article>
-                  <article className="card determination-card">
-                    <div>
-                      <p className="card-kicker">決意</p>
-                      {determination ? <p>{determination}</p> : null}
-                    </div>
-
-                    <form className="determination-form" onSubmit={handleDeterminationSubmit}>
-                      <label>
-                        <span>決意入力</span>
-                        <textarea
-                          value={draftDetermination}
-                          onChange={(event) => setDraftDetermination(event.target.value)}
-                          rows={4}
-                        />
-                      </label>
-                      <button type="submit">保存</button>
-                    </form>
                   </article>
                 </div>
               </>
