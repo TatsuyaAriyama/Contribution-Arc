@@ -17929,7 +17929,7 @@ function App() {
               uid={currentUser.uid}
               feature="learning"
               title={t("記録する — 学びの時間を積み上げる中心")}
-              body={t("学習内容と時間を入力して記録。残した時間はホームのグラフと EXP に反映されます。")}
+              body={t("学習対象を登録し、各カードから時間を記録。残した時間はホームのグラフと EXP に反映されます。")}
               bullets={[
                 t("「学習対象」をジャンルと色で登録(例: React=青、英語=橙)"),
                 t("時間を入力すると、その分だけ Effort EXP が貯まります"),
@@ -17939,23 +17939,11 @@ function App() {
             />
           ) : null}
 
-          {/* メインの記録導線。ナビ「記録する」を押したらまず目の前で
-              記録できる、という期待にそのまま応えるための常設フォーム。
-              下のライブラリ(学習対象の管理)より上に置く。 */}
-          <section className="learning-record-panel" aria-label={t("記録する")}>
-            <div className="learning-record-head">
-              <p className="card-kicker">Record</p>
-              <h2>{t("記録する")}</h2>
-              <small>{t("今日の学びを残そう。記録した時間はホームのグラフと EXP に反映されます。")}</small>
-            </div>
-            {renderStudyForm()}
-          </section>
-
           <header className="learning-header">
             <div>
               <p className="card-kicker">Learning Items</p>
               <h2>{t("ライブラリ")}</h2>
-              <small>{t("学習対象をジャンルと色で登録・整理する場所。記録は上のフォームから残せます。")}</small>
+              <small>{t("学習対象をジャンルと色で登録・整理。各カードから時間を記録できます。")}</small>
               {(() => {
                 // Quiet inventory summary — counts only, no streaks or
                 // targets. Helps the user gauge library size at a glance.
