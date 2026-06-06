@@ -22882,6 +22882,55 @@
   gap: 6px;
 }
 
+.learning-detail-quicklog input {
+  width: 84px;
+  height: 40px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  text-align: center;
+  outline: none;
+  padding: 0 8px;
+}
+
+.learning-detail-quicklog input:focus {
+  border-color: rgba(31, 111, 74, 0.45);
+}
+
+.learning-detail-quicklog-unit {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.learning-detail-quicklog-submit {
+  height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 11px;
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.learning-detail-quicklog-submit:hover {
+  background: var(--green);
+  box-shadow: 0 12px 24px rgba(31, 111, 74, 0.18);
+}
+
+.learning-detail-quicklog-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .learning-modal-actions {
   display: flex;
   align-items: center;

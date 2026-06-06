@@ -3957,6 +3957,9 @@ function App() {
      0 の場合は記録ボタンを無効化する. */
   const [learningQuickLogOpenId, setLearningQuickLogOpenId] = useState<string | null>(null);
   const [learningQuickLogCustomMinutes, setLearningQuickLogCustomMinutes] = useState("");
+  /* 学習対象の詳細モーダルでの自由時間入力(分)。固定プリセットではなく
+     任意の分数を直接入れて記録できるようにするための専用 state。 */
+  const [detailLogMinutes, setDetailLogMinutes] = useState("");
   /* Phase 10d: グローバルなクイック記録ポップオーバー. トップバーと
      mobile bottom nav の「+ 記録」から開かれ、どの画面からでも 1-2
      タップで時間を残せるようにする. 同じ popover 内で各 Learning Item
@@ -15115,7 +15118,10 @@ function App() {
           ? Math.min(100, Math.round(((item.currentPages || 0) / (item.totalPages || 1)) * 100))
           : 0;
         const recentLogs = itemLogs.slice(0, 8);
-        const closeDetail = () => setLearningDetailId(null);
+        const closeDetail = () => {
+          setLearningDetailId(null);
+          setDetailLogMinutes("");
+        };
         return (
           <div className="settings-modal-backdrop" role="presentation" onClick={closeDetail}>
             <section
@@ -15210,20 +15216,45 @@ function App() {
               </div>
 
               <div className="learning-detail-actions">
-                {!item.archived ? (
-                  <div className="learning-detail-quicklog" role="group" aria-label={t("クイック記録")}>
-                    {[15, 30, 60].map((minutes) => (
+                {!item.archived ? (() => {
+                  const detailMinutesValue = Number(detailLogMinutes);
+                  const canRecordDetail =
+                    Number.isFinite(detailMinutesValue) && detailMinutesValue > 0;
+                  const submitDetailLog = () => {
+                    if (!canRecordDetail) return;
+                    handleLearningQuickLog(item, Math.round(detailMinutesValue));
+                    setDetailLogMinutes("");
+                  };
+                  return (
+                    <div className="learning-detail-quicklog" role="group" aria-label={t("時間を指定して記録")}>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min="1"
+                        step="1"
+                        value={detailLogMinutes}
+                        onChange={(event) => setDetailLogMinutes(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            submitDetailLog();
+                          }
+                        }}
+                        placeholder="30"
+                        aria-label={t("時間（分）")}
+                      />
+                      <span className="learning-detail-quicklog-unit">分</span>
                       <button
-                        key={minutes}
                         type="button"
-                        className="learning-card-quicklog-chip"
-                        onClick={() => handleLearningQuickLog(item, minutes)}
+                        className="learning-detail-quicklog-submit"
+                        onClick={submitDetailLog}
+                        disabled={!canRecordDetail}
                       >
-                        +{minutes < 60 ? `${minutes}m` : `${minutes / 60}h`}
+                        {t("記録")}
                       </button>
-                    ))}
-                  </div>
-                ) : (
+                    </div>
+                  );
+                })() : (
                   <span aria-hidden="true" />
                 )}
                 <button
