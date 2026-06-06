@@ -2859,9 +2859,15 @@
 .home-announcements {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 18px 20px;
+  gap: 0;
+  padding: 0;
   margin-bottom: 12px;
+  /* リスト行を card 端まで張り付けたいので、card 親側の padding は
+     ゼロに。header は項目とは別 padding で個別管理する。 */
+}
+
+.home-announcements-head {
+  padding: 18px 20px 12px;
 }
 
 .home-announcements-head .card-kicker {
@@ -2877,6 +2883,7 @@
 
 .home-announcements-empty {
   margin: 0;
+  padding: 0 20px 20px;
   font-size: 13px;
   line-height: 1.6;
   color: rgba(var(--ink-rgb), 0.55);
@@ -2891,19 +2898,16 @@
   list-style: none;
 }
 
-/* 各お知らせ：日付 + タイトル + 右端 chevron の 1 行スタイル。
-   Pokémon 系アプリのお知らせページを参考に、左端に細い赤い
-   アクセント、行間に薄い divider、タップで body を展開する。 */
 .home-announcement-item {
-  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0;
-  padding: 0;
-  border-top: 1px solid rgba(var(--ink-rgb), 0.06);
+  gap: 4px;
+  padding: 14px 0;
+  border-top: 1px solid rgba(var(--ink-rgb), 0.08);
 }
 
 .home-announcement-item:first-child {
+  padding-top: 0;
   border-top: none;
 }
 
@@ -2914,7 +2918,7 @@
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 16px 12px 16px 18px;
+  padding: 18px 18px 18px 22px;
   border: 0;
   background: transparent;
   color: inherit;
@@ -2925,16 +2929,17 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* 左端の赤いアクセントライン */
+/* 左端の赤いアクセントライン (Pokémon 系お知らせ UI 参考)。
+   card の左端ベタ付きで太め 4px、上下 18px のインセット。 */
 .home-announcement-trigger::before {
   content: "";
   position: absolute;
-  left: 0;
-  top: 14px;
-  bottom: 14px;
-  width: 3px;
+  left: 8px;
+  top: 18px;
+  bottom: 18px;
+  width: 4px;
   border-radius: 2px;
-  background: #d63b3b;
+  background: #e53935;
 }
 
 .home-announcement-trigger:hover {
@@ -2953,7 +2958,7 @@
 }
 
 .home-announcement-date {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
   color: rgba(var(--ink-rgb), 0.45);
@@ -2966,20 +2971,22 @@
   color: var(--ink);
 }
 
-/* 右端の赤い chevron。展開時に 90° 回転して下を向く。 */
+/* 右端の赤い chevron。展開時に 90° 回転して下を向く。
+   リファレンス通り、はっきり見えるサイズ + 強い赤に。 */
 .home-announcement-chevron {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  color: #d63b3b;
+  width: 26px;
+  height: 26px;
+  color: #e53935;
   flex-shrink: 0;
   transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .home-announcement-chevron svg {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
+  stroke-width: 2.6;
 }
 .home-announcement-chevron.is-open {
   transform: rotate(90deg);
@@ -2988,10 +2995,10 @@
 /* 展開時の body 段落：行間広め、少し muted。 */
 .home-announcement-body {
   margin: 0;
-  padding: 0 18px 18px;
-  font-size: 13px;
-  line-height: 1.7;
-  color: rgba(var(--ink-rgb), 0.66);
+  padding: 0 22px 20px;
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: rgba(var(--ink-rgb), 0.7);
   animation: home-announcement-body-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 @keyframes home-announcement-body-in {
