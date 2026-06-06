@@ -5811,6 +5811,59 @@
   border-top: 1px solid rgba(var(--ink-rgb), 0.06);
 }
 
+/* Team Daily の lazy-load 用ローダーカード。"読み込む" を踏むまで
+   ここしか表示しない (画面を開いた瞬間の自動 fetch を抑止)。 */
+.daily-shared-loader {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border: 1px dashed rgba(var(--ink-rgb), 0.12);
+  border-radius: 14px;
+  background: rgba(var(--surface-rgb), 0.6);
+  text-align: center;
+}
+.daily-shared-loader p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.daily-shared-load-button {
+  justify-self: center;
+  min-height: 40px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, #1f6f4a 0%, #145238 100%);
+  color: #ecf3ef;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  box-shadow:
+    0 8px 18px rgba(31, 111, 74, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+.daily-shared-load-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    0 12px 24px rgba(31, 111, 74, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+.daily-shared-load-button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.daily-shared-load-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.daily-shared-load-error {
+  margin: 0;
+  font-size: 11px;
+  color: #b91c1c;
+}
+
 .daily-shared-list {
   display: grid;
   gap: 8px;

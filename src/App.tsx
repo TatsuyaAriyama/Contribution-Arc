@@ -4449,6 +4449,14 @@ function App() {
   const [recruitmentError, setRecruitmentError] = useState("");
   const [dailyReports, setDailyReports] = useState<DailyReport[]>([]);
   const [sharedDailyReports, setSharedDailyReports] = useState<DailyReport[]>([]);
+  /* Team Daily の lazy load 状態。
+     - isSharedDailyLoaded: ユーザーが "読み込む" を 1 度でも踏んだか
+     - isLoadingSharedDaily: 取得 in-flight
+     初回マウントの自動 fetch は廃止し、ボタン押下時に limit(100) で
+     一括取得する。 */
+  const [isSharedDailyLoaded, setIsSharedDailyLoaded] = useState(false);
+  const [isLoadingSharedDaily, setIsLoadingSharedDaily] = useState(false);
+  const [sharedDailyLoadError, setSharedDailyLoadError] = useState("");
   const [selectedDailyDate, setSelectedDailyDate] = useState(getLearnerDate());
   const [dailyPlanItemsDraft, setDailyPlanItemsDraft] = useState<PlanItem[]>([]);
   const [dailyReflectionDraft, setDailyReflectionDraft] = useState("");
@@ -4732,6 +4740,9 @@ function App() {
       setIsPosting(false);
       setDailyReports([]);
       setSharedDailyReports([]);
+      setIsSharedDailyLoaded(false);
+      setIsLoadingSharedDaily(false);
+      setSharedDailyLoadError("");
       setSelectedDailyDate(getLearnerDate());
       setDailyPlanItemsDraft([]);
       setDailyReflectionDraft("");
@@ -5774,7 +5785,6 @@ function App() {
 
     let handledOwnInitialSnapshot = false;
     const ownDailyQuery = query(collection(db, "dailyReports"), where("userId", "==", currentUser.uid));
-    const sharedDailyQuery = query(collection(db, "dailyReports"), orderBy("date", "desc"), limit(30));
     const unsubscribeOwnReports = onSnapshot(
       ownDailyQuery,
       (snapshot) => {
@@ -5840,29 +5850,10 @@ function App() {
         }
       },
     );
-    void getDocs(sharedDailyQuery)
-      .then((snapshot) => {
-        if (!isActive) return;
-        const syncedCloudReports = snapshot.docs
-          .map((item) => {
-            const data = {
-              ...(item.data() as Partial<DailyReport>),
-              id: item.id,
-            };
-            return {
-              ...normalizeDailyReport(data, currentUser.uid),
-              syncStatus: "synced" as const,
-              syncError: "",
-            };
-          })
-          .filter((report) => report.userId && (report.plan.trim() || report.reflection.trim()));
-
-        setSharedDailyReports(syncedCloudReports);
-        void putPersistentItems("dailyReports", syncedCloudReports);
-      })
-      .catch((error) => {
-        console.info("Shared daily report fetch skipped.", error);
-      });
+    /* Team Daily (みんなの日報) は明示的にユーザーが「読み込む」ボタンを
+       押した時にだけ 100 件まで取りに行く。マウント時の自動 fetch を
+       廃止することで、日報画面を開くたびに巨大なネットワーク往復が
+       走らなくなる (報告ベース)。 */
 
     return () => {
       isActive = false;
@@ -8487,6 +8478,43 @@ function App() {
       console.info("Post delete skipped.", error);
       setPostError("ログを削除できませんでした。");
     });
+  };
+
+  /* Team Daily の lazy load。「読み込む」ボタンから呼ばれて、最新 100 件
+     の共有日報を一括取得する。リロードしたい時のために 2 回目以降も
+     呼べる (loaded 状態は維持)。 */
+  const handleLoadSharedDailyReports = async () => {
+    if (!currentUser || isLoadingSharedDaily) return;
+    setIsLoadingSharedDaily(true);
+    setSharedDailyLoadError("");
+    try {
+      const snapshot = await getDocs(
+        query(collection(db, "dailyReports"), orderBy("date", "desc"), limit(100)),
+      );
+      const syncedCloudReports = snapshot.docs
+        .map((item) => {
+          const data = {
+            ...(item.data() as Partial<DailyReport>),
+            id: item.id,
+          };
+          return {
+            ...normalizeDailyReport(data, currentUser.uid),
+            syncStatus: "synced" as const,
+            syncError: "",
+          };
+        })
+        .filter(
+          (report) => report.userId && (report.plan.trim() || report.reflection.trim()),
+        );
+      setSharedDailyReports(syncedCloudReports);
+      void putPersistentItems("dailyReports", syncedCloudReports);
+      setIsSharedDailyLoaded(true);
+    } catch (error) {
+      console.info("Team Daily fetch failed.", error);
+      setSharedDailyLoadError("読み込みに失敗しました。もう一度お試しください。");
+    } finally {
+      setIsLoadingSharedDaily(false);
+    }
   };
 
   const handleDailyReportDelete = (report: DailyReport) => {
@@ -16905,9 +16933,31 @@ function App() {
             <div className="daily-shared-feed" aria-label={t("みんなの日報")}>
               <div className="daily-history-head">
                 <p className="card-kicker">Team Daily</p>
-                <strong>{visibleSharedDailyReports.length}</strong>
+                <strong>{isSharedDailyLoaded ? visibleSharedDailyReports.length : ""}</strong>
               </div>
-              {visibleSharedDailyReports.length > 0 ? (
+              {/* Team Daily は明示的に "読み込む" を押すまでネットワーク fetch
+                  しない。100 件まで一括取得 → onSnapshot ではないので再読込
+                  したい場合は再度ボタンを押す。 */}
+              {!isSharedDailyLoaded ? (
+                <div className="daily-shared-loader">
+                  <p>
+                    {t("みんなの過去の日報を最大100件まで読み込みます。")}
+                  </p>
+                  <button
+                    type="button"
+                    className="daily-shared-load-button"
+                    onClick={() => void handleLoadSharedDailyReports()}
+                    disabled={isLoadingSharedDaily}
+                  >
+                    {isLoadingSharedDaily ? t("読み込み中…") : t("Team Daily を読み込む")}
+                  </button>
+                  {sharedDailyLoadError ? (
+                    <p className="daily-shared-load-error" role="alert">
+                      {sharedDailyLoadError}
+                    </p>
+                  ) : null}
+                </div>
+              ) : visibleSharedDailyReports.length > 0 ? (
                 <div className="daily-shared-list">
                   {visibleSharedDailyReports.map((report) => {
                     const isMine = report.userId === currentUserUid;
