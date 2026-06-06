@@ -12495,14 +12495,19 @@ function App() {
         ? "is-pending"
         : "is-stranger";
 
+    // workspaceProfiles のリアルタイム購読値を fallback の最優先に置く。
+    // member 詳細を開いた直後はまだ authorAppearances に fetch が走って
+    // いないことがあり、その隙に古いスナップショット色が出てしまうのを防ぐ。
+    const memberLive = workspaceProfiles[member.userId];
+    const memberLook = resolveAuthorAppearance(
+      member.userId,
+      memberLive?.characterColor || memberProfile.characterColor,
+      memberLive?.characterShape || memberProfile.characterShape,
+    );
     return (
       <article className="card member-profile-card workspace-member-profile-card">
         <header className="member-profile-hero">
-          <ProfileCharacterPreview
-            color={memberProfile.characterColor}
-           
-            shape={memberProfile.characterShape}
-          />
+          <ProfileCharacterPreview color={memberLook.color} shape={memberLook.shape} />
           <div className="member-profile-identity">
             {(() => {
               const liveProfile = workspaceProfiles[member.userId];
@@ -12607,8 +12612,14 @@ function App() {
     const elapsedMinutes = getElapsedMinutes(member.joinedAt, workspaceNow);
     const memberProfile = workspaceMemberToProfile(member);
     const liveProfile = cloudUser || workspaceProfiles[member.userId];
-    const previewColor = cloudUser?.characterColor || memberProfile.characterColor;
-    const previewShape = cloudUser?.characterShape || memberProfile.characterShape;
+    // resolveAuthorAppearance に通すと、本人なら playerCharacterColor/Shape、
+    // 他人なら authorAppearances → workspaceProfiles → 投稿スナップショット
+    // の順で live を優先する。これで同一人物がカード間で違う色にならない。
+    const previewLook = resolveAuthorAppearance(
+      member.userId,
+      liveProfile?.characterColor || memberProfile.characterColor,
+      liveProfile?.characterShape || memberProfile.characterShape,
+    );
     const liveLevel = typeof liveProfile?.level === "number" ? liveProfile.level : null;
     const liveStreak = typeof liveProfile?.streak === "number" ? liveProfile.streak : 0;
 
@@ -12660,7 +12671,7 @@ function App() {
           ×
         </button>
         <div className="room-member-card-head">
-          <ProfileCharacterPreview color={previewColor} shape={previewShape} />
+          <ProfileCharacterPreview color={previewLook.color} shape={previewLook.shape} />
           <div className="room-member-card-identity">
             <h3>
               {member.name}
@@ -12786,14 +12797,17 @@ function App() {
     const liveGithubUrl = liveProfile.githubUsername
       ? `https://github.com/${liveProfile.githubUsername}`
       : githubUrl;
+    // 同上：friend を開いた瞬間の表示でも古いスナップショットを使わず、
+    // workspaceProfiles のリアルタイム値を fallback として優先する。
+    const friendLook = resolveAuthorAppearance(
+      profile.uid,
+      liveProfile.characterColor || profile.characterColor,
+      liveProfile.characterShape || profile.characterShape,
+    );
     return (
       <article className="card member-profile-card friend-profile-card">
         <header className="member-profile-hero">
-          <ProfileCharacterPreview
-            color={profile.characterColor}
-           
-            shape={profile.characterShape}
-          />
+          <ProfileCharacterPreview color={friendLook.color} shape={friendLook.shape} />
           <div className="member-profile-identity">
             <h2>
               {profile.displayName}{" "}
