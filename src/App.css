@@ -33670,3 +33670,84 @@ select:disabled {
   color: rgba(236, 243, 239, 0.96);
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
 }
+
+/* ===============================================================
+   App-wide polish pass (round 2)
+   ランキング上位アプリ (Linear / Notion / X / IG) と肩を並べる
+   微差を埋めるための「触り心地」改善。CSS only、JSX 無変更。
+   =============================================================== */
+
+/* 1) クリック可能カードの press フィードバックを統一。
+   PC は subtle / モバイルはやや強めの押し込み。 */
+.log-post-card,
+.feed-card,
+.recruitment-card,
+.room-card,
+.daily-shared-list article,
+.study-day-detail-list article {
+  transition:
+    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
+}
+.log-post-card:active,
+.feed-card:active,
+.recruitment-card:active,
+.daily-shared-list article:active,
+.study-day-detail-list article:active {
+  transform: scale(0.992);
+}
+@media (max-width: 720px) {
+  .log-post-card:active,
+  .feed-card:active,
+  .recruitment-card:active,
+  .daily-shared-list article:active,
+  .study-day-detail-list article:active {
+    transform: scale(0.985);
+  }
+}
+
+/* 2) global スクロールバーを細く / ブランド緑寄りに (Linear / Notion 風)。
+   モバイルでは触れる事が少ないので default のままにして PC のみ適用。 */
+@media (min-width: 721px) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(var(--ink-rgb), 0.18) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: rgba(var(--ink-rgb), 0.16);
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    border-radius: 999px;
+    transition: background 0.18s ease;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: rgba(var(--green-rgb, 31, 111, 74), 0.42);
+    background-clip: padding-box;
+  }
+}
+
+/* 3) global focus ring を「キーボード操作時だけ緑リング」に統一。
+   タッチ / マウスクリック後の太い outline を残さない。 */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid rgba(var(--green-rgb, 31, 111, 74), 0.6);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* 4) 選択中のテキストの色をブランドカラーに。地味だが Linear / Vercel
+   などのモダン web アプリで共通の演出。 */
+::selection {
+  background: rgba(var(--green-rgb, 31, 111, 74), 0.28);
+  color: var(--ink);
+}
