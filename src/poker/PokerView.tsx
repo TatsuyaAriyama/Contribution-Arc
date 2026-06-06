@@ -191,16 +191,12 @@ export default function PokerView({
     setHeld((prev) => prev.map((v, i) => (i === idx ? !v : v)));
   }
 
-  function bumpBet(delta: number) {
+  function pickBetIdx(idx: number) {
     if (phase === "dealt") return;
     if (mode === "normal") {
-      setNormalBetIdx((i) =>
-        Math.max(0, Math.min(NORMAL_BET_STEPS.length - 1, i + delta)),
-      );
+      setNormalBetIdx(Math.max(0, Math.min(NORMAL_BET_STEPS.length - 1, idx)));
     } else {
-      setFocusBetIdx((i) =>
-        Math.max(0, Math.min(FOCUS_BET_STEPS.length - 1, i + delta)),
-      );
+      setFocusBetIdx(Math.max(0, Math.min(FOCUS_BET_STEPS.length - 1, idx)));
     }
   }
 
@@ -236,21 +232,26 @@ export default function PokerView({
           <p className="poker-kicker">Video Poker · Jacks or Better (6/5)</p>
           <h1>♠ Arc を増やすには集中して稼ぐ。</h1>
         </div>
-        <div className="poker-balances">
-          <div className="poker-balance" title="Arc 残高">
-            <span className="poker-balance-icon">◆</span>
-            <span className="poker-balance-value">{arcBalance.toLocaleString()}</span>
-            <span className="poker-balance-label">Arc</span>
+        <div className="poker-balances" aria-label="残高">
+          <div className="poker-meter" title="Arc 残高">
+            <span className="poker-meter-label">Arc</span>
+            <span className="poker-meter-value">{arcBalance.toLocaleString()}</span>
           </div>
-          <div className="poker-balance" title="ポーカーチップ残高">
-            <span className="poker-balance-icon">●</span>
-            <span className="poker-balance-value">{displayChips.toLocaleString()}</span>
-            <span className="poker-balance-label">chip</span>
+          <span className="poker-meter-sep" aria-hidden="true" />
+          <div className="poker-meter" title="ポーカーチップ残高">
+            <span className="poker-meter-label">Chip</span>
+            <span className="poker-meter-value">{displayChips.toLocaleString()}</span>
           </div>
-          <div className="poker-balance is-focus" title="今日のFocus Chip残高">
-            <span className="poker-balance-icon">🔥</span>
-            <span className="poker-balance-value">{focusChips}</span>
-            <span className="poker-balance-label">focus</span>
+          <span className="poker-meter-sep" aria-hidden="true" />
+          <div
+            className={`poker-meter is-focus${focusChips > 0 ? " has-charge" : ""}`}
+            title="今日のFocus Chip残高（集中作業で獲得）"
+          >
+            <span className="poker-meter-label">
+              <span className="poker-meter-dot" aria-hidden="true" />
+              Focus
+            </span>
+            <span className="poker-meter-value">{focusChips}</span>
           </div>
         </div>
       </div>
@@ -397,7 +398,7 @@ export default function PokerView({
         </div>
 
         <div className="poker-side">
-          {/* Bet mode tabs */}
+          {/* Bet mode — underline tabs */}
           <div className="poker-mode-tabs" role="tablist">
             <button
               type="button"
@@ -424,91 +425,77 @@ export default function PokerView({
                   : "配当 ×1.5"
               }
             >
-              🔥 Focus
+              <span className="poker-mode-tab-text">Focus</span>
+              <span className="poker-mode-tab-meta">×1.5</span>
             </button>
           </div>
 
-          <div className="poker-bet-panel">
-            <p className="poker-stat-label">Bet</p>
-            <div className="poker-bet-control">
-              <button
-                type="button"
-                className="poker-bet-step"
-                onClick={() => bumpBet(-1)}
-                disabled={phase === "dealt" || (mode === "normal" ? normalBetIdx === 0 : focusBetIdx === 0)}
-                aria-label="ベットを下げる"
-              >
-                −
-              </button>
-              <div className="poker-bet-value-wrap">
-                <span className="poker-bet-value" key={`${mode}-${activeBet}`}>{activeBet}</span>
-                <span className="poker-bet-value-unit">
+          {/* Bet — flat group with chip selector */}
+          <div className="poker-bet-group">
+            <div className="poker-bet-head">
+              <span className="poker-bet-head-label">Bet</span>
+              <span className="poker-bet-head-amount" key={`${mode}-${activeBet}`}>
+                <span className="poker-bet-head-num">{activeBet}</span>
+                <span className="poker-bet-head-unit">
                   {mode === "normal" ? "chip" : "focus"}
                 </span>
-              </div>
-              <button
-                type="button"
-                className="poker-bet-step"
-                onClick={() => bumpBet(1)}
-                disabled={
-                  phase === "dealt" ||
-                  (mode === "normal"
-                    ? normalBetIdx >= NORMAL_BET_STEPS.length - 1
-                    : focusBetIdx >= FOCUS_BET_STEPS.length - 1)
-                }
-                aria-label="ベットを上げる"
-              >
-                ＋
-              </button>
+              </span>
             </div>
-            <div className="poker-bet-ticks" aria-hidden="true">
+            <div className="poker-bet-chips" role="group" aria-label="ベット額">
               {(mode === "normal" ? NORMAL_BET_STEPS : FOCUS_BET_STEPS).map((step, i) => {
                 const activeIdx = mode === "normal" ? normalBetIdx : focusBetIdx;
                 return (
-                  <span
+                  <button
                     key={step}
-                    className={`poker-bet-tick${i <= activeIdx ? " is-on" : ""}${
-                      i === activeIdx ? " is-current" : ""
-                    }`}
-                  />
+                    type="button"
+                    className={`poker-bet-chip${i === activeIdx ? " is-active" : ""}`}
+                    onClick={() => pickBetIdx(i)}
+                    disabled={phase === "dealt"}
+                    aria-pressed={i === activeIdx}
+                  >
+                    {step}
+                  </button>
                 );
               })}
             </div>
             <p className="poker-bet-note">
               {mode === "normal"
-                ? "通常チップ。RTP 95% でジリ貧"
-                : "Focus Chip。配当 ×1.5（勝ち越し可能）"}
+                ? "RTP 95% — 長くやると確率的に負け越す"
+                : "配当 ×1.5 — 集中で稼いだ Focus でだけ勝ち越せる"}
             </p>
           </div>
 
+          {/* Primary action */}
           {phase === "dealt" ? (
             <button
               type="button"
-              className="poker-action primary is-draw"
+              className="poker-cta is-draw"
               onClick={handleDraw}
             >
-              <span className="poker-action-label">DRAW</span>
-              <span className="poker-action-sub">不要札を交換</span>
+              <span className="poker-cta-label">Draw</span>
+              <span className="poker-cta-sub">残してない札を交換</span>
             </button>
           ) : (
             <button
               type="button"
-              className="poker-action primary is-deal"
+              className="poker-cta is-deal"
               onClick={handleDeal}
               disabled={!canDeal}
             >
-              <span className="poker-action-label">
-                {canDeal ? "DEAL" : mode === "normal" ? "チップ不足" : "Focus 不足"}
+              <span className="poker-cta-label">
+                {canDeal ? "Deal" : mode === "normal" ? "チップ不足" : "Focus 不足"}
               </span>
-              <span className="poker-action-sub">
-                {canDeal ? `−${activeBet} ${mode === "normal" ? "chip" : "focus"}` : "両替してね"}
+              <span className="poker-cta-sub">
+                {canDeal
+                  ? `−${activeBet} ${mode === "normal" ? "chip" : "focus"}`
+                  : "両替が必要です"}
               </span>
             </button>
           )}
 
           <button
             type="button"
-            className="poker-action ghost"
+            className="poker-link"
             onClick={() => setExchangeOpen((v) => !v)}
             disabled={phase === "dealt"}
           >

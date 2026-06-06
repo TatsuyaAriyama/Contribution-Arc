@@ -34703,209 +34703,161 @@ select:disabled {
   font-weight: 600;
 }
 
-/* side panel */
+/* side panel — flat layout, hairline dividers, no card stacking */
 .poker-side {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 20px;
+  font-variant-numeric: tabular-nums;
 }
 .poker-stat-label {
   margin: 0 0 4px;
-  font-size: 10px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #8a8a98;
-}
-
-/* ── Bet panel ──────────────────────────────────────────────── */
-.poker-bet-panel {
-  background: #fff;
-  border: 1px solid rgba(40, 40, 50, 0.1);
-  border-radius: 14px;
-  padding: 14px 16px 12px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-}
-.poker-bet-control {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-.poker-bet-step {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 1px solid rgba(40, 40, 50, 0.15);
-  background: linear-gradient(180deg, #fff, #f5f5f8);
-  cursor: pointer;
-  font-size: 18px;
-  font-weight: 700;
-  color: #1f1f28;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.7);
-  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
-}
-.poker-bet-step:hover:not(:disabled) {
-  background: linear-gradient(180deg, #fff, #ebebef);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
-}
-.poker-bet-step:active:not(:disabled) {
-  transform: translateY(0) scale(0.94);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08) inset;
-}
-.poker-bet-step:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-.poker-bet-value-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  line-height: 1;
-}
-.poker-bet-value {
-  font-size: 28px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: #1f1f28;
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "lnum";
-  animation: poker-bet-pop 220ms cubic-bezier(0.2, 0.9, 0.3, 1.1);
-}
-@keyframes poker-bet-pop {
-  0% { transform: scale(0.85); opacity: 0.4; }
-  60% { transform: scale(1.08); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
-}
-.poker-bet-value-unit {
-  margin-top: 3px;
-  font-size: 9px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #8a8a98;
-  font-family: system-ui, sans-serif;
-}
-.poker-bet-ticks {
-  display: flex;
-  gap: 6px;
-  justify-content: center;
-  margin-bottom: 6px;
-}
-.poker-bet-tick {
-  width: 22px;
-  height: 4px;
-  border-radius: 2px;
-  background: rgba(40, 40, 50, 0.12);
-  transition: background 200ms ease, transform 200ms ease;
-}
-.poker-bet-tick.is-on {
-  background: linear-gradient(90deg, #ff9c3a, #ffc94a);
-}
-.poker-bet-tick.is-current {
-  transform: scaleY(1.6);
-}
-.poker-bet-note {
-  margin: 6px 0 0;
   font-size: 11px;
-  color: #6b6b78;
-  text-align: center;
+  font-weight: 500;
+  color: #8a8a98;
   letter-spacing: 0.02em;
 }
 
-/* ── Action buttons (DEAL / DRAW) ───────────────────────────── */
-.poker-action {
-  min-height: 56px;
-  border-radius: 14px;
-  border: none;
+/* ── Bet group — bordered top/bottom only, no card ───────────── */
+.poker-bet-group {
+  padding: 4px 0 12px;
+  border-bottom: 1px solid rgba(40, 40, 50, 0.08);
+}
+.poker-bet-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.poker-bet-head-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #8a8a98;
+  letter-spacing: 0.02em;
+}
+.poker-bet-head-amount {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  color: #1a1a22;
+  animation: poker-bet-amount-flip 200ms ease;
+}
+.poker-bet-head-num {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.poker-bet-head-unit {
+  font-size: 11px;
+  font-weight: 500;
+  color: #8a8a98;
+  letter-spacing: 0.02em;
+}
+@keyframes poker-bet-amount-flip {
+  0% { opacity: 0.3; transform: translateY(-2px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.poker-bet-chips {
+  display: flex;
+  gap: 6px;
+}
+.poker-bet-chip {
+  flex: 1;
+  min-height: 34px;
+  border: 1px solid rgba(40, 40, 50, 0.14);
+  background: transparent;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #4a4a55;
+  font-variant-numeric: tabular-nums;
   cursor: pointer;
-  font-weight: 800;
-  letter-spacing: 0.16em;
+  transition: border-color 150ms ease, background 150ms ease, color 150ms ease;
+}
+.poker-bet-chip:hover:not(:disabled):not(.is-active) {
+  border-color: rgba(40, 40, 50, 0.28);
+  color: #1a1a22;
+}
+.poker-bet-chip.is-active {
+  background: #1a1a22;
+  border-color: #1a1a22;
+  color: #fff;
+  font-weight: 600;
+}
+.poker-bet-chip:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.poker-bet-note {
+  margin: 12px 0 0;
+  font-size: 11px;
+  color: #8a8a98;
+  letter-spacing: 0.01em;
+  line-height: 1.5;
+}
+
+/* ── Primary CTA (Deal / Draw) — quiet, single-tone ──────────── */
+.poker-cta {
+  min-height: 52px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 2px;
-  position: relative;
-  overflow: hidden;
-  transition: transform 140ms ease, box-shadow 180ms ease, filter 180ms ease;
-}
-.poker-action::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 40%);
-  pointer-events: none;
-}
-.poker-action.primary {
-  background: linear-gradient(180deg, #2c2c38 0%, #14141d 100%);
+  background: #1a1a22;
   color: #fff;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.15),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
-    0 10px 24px rgba(0, 0, 0, 0.25);
+  transition: background 150ms ease, transform 100ms ease;
 }
-.poker-action.primary.is-deal {
-  background: linear-gradient(180deg, #ffd76a 0%, #ff9b3c 100%);
-  color: #2a1700;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.45),
-    inset 0 0 0 1px rgba(180, 100, 30, 0.3),
-    0 12px 28px rgba(255, 150, 60, 0.35);
+.poker-cta:hover:not(:disabled) { background: #2a2a36; }
+.poker-cta:active:not(:disabled) { transform: scale(0.995); }
+.poker-cta.is-draw {
+  background: #1e6b4d;
 }
-.poker-action.primary.is-deal:hover:not(:disabled) {
-  filter: brightness(1.05);
-  transform: translateY(-2px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 0 0 1px rgba(180, 100, 30, 0.3),
-    0 18px 36px rgba(255, 150, 60, 0.45);
-}
-.poker-action.primary.is-draw {
-  background: linear-gradient(180deg, #5ed4a0 0%, #2a9a72 100%);
-  color: #042419;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    inset 0 0 0 1px rgba(20, 80, 50, 0.4),
-    0 12px 28px rgba(40, 160, 110, 0.35);
-}
-.poker-action.primary.is-draw:hover:not(:disabled) {
-  filter: brightness(1.05);
-  transform: translateY(-2px);
-}
-.poker-action.primary:active:not(:disabled) {
-  transform: translateY(1px) scale(0.99);
-  filter: brightness(0.96);
-}
-.poker-action.primary:disabled {
-  background: linear-gradient(180deg, #4a4a55, #33333c);
-  color: rgba(255, 255, 255, 0.6);
-  box-shadow: none;
+.poker-cta.is-draw:hover:not(:disabled) { background: #248055; }
+.poker-cta:disabled {
+  background: rgba(40, 40, 50, 0.08);
+  color: rgba(40, 40, 50, 0.45);
   cursor: not-allowed;
 }
-.poker-action-label {
-  font-size: 16px;
-  font-weight: 800;
-}
-.poker-action-sub {
-  font-size: 10px;
+.poker-cta-label {
+  font-size: 14px;
   font-weight: 600;
-  letter-spacing: 0.12em;
-  opacity: 0.8;
-  text-transform: none;
+  letter-spacing: 0.02em;
 }
-.poker-action.ghost {
+.poker-cta-sub {
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.62);
+}
+.poker-cta:disabled .poker-cta-sub {
+  color: rgba(40, 40, 50, 0.4);
+}
+
+/* ── Secondary link button (両替) ────────────────────────────── */
+.poker-link {
   background: transparent;
-  color: #6b6b78;
-  border: 1px solid rgba(40, 40, 50, 0.18);
+  border: none;
+  padding: 4px 0;
   font-size: 12px;
-  min-height: 38px;
-  letter-spacing: 0.1em;
-  box-shadow: none;
+  color: #6b6b78;
+  cursor: pointer;
+  text-align: center;
+  letter-spacing: 0.01em;
+  border-bottom: 1px solid transparent;
+  align-self: center;
+  transition: color 150ms ease, border-color 150ms ease;
 }
-.poker-action.ghost::before { display: none; }
-.poker-action.ghost:hover {
-  background: rgba(40, 40, 50, 0.05);
+.poker-link:hover:not(:disabled) {
+  color: #1a1a22;
+  border-bottom-color: rgba(40, 40, 50, 0.4);
+}
+.poker-link:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* ── Topbar balances ─────────────────────────────────────────── */
@@ -34914,79 +34866,124 @@ select:disabled {
 }
 .poker-balances {
   margin-left: auto;
-  display: flex;
-  gap: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+  padding: 4px 2px;
+  font-variant-numeric: tabular-nums;
 }
-.poker-balance {
+.poker-meter {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  line-height: 1;
+}
+.poker-meter-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: #8a8a98;
+}
+.poker-meter-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a22;
+  letter-spacing: -0.01em;
+}
+.poker-meter-sep {
+  display: inline-block;
+  width: 1px;
+  height: 22px;
+  background: rgba(40, 40, 50, 0.1);
+}
+.poker-meter.is-focus .poker-meter-value {
+  color: #6b6b76;
+}
+.poker-meter.is-focus.has-charge .poker-meter-value {
+  color: #c97a14;
+}
+.poker-meter-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(40, 40, 50, 0.2);
+  transition: background 220ms ease;
+}
+.poker-meter.is-focus.has-charge .poker-meter-dot {
+  background: #f0a020;
+  box-shadow: 0 0 0 3px rgba(240, 160, 32, 0.16);
+}
+@media (max-width: 640px) {
+  .poker-balances {
+    gap: 12px;
+  }
+  .poker-meter-value {
+    font-size: 16px;
+  }
+}
+
+/* ── Mode tabs — underline style, no segment background ───────── */
+.poker-mode-tabs {
+  display: flex;
+  gap: 18px;
+  border-bottom: 1px solid rgba(40, 40, 50, 0.08);
+  padding: 0 0 0 0;
+}
+.poker-mode-tab {
+  position: relative;
+  background: transparent;
+  border: none;
+  padding: 8px 0 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #8a8a98;
+  cursor: pointer;
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: #fff;
-  border: 1px solid rgba(40, 40, 50, 0.12);
-  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  transition: color 150ms ease;
 }
-.poker-balance.is-focus {
-  background: linear-gradient(135deg, #fff4d6, #ffe8a8);
-  border-color: rgba(180, 130, 0, 0.3);
-}
-.poker-balance-icon {
-  font-size: 12px;
-  color: #8a8a98;
-}
-.poker-balance.is-focus .poker-balance-icon {
-  font-size: 14px;
-}
-.poker-balance-value {
-  font-size: 15px;
-  font-weight: 700;
-  color: #1f1f28;
-}
-.poker-balance-label {
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  color: #8a8a98;
-  text-transform: uppercase;
-}
-
-/* ── Mode tabs ───────────────────────────────────────────────── */
-.poker-mode-tabs {
-  display: flex;
-  gap: 6px;
-  background: rgba(40, 40, 50, 0.06);
-  padding: 4px;
-  border-radius: 10px;
-}
-.poker-mode-tab {
-  flex: 1;
-  min-height: 34px;
-  border-radius: 8px;
-  border: none;
+.poker-mode-tab::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1.5px;
   background: transparent;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  color: #6b6b78;
+  transition: background 150ms ease;
+}
+.poker-mode-tab:hover:not(:disabled) {
+  color: #1a1a22;
 }
 .poker-mode-tab.is-active {
-  background: #fff;
-  color: #1f1f28;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  color: #1a1a22;
+  font-weight: 600;
+}
+.poker-mode-tab.is-active::after {
+  background: #1a1a22;
 }
 .poker-mode-tab.is-empty {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 .poker-mode-tab:disabled:not(.is-active) {
   cursor: not-allowed;
 }
-
-.poker-bet-note {
-  margin: 8px 0 0;
-  font-size: 11px;
-  color: #6b6b78;
+.poker-mode-tab-meta {
+  font-size: 10px;
+  font-weight: 500;
+  color: #c97a14;
+  letter-spacing: 0.02em;
+}
+.poker-mode-tab.is-empty .poker-mode-tab-meta,
+.poker-mode-tab:disabled:not(.is-active) .poker-mode-tab-meta {
+  color: rgba(40, 40, 50, 0.3);
 }
 
 /* ── Hot streak chip ─────────────────────────────────────────── */
