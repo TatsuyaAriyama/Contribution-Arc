@@ -4710,6 +4710,65 @@
   font-weight: 500;
 }
 
+/* 自動投稿バッジ。手書き投稿との見分けがつくよう小さなピルで author 名の
+   右に並べる。色は kind 別に弱め（作業＝紺、学習＝緑）にして、タイムライン
+   の視覚ノイズを増やさない。 */
+.log-post-auto-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.log-post-auto-badge[data-kind="workspace"] {
+  background: rgba(80, 110, 200, 0.12);
+  color: #3a5bb7;
+}
+.log-post-auto-badge[data-kind="study"] {
+  background: rgba(70, 160, 110, 0.14);
+  color: #2c8a5a;
+}
+@media (prefers-color-scheme: dark) {
+  .log-post-auto-badge[data-kind="workspace"] {
+    background: rgba(120, 150, 230, 0.18);
+    color: #a8bcef;
+  }
+  .log-post-auto-badge[data-kind="study"] {
+    background: rgba(110, 200, 150, 0.18);
+    color: #9adfb5;
+  }
+}
+
+/* 自動投稿トグル — 通知設定 fieldset の見た目を踏襲しつつ、説明が長いので
+   <small> を 2 行で読ませる。 */
+.auto-post-settings .auto-post-toggle {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: 12px;
+}
+.auto-post-settings .auto-post-toggle > span {
+  display: block;
+}
+.auto-post-settings .auto-post-toggle strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.auto-post-settings .auto-post-toggle small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
 .log-post-card > p {
   margin: 0;
   color: var(--ink);
