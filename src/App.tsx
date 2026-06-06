@@ -676,18 +676,18 @@ function CharCountRing({ value, max }: { value: number; max: number }) {
   );
 }
 const studyColorOptions = [
-  { name: "Evergreen", value: "#1f6f4a" },
-  { name: "Sage", value: "#7aa874" },
-  { name: "Jade", value: "#2f8f83" },
-  { name: "Sea", value: "#2f7890" },
-  { name: "Azure", value: "#4f7fb2" },
-  { name: "Indigo", value: "#5b68a6" },
-  { name: "Lavender", value: "#8b72b6" },
-  { name: "Plum", value: "#9b4f83" },
-  { name: "Rose", value: "#bf5f78" },
-  { name: "Clay", value: "#b87555" },
-  { name: "Amber", value: "#c8a95b" },
-  { name: "Moss", value: "#6f8f45" },
+  { name: "Evergreen", labelJa: "緑", value: "#1f6f4a" },
+  { name: "Sage", labelJa: "若草", value: "#7aa874" },
+  { name: "Jade", labelJa: "翡翠", value: "#2f8f83" },
+  { name: "Sea", labelJa: "青緑", value: "#2f7890" },
+  { name: "Azure", labelJa: "空", value: "#4f7fb2" },
+  { name: "Indigo", labelJa: "藍", value: "#5b68a6" },
+  { name: "Lavender", labelJa: "藤", value: "#8b72b6" },
+  { name: "Plum", labelJa: "梅", value: "#9b4f83" },
+  { name: "Rose", labelJa: "薔薇", value: "#bf5f78" },
+  { name: "Clay", labelJa: "土", value: "#b87555" },
+  { name: "Amber", labelJa: "琥珀", value: "#c8a95b" },
+  { name: "Moss", labelJa: "苔", value: "#6f8f45" },
 ];
 
 // 記録フォームの時間クイック選択（分単位）。よく使う区切りを並べ、
@@ -8227,6 +8227,27 @@ function App() {
     showToast(`+${formatStudyTimeJa(safeMinutes)} ${item.name}`, { kind: "success" });
   };
 
+  // 入力中の学習名に一致する既存の学習対象（active のみ・大文字小文字無視）。
+  // 同名は1つの学習対象に統一するための「集約先」。一致した場合は色も
+  // その対象に固定し、記録ごとに色がぶれないようにする。
+  const matchedStudyItem = useMemo(() => {
+    const normalized = studySubject.trim().toLowerCase();
+    if (!normalized) return null;
+    return (
+      learningItems.find(
+        (item) => !item.archived && item.name.toLowerCase() === normalized,
+      ) ?? null
+    );
+  }, [studySubject, learningItems]);
+
+  // 既存名を入力したら、その学習対象の登録色へ自動同期。これで「同名は
+  // 同じ色」が UI 上も保証され、ユーザーは色を選び直す必要がなくなる。
+  useEffect(() => {
+    if (matchedStudyItem) {
+      setStudyColor(matchedStudyItem.color);
+    }
+  }, [matchedStudyItem]);
+
   const handleStudySubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -8241,16 +8262,39 @@ function App() {
 
     const minutes = Math.max(1, Math.round(amount));
     const trimmedSubject = studySubject.trim();
-    const matchedItem = learningItems.find(
-      (item) => !item.archived && item.name.toLowerCase() === trimmedSubject.toLowerCase(),
-    );
+
+    // 同名統一の要: 既存の学習対象に一致すればそこへ、無ければ新しい
+    // 学習対象を「その場で」作成してから記録を紐付ける。これにより、
+    // 同じ名前の記録は必ず同一の学習対象（= 同じ色・同じ統計）に集約され、
+    // learningItemId を持たない宙ぶらりんの記録が生まれなくなる。
+    let targetItem = matchedStudyItem;
+    if (!targetItem) {
+      const nowIso = new Date().toISOString();
+      const createdItem: LearningItem = {
+        id: crypto.randomUUID(),
+        userId: currentUser.uid,
+        name: trimmedSubject.slice(0, 60),
+        category: "stack",
+        color: studyColor,
+        status: "active",
+        archived: false,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+      setLearningItems((items) => [...items, createdItem]);
+      void saveLearningItemToCloud(db, createdItem).catch((error) => {
+        console.info("Learning item auto-create skipped.", error);
+      });
+      targetItem = createdItem;
+    }
+
     const nextLog: StudyLog = {
       id: crypto.randomUUID(),
-      subject: matchedItem ? matchedItem.name : trimmedSubject,
+      subject: targetItem.name,
       minutes,
       createdAt: new Date().toISOString(),
-      color: matchedItem ? matchedItem.color : studyColor,
-      ...(matchedItem ? { learningItemId: matchedItem.id } : {}),
+      color: targetItem.color,
+      learningItemId: targetItem.id,
     };
     setStudyLogs((logs) => [...logs, nextLog]);
     void saveStudyLogToCloud(db, currentUser.uid, nextLog, {
@@ -8294,7 +8338,14 @@ function App() {
   // 先頭の両方で同じものを出す。導線を1本化して "記録する=ここで記録"
   // という期待にそのまま応えるための共有レンダラ(views は排他なので
   // datalist id / state 共有でも衝突しない)。
-  const renderStudyForm = () => (
+  const renderStudyForm = () => {
+    const trimmedSubject = studySubject.trim();
+    // 既存名にマッチしている＝色は学習対象に統一済み。記録フォームでは
+    // 色を選び直させず、登録色をロック表示する（同名統一の担保）。
+    const isExistingName = Boolean(matchedStudyItem);
+    const selectedColor =
+      studyColorOptions.find((color) => color.value === studyColor) ?? studyColorOptions[0];
+    return (
     <form className="study-form" onSubmit={handleStudySubmit}>
       <label className="study-subject-field">
         <span>{t("学習内容")}</span>
@@ -8310,11 +8361,6 @@ function App() {
           const recentChips = recentItemIds
             .map((id) => activeItems.find((item) => item.id === id))
             .filter((item): item is LearningItem => Boolean(item));
-          const trimmedSubject = studySubject.trim();
-          const matchedItem = activeItems.find(
-            (item) => item.name.toLowerCase() === trimmedSubject.toLowerCase(),
-          );
-          const showGhostHint = trimmedSubject.length > 0 && !matchedItem;
           return (
             <>
               {recentChips.length > 0 ? (
@@ -8323,7 +8369,7 @@ function App() {
                     <button
                       type="button"
                       key={item.id}
-                      className={matchedItem?.id === item.id ? "active" : ""}
+                      className={matchedStudyItem?.id === item.id ? "active" : ""}
                       onClick={() => {
                         setStudySubject(item.name);
                         setStudyColor(item.color);
@@ -8346,15 +8392,6 @@ function App() {
                   <option key={item.id} value={item.name} />
                 ))}
               </datalist>
-              {showGhostHint ? (
-                <button
-                  type="button"
-                  className="subject-ghost-hint"
-                  onClick={() => openLearningEditorForCreate(trimmedSubject)}
-                >
-                  + 「{trimmedSubject}」を記録に追加
-                </button>
-              ) : null}
             </>
           );
         })()}
@@ -8403,27 +8440,40 @@ function App() {
         </div>
       </div>
       <div className="study-form-footer">
-        <fieldset className="study-color-field">
-          <legend>カラー</legend>
-          <div className="study-color-options">
+        <fieldset className={`study-color-field${isExistingName ? " is-locked" : ""}`}>
+          <legend>
+            {isExistingName
+              ? `${matchedStudyItem?.name} のカラー`
+              : trimmedSubject
+                ? `「${trimmedSubject}」につける色`
+                : "カラー"}
+          </legend>
+          <div className="study-color-options" aria-disabled={isExistingName || undefined}>
             {studyColorOptions.map((color) => (
-              <label key={color.value} title={color.name}>
+              <label key={color.value} title={color.labelJa}>
                 <input
                   type="radio"
                   name="study-color"
                   value={color.value}
                   checked={studyColor === color.value}
+                  disabled={isExistingName}
                   onChange={(event) => setStudyColor(event.target.value)}
                 />
                 <span style={{ background: color.value }} />
               </label>
             ))}
           </div>
+          <small className="study-color-caption">
+            {isExistingName
+              ? "同じ名前は色を統一。変更はライブラリから"
+              : `選択中: ${selectedColor.labelJa}`}
+          </small>
         </fieldset>
         <button type="submit">記録 +EXP</button>
       </div>
     </form>
-  );
+    );
+  };
 
   const openLearningEditorForEdit = (item: LearningItem) => {
     setIsLearningDeleteConfirming(false);

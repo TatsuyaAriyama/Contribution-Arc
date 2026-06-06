@@ -7990,11 +7990,42 @@
     0 6px 12px rgba(var(--ink-rgb), 0.08);
 }
 
+.study-color-options span {
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.study-color-options label:hover span {
+  transform: scale(1.18);
+}
+
 .study-color-options input:checked + span {
+  transform: scale(1.18);
   box-shadow:
     0 0 0 2px var(--ink),
     0 0 0 4px rgba(31, 111, 74, 0.12),
     0 8px 16px rgba(var(--ink-rgb), 0.1);
+}
+
+/* 選択中の色名 / 同名統一の説明。色を学習対象に「付ける」ことを
+   言葉でも伝え、直感的に選べるようにする補助テキスト。 */
+.study-color-caption {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* 既存名のときは色を学習対象に統一済み＝ここでは変更させない。
+   触れない状態を視覚的に示す（淡色＋カーソル無効）。 */
+.study-color-field.is-locked .study-color-options {
+  opacity: 0.62;
+}
+
+.study-color-field.is-locked .study-color-options label {
+  cursor: default;
+}
+
+.study-color-field.is-locked .study-color-options label:hover span {
+  transform: none;
 }
 
 .study-form button {
