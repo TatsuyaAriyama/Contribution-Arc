@@ -13954,14 +13954,15 @@
     display: contents;
   }
 
-  /* row1 右端: bell + avatar — 必ず viewport に残す */
+  /* row 末端: bell + avatar — flex 1 列レイアウトでも必ず右端に固定。
+     高い order 値で他のアイコン群より後ろにする。 */
   .premium-dashboard-header .notification-wrap {
     flex: 0 0 auto;
-    order: 2;
+    order: 80;
   }
   .premium-dashboard-header .user-menu-wrap {
     flex: 0 0 auto;
-    order: 3;
+    order: 90;
   }
 
   /* row1 → row2 の改行を強制するため、::after pseudo を flex-basis
@@ -13980,20 +13981,22 @@
     pointer-events: none;
   }
 
-  /* row2: icon 群を横並び・折返し可。order 10 で改行後の先頭グループ */
+  /* row2: icon 群を横並び・折返し可。order 10 で改行後の先頭グループ。
+     検索 wrap も同 order に揃えてアイコン群と並べる (旧 order 未設定
+     で 0 になり、左端に飛び出してアバターが画面右に行かない原因だった)。 */
   .premium-dashboard-header .topbar-manager-button,
   .premium-dashboard-header .topbar-workspace-button,
   .premium-dashboard-header .topbar-shop-button,
-  .premium-dashboard-header .topbar-popover-wrap-friends {
+  .premium-dashboard-header .topbar-popover-wrap-friends,
+  .premium-dashboard-header .topbar-popover-wrap-search {
     order: 10;
     flex: 0 0 auto;
   }
-
-  /* row3: 検索バー (flex-basis 100% で必ず別行) */
-  .premium-dashboard-header .user-search-button {
-    order: 100;
-    flex: 1 1 100%;
-    width: 100%;
+  /* search button 自体は wrap の中で 1 列レイアウト時に shrink される
+     と困るので、明示的にサイズ固定 (40px round は別ルール) */
+  .premium-dashboard-header .topbar-popover-wrap-search > .user-search-button {
+    flex: 0 0 auto;
+    width: 40px;
   }
 
   .premium-dashboard-header .notification-wrap > .notification-button,
@@ -15456,13 +15459,18 @@
   background: rgba(var(--green-rgb, 31, 111, 74), 0.06);
 }
 
-/* モバイル: 検索 popover はアイコン直下に right-align で、画面幅
-   一杯まで使える方が検索結果が見やすい */
+/* モバイル: 検索 popover はアイコン基準の絶対配置だと検索アイコンが
+   topbar の左/中ほどに居る瞬間に画面左を突き抜ける事故が起きる。
+   viewport 基準の fixed に切替えて、常に画面右端から safe-area
+   込みの余白で開くよう統一する。topbar 下に張り付くので top も固定。 */
 @media (max-width: 720px) {
   .topbar-popover-search {
-    width: calc(100vw - 24px);
-    max-width: 360px;
-    right: max(-4px, calc(0px - env(safe-area-inset-right, 0px)));
+    position: fixed;
+    top: calc(8px + env(safe-area-inset-top, 0px) + 56px);
+    right: max(12px, env(safe-area-inset-right, 0px));
+    left: max(12px, env(safe-area-inset-left, 0px));
+    width: auto;
+    max-width: calc(100vw - 24px);
   }
 }
 
@@ -20846,6 +20854,21 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+/* モバイルでは avatar が左端寄りに居る瞬間 (icon 群とサイズの組合せ
+   次第) もありうるので、user-menu-panel を viewport 基準の fixed に
+   切り替えて常に右端に張り付かせる。これでパネルが画面外にはみ出して
+   "プロフィール" や "設定" が押せない事故を防ぐ。 */
+@media (max-width: 720px) {
+  .user-menu-panel {
+    position: fixed;
+    top: calc(8px + env(safe-area-inset-top, 0px) + 56px);
+    right: max(12px, env(safe-area-inset-right, 0px));
+    left: auto;
+    min-width: 240px;
+    max-width: calc(100vw - 24px);
+  }
 }
 
 .user-menu-head {
