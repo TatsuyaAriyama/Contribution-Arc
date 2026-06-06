@@ -131,7 +131,11 @@ import {
   putPersistentItems,
   readPersistentItems,
 } from "./services/persistentCache";
-import { fetchGithubContributions, type GithubContributions } from "./services/githubContributions";
+import {
+  fetchGithubContributions,
+  GithubRateLimitError,
+  type GithubContributions,
+} from "./services/githubContributions";
 import { computeStudyStreak } from "./services/studyStreak";
 import { PLANS, getPlan, BETA_ALL_FEATURES_FREE, type PlanTier } from "./services/plans";
 import {
@@ -7230,10 +7234,21 @@ function App() {
           return;
         } catch (err) {
           lastError = err;
+          // レート制限に当たったら、残りの候補を試さず即中断する。
+          // 候補を総当たりすると 1 ユーザーで最大 4 リクエストになり、
+          // レート制限を悪化させるため (コスト削減の肝)。
+          if (err instanceof GithubRateLimitError) {
+            break;
+          }
         }
       }
       if (cancelled) return;
-      const message = lastError instanceof Error ? lastError.message : String(lastError);
+      const message =
+        lastError instanceof GithubRateLimitError
+          ? lastError.message
+          : lastError instanceof Error
+            ? lastError.message
+            : String(lastError);
       setGithubContributionsError(message);
     })();
     return () => {
