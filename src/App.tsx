@@ -861,6 +861,10 @@ type Announcement = {
   date: string;
   title: string;
   body: string;
+  /* 常にホーム先頭に固定表示するウェルカム告知。1 件だけ true に
+     する想定。pinned 以外の中で最新 1 件をその下に出し、残りは
+     「お知らせ一覧」モーダルから辿る (ホームを煩雑にしない方針)。 */
+  pinned?: boolean;
 };
 
 const ANNOUNCEMENTS: Announcement[] = [
@@ -881,8 +885,15 @@ const ANNOUNCEMENTS: Announcement[] = [
     date: "2026.06.01",
     title: "Contribution Arc をご利用いただきありがとうございます",
     body: "学習の積み上げを静かに記録し、仲間とゆるくつながれる場所です。ご要望があればお気軽にお寄せください。",
+    pinned: true,
   },
 ];
+/* ホーム先頭固定の pinned 告知 (ウェルカム)。最大 1 件。 */
+const PINNED_ANNOUNCEMENT = ANNOUNCEMENTS.find((item) => item.pinned) || null;
+/* pinned 以外の告知 (= 通常の更新履歴)。配列の上ほど新しい前提。 */
+const NON_PINNED_ANNOUNCEMENTS = ANNOUNCEMENTS.filter((item) => !item.pinned);
+/* ホームにはこの最新 1 件だけ出す。残りは一覧モーダルへ。 */
+const LATEST_ANNOUNCEMENT = NON_PINNED_ANNOUNCEMENTS[0] || null;
 const sanitizeStoragePart = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9_.-]/g, "_");
 const getAccountStorageScope = (uid: string, registeredUserId: string) =>
   sanitizeStoragePart(registeredUserId) || `uid-${uid}`;
@@ -3901,6 +3912,9 @@ function App() {
   /* ホーム上部の「お知らせ」をアコーディオン化する状態。
      タップで body を開閉。同時に開けるのは 1 件まで。 */
   const [openAnnouncementId, setOpenAnnouncementId] = useState<string | null>(null);
+  /* お知らせ一覧モーダルの開閉。ホームには pinned + 最新 1 件だけ出し、
+     過去のお知らせはここを開いて全件を見せる。 */
+  const [isAnnouncementsModalOpen, setIsAnnouncementsModalOpen] = useState(false);
   /* 各 Learning Item ごとに記入中の分数 (string) を保持する. プリセット
      チップは廃止し、最初から数値入力欄を表示してそのまま打ち込める
      ようにした (チップ → 「他の時間…」 と段階を踏ませる方が逆に遅い、
@@ -16587,6 +16601,88 @@ function App() {
           という報告があったため。コードはコミット履歴に残るので
           ここでは復活させない。 */}
 
+      {/* お知らせ一覧モーダル。ホームには pinned + 最新 1 件だけ出して
+          いるので、過去のお知らせを全部見たい時はここで一覧表示する。 */}
+      {isAnnouncementsModalOpen ? (
+        <div
+          className="settings-modal-backdrop"
+          role="presentation"
+          onClick={() => setIsAnnouncementsModalOpen(false)}
+        >
+          <section
+            className="announcements-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="announcements-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="announcements-modal-head">
+              <div>
+                <p className="card-kicker">{t("お知らせ")}</p>
+                <h2 id="announcements-modal-title">{t("運営からのお知らせ")}</h2>
+              </div>
+              <button
+                type="button"
+                className="announcements-modal-close"
+                onClick={() => setIsAnnouncementsModalOpen(false)}
+                aria-label={t("閉じる")}
+              >
+                ×
+              </button>
+            </header>
+            <ol className="home-announcements-list announcements-modal-list">
+              {ANNOUNCEMENTS.map((announcement) => {
+                const isOpen = openAnnouncementId === announcement.id;
+                return (
+                  <li
+                    key={announcement.id}
+                    className={`home-announcement-item${isOpen ? " is-open" : ""}${announcement.pinned ? " is-pinned" : ""}`}
+                  >
+                    <button
+                      type="button"
+                      className="home-announcement-trigger"
+                      onClick={() =>
+                        setOpenAnnouncementId((current) =>
+                          current === announcement.id ? null : announcement.id,
+                        )
+                      }
+                      aria-expanded={isOpen}
+                    >
+                      <span className="home-announcement-row-text">
+                        <span className="home-announcement-date">
+                          {announcement.pinned ? (
+                            <span className="home-announcement-pin" aria-hidden="true">📌 </span>
+                          ) : null}
+                          {announcement.date}
+                        </span>
+                        <strong className="home-announcement-title">{announcement.title}</strong>
+                      </span>
+                      <span
+                        className={`home-announcement-chevron${isOpen ? " is-open" : ""}`}
+                        aria-hidden="true"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none">
+                          <path
+                            d="M9 6l6 6-6 6"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </span>
+                    </button>
+                    {isOpen ? (
+                      <p className="home-announcement-body">{announcement.body}</p>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
+        </div>
+      ) : null}
+
       {pendingJoinRoom ? (
         <div className="settings-modal-backdrop" role="presentation">
           <section
@@ -19537,72 +19633,88 @@ function App() {
         transition={SPRING_SNAPPY}
       >
 
-      {/* 運営からのお知らせ。ホーム最上部に表示する告知欄。
-          リスト = 日付 + タイトル + 右端の chevron だけを並べ、
-          タップで body 詳細パネルを開閉する (Pokémon 系アプリの
-          おしらせ UI を参考)。中身は ANNOUNCEMENTS (モジュール冒頭
-          の定数) をそのまま描画するだけで新規 Firestore 読み取りは
-          発生しない。 */}
+      {/* 運営からのお知らせ。ホームには pinned (ウェルカム) を固定で
+          先頭に出し、その下に最新 1 件だけ。過去のお知らせはヘッダー
+          右の「すべて見る」から一覧モーダルで辿る。中身は ANNOUNCEMENTS
+          (モジュール冒頭の定数) なので Firestore 読み取りは発生しない。 */}
       <section className="home-announcements card" aria-label={t("運営からのお知らせ")}>
         <header className="home-announcements-head">
-          <p className="card-kicker">{t("お知らせ")}</p>
-          <strong>{t("運営からのお知らせ")}</strong>
+          <div>
+            <p className="card-kicker">{t("お知らせ")}</p>
+            <strong>{t("運営からのお知らせ")}</strong>
+          </div>
+          {NON_PINNED_ANNOUNCEMENTS.length > 1 ? (
+            <button
+              type="button"
+              className="home-announcements-viewall"
+              onClick={() => setIsAnnouncementsModalOpen(true)}
+            >
+              {t("すべて見る")}
+            </button>
+          ) : null}
         </header>
         {ANNOUNCEMENTS.length === 0 ? (
           <p className="home-announcements-empty">{t("いまは新しいお知らせはありません。")}</p>
         ) : (
           <ol className="home-announcements-list">
-            {ANNOUNCEMENTS.map((announcement, index) => {
-              const isOpen = openAnnouncementId === announcement.id;
-              return (
-                <motion.li
-                  key={announcement.id}
-                  className={`home-announcement-item${isOpen ? " is-open" : ""}`}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1], delay: index * 0.05 }}
-                >
-                  <button
-                    type="button"
-                    className="home-announcement-trigger"
-                    onClick={() =>
-                      setOpenAnnouncementId((current) =>
-                        current === announcement.id ? null : announcement.id,
-                      )
-                    }
-                    aria-expanded={isOpen}
-                    aria-controls={`announcement-body-${announcement.id}`}
+            {[PINNED_ANNOUNCEMENT, LATEST_ANNOUNCEMENT]
+              .filter((item): item is Announcement => item !== null)
+              .map((announcement, index) => {
+                const isOpen = openAnnouncementId === announcement.id;
+                return (
+                  <motion.li
+                    key={announcement.id}
+                    className={`home-announcement-item${isOpen ? " is-open" : ""}${announcement.pinned ? " is-pinned" : ""}`}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1], delay: index * 0.05 }}
                   >
-                    <span className="home-announcement-row-text">
-                      <span className="home-announcement-date">{announcement.date}</span>
-                      <strong className="home-announcement-title">{announcement.title}</strong>
-                    </span>
-                    <span
-                      className={`home-announcement-chevron${isOpen ? " is-open" : ""}`}
-                      aria-hidden="true"
+                    <button
+                      type="button"
+                      className="home-announcement-trigger"
+                      onClick={() =>
+                        setOpenAnnouncementId((current) =>
+                          current === announcement.id ? null : announcement.id,
+                        )
+                      }
+                      aria-expanded={isOpen}
+                      aria-controls={`announcement-body-${announcement.id}`}
                     >
-                      <svg viewBox="0 0 24 24" fill="none">
-                        <path
-                          d="M9 6l6 6-6 6"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </span>
-                  </button>
-                  {isOpen ? (
-                    <p
-                      id={`announcement-body-${announcement.id}`}
-                      className="home-announcement-body"
-                    >
-                      {announcement.body}
-                    </p>
-                  ) : null}
-                </motion.li>
-              );
-            })}
+                      <span className="home-announcement-row-text">
+                        <span className="home-announcement-date">
+                          {announcement.pinned ? (
+                            <span className="home-announcement-pin" aria-hidden="true">📌 </span>
+                          ) : null}
+                          {announcement.date}
+                        </span>
+                        <strong className="home-announcement-title">{announcement.title}</strong>
+                      </span>
+                      <span
+                        className={`home-announcement-chevron${isOpen ? " is-open" : ""}`}
+                        aria-hidden="true"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none">
+                          <path
+                            d="M9 6l6 6-6 6"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </span>
+                    </button>
+                    {isOpen ? (
+                      <p
+                        id={`announcement-body-${announcement.id}`}
+                        className="home-announcement-body"
+                      >
+                        {announcement.body}
+                      </p>
+                    ) : null}
+                  </motion.li>
+                );
+              })}
           </ol>
         )}
       </section>
