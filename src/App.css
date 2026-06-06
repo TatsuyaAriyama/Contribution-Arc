@@ -227,6 +227,35 @@
   background: #ef4444;
   border: 2px solid var(--surface);
   pointer-events: none;
+  /* IG / X 風: 未読がある時は subtle に pulse して "新着" を伝える。
+     halo は ::after で別レイヤーに分離、原ドット自体は安定 */
+  animation: notification-dot-bob 2.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+.notification-button .notification-dot::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  background: rgba(239, 68, 68, 0.55);
+  z-index: -1;
+  animation: notification-dot-halo 2.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+@keyframes notification-dot-bob {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+}
+@keyframes notification-dot-halo {
+  0% { transform: scale(0.7); opacity: 0.55; }
+  70%, 100% { transform: scale(2.2); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .notification-button .notification-dot,
+  .notification-button .notification-dot::after {
+    animation: none !important;
+  }
+  .notification-button .notification-dot::after {
+    display: none;
+  }
 }
 
 .notification-panel {
@@ -24384,6 +24413,24 @@ select:focus-visible,
   -webkit-backdrop-filter: blur(20px);
   touch-action: manipulation;
   transition: transform 0.12s ease;
+  /* スライドアップ + フェードで登場 (IG/X 風)。spring カーブで
+     "ふわっと" 着地。 */
+  animation: toast-slide-up 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes toast-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none !important;
+  }
 }
 
 .toast:active {
