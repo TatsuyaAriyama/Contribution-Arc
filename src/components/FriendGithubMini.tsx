@@ -2,8 +2,9 @@
  * Tiny 13-week GitHub heatmap for the sidebar friend cards.
  *
  * Reuses the shared fetcher in services/githubContributions.ts (which
- * caches per-username for 1h) so opening the sidebar for multiple
- * friends doesn't hit the third-party API repeatedly.
+ * caches per-username for 6h, dedups in-flight requests, and backs off
+ * globally when the endpoint is rate limited) so opening the sidebar for
+ * multiple friends doesn't hit the third-party API repeatedly.
  *
  * Renders nothing while loading or on error — the friend card stays
  * visually intact and a stale/missing chart never blocks the rest of
