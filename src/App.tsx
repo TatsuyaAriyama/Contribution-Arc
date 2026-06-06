@@ -4306,6 +4306,13 @@ function App() {
   const [desktopNotificationSettings, setDesktopNotificationSettings] = useState<DesktopNotificationSettings>(
     defaultDesktopNotificationSettings,
   );
+  // 「学習記録の進捗 / 作業部屋退室の積み上げ」を FEED に自動投稿するか。
+  // デフォルト ON で“仲間と作業している感”を出すが、静かに使いたいユーザーが
+  // 抜けないよう設定で OFF できる。永続化は localStorage（uid スコープ）。
+  const [isAutoPostEnabled, setIsAutoPostEnabled] = useState<boolean>(true);
+  // 同種の自動投稿が連投で流れないよう、最後に出した時刻を kind 別に覚えておく。
+  // 同 kind は 60 分以内は集約（=出さない）。
+  const lastAutoPostAtRef = useRef<Record<string, number>>({});
   const [currentView, setCurrentViewRaw] = useState<AppView>("home");
 
   const setCurrentView = useCallback((next: AppView) => {
@@ -5010,6 +5017,12 @@ function App() {
     setLastNotificationReadAt(savedNotificationReadAt || "");
     setDesktopNotificationSettings(readDesktopNotificationSettings(accountScope));
     setAppNotifications(readAppNotifications(accountScope));
+    try {
+      const storedAutoPost = window.localStorage.getItem(`ca:auto-post-enabled:${currentUser.uid}`);
+      setIsAutoPostEnabled(storedAutoPost === null ? true : storedAutoPost !== "false");
+    } catch {
+      setIsAutoPostEnabled(true);
+    }
     setFriends(savedFriends ? (JSON.parse(savedFriends) as FriendPreview[]) : []);
     setFriendRequests(
       savedFriendRequests
@@ -6282,6 +6295,14 @@ function App() {
       JSON.stringify(workspacePresetMessages.slice(0, 6)),
     );
   }, [currentUser, workspacePresetMessages, isWorkspaceLoaded, userId]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    safeSetLocalStorage(
+      `ca:auto-post-enabled:${currentUser.uid}`,
+      isAutoPostEnabled ? "true" : "false",
+    );
+  }, [currentUser, isAutoPostEnabled]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
@@ -8557,6 +8578,14 @@ function App() {
       void saveLearningItemToCloud(db, updated).catch((error) => {
         console.info("Learning item cloud save skipped.", error);
       });
+      // 「未完了 → 完了」に切り替わったタイミングだけ自動投稿で祝う。
+      // 単なる名前変更や色変更で投稿が走ると鬱陶しいので、状態遷移を見る。
+      if (existing.status !== "done" && updated.status === "done") {
+        void enqueueAutoPost({
+          kind: "auto-study",
+          text: `『${updated.name}』をやり遂げました ✨`,
+        });
+      }
     }
 
     setLearningEditorState(null);
@@ -8622,6 +8651,86 @@ function App() {
     void saveLearningItemToCloud(db, updated).catch((error) => {
       console.info("Learning item cloud save skipped.", error);
     });
+    // 20 ページ以上進めたら積み上げを FEED に流す（毎ページ通知は鬱陶しい）。
+    // 60 分のクールダウンは enqueueAutoPost 側で見る。
+    const previousPages =
+      typeof existing.currentPages === "number" ? existing.currentPages : 0;
+    const advanced = clamped - previousPages;
+    if (advanced >= 20) {
+      const pageLabel =
+        typeof existing.totalPages === "number" && existing.totalPages > 0
+          ? `${clamped} / ${existing.totalPages} ページ`
+          : `${clamped} ページ`;
+      void enqueueAutoPost({
+        kind: "auto-study",
+        text: `『${existing.name}』を ${pageLabel} まで進めました 📘`,
+      });
+    }
+  };
+
+  // 「学習記録の進捗」「作業部屋退室の積み上げ」を FEED に自動投稿する共通入口。
+  // 通常の handlePostSubmit と違って draft / toast / Arc 報酬 / オンボーディング
+  // ステップを動かさず、サイレントに 1 件足す（連投を防ぐため、同 kind は 60 分
+  // 集約、設定 OFF / 未ログインなら no-op）。これで「ユーザーが投稿ボタンを
+  // 押さなくても、仲間の積み上げが流れてくる」状態を作る。
+  const enqueueAutoPost = async ({
+    kind,
+    text,
+    studyMinutesValue = 0,
+    roomIdValue = "",
+    roomNameValue = "",
+  }: {
+    kind: "auto-study" | "auto-workspace";
+    text: string;
+    studyMinutesValue?: number;
+    roomIdValue?: string;
+    roomNameValue?: string;
+  }) => {
+    if (!currentUser) return;
+    if (!isAutoPostEnabled) return;
+    const trimmed = text.trim();
+    if (!trimmed) return;
+
+    const now = Date.now();
+    const lastAt = lastAutoPostAtRef.current[kind] || 0;
+    // 60 分以内に同じ kind を出していたら集約してスキップ。長時間ぶっ続けで
+    // 学習している時に 5 ページ進むたびに通知が走るのを防ぐための spam guard。
+    if (now - lastAt < 60 * 60 * 1000) return;
+    lastAutoPostAtRef.current[kind] = now;
+
+    const autoPost: ContributionPostRecord = {
+      id: crypto.randomUUID(),
+      userId: currentUser.uid,
+      username: playerName,
+      avatar: getSerializableAvatar(playerAvatar || currentUser.photoURL || ""),
+      currentCharacter: characterOptions[0].id,
+      characterColor: playerCharacterColor,
+      characterShape: playerCharacterShape,
+      currentTitle,
+      text: trimmed.slice(0, 280),
+      createdAt: new Date().toISOString(),
+      roomId: roomIdValue,
+      roomName: roomNameValue,
+      githubContributionCount: outputStats.commits,
+      studyMinutes: studyMinutesValue,
+      likesCount: 0,
+      likedUserIds: [],
+      postType: kind,
+      syncStatus: "pending",
+      syncError: "",
+    };
+    setPosts((items) => mergePosts([autoPost, ...items.filter((item) => item.id !== autoPost.id)]));
+    void putPersistentItem("posts", autoPost).catch(logPersistError);
+    try {
+      await savePostToCloud(db, autoPost);
+      const synced: ContributionPostRecord = { ...autoPost, syncStatus: "synced", syncError: "" };
+      setPosts((items) => mergePosts([synced, ...items.filter((item) => item.id !== autoPost.id)]));
+      void putPersistentItem("posts", synced).catch(logPersistError);
+    } catch (error) {
+      // 失敗してもユーザー操作ではないので、UI でエラー表示はしない。ローカル
+      // キャッシュには残っているので、後の手動投稿/再ログインで再同期される。
+      console.info("Auto post cloud save skipped.", error);
+    }
   };
 
   const handlePostSubmit = async (
@@ -10824,6 +10933,20 @@ function App() {
         );
       }
     }
+
+    // 「みんなと作業している感」を出すために、5 分以上の積み上げは FEED に
+    // 自動で流す。ゴースト救済（実測ではない概算）の場合は本人の意思では
+    // ないので流さない。アイドル自動退室は流す — そこで作業していたのは事実。
+    if (!isGhostCleanup && session.durationMinutes >= 5) {
+      const taskLabel = session.task ? `「${session.task}」を` : "";
+      void enqueueAutoPost({
+        kind: "auto-workspace",
+        text: `${session.roomName} で${taskLabel}${formatStayTime(session.durationMinutes)}積み上げました ✦ +${session.earnedExp} EXP`,
+        studyMinutesValue: session.durationMinutes,
+        roomIdValue: session.roomId,
+        roomNameValue: session.roomName,
+      });
+    }
   };
 
   // idle 監視 effect（早期 return より前に配置）から、毎レンダー再生成される
@@ -12434,7 +12557,18 @@ function App() {
             return <ProfileCharacterPreview color={look.color} shape={look.shape} />;
           })()}
           <span>
-            <strong>{post.username}</strong>
+            <strong>
+              {post.username}
+              {post.postType === "auto-workspace" ? (
+                <span className="log-post-auto-badge" data-kind="workspace" aria-label="作業部屋での積み上げ">
+                  ✦ 作業ログ
+                </span>
+              ) : post.postType === "auto-study" ? (
+                <span className="log-post-auto-badge" data-kind="study" aria-label="学習記録から自動投稿">
+                  📘 学習ログ
+                </span>
+              ) : null}
+            </strong>
             <small>{formatPostTime(post.createdAt)}</small>
           </span>
         </button>
@@ -16990,6 +17124,25 @@ function App() {
                   >
                     {t("通知音をテスト")}
                   </button>
+                </fieldset>
+              ) : null}
+
+              {!isOnboardingSettings ? (
+                <fieldset className="desktop-notification-settings auto-post-settings">
+                  <legend>{t("自動投稿")}</legend>
+                  <label className="auto-post-toggle">
+                    <span>
+                      <strong>{t("学習・作業の積み上げを自動で投稿する")}</strong>
+                      <small>
+                        {t("作業部屋を5分以上利用したり、本のページが進んだら自動でタイムラインに流れます。仲間の積み上げが見えるようになり、お互いを応援しやすくなります。")}
+                      </small>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={isAutoPostEnabled}
+                      onChange={(event) => setIsAutoPostEnabled(event.target.checked)}
+                    />
+                  </label>
                 </fieldset>
               ) : null}
 

@@ -16,6 +16,8 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 
+export type ContributionPostType = "manual" | "auto-study" | "auto-workspace";
+
 export type ContributionPostRecord = {
   id: string;
   userId: string;
@@ -35,6 +37,10 @@ export type ContributionPostRecord = {
   studyMinutes: number;
   likesCount: number;
   likedUserIds: string[];
+  // どの経路で投稿されたか。auto-* は「学習記録 / 作業部屋退室から自動で流れた
+  // 積み上げ通知」で、UI 側でバッジを出して通常の手書き投稿と見分けられるよう
+  // にする。未設定 (legacy) は manual 扱い。
+  postType?: ContributionPostType;
   syncStatus?: "synced" | "pending";
   syncError?: string;
 };
@@ -53,6 +59,13 @@ export type ContributionReplyRecord = {
 
 function readString(value: unknown, fallback = "") {
   return typeof value === "string" ? value : fallback;
+}
+
+function readPostType(value: unknown): ContributionPostType | undefined {
+  if (value === "manual" || value === "auto-study" || value === "auto-workspace") {
+    return value;
+  }
+  return undefined;
 }
 
 function readNumber(value: unknown, fallback = 0) {
@@ -109,6 +122,7 @@ export function subscribePostsFromCloud(
           studyMinutes: readNumber(data.studyMinutes),
           likesCount: readNumber(data.likesCount),
           likedUserIds: readStringList(data.likedUserIds),
+          postType: readPostType(data.postType),
           syncStatus: "synced" as const,
         };
       });
