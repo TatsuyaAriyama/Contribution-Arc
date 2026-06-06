@@ -812,6 +812,14 @@ const characterColorOptions = [
   { name: "薔薇", value: "#b05268" },
   { name: "琥珀", value: "#c8a95b" },
   { name: "苔色", value: "#6f8f3f" },
+  { name: "煉瓦", value: "#9c5a4a" },
+  { name: "胡桃", value: "#8a6a4f" },
+  { name: "枯草", value: "#a8986a" },
+  { name: "若竹", value: "#4f977a" },
+  { name: "藍鼠", value: "#5f6f7f" },
+  { name: "鴇鼠", value: "#a88088" },
+  { name: "利休鼠", value: "#6e7b6e" },
+  { name: "藤鼠", value: "#8a82a8" },
   { name: "墨", value: "#111827" },
 ];
 
