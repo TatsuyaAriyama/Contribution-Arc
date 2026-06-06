@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   buildDeck,
   computePayout,
@@ -54,6 +54,17 @@ export default function PokerView({
   const [held, setHeld] = useState<boolean[]>([false, false, false, false, false]);
   const [phase, setPhase] = useState<Phase>("idle");
   const [deck, setDeck] = useState<Card[]>([]);
+  /* One monotonically-incrementing id per card slot. DEAL refreshes all
+     five; DRAW refreshes only the slots the player did not HOLD. We
+     wire these into the React `key` attribute so the CSS deal-in
+     animation fires exactly on the slots that just changed — held
+     cards stay still, redrawn cards flip in. */
+  const [cardKeys, setCardKeys] = useState<number[]>([0, 0, 0, 0, 0]);
+  const cardKeyCounterRef = useRef(0);
+  const nextCardKey = () => ++cardKeyCounterRef.current;
+  /* Displayed chip balance — animates toward `pokerChips` so wins feel
+     like the credits tick up. Updated by an effect below. */
+  const [displayChips, setDisplayChips] = useState(pokerChips);
   const [lastResult, setLastResult] = useState<{
     evaluation: HandEval;
     payout: number;
@@ -82,6 +93,30 @@ export default function PokerView({
   const canDeal = phase !== "dealt" && activeBalance >= activeBet;
   const canDraw = phase === "dealt";
 
+  /* Count-up animation for the chip balance display. When `pokerChips`
+     jumps (deal cost / win payout), tween the visible number over ~600ms
+     so it feels like the credit counter is settling. requestAnimationFrame
+     keeps it smooth without locking the main thread on a setInterval. */
+  useEffect(() => {
+    if (displayChips === pokerChips) return;
+    const start = displayChips;
+    const delta = pokerChips - start;
+    const duration = Math.min(900, 350 + Math.abs(delta) * 0.6);
+    const startedAt = performance.now();
+    let raf = 0;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - startedAt) / duration);
+      // Ease-out cubic.
+      const eased = 1 - Math.pow(1 - t, 3);
+      const value = Math.round(start + delta * eased);
+      setDisplayChips(value);
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pokerChips]);
+
   function handleDeal() {
     if (!canDeal) return;
     const fresh = shuffle(buildDeck());
@@ -89,6 +124,8 @@ export default function PokerView({
     setDeck(fresh.slice(5));
     setHand(newHand);
     setHeld([false, false, false, false, false]);
+    // Re-key every slot so the deal-in animation fires for all five.
+    setCardKeys([nextCardKey(), nextCardKey(), nextCardKey(), nextCardKey(), nextCardKey()]);
     if (mode === "normal") {
       setPokerChips((c) => c - normalBet);
     } else {
@@ -106,6 +143,9 @@ export default function PokerView({
       if (held[idx]) return card;
       return remaining.shift() ?? card;
     });
+    // Re-key only the slots that swapped in a fresh card so HOLD cards
+    // do not jump while the drawn cards flip in.
+    setCardKeys((prev) => prev.map((k, i) => (held[i] ? k : nextCardKey())));
     const evaluation = evaluateHand(finalHand);
 
     /* Convert the chosen stake to a per-credit base, then apply the
@@ -204,7 +244,7 @@ export default function PokerView({
           </div>
           <div className="poker-balance" title="ポーカーチップ残高">
             <span className="poker-balance-icon">●</span>
-            <span className="poker-balance-value">{pokerChips.toLocaleString()}</span>
+            <span className="poker-balance-value">{displayChips.toLocaleString()}</span>
             <span className="poker-balance-label">chip</span>
           </div>
           <div className="poker-balance is-focus" title="今日のFocus Chip残高">
@@ -238,7 +278,15 @@ export default function PokerView({
           </p>
         </div>
 
-        <div className="poker-table">
+        <div
+          className={`poker-table${
+            lastResult && lastResult.payout > 0 ? " is-winning" : ""
+          }${winStreak >= HOT_STREAK_THRESHOLD ? " is-armed" : ""}`}
+        >
+          {/* Felt highlights — pure CSS, no DOM cost beyond two layers */}
+          <div className="poker-table-glow" aria-hidden="true" />
+          <div className="poker-table-rim" aria-hidden="true" />
+
           <div className="poker-streak-row">
             <div
               className={`poker-streak${
@@ -246,34 +294,64 @@ export default function PokerView({
               }`}
               aria-label="連勝カウンタ"
             >
-              {winStreak >= HOT_STREAK_THRESHOLD
-                ? "🔥 HOT STREAK +20%"
-                : `WIN STREAK ${winStreak} / ${HOT_STREAK_THRESHOLD}`}
+              {winStreak >= HOT_STREAK_THRESHOLD ? (
+                <>
+                  <span className="poker-streak-flame">🔥</span>
+                  <span>HOT STREAK</span>
+                  <span className="poker-streak-bonus">+20%</span>
+                </>
+              ) : (
+                <>
+                  <span>WIN STREAK</span>
+                  <span className="poker-streak-dots">
+                    {Array.from({ length: HOT_STREAK_THRESHOLD }).map((_, i) => (
+                      <span
+                        key={i}
+                        className={`poker-streak-dot${i < winStreak ? " is-lit" : ""}`}
+                      />
+                    ))}
+                  </span>
+                </>
+              )}
             </div>
           </div>
 
           <div className="poker-hand">
             {hand.length === 0
               ? Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="poker-card is-placeholder">
-                    <span>♠</span>
+                  <div
+                    key={i}
+                    className="poker-card is-placeholder"
+                    style={{ ["--deal-delay" as string]: `${i * 70}ms` }}
+                  >
+                    <div className="poker-card-back" aria-hidden="true">
+                      <span>♠</span>
+                    </div>
                   </div>
                 ))
               : hand.map((card, i) => {
                   const isRed = card.suit === "♥" || card.suit === "♦";
                   return (
                     <button
-                      key={`${card.rank}-${card.suit}-${i}`}
+                      key={cardKeys[i]}
                       type="button"
                       className={`poker-card${held[i] ? " is-held" : ""}${
                         isRed ? " is-red" : ""
                       }${phase === "settled" ? " is-locked" : ""}`}
+                      style={{ ["--deal-delay" as string]: `${i * 70}ms` }}
                       onClick={() => toggleHold(i)}
                       disabled={phase !== "dealt"}
                       aria-label={`${card.rank} of ${card.suit}${held[i] ? " HELD" : ""}`}
                     >
-                      <span className="poker-card-rank">{card.rank}</span>
-                      <span className="poker-card-suit">{card.suit}</span>
+                      <span className="poker-card-corner top">
+                        <span className="poker-card-rank">{card.rank}</span>
+                        <span className="poker-card-suit-mini">{card.suit}</span>
+                      </span>
+                      <span className="poker-card-suit-center">{card.suit}</span>
+                      <span className="poker-card-corner bottom">
+                        <span className="poker-card-rank">{card.rank}</span>
+                        <span className="poker-card-suit-mini">{card.suit}</span>
+                      </span>
                       <span className="poker-card-hold">HOLD</span>
                     </button>
                   );
@@ -283,27 +361,37 @@ export default function PokerView({
           <div className="poker-result" aria-live="polite">
             {phase === "idle" ? (
               <p className="poker-result-hint">
-                ベットモードとベット額を選び <strong>DEAL</strong>。
+                ベットを決めて <strong>DEAL</strong>。
               </p>
             ) : phase === "dealt" ? (
               <p className="poker-result-hint">
-                残したいカードをタップ → <strong>DRAW</strong>。
+                残したい札をタップ → <strong>DRAW</strong>。
               </p>
             ) : lastResult ? (
-              <p
-                className={`poker-result-text${
-                  lastResult.payout > 0 ? " is-win" : ""
-                }`}
+              <div
+                key={cardKeys.join("-")}
+                className={`poker-result-card${
+                  lastResult.payout > 0 ? " is-win" : " is-loss"
+                }${lastResult.hotStreakBonus ? " is-bonus" : ""}`}
               >
-                <strong>{lastResult.evaluation.label}</strong>
-                <span>
-                  {lastResult.payout > 0
-                    ? `+${lastResult.payout.toLocaleString()} chip${
-                        lastResult.hotStreakBonus ? " 🔥" : ""
-                      }`
-                    : "ノーペイ"}
-                </span>
-              </p>
+                <p className="poker-result-rank">{lastResult.evaluation.label}</p>
+                <p className="poker-result-payout">
+                  {lastResult.payout > 0 ? (
+                    <>
+                      <span className="poker-result-plus">+</span>
+                      <span className="poker-result-amount">
+                        {lastResult.payout.toLocaleString()}
+                      </span>
+                      <span className="poker-result-unit">chip</span>
+                      {lastResult.hotStreakBonus ? (
+                        <span className="poker-result-bonus-tag">🔥 STREAK</span>
+                      ) : null}
+                    </>
+                  ) : (
+                    <span className="poker-result-zero">ノーペイ</span>
+                  )}
+                </p>
+              </div>
             ) : null}
           </div>
         </div>
@@ -340,19 +428,27 @@ export default function PokerView({
             </button>
           </div>
 
-          <div className="poker-stat">
+          <div className="poker-bet-panel">
             <p className="poker-stat-label">Bet</p>
             <div className="poker-bet-control">
               <button
                 type="button"
+                className="poker-bet-step"
                 onClick={() => bumpBet(-1)}
-                disabled={phase === "dealt" || activeBet <= (mode === "normal" ? NORMAL_BET_STEPS[0] : FOCUS_BET_STEPS[0])}
+                disabled={phase === "dealt" || (mode === "normal" ? normalBetIdx === 0 : focusBetIdx === 0)}
+                aria-label="ベットを下げる"
               >
                 −
               </button>
-              <span>{activeBet}</span>
+              <div className="poker-bet-value-wrap">
+                <span className="poker-bet-value" key={`${mode}-${activeBet}`}>{activeBet}</span>
+                <span className="poker-bet-value-unit">
+                  {mode === "normal" ? "chip" : "focus"}
+                </span>
+              </div>
               <button
                 type="button"
+                className="poker-bet-step"
                 onClick={() => bumpBet(1)}
                 disabled={
                   phase === "dealt" ||
@@ -360,37 +456,53 @@ export default function PokerView({
                     ? normalBetIdx >= NORMAL_BET_STEPS.length - 1
                     : focusBetIdx >= FOCUS_BET_STEPS.length - 1)
                 }
+                aria-label="ベットを上げる"
               >
                 ＋
               </button>
             </div>
+            <div className="poker-bet-ticks" aria-hidden="true">
+              {(mode === "normal" ? NORMAL_BET_STEPS : FOCUS_BET_STEPS).map((step, i) => {
+                const activeIdx = mode === "normal" ? normalBetIdx : focusBetIdx;
+                return (
+                  <span
+                    key={step}
+                    className={`poker-bet-tick${i <= activeIdx ? " is-on" : ""}${
+                      i === activeIdx ? " is-current" : ""
+                    }`}
+                  />
+                );
+              })}
+            </div>
             <p className="poker-bet-note">
               {mode === "normal"
-                ? `通常チップ × ${activeBet}`
-                : `Focus Chip × ${activeBet}（配当 ×1.5）`}
+                ? "通常チップ。RTP 95% でジリ貧"
+                : "Focus Chip。配当 ×1.5（勝ち越し可能）"}
             </p>
           </div>
 
           {phase === "dealt" ? (
             <button
               type="button"
-              className="poker-action primary"
+              className="poker-action primary is-draw"
               onClick={handleDraw}
             >
-              DRAW
+              <span className="poker-action-label">DRAW</span>
+              <span className="poker-action-sub">不要札を交換</span>
             </button>
           ) : (
             <button
               type="button"
-              className="poker-action primary"
+              className="poker-action primary is-deal"
               onClick={handleDeal}
               disabled={!canDeal}
             >
-              {canDeal
-                ? "DEAL"
-                : mode === "normal"
-                  ? "チップ不足"
-                  : "Focus Chip 不足"}
+              <span className="poker-action-label">
+                {canDeal ? "DEAL" : mode === "normal" ? "チップ不足" : "Focus 不足"}
+              </span>
+              <span className="poker-action-sub">
+                {canDeal ? `−${activeBet} ${mode === "normal" ? "chip" : "focus"}` : "両替してね"}
+              </span>
             </button>
           )}
 
