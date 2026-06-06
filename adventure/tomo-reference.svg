@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  灯 (Tomo) — 初期キャラクター / リファレンスアートワーク
+  角丸スクエアボディ + 明るい同色の内パネル（目なし） + 中央寄りの 2 本足。
+  ユーザー提供画像準拠。ボディ色はアプリではプレイヤー選択色 (actor-color 変数) 依存。
+  ここでは代表色として 菫 #7667a8 を使用し、内パネルは白と混ぜた明るい #bdb6d5。
+  座標系: viewBox 128 x 140 / 中心 (64,58) / 静止ポーズ
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 140" width="256" height="280">
+  <defs>
+    <linearGradient id="tomoTop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.20"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 足（ボディより先に描いて付け根が隠れる）。中央寄り・近接の暗色 2 本 -->
+  <rect x="44" y="100" width="18" height="24" rx="7" fill="#09110e"/>
+  <rect x="66" y="100" width="18" height="24" rx="7" fill="#09110e"/>
+
+  <!-- ボディ: 角丸スクエア（プレイヤー色 / 例: 菫 #7667a8） -->
+  <rect x="20" y="14" width="88" height="88" rx="22" fill="#7667a8"/>
+  <!-- 上部ハイライト -->
+  <rect x="20" y="14" width="88" height="88" rx="22" fill="url(#tomoTop)"/>
+
+  <!-- 内パネル: 明るい同色の角丸スクエア（目なし） -->
+  <rect x="39" y="33" width="50" height="50" rx="12" fill="#bdb6d5"/>
+</svg>
