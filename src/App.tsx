@@ -1,5 +1,7 @@
 import {
   Fragment,
+  Suspense,
+  lazy,
   useCallback,
   useEffect,
   useMemo,
@@ -187,6 +189,13 @@ import {
   type Language,
 } from "./i18n/translations";
 import "./App.css";
+import type {
+  AdventureProgress,
+  OwnedTrophy,
+} from "./adventure/types";
+
+// Phaser を含む冒険機能は開くまでロードしない（バンドル分割）。
+const AdventureView = lazy(() => import("./adventure/AdventureView"));
 
 declare global {
   interface Window {
@@ -376,6 +385,9 @@ type UserProfile = {
   pinnedFriendUids?: string[];
   mutedFriendUids?: string[];
   blockedFriendUids?: string[];
+  /* 冒険(Adventure)RPG。未プレイなら null / 空配列にフォールバック。 */
+  adventureProgress?: AdventureProgress | null;
+  ownedTrophyItems?: OwnedTrophy[];
 };
 
 type FriendRequestStatus = "pending" | "accepted" | "rejected";
@@ -1658,6 +1670,15 @@ function normalizeUserProfile(uid: string, data: Partial<UserProfile>): UserProf
     blockedFriendUids: Array.isArray(data.blockedFriendUids)
       ? data.blockedFriendUids.filter((value): value is string => typeof value === "string")
       : undefined,
+    /* 冒険(Adventure): 未プレイは null / 空配列。型を厳密に検証せず
+       shape だけ最低限ガード（破損データで全体が壊れないように）。 */
+    adventureProgress:
+      data.adventureProgress && typeof data.adventureProgress === "object"
+        ? (data.adventureProgress as AdventureProgress)
+        : null,
+    ownedTrophyItems: Array.isArray(data.ownedTrophyItems)
+      ? (data.ownedTrophyItems as OwnedTrophy[])
+      : [],
   };
 }
 
@@ -4279,6 +4300,9 @@ function App() {
   const [playerCharacterColor, setPlayerCharacterColor] = useState(characterColorOptions[0].value);
   const [playerCharacterShape, setPlayerCharacterShape] = useState<CharacterShape>("default");
   const [ownedCharacterShapes, setOwnedCharacterShapes] = useState<CharacterShape[]>(["default"]);
+  // 冒険(Adventure)RPG: 進行状況と所持トロフィー。Firestore の users doc に相乗り永続化。
+  const [adventureProgress, setAdventureProgress] = useState<AdventureProgress | null>(null);
+  const [ownedTrophyItems, setOwnedTrophyItems] = useState<OwnedTrophy[]>([]);
   // Set the moment the user picks a color/shape in this session. The
   // account-load effect runs an async `getDoc` whose `.then()` writes the
   // cloud's stored appearance back into local state — if that resolves
@@ -5071,6 +5095,9 @@ function App() {
             (first, second) => first - second,
           ),
         );
+        // 冒険(Adventure): cloud の進行・トロフィーを復元。
+        setAdventureProgress(profile.adventureProgress ?? null);
+        setOwnedTrophyItems(profile.ownedTrophyItems ?? []);
         if (resolvedUserId) {
           safeSetLocalStorage(`contribution-arc-user-id-${currentUser.uid}`, resolvedUserId);
           /* cross-device 同期：cloud profile に onboardingCompletedAt が
@@ -9095,6 +9122,10 @@ function App() {
       mutedFriendUids: [...mutedFriendUids].sort(),
       blockedFriendUids: [...blockedFriendUids].sort(),
       onboardingCompletedAt: cloudOnboardingCompletedAt,
+      // 冒険(Adventure)RPG の進行・所持トロフィー。専用 onSnapshot を増やさず
+      // 既存の user doc 自動保存に相乗りさせる。
+      adventureProgress,
+      ownedTrophyItems,
       // Mirror the current org membership into the periodic progress
       // write so the user doc converges to one consistent shape even
       // if the user just joined/left via the dedicated helpers.
@@ -18204,6 +18235,27 @@ function App() {
             )}
           </div>
         </motion.section>
+      ) : currentView === "adventure" ? (
+        <motion.section
+          className="adventure-screen"
+          aria-label="Adventure screen"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={SPRING_SNAPPY}
+        >
+          <Suspense fallback={<div className="adventure-loading">冒険を準備中…</div>}>
+            <AdventureView
+              adventureProgress={adventureProgress}
+              setAdventureProgress={setAdventureProgress}
+              ownedTrophyItems={ownedTrophyItems}
+              setOwnedTrophyItems={setOwnedTrophyItems}
+              studyLogs={studyLogs}
+              currentStayMinutes={currentStayMinutes}
+              playerCharacterColor={playerCharacterColor}
+              onBack={() => setCurrentView("workspace")}
+            />
+          </Suspense>
+        </motion.section>
       ) : currentView === "workspace" ? (
         <motion.section
           className="workspace-screen"
@@ -18229,6 +18281,13 @@ function App() {
           <div className="profile-topbar">
             <button type="button" onClick={() => setCurrentView("home")}>
               ← Home
+            </button>
+            <button
+              type="button"
+              className="workspace-adventure-entry"
+              onClick={() => setCurrentView("adventure")}
+            >
+              ⚔ 冒険に出る
             </button>
           </div>
 

@@ -21,6 +21,7 @@ import {
 
 import { guardedOnSnapshot, scheduleDocWrite } from "./firebaseGuard";
 import { normalizePlanTier, type PlanTier } from "./plans";
+import type { AdventureProgress, OwnedTrophy } from "../adventure/types";
 
 export type StudyLogRecord = {
   id: string;
@@ -95,6 +96,9 @@ export type UserProgressRecord = {
   pinnedFriendUids?: string[];
   mutedFriendUids?: string[];
   blockedFriendUids?: string[];
+  /* 冒険(Adventure)RPG。未プレイなら null / 空配列。 */
+  adventureProgress?: AdventureProgress | null;
+  ownedTrophyItems?: OwnedTrophy[];
 };
 
 export type GitHubActivitySummary = {
@@ -477,6 +481,9 @@ export async function saveUserProgressToCloud(db: Firestore, profile: UserProgre
     ...(Array.isArray(profile.pinnedFriendUids) ? { pinnedFriendUids: profile.pinnedFriendUids } : {}),
     ...(Array.isArray(profile.mutedFriendUids) ? { mutedFriendUids: profile.mutedFriendUids } : {}),
     ...(Array.isArray(profile.blockedFriendUids) ? { blockedFriendUids: profile.blockedFriendUids } : {}),
+    // 冒険: 進行は null も意味があるので存在チェックのみ。トロフィーは配列のみ書く。
+    ...(profile.adventureProgress !== undefined ? { adventureProgress: profile.adventureProgress } : {}),
+    ...(Array.isArray(profile.ownedTrophyItems) ? { ownedTrophyItems: profile.ownedTrophyItems } : {}),
   };
 
   // Build the dedup key from every meaningful field EXCEPT lastSyncedAt

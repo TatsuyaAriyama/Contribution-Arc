@@ -2997,10 +2997,25 @@
 
 .profile-layout {
   display: grid;
-  grid-template-columns: minmax(0, 640px);
-  justify-content: center;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: start;
   gap: 16px;
+  max-width: 1080px;
+  margin-inline: auto;
+}
+
+/* 既定は全幅。ステータス(左)と分身カード(右)だけ 1 行目に左右で並べ、
+   クイックアクション・累計・学習ログはその下に全幅で積む。 */
+.profile-layout > * {
+  grid-column: 1 / -1;
+}
+.profile-layout > .status-card {
+  grid-column: 1;
+  grid-row: 1;
+}
+.profile-layout > .character-color-card {
+  grid-column: 2;
+  grid-row: 1;
 }
 
 .determination-card {
@@ -9005,6 +9020,12 @@
   .room-output-panel {
     grid-template-columns: 1fr;
     min-height: auto;
+  }
+
+  .profile-layout > .status-card,
+  .profile-layout > .character-color-card {
+    grid-column: 1 / -1;
+    grid-row: auto;
   }
 
   .presence-list {
@@ -33814,4 +33835,107 @@ select:disabled {
 ::selection {
   background: rgba(var(--green-rgb, 31, 111, 74), 0.28);
   color: var(--ink);
+}
+
+/* ===== 冒険(Adventure)RPG ===== */
+.adventure-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.adventure-view {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.adventure-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.adventure-back {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.1));
+  background: var(--surface, #fff);
+  color: var(--ink, #1a1a1a);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.adventure-back:hover {
+  background: var(--surface-hover, rgba(0, 0, 0, 0.04));
+}
+.adventure-back:active {
+  transform: scale(0.98);
+}
+
+.adventure-progress-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-muted, #555);
+}
+
+.adventure-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #10131c;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+}
+
+.adventure-canvas {
+  width: 100%;
+  height: 100%;
+}
+.adventure-canvas canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.adventure-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 200px;
+  color: #c7cbd6;
+  font-size: 14px;
+}
+
+.adventure-hint {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-muted, #666);
+  text-align: center;
+}
+
+.workspace-adventure-entry {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(118, 103, 168, 0.35);
+  background: rgba(118, 103, 168, 0.1);
+  color: #6a5aa0;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.workspace-adventure-entry:hover {
+  background: rgba(118, 103, 168, 0.18);
+}
+.workspace-adventure-entry:active {
+  transform: scale(0.98);
 }
