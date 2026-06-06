@@ -690,6 +690,18 @@ const studyColorOptions = [
   { name: "Moss", value: "#6f8f45" },
 ];
 
+// 記録フォームの時間クイック選択（分単位）。よく使う区切りを並べ、
+// 1タップで入力できるようにする。自由入力（分）と併用。
+const STUDY_TIME_PRESETS = [15, 30, 45, 60, 90, 120];
+
+// 分を人が読める表記に。60分以上は「N時間」「N時間M分」に丸める。
+function formatStudyMinutesLabel(minutes: number) {
+  if (minutes < 60) return `${minutes}分`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours}時間` : `${hours}時間${rest}分`;
+}
+
 /* Character silhouette options offered in the profile editor.
    Order is intentional — "default" stays first so it's the
    visual fallback for legacy users. Adding a new shape here also
@@ -3935,9 +3947,10 @@ function App() {
   // input is open, plus the in-flight text value. null = closed.
   const [learningPageEditId, setLearningPageEditId] = useState<string | null>(null);
   const [learningPageEditValue, setLearningPageEditValue] = useState("");
-  const [studySubject, setStudySubject] = useState("React");
-  const [studyAmount, setStudyAmount] = useState("1");
-  const [studyUnit, setStudyUnit] = useState<"hours" | "minutes">("hours");
+  const [studySubject, setStudySubject] = useState("");
+  // 学習時間は「分」で保持する。1分単位で直感的に記録できるよう、
+  // 旧来の「時間/分の単位切替＋0.1刻み」は廃止して分一本に統一した。
+  const [studyAmount, setStudyAmount] = useState("30");
   const [studyColor, setStudyColor] = useState(studyColorOptions[0].value);
   /* Phase 10c: Learning Item ごとのインライン「他の時間…」入力. null
      なら閉, それ以外なら開いてるカードの id. 文字列入力なので空白や
@@ -8222,11 +8235,11 @@ function App() {
     }
 
     const amount = Number(studyAmount);
-    if (!studySubject.trim() || Number.isNaN(amount) || amount <= 0) {
+    if (!studySubject.trim() || !Number.isFinite(amount) || amount <= 0) {
       return;
     }
 
-    const minutes = Math.round(studyUnit === "hours" ? amount * 60 : amount);
+    const minutes = Math.max(1, Math.round(amount));
     const trimmedSubject = studySubject.trim();
     const matchedItem = learningItems.find(
       (item) => !item.archived && item.name.toLowerCase() === trimmedSubject.toLowerCase(),
@@ -8251,7 +8264,16 @@ function App() {
       // will retry the upload on the next snapshot.
       console.error("Study log cloud save failed.", error);
     });
-    setStudyAmount(studyUnit === "hours" ? "1" : "30");
+    setStudyAmount("30");
+  };
+
+  // 分入力の±ステッパー。最小1分。空欄や不正値は0扱いから加算する。
+  const adjustStudyMinutes = (delta: number) => {
+    setStudyAmount((prev) => {
+      const current = Number(prev);
+      const base = Number.isFinite(current) ? current : 0;
+      return String(Math.max(1, Math.round(base) + delta));
+    });
   };
 
   const openLearningEditorForCreate = (presetName = "") => {
@@ -8337,44 +8359,69 @@ function App() {
           );
         })()}
       </label>
-      <label>
-        <span>時間</span>
-        <input
-          type="number"
-          min="0.1"
-          step="0.1"
-          value={studyAmount}
-          onChange={(event) => setStudyAmount(event.target.value)}
-        />
-      </label>
-      <label>
-        <span>単位</span>
-        <select
-          value={studyUnit}
-          onChange={(event) => setStudyUnit(event.target.value as "hours" | "minutes")}
-        >
-          <option value="hours">h</option>
-          <option value="minutes">m</option>
-        </select>
-      </label>
-      <fieldset className="study-color-field">
-        <legend>カラー</legend>
-        <div className="study-color-options">
-          {studyColorOptions.map((color) => (
-            <label key={color.value} title={color.name}>
-              <input
-                type="radio"
-                name="study-color"
-                value={color.value}
-                checked={studyColor === color.value}
-                onChange={(event) => setStudyColor(event.target.value)}
-              />
-              <span style={{ background: color.value }} />
-            </label>
+      <div className="study-time-field">
+        <span className="study-time-label">{t("時間")}</span>
+        <div className="study-time-quick" role="group" aria-label={t("時間")}>
+          {STUDY_TIME_PRESETS.map((preset) => (
+            <button
+              type="button"
+              key={preset}
+              className={Number(studyAmount) === preset ? "active" : ""}
+              onClick={() => setStudyAmount(String(preset))}
+            >
+              {formatStudyMinutesLabel(preset)}
+            </button>
           ))}
         </div>
-      </fieldset>
-      <button type="submit">記録 +EXP</button>
+        <div className="study-time-input">
+          <button
+            type="button"
+            className="study-time-step"
+            aria-label="1分減らす"
+            onClick={() => adjustStudyMinutes(-1)}
+          >
+            −
+          </button>
+          <input
+            type="number"
+            min="1"
+            step="1"
+            inputMode="numeric"
+            value={studyAmount}
+            onChange={(event) => setStudyAmount(event.target.value)}
+            aria-label={t("時間")}
+          />
+          <span className="study-time-unit">分</span>
+          <button
+            type="button"
+            className="study-time-step"
+            aria-label="1分増やす"
+            onClick={() => adjustStudyMinutes(1)}
+          >
+            ＋
+          </button>
+        </div>
+      </div>
+      <div className="study-form-footer">
+        <fieldset className="study-color-field">
+          <legend>カラー</legend>
+          <div className="study-color-options">
+            {studyColorOptions.map((color) => (
+              <label key={color.value} title={color.name}>
+                <input
+                  type="radio"
+                  name="study-color"
+                  value={color.value}
+                  checked={studyColor === color.value}
+                  onChange={(event) => setStudyColor(event.target.value)}
+                />
+                <span style={{ background: color.value }} />
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <button type="submit">記録 +EXP</button>
+      </div>
     </form>
   );
 
