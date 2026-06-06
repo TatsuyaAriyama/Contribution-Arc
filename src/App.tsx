@@ -1877,6 +1877,34 @@ function formatPostTime(createdAt: string) {
   return new Date(createdAt).toLocaleDateString("ja-JP", { month: "2-digit", day: "2-digit" });
 }
 
+// 返信のタイムスタンプ。直近(24時間以内)は「N分前 / N時間前」で相対表示し、
+// 1日以上経過したものは日時(M/D HH:mm)を出して「いつ返信されたか」が
+// 一目で分かるようにする。小さく添えるバイライン用途。
+function formatReplyTime(createdAt: string) {
+  const createdTime = new Date(createdAt).getTime();
+  if (!Number.isFinite(createdTime)) {
+    return "";
+  }
+
+  const diffMinutes = Math.max(0, Math.floor((Date.now() - createdTime) / 60000));
+  if (diffMinutes < 1) {
+    return "たった今";
+  }
+  if (diffMinutes < 60) {
+    return `${diffMinutes}分前`;
+  }
+  if (diffMinutes < 60 * 24) {
+    return `${Math.floor(diffMinutes / 60)}時間前`;
+  }
+
+  return new Date(createdAt).toLocaleString("ja-JP", {
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function getDateInputValue(date = new Date()) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -12367,6 +12395,11 @@ function App() {
                   })()}
                   <p>
                     <strong>{reply.username}</strong>
+                    {formatReplyTime(reply.createdAt) ? (
+                      <time className="post-reply-time" dateTime={reply.createdAt}>
+                        {formatReplyTime(reply.createdAt)}
+                      </time>
+                    ) : null}
                     <span>{reply.text}</span>
                   </p>
                 </motion.button>

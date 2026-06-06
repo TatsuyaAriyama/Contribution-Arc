@@ -5119,6 +5119,14 @@
   font-weight: 880;
 }
 
+.post-reply-time {
+  margin-right: 6px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 720;
+  white-space: nowrap;
+}
+
 .post-reply-list > small {
   color: var(--muted);
   font-size: 10px;
