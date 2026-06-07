@@ -33614,9 +33614,11 @@ body.workspace-popover-active .preset-message-panel.hud-fab,
     border-radius: 999px;
   }
 
-  /* ===== Toast (グローバル通知) の位置調整 ===== */
+  /* ===== Toast (グローバル通知) の位置調整 =====
+     モーダル (例: 学習詳細の「+30 分」記録) を開いている状態でも
+     モーダルのフッターやボトムナビと重ならない高さに置く。 */
   .toast-host {
-    bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: calc(120px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   /* ===== 共通：カード見出しの統一 ===== */
