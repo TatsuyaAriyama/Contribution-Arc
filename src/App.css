@@ -6095,93 +6095,116 @@
 
 /* 日報報酬バナー — 当日のみ表示。「両方共有で +50 Arc」のインセンティブと
    進捗（plan / reflection どちらが済んだか）を 1 行で示す。獲得済みは
-   is-earned で色を反転し「明日もどうぞ」と次の継続ループに引き継ぐ。 */
+   is-earned で色を反転し「明日もどうぞ」と次の継続ループに引き継ぐ。
+   コントラストを上げて、未達/達成のチップもピル状にして読み取れるように
+   している（初版が薄すぎて読めない、というフィードバックの修正）。 */
 .daily-reward-banner {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   margin: 0 0 12px;
-  padding: 10px 14px;
-  border: 1px solid rgba(70, 160, 110, 0.22);
+  padding: 12px 14px;
+  border: 1px solid rgba(44, 138, 90, 0.45);
   border-radius: 16px;
-  background: linear-gradient(135deg, rgba(70, 160, 110, 0.08), rgba(120, 200, 160, 0.16));
-  color: #1f5a3d;
-  font-size: 12.5px;
+  background: linear-gradient(135deg, rgba(44, 138, 90, 0.18), rgba(80, 180, 130, 0.28));
+  color: #0f3a25;
+  font-size: 13px;
 }
 .daily-reward-banner.is-earned {
-  border-color: rgba(218, 165, 32, 0.32);
-  background: linear-gradient(135deg, rgba(255, 215, 70, 0.12), rgba(255, 200, 100, 0.22));
-  color: #7a5410;
+  border-color: rgba(180, 130, 20, 0.55);
+  background: linear-gradient(135deg, rgba(255, 200, 70, 0.32), rgba(255, 180, 60, 0.42));
+  color: #5a3a08;
 }
 .daily-reward-banner-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: rgba(70, 160, 110, 0.18);
-  color: #2c8a5a;
-  font-size: 13px;
+  background: #2c8a5a;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
   flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(44, 138, 90, 0.32);
 }
 .daily-reward-banner.is-earned .daily-reward-banner-icon {
-  background: rgba(218, 165, 32, 0.18);
-  color: #8a6410;
+  background: #d49a1a;
+  box-shadow: 0 2px 6px rgba(180, 130, 20, 0.36);
 }
 .daily-reward-banner-text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   min-width: 0;
   flex: 1;
 }
 .daily-reward-banner-text strong {
-  font-size: 13px;
+  color: inherit;
+  font-size: 13.5px;
   font-weight: 700;
   letter-spacing: 0;
+  line-height: 1.3;
 }
 .daily-reward-banner-text small {
   color: inherit;
-  opacity: 0.7;
+  opacity: 0.85;
   font-size: 11.5px;
   font-weight: 500;
+  line-height: 1.4;
 }
 .daily-reward-banner-progress {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 4px 10px;
+  gap: 6px;
   font-size: 11.5px;
   font-weight: 600;
 }
 .daily-reward-banner-progress > span {
-  opacity: 0.55;
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border: 1px solid rgba(44, 138, 90, 0.35);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  color: #2c5a40;
   letter-spacing: 0.01em;
 }
 .daily-reward-banner-progress > span.is-done {
-  opacity: 1;
-  color: #1f5a3d;
+  background: #2c8a5a;
+  border-color: #2c8a5a;
+  color: #ffffff;
 }
 @media (prefers-color-scheme: dark) {
   .daily-reward-banner {
-    border-color: rgba(110, 200, 150, 0.32);
-    background: linear-gradient(135deg, rgba(60, 120, 90, 0.32), rgba(80, 150, 110, 0.4));
-    color: #c8eccd;
+    border-color: rgba(120, 220, 160, 0.5);
+    background: linear-gradient(135deg, rgba(40, 110, 70, 0.6), rgba(60, 150, 100, 0.66));
+    color: #e6f6ea;
   }
   .daily-reward-banner-icon {
-    background: rgba(110, 200, 150, 0.28);
-    color: #c8eccd;
+    background: #5ad196;
+    color: #0f3a25;
+    box-shadow: 0 2px 6px rgba(20, 60, 40, 0.5);
+  }
+  .daily-reward-banner-progress > span {
+    background: rgba(20, 50, 35, 0.55);
+    border-color: rgba(120, 220, 160, 0.45);
+    color: #e6f6ea;
   }
   .daily-reward-banner-progress > span.is-done {
-    color: #c8eccd;
+    background: #5ad196;
+    border-color: #5ad196;
+    color: #0f3a25;
   }
   .daily-reward-banner.is-earned {
-    background: linear-gradient(135deg, rgba(160, 120, 40, 0.4), rgba(200, 150, 60, 0.5));
+    background: linear-gradient(135deg, rgba(180, 130, 30, 0.58), rgba(220, 170, 60, 0.66));
     color: #ffe6a8;
+    border-color: rgba(255, 200, 100, 0.55);
   }
   .daily-reward-banner.is-earned .daily-reward-banner-icon {
-    background: rgba(255, 215, 100, 0.28);
-    color: #ffe6a8;
+    background: #f5c453;
+    color: #5a3a08;
   }
 }
 
