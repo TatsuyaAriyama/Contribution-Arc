@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   dismissToast,
@@ -18,11 +19,23 @@ import {
  *  - Spring-in / fade-out via AnimatePresence so a dismissed toast
  *    doesn't yank the layout.
  *  - On mobile the host sits above the bottom navigation (which has
- *    z-index 70) — the host uses z-index 80 so toasts always layer on
- *    top of the nav without obscuring it for tap.
+ *    z-index 70) and above the .settings-modal-backdrop (z-index 100)
+ *    so a toast emitted from inside a modal (e.g. quick-log "+30 分")
+ *    is still readable. The host uses z-index 200 from the stylesheet.
  *  - Tap anywhere on a toast to dismiss early; cursor:pointer + the
  *    role=status combo gives screen readers polite live-region
  *    behaviour without making each toast a separate landmark.
+ *
+ * Why portal to <body>:
+ *  - The app root is wrapped in `motion.main`, which generates a CSS
+ *    `transform` on every frame. A `transform` on an ancestor turns
+ *    that ancestor into the containing block for any descendant
+ *    `position: fixed`, so the toast host's `bottom` / `z-index` are
+ *    measured against `motion.main` instead of the viewport. That made
+ *    toasts emitted from inside the learning-detail modal end up
+ *    *below* the visible viewport on mobile (reported with screenshot
+ *    of "+XXmin" never showing up). Portalling to `document.body`
+ *    sidesteps the transform-containing-block trap entirely.
  */
 const MAX_VISIBLE = 4;
 
@@ -34,12 +47,13 @@ export function ToastHost() {
   }, []);
 
   if (toasts.length === 0) return null;
+  if (typeof document === "undefined") return null;
 
   // Newest at the bottom of the stack so the eye lands on the most
   // recent message; older toasts age upward and out.
   const visible = toasts.slice(-MAX_VISIBLE);
 
-  return (
+  return createPortal(
     <div
       className="toast-host"
       role="status"
@@ -66,6 +80,7 @@ export function ToastHost() {
           </motion.button>
         ))}
       </AnimatePresence>
-    </div>
+    </div>,
+    document.body,
   );
 }
