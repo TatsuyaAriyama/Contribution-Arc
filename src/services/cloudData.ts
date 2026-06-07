@@ -61,6 +61,10 @@ export type UserProgressRecord = {
   coins: number;
   lastFeedRewardDate: string;
   feedRewardArcEarned: number;
+  /* 日報報酬：今日やること + 振り返り の両方を当日中に書き切った日付。
+     PC ↔ モバイル間で同一日に二重に受け取れないよう、最後に受領した
+     YYYY-MM-DD を持つ。Optional は back-compat（旧プロファイル）用。 */
+  lastDailyReportRewardDate?: string;
   /* Poker chips — separated from Arc so the casino loop doesn't
      inflate the spend-side currency. Optional for back-compat with
      profiles created before poker shipped. */
@@ -461,6 +465,9 @@ export async function saveUserProgressToCloud(db: Firestore, profile: UserProgre
     coins: profile.coins,
     lastFeedRewardDate: profile.lastFeedRewardDate,
     feedRewardArcEarned: profile.feedRewardArcEarned,
+    ...(profile.lastDailyReportRewardDate
+      ? { lastDailyReportRewardDate: profile.lastDailyReportRewardDate }
+      : {}),
     ...(profile.pokerChips !== undefined ? { pokerChips: profile.pokerChips } : {}),
     ...(profile.focusChips !== undefined ? { focusChips: profile.focusChips } : {}),
     ...(profile.focusChipsDate ? { focusChipsDate: profile.focusChipsDate } : {}),
