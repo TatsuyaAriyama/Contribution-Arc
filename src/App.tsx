@@ -350,6 +350,10 @@ type UserProfile = {
      stops paying out. Independent of the actual coin balance — the
      user can spend Arc and the cap still applies. */
   feedRewardArcEarned?: number;
+  /* 日報報酬：今日やること + 振り返り の両方を当日中に書き切ったら 50 Arc。
+     最後に受領した YYYY-MM-DD を持ち、PC ↔ モバイル間で同日に二重受領
+     しないようにする。キャップは設けず、毎日継続するインセンティブにする。 */
+  lastDailyReportRewardDate?: string;
   /* Poker chips — kept separate from Arc so casino swings can't
      destabilise the spend-side economy. */
   pokerChips?: number;
@@ -1656,6 +1660,8 @@ function normalizeUserProfile(uid: string, data: Partial<UserProfile>): UserProf
       typeof data.feedRewardArcEarned === "number" && Number.isFinite(data.feedRewardArcEarned)
         ? Math.max(0, Math.floor(data.feedRewardArcEarned))
         : 0,
+    lastDailyReportRewardDate:
+      typeof data.lastDailyReportRewardDate === "string" ? data.lastDailyReportRewardDate : "",
     pokerChips:
       typeof data.pokerChips === "number" && Number.isFinite(data.pokerChips)
         ? Math.max(0, Math.floor(data.pokerChips))
@@ -4412,6 +4418,10 @@ function App() {
      reward — exactly what the user asked for. */
   const [lastFeedRewardDate, setLastFeedRewardDate] = useState<string>("");
   const [feedRewardArcEarned, setFeedRewardArcEarned] = useState<number>(0);
+  /* 日報報酬：当日 (YYYY-MM-DD) に「今日やること」と「振り返り」を両方
+     書き終わると 1日 1回 50 Arc。最後に受領した日付を保持してこれを
+     gate にする。プロファイル doc にミラーされる。 */
+  const [lastDailyReportRewardDate, setLastDailyReportRewardDate] = useState<string>("");
   /* Poker chip economy. `pokerChips` is the "normal" currency you buy
      by spending Arc (1 Arc → 100 chips). `focusChips` are the
      better-paying chips you earn by staying in a workspace room (25
@@ -5161,6 +5171,7 @@ function App() {
         setCoins(grantedCoins);
         setLastFeedRewardDate(profile.lastFeedRewardDate || "");
         setFeedRewardArcEarned(profile.feedRewardArcEarned || 0);
+        setLastDailyReportRewardDate(profile.lastDailyReportRewardDate || "");
         setPokerChips(profile.pokerChips ?? 0);
         setFocusChips(profile.focusChips ?? 0);
         setFocusChipsDate(profile.focusChipsDate ?? "");
@@ -9462,6 +9473,29 @@ function App() {
         return nextReports;
       });
       setDailyMessage(`${sectionLabel}を保存しました。`);
+
+      // 日報報酬：当日の「今日やること」と「振り返り」を両方書き終えたら 50 Arc。
+      // 1日1回・端末間で二重受領しないよう lastDailyReportRewardDate で gate する。
+      // - 過去日の編集には払わない（バックフィルで Arc 稼ぎを成立させない）
+      // - 下書き保存では払わない（共有された時点が達成）
+      // - 失敗 (catch) 経路でも払わない（クラウドに届いていないため）
+      const todayLocal = new Date();
+      const todayLocalKey = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth() + 1).padStart(2, "0")}-${String(todayLocal.getDate()).padStart(2, "0")}`;
+      const planComplete = syncedReport.planItems && syncedReport.planItems.length > 0;
+      const reflectionComplete = syncedReport.reflection.trim().length > 0;
+      if (
+        selectedDailyDate === todayLocalKey &&
+        lastDailyReportRewardDate !== todayLocalKey &&
+        !syncedReport.isDraft &&
+        planComplete &&
+        reflectionComplete
+      ) {
+        setCoins((value) => value + 50);
+        setLastDailyReportRewardDate(todayLocalKey);
+        showToast("+50 Arc 獲得 ✦ 今日やること & 振り返り を両方完了しました", {
+          kind: "success",
+        });
+      }
     } catch (error) {
       const pendingReport: DailyReport = {
         ...report,
@@ -9627,6 +9661,7 @@ function App() {
       coins,
       lastFeedRewardDate,
       feedRewardArcEarned,
+      lastDailyReportRewardDate,
       pokerChips,
       focusChips,
       focusChipsDate,
@@ -9725,6 +9760,7 @@ function App() {
     ownedCharacterShapes,
     lastFeedRewardDate,
     feedRewardArcEarned,
+    lastDailyReportRewardDate,
     pokerChips,
     focusChips,
     focusChipsDate,
@@ -17544,6 +17580,47 @@ function App() {
                 </>
               ) : null}
             </div>
+
+            {(() => {
+              // 当日の日報を編集中なら「両方共有で +50 Arc」のバナーを出す。
+              // 達成 (受領済み) なら「獲得済み」表示に切替えて、明日のループへ
+              // 期待を引き継ぐ。過去日報の編集ビューでは出さない。
+              if (selectedDailyDate !== todayDateKey) return null;
+              const todayReport = dailyReports.find((r) => r.date === selectedDailyDate);
+              const earned = lastDailyReportRewardDate === todayDateKey;
+              const planDone =
+                (todayReport?.planItems?.length ?? 0) > 0 && !todayReport?.isDraft;
+              const reflectionDone =
+                ((todayReport?.reflection || "").trim().length > 0) && !todayReport?.isDraft;
+              return (
+                <div
+                  className={`daily-reward-banner${earned ? " is-earned" : ""}`}
+                  role="status"
+                >
+                  <span className="daily-reward-banner-icon" aria-hidden="true">✦</span>
+                  {earned ? (
+                    <span className="daily-reward-banner-text">
+                      <strong>{t("+50 Arc 獲得済み")}</strong>
+                      <small>{t("明日も「今日やること」と「振り返り」の両方共有で Arc を狙えます。")}</small>
+                    </span>
+                  ) : (
+                    <span className="daily-reward-banner-text">
+                      <strong>{t("両方を共有すると +50 Arc / 日")}</strong>
+                      <span className="daily-reward-banner-progress" aria-label={t("今日の達成状況")}>
+                        <span className={planDone ? "is-done" : ""}>
+                          {planDone ? "✓ " : "・"}
+                          {t("今日やること")}
+                        </span>
+                        <span className={reflectionDone ? "is-done" : ""}>
+                          {reflectionDone ? "✓ " : "・"}
+                          {t("振り返り")}
+                        </span>
+                      </span>
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
 
             {!canEditSelectedDailyReport ? (
               <p className="daily-edit-note">{t("日報の編集は当日または1日前までです。")}</p>
