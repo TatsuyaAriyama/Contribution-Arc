@@ -25160,7 +25160,12 @@ select:focus-visible,
   left: 50%;
   bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   transform: translateX(-50%);
-  z-index: 80;
+  /* モーダル背景 (.settings-modal-backdrop は 100) より上に出して
+     学習詳細モーダルなどから「記録」した時の +EXP/+時間 トーストが
+     モーダルの下に潜って見えない、という報告 (モバイル) を解消する。
+     base z-index は 200。モバイルではボトムナビと学習詳細モーダルの
+     フッターをまたいで見えるよう、さらに上の位置に持ち上げる。 */
+  z-index: 200;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -25171,9 +25176,12 @@ select:focus-visible,
 }
 
 @media (max-width: 720px) {
-  /* Sit above the bottom nav (~72px tall) with breathing room. */
+  /* モバイル：学習詳細モーダルの記録ボタンを押した時に、フッター
+     (記録/編集ボタン群が画面下端に張り付く高さ ≈ 80px) の上にトーストが
+     かぶらず見えるよう、bottom を 112px まで持ち上げる。ボトムナビが
+     表示されている通常の画面でも、ナビ (~72px) の上に常に余白を取れる。 */
   .toast-host {
-    bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(112px + env(safe-area-inset-bottom, 0px));
     width: calc(100% - 24px);
   }
 }
