@@ -8,18 +8,18 @@ colors:
   primary-active: "#2d8a5b"
   primary-soft: "#dce8e1"
   on-primary: "#ffffff"
-  cta-bg: "#111827"
+  cta-bg: "#1a1817"
   cta-fg: "#ffffff"
-  canvas: "#fafaf8"
+  canvas: "#f6f5f4"
   surface: "#ffffff"
   surface-warm: "#fffdfa"
   surface-elevated: "#ffffff"
-  ink: "#111827"
-  ink-strong: "#0a0f1c"
-  ink-muted: "#6b7280"
-  hairline: "#e5e7eb"
-  hairline-soft: "rgba(17, 24, 39, 0.06)"
-  hairline-strong: "rgba(17, 24, 39, 0.12)"
+  ink: "#1a1817"
+  ink-strong: "#0a0807"
+  ink-muted: "#615d59"
+  hairline: "#e6e3df"
+  hairline-soft: "rgba(26, 24, 23, 0.06)"
+  hairline-strong: "rgba(26, 24, 23, 0.12)"
   accent-rare: "#c8a95b"
   accent-warm: "#d3573b"
   accent-auto-workspace: "#3a5bb7"
@@ -129,12 +129,12 @@ spacing:
   xxl: 40px
 
 shadow:
-  hairline: "0 1px 0 rgba(17, 24, 39, 0.02)"
-  card: "0 1px 3px rgba(17, 24, 39, 0.04), 0 6px 22px rgba(17, 24, 39, 0.05)"
-  card-elevated: "0 18px 58px rgba(17, 24, 39, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.9)"
-  modal: "0 30px 90px rgba(17, 24, 39, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.9)"
+  hairline: "0 1px 0 rgba(26, 24, 23, 0.02)"
+  card: "0 0.5px 1px rgba(26, 24, 23, 0.025), 0 1px 3px rgba(26, 24, 23, 0.035), 0 6px 18px rgba(26, 24, 23, 0.05)"
+  card-elevated: "0 1px 1px rgba(26, 24, 23, 0.02), 0 4px 12px rgba(26, 24, 23, 0.04), 0 14px 36px rgba(26, 24, 23, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.9)"
+  modal: "0 30px 90px rgba(26, 24, 23, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.9)"
   toast: "0 20px 48px rgba(0, 0, 0, 0.28), 0 2px 6px rgba(0, 0, 0, 0.18)"
-  cta-press: "0 14px 32px rgba(17, 24, 39, 0.18)"
+  cta-press: "0 14px 32px rgba(26, 24, 23, 0.18)"
   focus-ring: "0 0 0 3px rgba(31, 111, 74, 0.22)"
 
 components:
@@ -322,9 +322,9 @@ components:
 
 ## Overview
 
-Contribution Arc は「静かな書斎」のような学習トラッキング SNS。背景は紙のような暖かい off-white `{colors.canvas}` (#fafaf8) に Inter の太字。アクセントは森のような深緑 `{colors.primary}` (#1f6f4a) ひとつだけで、それも CTA・タイトル下線・focus リングなど「ここを見て」というポイントにしか使わない。残りのチャンクは hairline と barely-there な shadow で「紙の層」を作るだけ。
+Contribution Arc は「静かな書斎」のような学習トラッキング SNS。背景は紙のような暖かい off-white `{colors.canvas}` (#f6f5f4) に Inter の太字。アクセントは森のような深緑 `{colors.primary}` (#1f6f4a) ひとつだけで、それも CTA・タイトル下線・focus リングなど「ここを見て」というポイントにしか使わない。残りのチャンクは hairline と barely-there な shadow で「紙の層」を作るだけ。
 
-唯一目立つ CTA は深紺の `{colors.cta-bg}` (#111827) で塗った pill ボタンで、ユーザー名 / 投稿送信 / 設定確定など「次のアクション」を必ず ink-on-canvas で表す。ブランド緑はそこから一歩引いて、ステータス・アクセント・データの「達成感」を担当する。
+唯一目立つ CTA は warm near-black の `{colors.cta-bg}` (#1a1817) で塗った pill ボタンで、ユーザー名 / 投稿送信 / 設定確定など「次のアクション」を必ず ink-on-canvas で表す。ブランド緑はそこから一歩引いて、ステータス・アクセント・データの「達成感」を担当する。
 
 ダークモードは黒の真上に白テキストを置く Twitter/Instagram 流の純色設計に切り替わる。背景 `#000000` に surface `#16181c`、緑は明るい新緑 `#4ade80` に反転、CTA も `#ffffff` 塗り + 黒文字に polarity flip するので、暗所でも「ここを押す」が即座に分かる。
 
@@ -333,9 +333,9 @@ Contribution Arc は「静かな書斎」のような学習トラッキング SN
 シャドウは「浮かせる」のではなく「紙の層を重ねる」感覚。`{shadow.card-elevated}` のように外側に大きく薄く、内側 inset で 1px の白ハイライトを足す形が定番。
 
 **Key Characteristics:**
-- Warm paper canvas `{colors.canvas}` (#fafaf8) / pure white `{colors.surface}` for cards — 図書館の机
+- Warm paper canvas `{colors.canvas}` (#f6f5f4) / pure white `{colors.surface}` for cards — 図書館の机
 - Single structural accent: forest green `{colors.primary}` — ステータス、達成、focus signal
-- 唯一の塗り CTA は ink-on-canvas `{colors.cta-bg}` — pill `{rounded.full}` で「次のアクション」を独占
+- 唯一の塗り CTA は warm near-black `{colors.cta-bg}` (#1a1817) — pill `{rounded.full}` で「次のアクション」を独占
 - Inter のみ、display は 800〜900 で重く、本文は 14px / 600 で読みやすく
 - 自動投稿（学習ログ / 作業ログ）専用のセカンダリアクセント (#2c8a5a / #3a5bb7) を tiny pill badge にだけ使う
 - Elevation = hairline + 多層 micro shadow（`{shadow.card-elevated}`）。heavy drop shadow は使わない
@@ -347,7 +347,7 @@ Contribution Arc は「静かな書斎」のような学習トラッキング SN
 - **Forest Green** (`{colors.primary}` — #1f6f4a): 唯一の構造アクセント。focus リング、Lv 上昇、達成ステート、リンク、ブランド sprite の塗り。
 - **Active Green** (`{colors.primary-active}` — #2d8a5b): hover / pressed。
 - **Soft Green** (`{colors.primary-soft}` — #dce8e1): 達成 chip、リワード banner の優しい背景。
-- **CTA Ink** (`{colors.cta-bg}` — #111827) / **CTA Surface** (`{colors.cta-fg}` — #ffffff): 主要 CTA は塗りで ink-on-canvas、これだけが「最も濃い塗り」になる。
+- **CTA Ink** (`{colors.cta-bg}` — #1a1817) / **CTA Surface** (`{colors.cta-fg}` — #ffffff): 主要 CTA は塗りで warm-ink-on-canvas、これだけが「最も濃い塗り」になる。Notion 流の cold-blue ink (#111827) ではなく warm 炭色に倣う。
 
 ### Secondary Accents
 - **Rare Gold** (`{colors.accent-rare}` — #c8a95b): 称号「Rare+」、レアアイテム、reward 獲得済バナーの金色。
@@ -357,18 +357,18 @@ Contribution Arc は「静かな書斎」のような学習トラッキング SN
 - **Reward Gold** (`{colors.reward-gold}` — #d49a1a): 日報報酬獲得済 (is-earned) のアイコン丸塗り。
 
 ### Surface
-- **Canvas** (`{colors.canvas}` — #fafaf8): ページ全面。warm off-white、紙の机。
-- **Surface** (`{colors.surface}` — #ffffff): カード / モーダル / nav の上層。
+- **Canvas** (`{colors.canvas}` — #f6f5f4): ページ全面。warm paper off-white、紙の机。Notion DESIGN.md と同一値で揃えた。
+- **Surface** (`{colors.surface}` — #ffffff): カード / モーダル / nav の上層。pure white で canvas との figure/ground を作る。
 - **Surface Warm** (`{colors.surface-warm}` — #fffdfa): 一部の暖かい見せ場（onboarding カードなど）。
 
 ### Text
-- **Ink** (`{colors.ink}` — #111827): 本文と見出し。
-- **Ink Strong** (`{colors.ink-strong}` — #0a0f1c): 見出し最強調。
-- **Ink Muted** (`{colors.ink-muted}` — #6b7280): キャプション / hint / placeholder。
+- **Ink** (`{colors.ink}` — #1a1817): 本文と見出し。warm near-black。
+- **Ink Strong** (`{colors.ink-strong}` — #0a0807): 見出し最強調。
+- **Ink Muted** (`{colors.ink-muted}` — #615d59): キャプション / hint / placeholder。warm stone。
 
 ### Lines
-- **Hairline** (`{colors.hairline}` — #e5e7eb): 1px の card border。
-- **Hairline Soft** (`rgba(17, 24, 39, 0.06)`) / **Hairline Strong** (`rgba(17, 24, 39, 0.12)`): 強弱の境界。
+- **Hairline** (`{colors.hairline}` — #e6e3df): 1px の card border。warm tone に揃えた。
+- **Hairline Soft** (`rgba(26, 24, 23, 0.06)`) / **Hairline Strong** (`rgba(26, 24, 23, 0.12)`): 強弱の境界。
 
 ### Dark Mode
 ライトの全てのトークンが `[data-theme="dark"]` で書き換わる。canvas は純黒、ink は純白、緑は #4ade80、CTA は polarity flip で白塗り黒文字に。

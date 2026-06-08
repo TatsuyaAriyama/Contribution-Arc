@@ -2,37 +2,52 @@
 
 :root {
   color-scheme: light;
-  color: #111827;
-  background: #fafaf8;
-  --bg: #fafaf8;
+  color: #1a1817;
+  background: #f6f5f4;
+  /* Notion DESIGN.md 由来の "warm paper" トーンに寄せた canvas。
+     #fafaf8 から #f6f5f4 へ 4 ポイント暖かく振り、長文ドキュメント感を
+     強める。pure white は surface だけに残し、紙の机感を作る。 */
+  --bg: #f6f5f4;
   --surface: #ffffff;
   --surface-warm: #fffdfa;
   --surface-elevated: #ffffff;
   /* RGB triplets so we can build rgba() with arbitrary alpha
      and have them auto-flip in dark mode. */
   --surface-rgb: 255, 255, 255;
-  --ink-rgb: 17, 24, 39;
+  /* ink は Notion 流の warm near-black。#111827 の冷たい青寄りから
+     #1a1817 (温かい炭色) へ。muted / hairline / shadow も同じ ink-rgb
+     ベースなので、サイト全体がパッと「紙色」に統一される。 */
+  --ink-rgb: 26, 24, 23;
   /* Soft green tint used for surface washes and borders;
      flips to a neutral white in dark mode so washes don't disappear. */
   --tint-soft-rgb: 220, 232, 225;
-  --ink: #111827;
-  --ink-strong: #0a0f1c;
+  --ink: #1a1817;
+  --ink-strong: #0a0807;
   /* Primary CTA palette — flips so contrast stays correct. */
-  --cta-bg: #111827;
+  --cta-bg: #1a1817;
   --cta-fg: #ffffff;
   /* RGB triplet so tooltip / CTA copy can render with alpha. */
   --cta-fg-rgb: 255, 255, 255;
-  --muted: #6b7280;
-  --line: #e5e7eb;
-  --line-soft: rgba(17, 24, 39, 0.06);
-  --line-strong: rgba(17, 24, 39, 0.12);
+  /* warm stone / ash — Notion 流の中間〜薄テキスト色。 */
+  --muted: #615d59;
+  --line: #e6e3df;
+  --line-soft: rgba(26, 24, 23, 0.06);
+  --line-strong: rgba(26, 24, 23, 0.12);
   --green: #1f6f4a;
   --green-hover: #2d8a5b;
   --green-soft: #dce8e1;
   --rare: #c8a95b;
   --accent-warm: #d3573b;
-  --shadow-soft: 0 14px 32px rgba(17, 24, 39, 0.08);
-  --shadow-card: 0 1px 3px rgba(17, 24, 39, 0.04), 0 6px 22px rgba(17, 24, 39, 0.05);
+  /* Notion "barely-there" elevation — 多層 micro shadow で「浮く」より
+     「紙が重なっている」感を出す。token は warm ink-rgb ベース。 */
+  --shadow-soft:
+    0 1px 1px rgba(26, 24, 23, 0.02),
+    0 4px 12px rgba(26, 24, 23, 0.04),
+    0 14px 36px rgba(26, 24, 23, 0.06);
+  --shadow-card:
+    0 0.5px 1px rgba(26, 24, 23, 0.025),
+    0 1px 3px rgba(26, 24, 23, 0.035),
+    0 6px 18px rgba(26, 24, 23, 0.05);
   --ring-focus: 0 0 0 3px rgba(31, 111, 74, 0.22);
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
@@ -76,6 +91,14 @@
   --ring-focus: 0 0 0 3px rgba(74, 222, 128, 0.36);
 }
 
+/* Notion DESIGN.md 流の display tightening。Inter のデフォルトトラッキング
+   は display サイズで広めに開くので、global で -0.022em を効かせて見出しを
+   「set」した印象に揃える。個別箇所で letter-spacing を明示しているところ
+   はそのまま尊重される（より specific な指定が勝つ）。 */
+h1, h2, h3, h4 {
+  letter-spacing: -0.022em;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -90,7 +113,10 @@ body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
-  background: #ffffff;
+  /* warm paper canvas を全画面で見えるように、background を hard-coded
+     #ffffff から var(--bg) へ。dark mode は [data-theme="dark"] body で
+     さらに上書きされる (下に既存ルールあり)。 */
+  background: var(--bg);
   /* `clip` (not `hidden`) so body suppresses horizontal scrollbars
      without becoming a scroll container. `overflow-x: hidden` turns
      body into a scroller and silently breaks `position: sticky`
