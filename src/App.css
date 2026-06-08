@@ -14010,20 +14010,65 @@
     text-align: left;
   }
 
+  /* Notion mobile 流のボトムシート。中央 dialog ではなく画面下端から
+     立ち上がる sheet にして「下から呼び出した」感を強める。padding は
+     0 にして、シート本体は画面端まで張り付く。safe-area inset は
+     シート内の content padding 側で吸収する。 */
   .settings-modal-backdrop {
     place-items: end center;
-    padding: 10px;
-    padding-bottom: max(10px, env(safe-area-inset-bottom));
+    padding: 0;
   }
 
   .settings-modal,
   .user-search-modal,
   .workspace-start-modal {
     width: 100%;
-    max-height: calc(100svh - 20px);
+    max-height: 92svh;
     overflow-y: auto;
-    padding: 18px;
-    border-radius: 24px;
+    /* iOS の慣性スクロールを有効に。Safari は内部要素にも必要。 */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding: 22px 18px max(22px, env(safe-area-inset-bottom));
+    /* 上だけ大きく角丸、下は viewport 下端にベタ付きで 0。Notion 等の
+       モバイル sheet とまったく同じ "立ち上がってきた" 感のシルエット。 */
+    border-radius: 28px 28px 0 0;
+    /* 立ち上がり animation。280ms cubic で「下からスッ」と入る。 */
+    animation: sheet-slide-up 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* シート上部のハンドルバー。Notion / Apple sheet と同じ Pull-down
+     指示 affordance。実際にドラッグで閉じる挙動は付けないが、視覚的
+     ヒントだけで「下から来た」が伝わる。 */
+  .settings-modal::before,
+  .user-search-modal::before,
+  .workspace-start-modal::before {
+    content: "";
+    display: block;
+    width: 38px;
+    height: 4px;
+    margin: -6px auto 14px;
+    border-radius: 999px;
+    background: var(--line-strong);
+    opacity: 0.6;
+  }
+
+  @keyframes sheet-slide-up {
+    from {
+      transform: translateY(24px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .settings-modal,
+    .user-search-modal,
+    .workspace-start-modal {
+      animation: none;
+    }
   }
 
   .settings-modal h2,
@@ -25311,6 +25356,29 @@ a[role="button"],
      app and steals the gesture from the actual onClick. Suppressing
      the callout makes presses feel native. */
   -webkit-touch-callout: none;
+}
+
+/* Notion mobile 流の subtle tap feedback。tap した瞬間に 0.97 倍に
+   縮んで 0.12s で戻る → 「物理的に押した」感が出る。全 button / role=button
+   / link に効かせるが、既に framer-motion の whileTap が当たっている
+   要素は React 側で上書きされるので競合しない。`@media (hover: hover)`
+   に閉じ込めて、デスクトップ機の hover 環境では発火しないようにする
+   オプションも考えたが、Notion はデスクトップでもこの subtle press を
+   出すのでグローバルで効かせる。 */
+button:not(:disabled):active,
+a[role="button"]:active,
+[role="button"]:not([aria-disabled="true"]):active,
+.tap-target:active {
+  transform: scale(0.97);
+  transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  button:not(:disabled):active,
+  a[role="button"]:active,
+  [role="button"]:not([aria-disabled="true"]):active,
+  .tap-target:active {
+    transform: none;
+  }
 }
 
 /* Chrome (titles, kickers, navigation chips, in-room actor labels) is
