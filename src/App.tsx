@@ -161,6 +161,7 @@ import { ManagerDashboard } from "./components/ManagerDashboard";
 import { ShareToXModal } from "./components/ShareToXModal";
 import { TutorialHint } from "./components/TutorialHint";
 import { ToastHost } from "./components/ToastHost";
+import { PullToRefresh } from "./components/PullToRefresh";
 import { IOSInstallHint } from "./components/IOSInstallHint";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 import {
@@ -10609,6 +10610,14 @@ function App() {
     }
   };
 
+  // Pull to Refresh のハンドラ。posts は Firestore の onSnapshot で
+  // リアルタイム購読中なので技術的には refresh 不要だが、X 流の引いて
+  // 更新ジェスチャを実装した時に「何も起きない」と無効感が出る。短い
+  // delay で indicator スピンを見せて「更新した」体感を作る。
+  const handleFeedRefresh = async () => {
+    await new Promise<void>((resolve) => setTimeout(resolve, 700));
+  };
+
   const handleProfileBack = () => {
     // プロフィールから「戻る」も新ホーム (feed) へ
     setCurrentView("feed");
@@ -20670,7 +20679,9 @@ function App() {
             <h1>{t("ホーム")}</h1>
           </header>
           <div className="feed-view-content">
-            {feedSection}
+            <PullToRefresh onRefresh={handleFeedRefresh}>
+              {feedSection}
+            </PullToRefresh>
           </div>
         </article>
       ) : null}

@@ -4425,15 +4425,61 @@
   align-items: start;
 }
 
+/* ─── Pull to Refresh (X / Instagram スタイル) ─── */
+.pull-to-refresh {
+  position: relative;
+  overflow: hidden;
+  /* touch ジェスチャを子に伝えつつ、横方向のページ pan は許可。
+     vertical pan は内部 handler で扱うが、prevent はしないので
+     iOS の rubber-band は自然に効く。 */
+  touch-action: pan-y;
+}
+.pull-to-refresh-indicator {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--green);
+  box-shadow: var(--shadow-card);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 5;
+}
+.pull-to-refresh-indicator.is-visible {
+  opacity: 1;
+}
+.pull-to-refresh-indicator.is-refreshing svg {
+  animation: pull-refresh-spin 0.9s linear infinite;
+}
+@keyframes pull-refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pull-to-refresh-indicator.is-refreshing svg {
+    animation: none;
+  }
+  .pull-to-refresh-content {
+    transition: none !important;
+  }
+}
+
 /* FEED 内の全アバターを完全に同じ recipe に統一。
    - 投稿ボックス (.log-composer)
    - 通常投稿カード (.log-post-author)
    - 自動投稿のコンパクトカード (.log-post-author-compact)
    - 投稿への返信 (.post-reply-item)
    全部 40×40 / border-radius 12px / scale 0.78 / translateY -1px。
-   container にも flex 中央寄せと overflow:hidden を明示して、将来
-   画像版 (Firebase 取得画像 / 別 SVG) を入れても確実に中央配置されるよう
-   レンダリングパスを 1 本化する。 */
+   container は aspect-ratio 1/1 を明示し、子の img / svg は object-fit
+   contain で正方形内に縦横比保持で収まるようにする。 */
 .log-composer .profile-character-preview,
 .log-post-author .profile-character-preview,
 .log-post-author-compact .profile-character-preview,
@@ -4441,6 +4487,7 @@
   width: 40px;
   height: 40px;
   min-width: 40px;
+  aspect-ratio: 1 / 1;
   border-radius: 12px;
   overflow: hidden;
   display: flex;
@@ -4454,9 +4501,9 @@
   transform: translateY(-1px) scale(0.78);
   transform-origin: center center;
 }
-/* 画像版アバターを使う場合 (img / svg を直接置く) のフォールバック。
-   現状は sprite のみだが、将来 Firebase の photoURL を avatar に使う
-   時に同じ container で確実に中央配置されるようにする。 */
+/* 画像 / SVG 版アバターを使う場合のフォールバック。container の縦幅に
+   伸びて縦長にならないよう object-fit: contain で縦横比を保持。SVG は
+   preserveAspectRatio="xMidYMid meet" 相当の挙動になる。 */
 .log-composer .profile-character-preview > img,
 .log-post-author .profile-character-preview > img,
 .log-post-author-compact .profile-character-preview > img,
@@ -4465,9 +4512,11 @@
 .log-post-author .profile-character-preview > svg,
 .log-post-author-compact .profile-character-preview > svg,
 .post-reply-item .profile-character-preview > svg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
   display: block;
 }
 
