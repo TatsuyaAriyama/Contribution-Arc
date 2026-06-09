@@ -4310,7 +4310,47 @@ function App() {
   // 同種の自動投稿が連投で流れないよう、最後に出した時刻を kind 別に覚えておく。
   // 同 kind は 60 分以内は集約（=出さない）。
   const lastAutoPostAtRef = useRef<Record<string, number>>({});
-  const [currentView, setCurrentViewRaw] = useState<AppView>("home");
+  // リロード時の初期 view は "feed"（= bottom-nav のホームに対応する新ホーム）。
+  // bottom-nav swap でラベル「ホーム」が view "feed" を指すよう変更したため、
+  // 初期表示も「ホーム」と書かれた画面 = feed view にする。
+  const [currentView, setCurrentViewRaw] = useState<AppView>("feed");
+  /* Pull-to-refresh：ホーム (= feed view) のみで有効。
+     - 画面最上部 (scrollY === 0) で touchstart した時の Y を控え
+     - touchmove で Y が 100px 以上下に動いたら window.location.reload()
+     - 他 view では発火させない (currentView がガード) */
+  useEffect(() => {
+    if (currentView !== "feed") return;
+    if (typeof window === "undefined") return;
+    let startY: number | null = null;
+    const onStart = (event: TouchEvent) => {
+      if (window.scrollY <= 0) {
+        startY = event.touches[0]?.clientY ?? null;
+      } else {
+        startY = null;
+      }
+    };
+    const onMove = (event: TouchEvent) => {
+      if (startY === null) return;
+      const currentY = event.touches[0]?.clientY ?? startY;
+      if (currentY - startY > 100) {
+        startY = null;
+        window.location.reload();
+      }
+    };
+    const onEnd = () => {
+      startY = null;
+    };
+    window.addEventListener("touchstart", onStart, { passive: true });
+    window.addEventListener("touchmove", onMove, { passive: true });
+    window.addEventListener("touchend", onEnd, { passive: true });
+    window.addEventListener("touchcancel", onEnd, { passive: true });
+    return () => {
+      window.removeEventListener("touchstart", onStart);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onEnd);
+      window.removeEventListener("touchcancel", onEnd);
+    };
+  }, [currentView]);
 
   const setCurrentView = useCallback((next: AppView) => {
     if (typeof document === "undefined") {
