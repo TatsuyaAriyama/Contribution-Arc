@@ -20399,21 +20399,23 @@ function App() {
             <p className="card-kicker">{t("お知らせ")}</p>
             <strong>{t("運営からのお知らせ")}</strong>
           </div>
-          {NON_PINNED_ANNOUNCEMENTS.length > 1 ? (
-            <button
-              type="button"
-              className="home-announcements-viewall"
-              onClick={() => setIsAnnouncementsModalOpen(true)}
-            >
-              {t("すべて見る")}
-            </button>
-          ) : null}
+          {/* 固定以外のお知らせは今後追加していくので、ボタンは常に表示して
+              一覧モーダルへの導線を残しておく（現状 0 件でも将来の追加に備える）。 */}
+          <button
+            type="button"
+            className="home-announcements-viewall"
+            onClick={() => setIsAnnouncementsModalOpen(true)}
+          >
+            {t("すべて見る")}
+          </button>
         </header>
         {ANNOUNCEMENTS.length === 0 ? (
           <p className="home-announcements-empty">{t("いまは新しいお知らせはありません。")}</p>
         ) : (
           <ol className="home-announcements-list">
-            {[PINNED_ANNOUNCEMENT, LATEST_ANNOUNCEMENT]
+            {/* ホームには固定のお知らせ (ウェルカム) だけ出す。今後追加される
+                非固定のお知らせは「すべて見る」モーダルから閲覧する設計。 */}
+            {[PINNED_ANNOUNCEMENT]
               .filter((item): item is Announcement => item !== null)
               .map((announcement, index) => {
                 const isOpen = openAnnouncementId === announcement.id;
