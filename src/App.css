@@ -4739,7 +4739,12 @@
   box-shadow: inset 0 0 0 1px rgba(var(--ink-rgb), 0.06);
 }
 .log-post-author-compact .profile-character-preview .actor-sprite {
-  transform: translateY(-1px) scale(0.78);
+  /* sprite の視覚全高 = head(-8) + block(40) + leg(-9) = 57px。
+     translateY を 0 にして上下対称な余白に + scale 0.7 で 57*0.7 ≈ 40px
+     にして container 40px に完全に収める。これで「左右上下均等 + 全身
+     入り切る」を達成。 */
+  transform: translateY(0) scale(0.7);
+  transform-origin: center center;
 }
 .log-post-compact-body {
   display: inline-flex;
@@ -5305,17 +5310,18 @@
 
 .post-reply-item .profile-character-preview {
   /* 28px container では sprite の head (top: -8px) と leg (bottom: -9px)
-     が overflow に切られて胴体しか見えない不具合があった。投稿ボックスと
-     同じ 36×36 + scale 0.7 の recipe にしてしっかり収める。 */
+     が overflow に切られて胴体しか見えない不具合があった。container を
+     36×36 に拡大し、scale 0.63 + translateY 0 で 上下対称・全身入り
+     切る形に。 */
   width: 36px;
   height: 36px;
   border-radius: 12px;
 }
-
-/* Reply avatar — slightly smaller than the post avatar but still large
-   enough for the head and legs to fit inside the chip. */
 .post-reply-item .profile-character-preview .actor-sprite {
-  transform: translateY(-1px) scale(0.7);
+  /* 視覚全高 57px * 0.63 = 35.9px → container 36px に収まる。
+     translateY 0 で上下対称、全身が均等に表示される。 */
+  transform: translateY(0) scale(0.63);
+  transform-origin: center center;
 }
 
 .post-reply-item p {
