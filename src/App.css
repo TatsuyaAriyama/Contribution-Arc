@@ -4462,6 +4462,12 @@
   font-weight: 800;
   letter-spacing: -0.02em;
 }
+.install-instructions-intro {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
 .install-instructions-list {
   margin: 8px 0 16px;
   padding: 0 0 0 22px;

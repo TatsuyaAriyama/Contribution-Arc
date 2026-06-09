@@ -107,7 +107,7 @@ export function InstallInstructionsModal({
         onClick={(event) => event.stopPropagation()}
       >
         <header className="install-instructions-head">
-          <h2 id="install-instructions-title">ホーム画面に追加</h2>
+          <h2 id="install-instructions-title">スマホアプリとしてダウンロード</h2>
           <button
             type="button"
             className="settings-modal-close"
@@ -117,6 +117,10 @@ export function InstallInstructionsModal({
             ×
           </button>
         </header>
+        <p className="install-instructions-intro">
+          ブラウザに登録するだけで、Contribution Arc がスマホアプリのように
+          起動できます。お使いの環境向けの手順を表示しています。
+        </p>
 
         {standalone ? (
           <p className="install-instructions-status">
