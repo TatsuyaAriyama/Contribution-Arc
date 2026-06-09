@@ -72,8 +72,17 @@ export function PullToRefresh({
     const handleScroll = () => {
       lastScrollAtRef.current = Date.now();
     };
+    // 検出した scrollSource に加えて、capture phase で document 全体に
+    // listen する。これは scroll event が bubble しないことへの保険：
+    // - scrollSource 検出が何かの理由で失敗していても、capture リスナー
+    //   が子要素の scroll を拾うので lastScrollAt が必ず更新される
+    // - 別ペインや内側にネストした overflow があってもカバーできる
     scroller.addEventListener("scroll", handleScroll, { passive: true });
-    return () => scroller.removeEventListener("scroll", handleScroll);
+    document.addEventListener("scroll", handleScroll, { capture: true, passive: true });
+    return () => {
+      scroller.removeEventListener("scroll", handleScroll);
+      document.removeEventListener("scroll", handleScroll, { capture: true });
+    };
   }, []);
 
   const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
@@ -90,13 +99,21 @@ export function PullToRefresh({
 
   const handleTouchMove = (event: TouchEvent<HTMLDivElement>) => {
     if (!activeRef.current || refreshing || startYRef.current === null) return;
+    // 途中で下にスクロールしたら追跡を解除
     if (getScrollTop() > 0) {
-      // 途中で下にスクロールしたら追跡を解除
+      activeRef.current = false;
+      setPull(0);
+      return;
+    }
+    // スクロール直後 (momentum / bounce 中) も pull を計上しない。
+    // touchstart 後にスクロールイベントが発火するパターンへの追加防衛。
+    if (Date.now() - lastScrollAtRef.current < SCROLL_QUIET_MS) {
       activeRef.current = false;
       setPull(0);
       return;
     }
     const deltaY = event.touches[0].clientY - startYRef.current;
+    // 下方向の移動 (deltaY > 0) のみを引き量にする。上方向や横方向は無視。
     if (deltaY <= 0) {
       setPull(0);
       return;
