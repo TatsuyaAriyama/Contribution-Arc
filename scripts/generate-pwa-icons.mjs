@@ -1,10 +1,14 @@
-// Re-render the brand SVG into the raster icon sizes iOS / Android /
-// browsers each insist on. Re-run after editing the source SVG with:
+// Re-render the brand image into the raster icon sizes iOS / Android /
+// browsers each insist on. Re-run after editing the source image with:
 //   node scripts/generate-pwa-icons.mjs
 //
 // Outputs land in /public so the manifest + index.html can reference
 // them directly. The maskable variant adds an inset safe zone so the
 // icon survives Android's circular / squircle cropping.
+//
+// Source: contribution-arc-icon.png (1024×1024 recommended). We switched
+// from SVG to PNG so designers can drop a finished rendering straight
+// in without touching SVG paths.
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -13,10 +17,10 @@ import sharp from "sharp";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const publicDir = resolve(__dirname, "..", "public");
-const sourceSvgPath = resolve(publicDir, "contribution-arc-icon.svg");
+const sourceImagePath = resolve(publicDir, "contribution-arc-icon.png");
 
 mkdirSync(publicDir, { recursive: true });
-const svg = readFileSync(sourceSvgPath);
+const sourceBuffer = readFileSync(sourceImagePath);
 
 const APPLE_BG = "#0f0f10";
 const MASKABLE_INSET = 0.18;
@@ -31,7 +35,7 @@ const targets = [
 for (const target of targets) {
   const out = resolve(publicDir, target.file);
   const innerSize = Math.round(target.size * (1 - target.inset * 2));
-  const inner = await sharp(svg, { density: 512 })
+  const inner = await sharp(sourceBuffer)
     .resize(innerSize, innerSize, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .png({ compressionLevel: 9 })
     .toBuffer();
