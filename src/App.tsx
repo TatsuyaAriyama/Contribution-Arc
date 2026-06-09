@@ -20702,7 +20702,11 @@ function App() {
           <header className="feed-view-header">
             <h1>{t("ホーム")}</h1>
           </header>
-          <div className="feed-view-content">
+          <div
+            className={`feed-view-content${
+              isProfileHydrated ? " is-hydrated" : " is-hydrating"
+            }`}
+          >
             <PullToRefresh onRefresh={handleFeedRefresh}>
               {feedSection}
             </PullToRefresh>
