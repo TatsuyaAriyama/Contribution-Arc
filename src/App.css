@@ -4723,37 +4723,23 @@
   background: transparent;
   cursor: pointer;
 }
-/* 自動投稿 (compact) のアバター。Instagram / X 流の完全 round avatar に
-   揃える。
-
-   偏り原因：
-   - .actor-sprite の CSS box は 40×40 だが、.sprite-head が top: -8px で
-     上に、.sprite-leg が bottom: -9px で下に overshoot する構造
-   - grid + place-items: center は CSS box を中央配置するので、visual
-     content の重心 (block 中心より約 0.5px 下) は完全には中央に来ない
-   - 前回の scale 0.7 では visual 全高 57×0.7 ≈ 40px と container 40px
-     がほぼ同じ = 「余裕 0」で僅かなずれが目立つ
-
-   修正：
-   - border-radius を 999px にして完全な丸 (Instagram / X 流)
-   - scale を 0.58 まで下げて visual 全高 33px / container 40px に
-     上下 3.5px ずつの余裕を確保 → 完全に中央に見える
-   - translateY を visual 重心ずれの補正で -0.3px 程度のマイクロ調整 */
+/* 自動投稿 (compact) のアバター枠。
+   ユーザー要望「投稿ボックスの sprite と同じ見た目に統一」。
+   .log-composer / .log-post-author と完全に同じ recipe を使う：
+   - container 40×40
+   - border-radius 12px の角丸正方形（円形だと sprite が下に偏って見える
+     という報告が連発したため、最もうまく行っている投稿ボックスと同じ
+     角丸正方形に統一）
+   - transform: translateY(-1px) scale(0.78)
+   - グリッド背景は .profile-character-preview の base スタイルそのまま */
 .log-post-author-compact .profile-character-preview {
   width: 40px;
   height: 40px;
-  border-radius: 999px;
-  overflow: hidden;
-  background: rgba(var(--ink-rgb), 0.04);
-  box-shadow: inset 0 0 0 1px rgba(var(--ink-rgb), 0.06);
+  border-radius: 12px;
 }
 .log-post-author-compact .profile-character-preview .actor-sprite {
-  transform: translateY(-1px) scale(0.58);
+  transform: translateY(-1px) scale(0.78);
   transform-origin: center center;
-  /* compact 円内では sprite の影 (base が 0 10px 18px の drop shadow を
-     持つ) が下にはみ出して「重心が下にずれた」印象を作っていた。
-     円形 avatar では影は不要なので削除。 */
-  box-shadow: none;
 }
 .log-post-compact-body {
   display: inline-flex;
@@ -5320,17 +5306,15 @@
 }
 
 .post-reply-item .profile-character-preview {
-  /* Instagram / X 流の完全 round avatar に揃える。container 36px、
-     scale 0.52 で visual 全高 57×0.52 ≈ 30px → container 36px に対して
-     上下 3px ずつの余白で完全に中央表示される。 */
+  /* 投稿ボックスと同じ recipe に統一。返信欄なのでサイズだけ少し
+     小さく (36×36)、scale は同じ 0.78 で見た目の比率を揃える。 */
   width: 36px;
   height: 36px;
-  border-radius: 999px;
+  border-radius: 12px;
 }
 .post-reply-item .profile-character-preview .actor-sprite {
-  transform: translateY(-1px) scale(0.52);
+  transform: translateY(-1px) scale(0.78);
   transform-origin: center center;
-  box-shadow: none;
 }
 
 .post-reply-item p {
