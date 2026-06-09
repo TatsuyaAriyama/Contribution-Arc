@@ -4721,15 +4721,19 @@
   cursor: pointer;
 }
 /* 自動投稿 (compact) のアバター枠。
-   投稿ボックス (.log-composer) や通常投稿 (.log-post-author) と同じ
-   recipe を流用する：container を 32px、sprite に
-   transform: translateY(-1px) scale(0.78) を当てるだけ。これで足元の
-   切れ / 顔の消失 / 縦伸びが解消される。前回 scale 0.6 + translateY -6px
-   は過剰だった (sprite 自体が縦長で表示されていた)。 */
+   .actor-sprite は base 40×40 だが、.sprite-head が top: -8px で上に
+   はみ出し、.sprite-leg が bottom: -9px で下にはみ出す構造になっている。
+   32px の円に scale で縮小すると、頭と足が overflow:hidden に切られて
+   「胴体の背景塗りだけ見える」状態になる (報告された不具合)。
+
+   投稿ボックス (.log-composer) が綺麗に表示できている理由は container
+   が 40×40 で sprite の頭・足が overflow せず収まっているから。同じ
+   recipe (40×40 container + transform: translateY(-1px) scale(0.78) +
+   border-radius 12px の角丸正方形) を流用する。 */
 .log-post-author-compact .profile-character-preview {
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   overflow: hidden;
   background: rgba(var(--ink-rgb), 0.04);
   box-shadow: inset 0 0 0 1px rgba(var(--ink-rgb), 0.06);
@@ -5300,15 +5304,18 @@
 }
 
 .post-reply-item .profile-character-preview {
-  width: 28px;
-  height: 28px;
-  border-radius: 10px;
+  /* 28px container では sprite の head (top: -8px) と leg (bottom: -9px)
+     が overflow に切られて胴体しか見えない不具合があった。投稿ボックスと
+     同じ 36×36 + scale 0.7 の recipe にしてしっかり収める。 */
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
 }
 
-/* Reply avatar — even tighter chip; scale smaller to keep the legs
-   visible inside the 28px box. */
+/* Reply avatar — slightly smaller than the post avatar but still large
+   enough for the head and legs to fit inside the chip. */
 .post-reply-item .profile-character-preview .actor-sprite {
-  transform: translateY(-1px) scale(0.55);
+  transform: translateY(-1px) scale(0.7);
 }
 
 .post-reply-item p {
