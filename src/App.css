@@ -4750,6 +4750,10 @@
 .log-post-author-compact .profile-character-preview .actor-sprite {
   transform: translateY(-1px) scale(0.58);
   transform-origin: center center;
+  /* compact 円内では sprite の影 (base が 0 10px 18px の drop shadow を
+     持つ) が下にはみ出して「重心が下にずれた」印象を作っていた。
+     円形 avatar では影は不要なので削除。 */
+  box-shadow: none;
 }
 .log-post-compact-body {
   display: inline-flex;
@@ -5326,6 +5330,7 @@
 .post-reply-item .profile-character-preview .actor-sprite {
   transform: translateY(-1px) scale(0.52);
   transform-origin: center center;
+  box-shadow: none;
 }
 
 .post-reply-item p {
@@ -11773,15 +11778,17 @@
   background: color-mix(in srgb, var(--actor-color) 48%, #ffffff 52%);
 }
 
-/* Two feet sit close together near the center (matches the reference
-   art). Keep the existing leg shape. */
+/* 両足の配置。以前は left: 38% / right: 38% で 40px sprite に対して
+   両足の幾何位置が x=[15.2,25.2] と x=[14.8,24.8] と「ほぼ完全に重なって」
+   1 本足のように見える不具合があった (報告)。左右に開いて確実に 2 本に
+   分離する。間隔 ≈ 2.4px。 */
 .actor-sprite.is-blocky .sprite-leg-left {
-  left: 38%;
+  left: 22%;
 }
 
 .actor-sprite.is-blocky .sprite-leg-right {
   left: auto;
-  right: 38%;
+  right: 22%;
 }
 
 /* Ghost shape — alternate silhouette: rounded dome head with a
