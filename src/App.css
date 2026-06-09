@@ -4727,9 +4727,19 @@
   overflow: hidden;
   background: rgba(var(--ink-rgb), 0.04);
   box-shadow: none;
+  /* 親自体も中央寄せに揃える。base ルールが grid + place-items: center
+     を持っているがコンパクト用にもう一度明示しておく。 */
+  display: grid;
+  place-items: center;
 }
 .log-post-author-compact .profile-character-preview .actor-sprite {
-  transform: scale(0.6);
+  /* base の .profile-character-preview .actor-sprite には
+     transform: translateY(9px) scale(0.92) が当たっており、28px の
+     小さな円に縮めた時に sprite が下にずれて足だけ見える / 顔が消える
+     状態になっていた。translateY を 0 にリセットして、scale だけで
+     縮めて中央に収める。 */
+  transform: translateY(0) scale(0.55);
+  transform-origin: center;
 }
 .log-post-compact-body {
   display: inline-flex;
