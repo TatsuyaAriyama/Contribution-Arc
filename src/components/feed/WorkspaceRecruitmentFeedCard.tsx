@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { WorkspaceRecruitmentRecord } from "../../services/workspaceRecruitments";
 
@@ -73,7 +74,7 @@ const ROLL_SPRING = { type: "spring" as const, stiffness: 420, damping: 32, mass
 export function WorkspaceRecruitmentFeedCard({
   recruitment,
   author,
-  now,
+  now: coarseNow,
   currentUserId,
   onJoin,
   onCancel,
@@ -81,6 +82,26 @@ export function WorkspaceRecruitmentFeedCard({
 }: WorkspaceRecruitmentFeedCardProps) {
   const startAtMs = new Date(recruitment.startAt).getTime();
   const expiresAtMs = new Date(recruitment.expiresAt).getTime();
+
+  // 秒単位のカウントダウンはこのカード内部のローカル tick で賄う。
+  // 以前は App 側の feedNowTick を 1 秒間隔にしていたが、それだと
+  // 2 万行の App コンポーネント全体が毎秒再レンダーされて UI 全体が
+  // モサつく。tick の影響範囲をこのカード 1 枚に閉じ込めることで、
+  // App 側は 30 秒間隔の粗い now だけ流せばよくなる。
+  // ローカル tick は「残り 5 分未満 (秒表示が出る区間)」のみ 1 秒、
+  // それ以外は 30 秒で十分。
+  const [localNow, setLocalNow] = useState(coarseNow);
+  useEffect(() => {
+    setLocalNow(coarseNow);
+    const msLeft = expiresAtMs - Date.now();
+    const isLive = Date.now() >= startAtMs && msLeft > 0;
+    const needsSecondTick = isLive && msLeft < 5 * 60 * 1000;
+    const intervalMs = needsSecondTick ? 1000 : 30000;
+    const id = window.setInterval(() => setLocalNow(Date.now()), intervalMs);
+    return () => window.clearInterval(id);
+  }, [coarseNow, startAtMs, expiresAtMs]);
+  const now = localNow;
+
   const isUpcoming = now < startAtMs;
   const isActive = !isUpcoming && now < expiresAtMs;
   const isOwner = currentUserId === recruitment.userId;

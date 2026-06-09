@@ -5477,13 +5477,14 @@ function App() {
   }, [currentUser]);
 
   useEffect(() => {
-    // Tick at 1s when any active recruitment is visible so countdown text
-    // and breathing pulse stay live. Falls back to 30s when nothing is live.
-    const hasLive = workspaceRecruitments.some((r) => new Date(r.expiresAt).getTime() > Date.now());
-    const intervalMs = hasLive ? 1000 : 30000;
-    const interval = window.setInterval(() => setFeedNowTick(Date.now()), intervalMs);
+    // 30 秒固定の粗い tick。以前は募集ライブ中 1 秒間隔にしていたが、
+    // それだと App 全体 (2 万行のコンポーネントツリー) が毎秒再レンダー
+    // され、タイピング・スクロール・タップすべてがモサつく主因になっていた。
+    // 秒単位のカウントダウン表示は WorkspaceRecruitmentFeedCard が内部の
+    // ローカル tick で賄うので、App 側は粗い時刻だけ流せば足りる。
+    const interval = window.setInterval(() => setFeedNowTick(Date.now()), 30000);
     return () => window.clearInterval(interval);
-  }, [workspaceRecruitments]);
+  }, []);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
