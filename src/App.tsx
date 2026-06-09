@@ -2,6 +2,7 @@ import {
   Fragment,
   Suspense,
   lazy,
+  memo,
   useCallback,
   useEffect,
   useMemo,
@@ -2394,7 +2395,12 @@ const ghostSvgMarkup = (
 // + two short legs. No sprout, no eyes — a minimal silhouette that matches
 // the workspace-room representation of the character. The "ghost" and "owl"
 // shapes (driven by the `shape` prop) render their own distinct silhouettes.
-function ProfileCharacterPreview({
+//
+// memo 化必須：50 箇所以上で繰り返し描画される sprite。color / shape が
+// 変わらなければ再描画スキップしてよい (内部 DOM は完全に props だけで
+// 決まる)。App.tsx の他の state が動くたびに 50 箇所の sprite が
+// reconcile されていたのを止める。
+export const ProfileCharacterPreview = memo(function ProfileCharacterPreview({
   color,
   shape = "default",
 }: {
@@ -2460,7 +2466,7 @@ function ProfileCharacterPreview({
       </span>
     </div>
   );
-}
+});
 
 function getFirestoreErrorMessage(error: unknown, fallback: string, permissionFallback = fallback) {
   const code =
@@ -5856,8 +5862,15 @@ function App() {
   // result refreshes whenever the page reloads or new authors appear, so
   // a teammate re-skinning shows up on the next load without any per-frame
   // listener cost.
-  useEffect(() => {
-    if (!currentUser) return;
+  // Author UIDs を string key に集約しておく。posts / replies / reports の
+  // 内容が更新されても、登場ユーザーの集合が変わらなければ key は変化せず、
+  // 下の useEffect が再評価されない (= 不要な Firestore fetch が走らない)。
+  // 元は posts/postReplies/dailyReports/sharedDailyReports そのものを deps
+  // にしていたため、誰かが 1 投稿いいねしただけで Firestore に問い合わせて
+  // いた。Avatar は users/{uid} のスナップショットなので、ユーザー数の
+  // 増減でしか再 fetch する意味がない。
+  const visibleAuthorIdsKey = useMemo(() => {
+    if (!currentUser) return "";
     const ids = new Set<string>();
     const collect = (uid?: string) => {
       if (uid && uid !== currentUser.uid) ids.add(uid);
@@ -5866,8 +5879,13 @@ function App() {
     postReplies.forEach((reply) => collect(reply.userId));
     dailyReports.forEach((report) => collect(report.userId));
     sharedDailyReports.forEach((report) => collect(report.userId));
+    return Array.from(ids).sort().join(",");
+  }, [currentUser, posts, postReplies, dailyReports, sharedDailyReports]);
 
-    const toFetch = Array.from(ids).filter(
+  useEffect(() => {
+    if (!currentUser || !visibleAuthorIdsKey) return;
+    const ids = visibleAuthorIdsKey.split(",").filter(Boolean);
+    const toFetch = ids.filter(
       (uid) => !fetchedAppearanceIdsRef.current.has(uid),
     );
     if (toFetch.length === 0) return;
@@ -5888,7 +5906,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [currentUser, posts, postReplies, dailyReports, sharedDailyReports]);
+  }, [currentUser, visibleAuthorIdsKey]);
 
   // 著者ごとの「代表アピアランス」。同一人物の投稿/返信が記録時点ごとに
   // 違う色で保存されていても、最新レコードの色・形へ寄せて FEED 上で
