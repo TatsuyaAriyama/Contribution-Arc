@@ -4425,19 +4425,50 @@
   align-items: start;
 }
 
+/* FEED 内の全アバターを完全に同じ recipe に統一。
+   - 投稿ボックス (.log-composer)
+   - 通常投稿カード (.log-post-author)
+   - 自動投稿のコンパクトカード (.log-post-author-compact)
+   - 投稿への返信 (.post-reply-item)
+   全部 40×40 / border-radius 12px / scale 0.78 / translateY -1px。
+   container にも flex 中央寄せと overflow:hidden を明示して、将来
+   画像版 (Firebase 取得画像 / 別 SVG) を入れても確実に中央配置されるよう
+   レンダリングパスを 1 本化する。 */
 .log-composer .profile-character-preview,
-.log-post-author .profile-character-preview {
+.log-post-author .profile-character-preview,
+.log-post-author-compact .profile-character-preview,
+.post-reply-item .profile-character-preview {
   width: 40px;
   height: 40px;
+  min-width: 40px;
   border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-
-/* Avatars in the feed composer and post header. Scale the 40x40
-   sprite down so body + legs fit inside the chip without the legs
-   clipping at the bottom edge. */
 .log-composer .profile-character-preview .actor-sprite,
-.log-post-author .profile-character-preview .actor-sprite {
+.log-post-author .profile-character-preview .actor-sprite,
+.log-post-author-compact .profile-character-preview .actor-sprite,
+.post-reply-item .profile-character-preview .actor-sprite {
   transform: translateY(-1px) scale(0.78);
+  transform-origin: center center;
+}
+/* 画像版アバターを使う場合 (img / svg を直接置く) のフォールバック。
+   現状は sprite のみだが、将来 Firebase の photoURL を avatar に使う
+   時に同じ container で確実に中央配置されるようにする。 */
+.log-composer .profile-character-preview > img,
+.log-post-author .profile-character-preview > img,
+.log-post-author-compact .profile-character-preview > img,
+.post-reply-item .profile-character-preview > img,
+.log-composer .profile-character-preview > svg,
+.log-post-author .profile-character-preview > svg,
+.log-post-author-compact .profile-character-preview > svg,
+.post-reply-item .profile-character-preview > svg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .log-composer textarea {
@@ -4723,24 +4754,8 @@
   background: transparent;
   cursor: pointer;
 }
-/* 自動投稿 (compact) のアバター枠。
-   ユーザー要望「投稿ボックスの sprite と同じ見た目に統一」。
-   .log-composer / .log-post-author と完全に同じ recipe を使う：
-   - container 40×40
-   - border-radius 12px の角丸正方形（円形だと sprite が下に偏って見える
-     という報告が連発したため、最もうまく行っている投稿ボックスと同じ
-     角丸正方形に統一）
-   - transform: translateY(-1px) scale(0.78)
-   - グリッド背景は .profile-character-preview の base スタイルそのまま */
-.log-post-author-compact .profile-character-preview {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-}
-.log-post-author-compact .profile-character-preview .actor-sprite {
-  transform: translateY(-1px) scale(0.78);
-  transform-origin: center center;
-}
+/* 自動投稿 (compact) のアバター枠は上の統一ルールで定義済み。
+   個別定義は削除して衝突を完全に避ける。 */
 .log-post-compact-body {
   display: inline-flex;
   align-items: baseline;
@@ -5305,17 +5320,8 @@
   box-shadow: 0 0 0 3px rgba(31, 111, 74, 0.16);
 }
 
-.post-reply-item .profile-character-preview {
-  /* 投稿ボックスと同じ recipe に統一。返信欄なのでサイズだけ少し
-     小さく (36×36)、scale は同じ 0.78 で見た目の比率を揃える。 */
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-}
-.post-reply-item .profile-character-preview .actor-sprite {
-  transform: translateY(-1px) scale(0.78);
-  transform-origin: center center;
-}
+/* 返信アバターは上の統一ルールで定義済み (40×40 + scale 0.78)。
+   個別の上書きを削除して、全 FEED avatar で完全に同じ見た目にする。 */
 
 .post-reply-item p {
   margin: 0;
