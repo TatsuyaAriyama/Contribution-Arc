@@ -4425,6 +4425,96 @@
   align-items: start;
 }
 
+/* ─── ホーム画面に追加 (InstallInstructionsModal) ─── */
+.install-app-settings .auto-post-toggle {
+  align-items: center;
+}
+.install-app-cta {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.12s ease;
+}
+.install-app-cta:hover {
+  opacity: 0.88;
+}
+
+.install-instructions-modal {
+  max-width: min(440px, 92vw);
+}
+.install-instructions-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.install-instructions-head h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.install-instructions-list {
+  margin: 8px 0 16px;
+  padding: 0 0 0 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.install-instructions-list li {
+  padding-left: 4px;
+}
+.install-instructions-list strong {
+  font-weight: 700;
+  color: var(--ink-strong);
+}
+.install-instructions-cta {
+  display: block;
+  width: 100%;
+  margin: 4px 0 12px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.12s ease;
+}
+.install-instructions-cta:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.install-instructions-status {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--green-soft);
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.install-instructions-note {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 /* ─── Pull to Refresh (X / Instagram スタイル) ─── */
 .pull-to-refresh {
   position: relative;

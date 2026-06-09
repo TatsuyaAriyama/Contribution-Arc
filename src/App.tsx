@@ -162,6 +162,7 @@ import { ShareToXModal } from "./components/ShareToXModal";
 import { TutorialHint } from "./components/TutorialHint";
 import { ToastHost } from "./components/ToastHost";
 import { PullToRefresh } from "./components/PullToRefresh";
+import { InstallInstructionsModal } from "./components/InstallInstructionsModal";
 import { IOSInstallHint } from "./components/IOSInstallHint";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 import {
@@ -4311,6 +4312,8 @@ function App() {
   // 同種の自動投稿が連投で流れないよう、最後に出した時刻を kind 別に覚えておく。
   // 同 kind は 60 分以内は集約（=出さない）。
   const lastAutoPostAtRef = useRef<Record<string, number>>({});
+  // 設定モーダルから呼び出す「ホーム画面に追加」インストラクション modal の表示状態。
+  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
   // リロード時の初期 view は "feed"（= bottom-nav のホームに対応する新ホーム）。
   // bottom-nav swap でラベル「ホーム」が view "feed" を指すよう変更したため、
   // 初期表示も「ホーム」と書かれた画面 = feed view にする。
@@ -17311,6 +17314,27 @@ function App() {
               ) : null}
 
               {!isOnboardingSettings ? (
+                <fieldset className="desktop-notification-settings install-app-settings">
+                  <legend>{t("アプリ")}</legend>
+                  <div className="auto-post-toggle">
+                    <span>
+                      <strong>{t("ホーム画面にアイコンを追加")}</strong>
+                      <small>
+                        {t("ホーム画面 / Dock に追加すると、ブラウザを開かずに 1 タップで起動できます。アイコンを更新したい場合もここから手順を確認できます。")}
+                      </small>
+                    </span>
+                    <button
+                      type="button"
+                      className="install-app-cta"
+                      onClick={() => setIsInstallModalOpen(true)}
+                    >
+                      {t("追加 / 更新")}
+                    </button>
+                  </div>
+                </fieldset>
+              ) : null}
+
+              {!isOnboardingSettings ? (
                 <details className="settings-guide">
                   <summary>
                     <span className="settings-guide-title">{t("Contribution Arc の使い方")}</span>
@@ -21045,6 +21069,10 @@ function App() {
       <ToastHost />
       <IOSInstallHint />
       <PWAInstallPrompt />
+      <InstallInstructionsModal
+        open={isInstallModalOpen}
+        onClose={() => setIsInstallModalOpen(false)}
+      />
     </motion.main>
     </MotionConfig>
   );
