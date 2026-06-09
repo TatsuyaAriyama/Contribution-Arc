@@ -888,18 +888,6 @@ type Announcement = {
 
 const ANNOUNCEMENTS: Announcement[] = [
   {
-    id: "2026-06-03-friend-request",
-    date: "2026.06.03",
-    title: "フレンド申請の不具合を修正しました",
-    body: "フレンド申請が正常に動作せずに届かない不具合を修正しました。",
-  },
-  {
-    id: "2026-06-03-rooms",
-    date: "2026.06.03",
-    title: "作業部屋まわりを改善しました",
-    body: "作業部屋の名前変更が反映されない不具合を修正し、ヘッダーの表示も見やすく整えました。",
-  },
-  {
     id: "2026-06-01-welcome",
     date: "2026.06.01",
     title: "Contribution Arc をご利用いただきありがとうございます",
