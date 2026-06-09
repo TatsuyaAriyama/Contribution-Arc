@@ -4681,6 +4681,147 @@
   );
 }
 
+/* ─── 自動投稿の細長コンパクト pill カード ───
+   学習記録 / 作業部屋退室の自動投稿用。1 行に「avatar・kind icon・名前・
+   本文・時刻・like」を全部詰めて、タイムラインを圧迫しない。手書きの
+   .log-post-card と並んで違和感がないよう、surface / hairline / radius
+   は同系統に揃え、padding と高さだけ抑える。 */
+.log-post-card-compact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  min-width: 0;
+}
+.log-post-card-compact.is-own {
+  background: linear-gradient(
+    90deg,
+    rgba(31, 111, 74, 0.06) 0%,
+    var(--surface) 70%
+  );
+}
+[data-theme="dark"] .log-post-card-compact.is-own {
+  background: linear-gradient(
+    90deg,
+    rgba(74, 222, 128, 0.07) 0%,
+    var(--surface) 70%
+  );
+}
+.log-post-author-compact {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.log-post-author-compact .profile-character-preview {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(var(--ink-rgb), 0.04);
+  box-shadow: none;
+}
+.log-post-author-compact .profile-character-preview .actor-sprite {
+  transform: scale(0.6);
+}
+.log-post-compact-body {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  /* overflow + ellipsis でテキストが溢れたら 1 行で切る。複数行に
+     折り返すと「縦に伸びる」=「コンパクト」のメリットが消える。 */
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.log-post-compact-icon {
+  flex-shrink: 0;
+  font-size: 13px;
+  line-height: 1;
+}
+.log-post-compact-name {
+  flex-shrink: 0;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+.log-post-compact-text {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.log-post-compact-time {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+.log-post-compact-like {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+.log-post-compact-like:hover {
+  background: rgba(var(--ink-rgb), 0.04);
+}
+.log-post-compact-like.is-liked {
+  color: #e0245e;
+}
+.log-post-compact-like-count {
+  font-size: 11.5px;
+  font-weight: 700;
+}
+/* kind 別の left border accent（薄く色付け）。data-kind は postType に対応。 */
+.log-post-card-compact[data-kind="study"] {
+  border-left: 3px solid rgba(70, 160, 110, 0.5);
+}
+.log-post-card-compact[data-kind="workspace"] {
+  border-left: 3px solid rgba(80, 110, 200, 0.5);
+}
+
+@media (max-width: 720px) {
+  .log-post-card-compact {
+    padding: 6px 10px;
+    gap: 8px;
+  }
+  .log-post-author-compact .profile-character-preview {
+    width: 24px;
+    height: 24px;
+  }
+  .log-post-compact-name,
+  .log-post-compact-text {
+    font-size: 12px;
+  }
+  .log-post-compact-time {
+    font-size: 10.5px;
+  }
+}
+
 .log-post-author {
   display: flex;
   align-items: center;
