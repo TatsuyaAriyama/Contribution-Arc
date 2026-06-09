@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode, type TouchEvent } from "react";
+import { useEffect, useRef, useState, type ReactNode, type TouchEvent } from "react";
 
 /**
  * Pull-to-Refresh コンポーネント。X / Instagram 流の引き下げで更新する
@@ -27,22 +27,35 @@ export function PullToRefresh({
   const [refreshing, setRefreshing] = useState(false);
   const startYRef = useRef<number | null>(null);
   const activeRef = useRef(false);
+  // 直近のスクロール時刻を記録して、スクロール momentum が落ち着く前の
+  // touchstart は PTR を起動しないようにする。「最上部にバウンドした直後
+  // に指で下に引いた」ような誤発火を防ぐ。
+  const lastScrollAtRef = useRef(0);
 
-  // X / Instagram よりさらに厳しいしきい値。「過敏すぎる」報告が連発したため。
-  // - THRESHOLD: 引いた visual 距離 140px 以上で発火 (以前 90)
-  // - RESISTANCE: 0.28 まで強めに減衰。指は 140 / 0.28 ≈ 500px 動かさないと
-  //   threshold に届かない → 通常のスクロール開始ジェスチャでは絶対に発火
-  //   しない感度
-  // - MAX_PULL: 200px、引き切りでも視覚的に止まる
   const THRESHOLD = 140;
   const MAX_PULL = 200;
   const RESISTANCE = 0.28;
+  // スクロール後この時間 (ms) は PTR を起動しない。500ms あれば momentum
+  // も止まり、ユーザーが「意図的に下に引いた」と区別できる。
+  const SCROLL_QUIET_MS = 500;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleScroll = () => {
+      lastScrollAtRef.current = Date.now();
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
     if (refreshing) return;
     // window のスクロール最上端でしか起動しない。中途半端な位置で引いて
     // も「リロードしかけ」表示が出るとスクロール体験が壊れる。
     if (window.scrollY > 0) return;
+    // スクロール momentum / 最上部バウンドの直後は PTR を起動しない。
+    // ユーザーが「早くスクロールしたら更新される」と報告した誤発火を防ぐ。
+    if (Date.now() - lastScrollAtRef.current < SCROLL_QUIET_MS) return;
     startYRef.current = event.touches[0].clientY;
     activeRef.current = true;
   };
