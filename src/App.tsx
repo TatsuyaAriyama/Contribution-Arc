@@ -8260,6 +8260,14 @@ function App() {
     // 控えめなフィードバック. 煽らない・派手にしない — MEMORY の
     // デザイン方針(Linear/Arc 系) に合わせる.
     showToast(`+${formatStudyTimeJa(safeMinutes)} ${item.name}`, { kind: "success" });
+    // 学習を記録したら自動的に FEED にも流す（細長コンパクト表示）。
+    // 通常の手書き投稿と違って横長 1 行で出るのでタイムラインを圧迫しない。
+    // 集約は enqueueAutoPost 側で 5 分ガード。
+    void enqueueAutoPost({
+      kind: "auto-study",
+      text: `『${item.name}』を ${formatStudyTimeJa(safeMinutes)} 学習しました`,
+      studyMinutesValue: safeMinutes,
+    });
   };
 
   // 入力中の学習名に一致する既存の学習対象（active のみ・大文字小文字無視）。
@@ -8707,9 +8715,10 @@ function App() {
 
     const now = Date.now();
     const lastAt = lastAutoPostAtRef.current[kind] || 0;
-    // 60 分以内に同じ kind を出していたら集約してスキップ。長時間ぶっ続けで
-    // 学習している時に 5 ページ進むたびに通知が走るのを防ぐための spam guard。
-    if (now - lastAt < 60 * 60 * 1000) return;
+    // 5 分以内に同じ kind を出していたら集約してスキップ。通常の手書き投稿
+    // と違い auto-* はコンパクト 1 行カードで表示されるためタイムラインを
+    // 圧迫しない設計。連続記録で 1 件ずつ流しても許容範囲。
+    if (now - lastAt < 5 * 60 * 1000) return;
     lastAutoPostAtRef.current[kind] = now;
 
     const autoPost: ContributionPostRecord = {
@@ -12564,6 +12573,54 @@ function App() {
 
   const postCard = (post: ContributionPostRecord, variant: "full" | "compact" = "full") => {
     const isLiked = post.likedUserIds.includes(currentUserUid);
+    const isAuto = post.postType === "auto-study" || post.postType === "auto-workspace";
+
+    // 自動投稿 (学習記録 / 作業部屋退室) は手書きの長文と並べると圧迫感が
+    // 出るので、1 行横並びのコンパクト pill カードで描画する。like ボタンも
+    // 縮約してハートだけにする。reply 系の機能は省略 (auto-* に reply を
+    // ぶら下げる UX は意味が薄い)。
+    if (isAuto) {
+      const autoLook = resolveAuthorAppearance(
+        post.userId,
+        post.characterColor,
+        post.characterShape,
+      );
+      return (
+        <article
+          className={`log-post-card-compact${post.userId === currentUserUid ? " is-own" : ""}`}
+          data-kind={post.postType === "auto-study" ? "study" : "workspace"}
+          key={post.id}
+        >
+          <button
+            type="button"
+            className="log-post-author-compact"
+            onClick={() => handlePostAuthorOpen(post)}
+            aria-label={`${post.username} のプロフィールを開く`}
+          >
+            <ProfileCharacterPreview color={autoLook.color} shape={autoLook.shape} />
+          </button>
+          <span className="log-post-compact-body">
+            <span className="log-post-compact-icon" aria-hidden="true">
+              {post.postType === "auto-study" ? "📘" : "✦"}
+            </span>
+            <strong className="log-post-compact-name">{post.username}</strong>
+            <span className="log-post-compact-text">{post.text}</span>
+          </span>
+          <small className="log-post-compact-time">{formatPostTime(post.createdAt)}</small>
+          <button
+            type="button"
+            className={`log-post-compact-like${isLiked ? " is-liked" : ""}`}
+            onClick={() => handlePostLike(post)}
+            aria-label={isLiked ? "ハートを取り消す" : "ハートする"}
+            aria-pressed={isLiked}
+          >
+            <span aria-hidden="true">{isLiked ? "♥" : "♡"}</span>
+            {post.likesCount > 0 ? <span className="log-post-compact-like-count">{post.likesCount}</span> : null}
+          </button>
+        </article>
+      );
+    }
+
     /* 投稿の下の小さなメタ。以前は studyMinutes が 0 / roomName が空の
        時に "quiet progress" "Quiet log" という英語のプレースホルダーを
        出していたが、意味が伝わらないと報告。データが無い時はそもそも
