@@ -4845,7 +4845,9 @@ function App() {
       cleanedLegacyWorkspaceRoomsRef.current = new Set();
       remoteWorkspaceRoomsRef.current = { rooms: [], legacyRooms: [] };
       setIsWorkspaceLoaded(false);
-      setCurrentView("home");
+      // 起動 / リロード / sign in 直後の初期 view。ユーザー要望で新ホーム =
+      // feed (旧投稿) を最初に見せる仕様に変更。
+      setCurrentView("feed");
       setProfileMember(null);
       setProfileUser(null);
       setOnboardingStep("idle");
@@ -5255,7 +5257,8 @@ function App() {
             setCurrentView("daily");
           } else {
             setOnboardingStep("firstPost");
-            setCurrentView("home");
+            // 新ホーム (feed) で「最初の投稿」を書かせるためにそこへ遷移
+            setCurrentView("feed");
           }
         } else if (!profile.language) {
           // Profile exists but has no language and no userId — treat
@@ -5285,7 +5288,8 @@ function App() {
       return;
     }
 
-    setCurrentView("home");
+    // welcome 直後の遷移先も新ホーム (feed)
+    setCurrentView("feed");
     setProfileMember(null);
     setProfileUser(null);
     setIsSearchOpen(false);
@@ -10072,7 +10076,8 @@ function App() {
 
       if (wasOnboardingSettings) {
         setOnboardingStep("firstPost");
-        setCurrentView("home");
+        // onboarding settings 完了 → 新ホーム (feed) で最初の投稿
+        setCurrentView("feed");
       } else {
         setOnboardingStep("idle");
         // Onboarding has its own celebratory flow ("first post" banner),
@@ -10605,7 +10610,8 @@ function App() {
   };
 
   const handleProfileBack = () => {
-    setCurrentView("home");
+    // プロフィールから「戻る」も新ホーム (feed) へ
+    setCurrentView("feed");
     setProfileMember(null);
     setProfileUser(null);
   };
