@@ -25691,6 +25691,26 @@ select:focus-visible,
    it system-wide get an instant, non-jittery UI.
    ================================================================= */
 
+/* モバイルでは backdrop-filter (blur) を全面的に切る。
+   blur はモバイル GPU で最も重いエフェクトのひとつで、71 箇所に散在
+   していた結果、スクロール・モーダル開閉・トースト表示のたびに
+   フレーム落ち (= 全体のモサつき) を起こしていた。rgba の半透明背景は
+   そのまま残るので、視覚的な劣化は「すりガラスのぼかしが消える」程度に
+   留まり、操作のキビキビ感を優先する。デスクトップは GPU に余裕がある
+   ため従来通り blur を効かせる。 */
+@media (max-width: 720px) {
+  * {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  /* blur を切った分、モーダル背景の暗幕を濃くして手前/背後の分離を保つ。
+     blur(10px) があった時は 0.18 で足りていたが、なしだと背景の文字が
+     透けて読めてしまいモーダルへの集中が削がれる。 */
+  .settings-modal-backdrop {
+    background: rgba(var(--ink-rgb), 0.4);
+  }
+}
+
 button,
 a[role="button"],
 [role="button"] {
