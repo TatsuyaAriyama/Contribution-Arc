@@ -4616,8 +4616,11 @@
 
 .log-post-card {
   display: grid;
-  gap: 10px;
-  padding: 16px 18px;
+  /* ユーザー要望：「1人あたりのカードが大きい」を解消し、画面により多くの
+     投稿が入るよう全方向の余白を圧縮。gap 10→6、padding 16/18→10/14。
+     line-height と font-size も後ろの > p ルールで一段縮める。 */
+  gap: 6px;
+  padding: 10px 14px;
   border: 1px solid rgba(var(--ink-rgb), 0.06);
   border-radius: 14px;
   background: var(--surface);
@@ -4930,9 +4933,11 @@
 .log-post-card > p {
   margin: 0;
   color: var(--ink);
-  font-size: 14.5px;
+  /* 同じく行高と font-size を一段圧縮。読みやすさは保ちつつ高さを
+     抑える方向。 */
+  font-size: 13.5px;
   font-weight: 400;
-  line-height: 1.6;
+  line-height: 1.5;
   white-space: pre-wrap;
 }
 
