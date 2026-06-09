@@ -4521,6 +4521,37 @@
   line-height: 1.5;
 }
 
+/* ─── リロード直後のキャラカラーフラッシュ対策 ───
+   profile が cloud から hydrate される前に default の characterColor で
+   sprite が描画され、その後正しい色に切り替わると一瞬「別キャラのカラー」
+   がチラつくチープな見え方になる。hydrate 完了まで feed の中身を
+   visibility:hidden + opacity:0 で隠し、完了したら 0.2s ease で fade-in
+   する。これで色の入れ替わりが視覚的に発生しなくなる。 */
+.feed-view-content.is-hydrating {
+  visibility: hidden;
+  opacity: 0;
+}
+.feed-view-content.is-hydrated {
+  visibility: visible;
+  opacity: 1;
+  animation: feed-fade-in 0.2s ease both;
+}
+@keyframes feed-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .feed-view-content.is-hydrated {
+    animation: none;
+  }
+}
+
 /* ─── Pull to Refresh (X / Instagram スタイル) ─── */
 .pull-to-refresh {
   position: relative;
