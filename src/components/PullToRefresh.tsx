@@ -28,9 +28,14 @@ export function PullToRefresh({
   const startYRef = useRef<number | null>(null);
   const activeRef = useRef(false);
 
-  const THRESHOLD = 60;
-  const MAX_PULL = 96;
-  const RESISTANCE = 0.5;
+  // X / Instagram のしっかり引っ張った時だけ発火する感度に合わせる。
+  // - THRESHOLD: 引いた距離 (visual) が 90px 以上で発火 (以前 60)
+  // - RESISTANCE: 指の移動量に対する追従率。0.35 にして「指を 250px ほど
+  //   下ろさないと threshold に届かない」感を出す (以前 0.5 で過敏に発火)
+  // - MAX_PULL: 引き切りの最大値。視覚的にこれ以上は伸びない
+  const THRESHOLD = 90;
+  const MAX_PULL = 130;
+  const RESISTANCE = 0.35;
 
   const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
     if (refreshing) return;
