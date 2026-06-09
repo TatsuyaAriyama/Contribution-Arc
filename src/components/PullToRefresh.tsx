@@ -31,6 +31,13 @@ export function PullToRefresh({
   // touchstart は PTR を起動しないようにする。「最上部にバウンドした直後
   // に指で下に引いた」ような誤発火を防ぐ。
   const lastScrollAtRef = useRef(0);
+  // PTR が watch するスクロール対象。.feed-view-content のように
+  // overflow-y:auto を持つ ancestor がいると window.scrollY は常に 0 で、
+  // 内部スクロール最中でも PTR が起動してしまう不具合があった。
+  // mount 時に DOM ツリーを上に辿って実際の scroll container を見つけて
+  // それを scrollTop の source にする。見つからなければ window 扱い。
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const scrollSourceRef = useRef<HTMLElement | Window>(typeof window !== "undefined" ? window : (null as never));
 
   const THRESHOLD = 140;
   const MAX_PULL = 200;
@@ -39,20 +46,41 @@ export function PullToRefresh({
   // も止まり、ユーザーが「意図的に下に引いた」と区別できる。
   const SCROLL_QUIET_MS = 500;
 
+  const getScrollTop = () => {
+    const target = scrollSourceRef.current;
+    if (!target) return 0;
+    if (target === window) return window.scrollY;
+    return (target as HTMLElement).scrollTop;
+  };
+
   useEffect(() => {
     if (typeof window === "undefined") return;
+    // 自身の root から上に辿って overflow-y: auto/scroll を持つ ancestor
+    // を見つける。それが実際のスクロールコンテナ。
+    let scroller: HTMLElement | Window = window;
+    let el: HTMLElement | null = rootRef.current?.parentElement || null;
+    while (el && el !== document.body) {
+      const overflowY = window.getComputedStyle(el).overflowY;
+      if (overflowY === "auto" || overflowY === "scroll") {
+        scroller = el;
+        break;
+      }
+      el = el.parentElement;
+    }
+    scrollSourceRef.current = scroller;
+
     const handleScroll = () => {
       lastScrollAtRef.current = Date.now();
     };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    scroller.addEventListener("scroll", handleScroll, { passive: true });
+    return () => scroller.removeEventListener("scroll", handleScroll);
   }, []);
 
   const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
     if (refreshing) return;
-    // window のスクロール最上端でしか起動しない。中途半端な位置で引いて
-    // も「リロードしかけ」表示が出るとスクロール体験が壊れる。
-    if (window.scrollY > 0) return;
+    // 実際のスクロールコンテナの最上端でしか起動しない。中途半端な位置で
+    // 引いても「リロードしかけ」表示が出るとスクロール体験が壊れる。
+    if (getScrollTop() > 0) return;
     // スクロール momentum / 最上部バウンドの直後は PTR を起動しない。
     // ユーザーが「早くスクロールしたら更新される」と報告した誤発火を防ぐ。
     if (Date.now() - lastScrollAtRef.current < SCROLL_QUIET_MS) return;
@@ -62,7 +90,7 @@ export function PullToRefresh({
 
   const handleTouchMove = (event: TouchEvent<HTMLDivElement>) => {
     if (!activeRef.current || refreshing || startYRef.current === null) return;
-    if (window.scrollY > 0) {
+    if (getScrollTop() > 0) {
       // 途中で下にスクロールしたら追跡を解除
       activeRef.current = false;
       setPull(0);
@@ -107,6 +135,7 @@ export function PullToRefresh({
 
   return (
     <div
+      ref={rootRef}
       className="pull-to-refresh"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
