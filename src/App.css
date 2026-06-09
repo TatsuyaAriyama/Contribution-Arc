@@ -4824,10 +4824,10 @@
     padding: 6px 10px;
     gap: 8px;
   }
-  .log-post-author-compact .profile-character-preview {
-    width: 24px;
-    height: 24px;
-  }
+  /* モバイル時に container を 24×24 に強制縮小していたルールを削除。
+     これが「アバターがずれる」と何度も報告された真の原因。base ルール
+     (40×40 container + scale 0.7) を維持して、頭・体・足が全身入る
+     状態をモバイルでも保つ。 */
   .log-post-compact-name,
   .log-post-compact-text {
     font-size: 12px;
