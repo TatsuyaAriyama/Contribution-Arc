@@ -17315,12 +17315,12 @@ function App() {
 
               {!isOnboardingSettings ? (
                 <fieldset className="desktop-notification-settings install-app-settings">
-                  <legend>{t("アプリ")}</legend>
+                  <legend>{t("スマホアプリ")}</legend>
                   <div className="auto-post-toggle">
                     <span>
-                      <strong>{t("ホーム画面にアイコンを追加")}</strong>
+                      <strong>{t("スマホアプリとしてダウンロード")}</strong>
                       <small>
-                        {t("ホーム画面 / Dock に追加すると、ブラウザを開かずに 1 タップで起動できます。アイコンを更新したい場合もここから手順を確認できます。")}
+                        {t("ホーム画面 / Dock に追加すると、ブラウザを開かずに 1 タップで起動できます。iPhone / Android どちらも対応。アイコンを更新したい場合もここから手順を確認できます。")}
                       </small>
                     </span>
                     <button
@@ -17328,7 +17328,7 @@ function App() {
                       className="install-app-cta"
                       onClick={() => setIsInstallModalOpen(true)}
                     >
-                      {t("追加 / 更新")}
+                      {t("ダウンロード")}
                     </button>
                   </div>
                 </fieldset>
