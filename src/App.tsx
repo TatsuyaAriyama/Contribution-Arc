@@ -20615,21 +20615,13 @@ function App() {
 
       </div>
 
-      {/* FEED 単独画面（スマホ版） */}
+      {/* feed view = 新ホーム。bottom-nav の「ホーム」を押すとここに来る。
+          以前は feed-view-header に「ホームに戻る ← フィード」と出ていたが、
+          新ホーム自身なので戻るボタンは外してタイトルも「ホーム」へ。 */}
       {currentView === "feed" ? (
         <article className="app-view-feed">
           <header className="feed-view-header">
-            <button
-              type="button"
-              className="topbar-icon-button"
-              aria-label="ホームに戻る"
-              onClick={() => setCurrentView("home")}
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <path d="M19 12H5M12 19l-7-7 7-7" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-            <h1>フィード</h1>
+            <h1>{t("ホーム")}</h1>
           </header>
           <div className="feed-view-content">
             {feedSection}
@@ -20783,10 +20775,15 @@ function App() {
           Hidden on desktop and during onboarding. */}
       {currentView && onboardingStep !== "welcome" ? (
         <nav className="mobile-bottom-nav" aria-label="メインナビゲーション">
+          {/* ホーム / 学習記録 はラベルと中身の swap：
+              - 「ホーム」を押すと FEED (旧投稿) view が表示される
+              - 「学習記録」を押すと 旧ホーム (お知らせ等) view が表示される
+              これは「ホームに feed の内容を出して、投稿タブの中身は旧ホーム」
+              というユーザー要求への対応。アクティブ判定もそれに合わせて反転。 */}
           <button
             type="button"
-            className={currentView === "home" ? "is-active" : ""}
-            onClick={() => setCurrentView("home")}
+            className={currentView === "feed" ? "is-active" : ""}
+            onClick={() => setCurrentView("feed")}
             aria-label={t("ホーム")}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -20824,13 +20821,14 @@ function App() {
             </svg>
             <span>記録する</span>
           </button>
-          {/* ユーザー要望でライブラリと投稿の位置を入れ替え:
-              ホーム / 日報 / 記録する / 投稿 / ライブラリ の順 */}
+          {/* ユーザー要望: 旧「投稿」タブを「学習記録」にリネーム + 中身を
+              旧ホーム (お知らせ等) に入れ替え。view 名はそのまま "home" を
+              使う (=旧ホームコンテンツへ遷移)。 */}
           <button
             type="button"
-            className={currentView === "feed" ? "is-active" : ""}
-            onClick={() => setCurrentView("feed")}
-            aria-label="投稿"
+            className={currentView === "home" ? "is-active" : ""}
+            onClick={() => setCurrentView("home")}
+            aria-label="学習記録"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <rect
@@ -20845,7 +20843,7 @@ function App() {
               />
               <path d="M7 10h10M7 14h6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
             </svg>
-            <span>投稿</span>
+            <span>学習記録</span>
           </button>
           <button
             type="button"
