@@ -4484,9 +4484,14 @@
 .log-post-author .profile-character-preview,
 .log-post-author-compact .profile-character-preview,
 .post-reply-item .profile-character-preview {
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
+  /* container を 40px → 48px に一回り拡大。Ari (is-blocky) は中央に
+     余裕を持って表示できていたが、別シェイプ (frost / owl など) を
+     選んだユーザー (一ノ瀬咲 など) の sprite が container を超えて
+     はみ出していた報告への対応。SVG / shape は触らず、container を
+     大きくして全シェイプを収める方針。 */
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
   aspect-ratio: 1 / 1;
   border-radius: 12px;
   overflow: hidden;
@@ -5340,10 +5345,9 @@
 
 .post-reply-item {
   display: grid;
-  /* avatar 列を 40px に揃える。以前は 28px 前提だったが、FEED 全体で
-     avatar サイズを 40×40 に統一したので grid 列もそれに合わせないと
-     avatar が右にはみ出して reply 本文に被る不具合になる。 */
-  grid-template-columns: 40px minmax(0, 1fr);
+  /* avatar 列を 48px に合わせる。FEED 全体の avatar を 48×48 に拡大した
+     のと整合。 */
+  grid-template-columns: 48px minmax(0, 1fr);
   align-items: start;
   gap: 10px;
   width: 100%;
