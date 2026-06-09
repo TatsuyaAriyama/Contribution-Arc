@@ -12600,9 +12600,6 @@ function App() {
             <ProfileCharacterPreview color={autoLook.color} shape={autoLook.shape} />
           </button>
           <span className="log-post-compact-body">
-            <span className="log-post-compact-icon" aria-hidden="true">
-              {post.postType === "auto-study" ? "📘" : "✦"}
-            </span>
             <strong className="log-post-compact-name">{post.username}</strong>
             <span className="log-post-compact-text">{post.text}</span>
           </span>
