@@ -5291,9 +5291,12 @@
 
 .post-reply-item {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
+  /* avatar 列を 40px に揃える。以前は 28px 前提だったが、FEED 全体で
+     avatar サイズを 40×40 に統一したので grid 列もそれに合わせないと
+     avatar が右にはみ出して reply 本文に被る不具合になる。 */
+  grid-template-columns: 40px minmax(0, 1fr);
   align-items: start;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
   padding: 7px 8px;
   border: 1px solid transparent;
