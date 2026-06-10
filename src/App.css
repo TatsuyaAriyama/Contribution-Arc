@@ -5854,10 +5854,13 @@
 .daily-entry-card {
   display: grid;
   gap: 10px;
-  padding: 12px;
-  border: 1px solid rgba(var(--ink-rgb), 0.06);
-  border-radius: 20px;
-  background: rgba(var(--surface-rgb), 0.5);
+  padding: 12px 14px;
+  /* 「枠だけにカラー、本体は白黒」方針：左 3px だけ緑、他は hairline。
+     学習記録カードと統一したミニマル語彙。 */
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--green);
+  border-radius: 14px;
+  background: var(--surface);
 }
 
 .daily-editor-form label,
@@ -6473,40 +6476,45 @@
    is-earned で色を反転し「明日もどうぞ」と次の継続ループに引き継ぐ。
    コントラストを上げて、未達/達成のチップもピル状にして読み取れるように
    している（初版が薄すぎて読めない、というフィードバックの修正）。 */
+/* 日報報酬バナー。デザイン方針「枠だけにカラー / 本体は白黒」に揃える。
+   学習記録カード (左 3-4px 緑アクセント + 本体白) と同じ語彙で統一。
+   濃い緑グラデ塗りは廃止。 */
 .daily-reward-banner {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   margin: 0 0 12px;
   padding: 12px 14px;
-  border: 1px solid rgba(44, 138, 90, 0.45);
-  border-radius: 16px;
-  background: linear-gradient(135deg, rgba(44, 138, 90, 0.18), rgba(80, 180, 130, 0.28));
-  color: #0f3a25;
+  /* 左 4px だけ緑、他は白 + hairline。 */
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--green);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--ink);
   font-size: 13px;
 }
 .daily-reward-banner.is-earned {
-  border-color: rgba(180, 130, 20, 0.55);
-  background: linear-gradient(135deg, rgba(255, 200, 70, 0.32), rgba(255, 180, 60, 0.42));
-  color: #5a3a08;
+  /* 獲得済みは左を金にスワップ。塗りはなし。 */
+  border-left-color: var(--rare);
 }
 .daily-reward-banner-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: #2c8a5a;
-  color: #ffffff;
+  background: transparent;
+  color: var(--green);
   font-size: 14px;
   font-weight: 700;
   flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(44, 138, 90, 0.32);
+  box-shadow: none;
 }
 .daily-reward-banner.is-earned .daily-reward-banner-icon {
-  background: #d49a1a;
-  box-shadow: 0 2px 6px rgba(180, 130, 20, 0.36);
+  background: transparent;
+  color: var(--rare);
+  box-shadow: none;
 }
 .daily-reward-banner-text {
   display: flex;
@@ -6516,17 +6524,16 @@
   flex: 1;
 }
 .daily-reward-banner-text strong {
-  color: inherit;
-  font-size: 13.5px;
-  font-weight: 700;
-  letter-spacing: 0;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.005em;
   line-height: 1.3;
 }
 .daily-reward-banner-text small {
-  color: inherit;
-  opacity: 0.85;
+  color: var(--muted);
   font-size: 11.5px;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.4;
 }
 .daily-reward-banner-progress {
@@ -6534,54 +6541,27 @@
   flex-wrap: wrap;
   gap: 6px;
   font-size: 11.5px;
-  font-weight: 600;
+  font-weight: 700;
 }
+/* 進捗チップも白 + hairline、達成時のみ ink 塗りでメリハリ。緑は出さない。 */
 .daily-reward-banner-progress > span {
   display: inline-flex;
   align-items: center;
   padding: 3px 9px;
-  border: 1px solid rgba(44, 138, 90, 0.35);
+  border: 1px solid var(--line-strong);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.55);
-  color: #2c5a40;
-  letter-spacing: 0.01em;
+  background: var(--surface);
+  color: var(--muted);
+  letter-spacing: 0;
 }
 .daily-reward-banner-progress > span.is-done {
-  background: #2c8a5a;
-  border-color: #2c8a5a;
-  color: #ffffff;
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--cta-fg);
 }
-@media (prefers-color-scheme: dark) {
-  .daily-reward-banner {
-    border-color: rgba(120, 220, 160, 0.5);
-    background: linear-gradient(135deg, rgba(40, 110, 70, 0.6), rgba(60, 150, 100, 0.66));
-    color: #e6f6ea;
-  }
-  .daily-reward-banner-icon {
-    background: #5ad196;
-    color: #0f3a25;
-    box-shadow: 0 2px 6px rgba(20, 60, 40, 0.5);
-  }
-  .daily-reward-banner-progress > span {
-    background: rgba(20, 50, 35, 0.55);
-    border-color: rgba(120, 220, 160, 0.45);
-    color: #e6f6ea;
-  }
-  .daily-reward-banner-progress > span.is-done {
-    background: #5ad196;
-    border-color: #5ad196;
-    color: #0f3a25;
-  }
-  .daily-reward-banner.is-earned {
-    background: linear-gradient(135deg, rgba(180, 130, 30, 0.58), rgba(220, 170, 60, 0.66));
-    color: #ffe6a8;
-    border-color: rgba(255, 200, 100, 0.55);
-  }
-  .daily-reward-banner.is-earned .daily-reward-banner-icon {
-    background: #f5c453;
-    color: #5a3a08;
-  }
-}
+/* ダークモードは token (--surface / --ink / --green / --line / --rare) が
+   全て自動で polarity flip するので、専用上書きは不要。base ルールが
+   そのまま「黒地に白文字 + 左 4px 緑」に切り替わる。 */
 
 .daily-history-card {
   display: grid;
