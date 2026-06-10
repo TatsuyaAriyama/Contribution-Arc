@@ -18863,6 +18863,116 @@ function App() {
                   ) : null}
                 </div>
 
+                {/* シンプルな投稿 + 日報アプリへの方向転換に伴い、トップバーの
+                    管理 / 作業部屋 / ショップ / フレンド / 検索 / 通知 / 設定
+                    エントリをプロフィール画面に集約。モバイル topbar は非表示
+                    にし、ここから全機能にアクセスする。 */}
+                <nav className="profile-menu" aria-label="メニュー">
+                  <button
+                    type="button"
+                    className="profile-menu-item"
+                    onClick={() => setIsAnnouncementsModalOpen(true)}
+                  >
+                    <span className="profile-menu-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 11.5 17 4v16L3 12.5z" />
+                        <path d="M7 12.5v4l3 1.5v-4" />
+                      </svg>
+                    </span>
+                    <span className="profile-menu-label">お知らせ</span>
+                    <span className="profile-menu-arrow" aria-hidden="true">›</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="profile-menu-item"
+                    onClick={() => setIsSearchOpen(true)}
+                  >
+                    <span className="profile-menu-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="10" cy="13" r="3.4" />
+                        <path d="M10 9V6.5M7 9.6 5.3 8.5M13 9.6l1.7-1.1M7 16.4l-1.7 1.1M13 16.4l1.7 1.1" />
+                        <path d="M20 21l-3-3" />
+                      </svg>
+                    </span>
+                    <span className="profile-menu-label">フレンド・検索</span>
+                    <span className="profile-menu-arrow" aria-hidden="true">›</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="profile-menu-item"
+                    onClick={() => setIsNotificationsOpen(true)}
+                  >
+                    <span className="profile-menu-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M6 16V10a6 6 0 1 1 12 0v6l1.5 2H4.5z" />
+                        <path d="M10 20a2 2 0 0 0 4 0" />
+                      </svg>
+                    </span>
+                    <span className="profile-menu-label">通知</span>
+                    <span className="profile-menu-arrow" aria-hidden="true">›</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="profile-menu-item"
+                    onClick={() => setCurrentView("workspace")}
+                  >
+                    <span className="profile-menu-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="4" y="6" width="16" height="13" rx="2" />
+                        <path d="M4 10h16M9 6V4M15 6V4" />
+                      </svg>
+                    </span>
+                    <span className="profile-menu-label">作業部屋</span>
+                    <span className="profile-menu-arrow" aria-hidden="true">›</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="profile-menu-item"
+                    onClick={() => setCurrentView("shop")}
+                  >
+                    <span className="profile-menu-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 9h14l-1.4 9.5a2 2 0 0 1-2 1.5H8.4a2 2 0 0 1-2-1.5z" />
+                        <path d="M9 9V6a3 3 0 0 1 6 0v3" />
+                      </svg>
+                    </span>
+                    <span className="profile-menu-label">ショップ</span>
+                    <span className="profile-menu-arrow" aria-hidden="true">›</span>
+                  </button>
+                  {currentOrganization?.ownerUid === currentUser.uid ? (
+                    <button
+                      type="button"
+                      className="profile-menu-item"
+                      onClick={() => setCurrentView("manager")}
+                    >
+                      <span className="profile-menu-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="4" y="4" width="7" height="7" rx="1.5" />
+                          <rect x="13" y="4" width="7" height="7" rx="1.5" />
+                          <rect x="4" y="13" width="7" height="7" rx="1.5" />
+                          <rect x="13" y="13" width="7" height="7" rx="1.5" />
+                        </svg>
+                      </span>
+                      <span className="profile-menu-label">管理ダッシュボード</span>
+                      <span className="profile-menu-arrow" aria-hidden="true">›</span>
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="profile-menu-item"
+                    onClick={handleSettingsOpen}
+                  >
+                    <span className="profile-menu-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="3" />
+                        <path d="M19 12a7 7 0 0 0-.1-1.3l2-1.5-2-3.4-2.4.9a7 7 0 0 0-2.2-1.3L13.7 3h-3.4l-.6 2.4a7 7 0 0 0-2.2 1.3l-2.4-.9-2 3.4 2 1.5A7 7 0 0 0 5 12a7 7 0 0 0 .1 1.3l-2 1.5 2 3.4 2.4-.9a7 7 0 0 0 2.2 1.3l.6 2.4h3.4l.6-2.4a7 7 0 0 0 2.2-1.3l2.4.9 2-3.4-2-1.5A7 7 0 0 0 19 12z" />
+                      </svg>
+                    </span>
+                    <span className="profile-menu-label">設定</span>
+                    <span className="profile-menu-arrow" aria-hidden="true">›</span>
+                  </button>
+                </nav>
+
                 {/* 分身キャラクター — ステータスカードのすぐ上に置き、
                     プロフィールの主役（自分のアバター）を最初に見せる。 */}
                 <article className="card character-color-card">

@@ -36120,3 +36120,85 @@ select:disabled {
   color: #8a8a98;
   line-height: 1.4;
 }
+
+/* ===============================================================
+   モバイル：トップバー (.site-header) を完全に非表示にする。
+   ユーザー方針「シンプルな投稿 + 日報のアプリ」に転換するため、
+   管理 / 作業部屋 / ショップ / フレンド / 検索 / 通知 / アバター
+   の集約は全てプロフィール画面へ移行 (下のメニュー参照)。
+   トップバー自体は廃止扱いだが、後戻りしやすいよう @media で
+   モバイル時のみ非表示にしている。デスクトップは現状維持。
+   =============================================================== */
+@media (max-width: 720px) {
+  .site-header {
+    display: none !important;
+  }
+  /* topbar 非表示で消える「アプリ shell の上余白」を最小限に詰める。
+     bottom-nav は別管理、安全エリアは既存 padding が拾う。 */
+  .app-main-panel {
+    padding-top: 0;
+  }
+}
+
+/* ===============================================================
+   プロフィール画面の集約メニュー (.profile-menu)
+   方向転換「シンプルな投稿 + 日報アプリ」に伴い、旧トップバーの
+   各エントリポイント (管理 / 作業部屋 / ショップ / フレンド / 検索
+   / 通知 / 設定) をここに集約。
+   Habit カード語彙に合わせて 1.5px ink hairline + 大角丸 + 行 hover。
+   =============================================================== */
+.profile-menu {
+  display: flex;
+  flex-direction: column;
+  margin-top: 8px;
+  border: 1.5px solid var(--ink);
+  border-radius: 22px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.profile-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 18px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.005em;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.14s ease;
+}
+.profile-menu-item:first-child {
+  border-top: 0;
+}
+.profile-menu-item:hover {
+  background: rgba(var(--ink-rgb), 0.04);
+}
+.profile-menu-item:active {
+  background: rgba(var(--ink-rgb), 0.06);
+}
+.profile-menu-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  color: var(--ink);
+}
+.profile-menu-label {
+  flex: 1;
+  min-width: 0;
+}
+.profile-menu-arrow {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1;
+}
