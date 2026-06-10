@@ -10190,7 +10190,9 @@
   .hours-card,
   .achievements-card,
   .social-card {
-    padding: 18px;
+    /* base / 720px ルールと整合させてコンパクト化。以前 18px で base の
+       12px 修正を打ち消していた。 */
+    padding: 12px;
     border-radius: 22px;
   }
 
@@ -13927,7 +13929,8 @@
   }
 
   .status-card {
-    padding: 14px;
+    /* base に揃えて 12px。以前は 14px で base の縮小修正を打ち消していた。 */
+    padding: 12px;
   }
 
   .status-card-link::after {
@@ -13944,12 +13947,15 @@
   .player-heading {
     align-items: center;
     gap: 10px;
-    margin-top: 8px;
+    /* 8 → 6px に詰める。base 修正に追随。 */
+    margin-top: 6px;
   }
 
   .player-heading h2 {
-    font-size: clamp(24px, 8vw, 31px);
-    line-height: 1;
+    /* clamp 上限を 31 → 24px に下げて、モバイルでの h2 が縦を食いすぎる
+       のを抑える。base が 22px なので minimum 20、ideal 6.5vw、max 24。 */
+    font-size: clamp(20px, 6.5vw, 24px);
+    line-height: 1.05;
   }
 
   .player-avatar {
@@ -13957,9 +13963,28 @@
     height: 42px;
     border-radius: 14px;
   }
+  /* キャラ silhouette 用の専用 avatar も小さく揃える。 */
+  .player-avatar-character {
+    width: 52px;
+    height: 52px;
+    padding: 3px;
+    border-radius: 14px;
+  }
 
   .status-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* status-metrics の base コンパクト化をモバイルでも維持。 */
+  .status-metrics div {
+    min-height: 42px;
+    padding: 7px 10px;
+    border-radius: 12px;
+  }
+  .status-metrics strong {
+    font-size: 16px;
+  }
+  .status-metrics span {
+    font-size: 10.5px;
   }
 
   .contribution-summary {
@@ -13967,17 +13992,30 @@
   }
 
   .contribution-summary div {
-    min-height: 52px;
-    padding: 8px;
+    /* 52 → 38、padding 8 → 6/8。base 修正と同調。 */
+    min-height: 38px;
+    padding: 6px 8px;
   }
 
   .contribution-summary strong {
-    font-size: 18px;
+    /* 18 → 15。3 カラムで詰まる縦を抑える。 */
+    font-size: 15px;
   }
 
   .contribution-summary span {
     font-size: 9px;
     overflow-wrap: anywhere;
+  }
+
+  /* 決意セクションもモバイルでコンパクトに保つ。 */
+  .player-determination {
+    margin-top: 8px;
+    padding: 8px 12px;
+  }
+  .determination-form textarea {
+    min-height: 56px;
+    padding: 10px 12px;
+    font-size: 13.5px;
   }
 
   .weekly-card {
