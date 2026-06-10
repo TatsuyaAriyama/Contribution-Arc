@@ -1398,6 +1398,31 @@ export async function deleteUserAccount(
   const toCount = await deleteCollectionByUserField(db, "friendRequests", "toUid", uid);
   deletedCounts.friendRequests = fromCount + toCount;
 
+  // 退会カスケードの補完 (ストア審査 / GDPR 対応):
+  // - workspaceInvites: 自分が送った / 受け取った作業部屋招待
+  // - encouragements: 自分が送った / 受け取った応援 (👏)
+  // どちらも rules 側で from/to (sender/recipient) の削除を許可している。
+  // 失敗してもアカウント削除全体は止めない (ベストエフォート)。
+  try {
+    const inviteFrom = await deleteCollectionByUserField(db, "workspaceInvites", "fromUid", uid);
+    const inviteTo = await deleteCollectionByUserField(db, "workspaceInvites", "toUid", uid);
+    deletedCounts.workspaceInvites = inviteFrom + inviteTo;
+  } catch {
+    deletedCounts.workspaceInvites = 0;
+  }
+  try {
+    const encSent = await deleteCollectionByUserField(db, "encouragements", "senderUid", uid);
+    const encReceived = await deleteCollectionByUserField(
+      db,
+      "encouragements",
+      "recipientUid",
+      uid,
+    );
+    deletedCounts.encouragements = encSent + encReceived;
+  } catch {
+    deletedCounts.encouragements = 0;
+  }
+
   if (userId) {
     try {
       await deleteDoc(doc(db, "usernames", userId));

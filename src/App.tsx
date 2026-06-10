@@ -17,6 +17,7 @@ import {
 } from "react";
 import {
   createUserWithEmailAndPassword,
+  deleteUser,
   getAdditionalUserInfo,
   getRedirectResult,
   linkWithPopup,
@@ -9135,7 +9136,9 @@ function App() {
         uid: currentUser.uid,
         userId: userId || "",
         displayName: playerName || "",
-        email: currentUser.email || "",
+        // email は保存しない (データ最小化)。問い合わせ対応が必要な場合は
+        // uid から Auth コンソールで特定できるため、平文の PII をここに
+        // 複製する必要がない。users doc が email を持たない設計とも整合。
         text,
         userAgent: typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 300) : "",
         createdAt: new Date().toISOString(),
@@ -11918,7 +11921,29 @@ function App() {
         }
       }
       await deleteUserAccount(db, currentUser.uid, userId);
-      await signOut(auth);
+      // Firestore のデータ削除後、Firebase Auth のユーザー本体も削除する。
+      // これを忘れると認証レコード (メールアドレス / OAuth 連携) がサーバに
+      // 残り続け、GDPR / 個人情報保護法の削除権とストア審査の「アカウント
+      // 削除」要件を満たせない。
+      try {
+        await deleteUser(currentUser);
+      } catch (authError) {
+        const code = (authError as { code?: string })?.code || "";
+        if (code === "auth/requires-recent-login") {
+          // セッションが古いと Firebase は破壊的操作を拒否する。データは
+          // 既に消えているので、再ログイン → 再実行で Auth レコードだけを
+          // 消してもらう。サインアウトはして "削除済み" の状態にする。
+          await signOut(auth);
+          setIsDeleteConfirmOpen(false);
+          setDeleteConfirmText("");
+          showToast(
+            "データを削除しました。認証アカウントの完全削除には、もう一度ログインして再度アカウント削除を実行してください。",
+            { kind: "info" },
+          );
+          return;
+        }
+        throw authError;
+      }
       setIsDeleteConfirmOpen(false);
       setDeleteConfirmText("");
       showToast("アカウントを削除しました", { kind: "success" });
