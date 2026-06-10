@@ -12574,20 +12574,14 @@ function App() {
       <div className="card-kicker">Player Status</div>
       <div className="player-heading">
         <span className="player-avatar player-avatar-character">
-          {/* Show the user's chosen character silhouette here instead
-              of the bare photo / initial. The character is the user's
-              identity inside the workspace, so the status card should
-              reflect it. Photo (if uploaded) sits as a small inset
-              chip on the bottom-right. */}
+          {/* キャラクター silhouette のみ表示。以前は右下に photo を
+              重ねていたが「Arc族キャラと顔写真が重なって崩れる」報告に
+              対応してアイコンを 1 つ (= 選択しているキャラ + カラー) に
+              統一する方針 (写真設定そのものも削除済)。 */}
           <ProfileCharacterPreview
             color={playerCharacterColor}
             shape={playerCharacterShape}
           />
-          {playerAvatar ? (
-            <span className="player-avatar-photo" aria-hidden="true">
-              <img src={playerAvatar} alt="" />
-            </span>
-          ) : null}
         </span>
         <div className="player-heading-text">
           <h2>{playerName} <span className="player-level-badge">Lv.{levelState.level}</span></h2>
@@ -16953,22 +16947,9 @@ function App() {
             </div>
 
             <form className="settings-form" onSubmit={handleSettingsSubmit}>
-              <div className="settings-avatar-field">
-                <span className="settings-avatar-preview">
-                  {playerAvatar ? <img src={playerAvatar} alt="" /> : playerInitial}
-                </span>
-                <div className="settings-avatar-actions">
-                  <label>
-                    {t("写真を選択")}
-                    <input type="file" accept="image/*" onChange={handleAvatarChange} />
-                  </label>
-                  {playerAvatar ? (
-                    <button type="button" onClick={handleAvatarRemove}>
-                      {t("削除")}
-                    </button>
-                  ) : null}
-                </div>
-              </div>
+              {/* 写真アップロード UI は削除。アイコンは選択しているキャラ
+                  + カラーに統一する設計に揃えた (写真とキャラの二重表示が
+                  崩れていた報告への対応)。 */}
 
               <div className="settings-character-color-panel">
                 <div className="settings-character-color-head">
