@@ -8430,6 +8430,15 @@ function App() {
       // will retry the upload on the next snapshot.
       console.error("Study log cloud save failed.", error);
     });
+    // メインフォームからの学習記録も FEED に自動投稿する。以前は学習詳細
+    // モーダルからの quick log でしか流れていなかったため、ホームの記録
+    // フォームから記録するユーザーの積み上げが FEED に出ず、「みんなの
+    // 学習が流れてこない」状態になっていた。
+    void enqueueAutoPost({
+      kind: "auto-study",
+      text: `『${targetItem.name}』を ${formatStudyTimeJa(minutes)} 学習しました`,
+      studyMinutesValue: minutes,
+    });
     setStudyAmount("30");
   };
 
