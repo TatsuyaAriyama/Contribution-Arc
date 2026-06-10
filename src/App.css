@@ -5620,6 +5620,54 @@
   grid-template-columns: minmax(0, 1fr) minmax(260px, 0.34fr);
   gap: 16px;
   align-items: start;
+  /* 日報画面は背面の warm paper canvas を消して pure white に。
+     Habit アプリ風のフラット白背景に揃える。負 margin と padding で
+     親 view-content の余白を取り消して、画面全幅に白を行き渡らせる。 */
+  margin: -14px;
+  padding: 14px;
+  background: var(--surface);
+  min-height: 100vh;
+  border-radius: 0;
+}
+
+/* === 日報の typography 統一 ===
+   フォント / weight / letter-spacing がばらついていた箇所をすべて 1 つの
+   体系に揃える。
+   ・display headings : weight 900 + tight tracking (-0.025〜-0.04em)
+   ・body strong      : weight 800 + slight tight tracking
+   ・eyebrow / label  : weight 800 + uppercase + 0.06em
+   ・muted / hint     : weight 600
+   全要素は Inter 1 家族で完結する。 */
+.daily-screen .card-kicker,
+.daily-screen .daily-entry-hint,
+.daily-screen .daily-day-summary-label,
+.daily-screen .daily-mode-toggle small,
+.daily-screen .daily-reward-banner-text small,
+.daily-screen .daily-plan-progress-meta,
+.daily-screen .daily-editor-head label span {
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.daily-screen .card-kicker,
+.daily-screen .daily-day-summary-label,
+.daily-screen .daily-plan-progress-meta,
+.daily-screen .daily-editor-head label span {
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.daily-screen .daily-day-summary-value,
+.daily-screen .daily-mode-toggle strong,
+.daily-screen .daily-reward-banner-text strong,
+.daily-screen .daily-plan-progress-meta strong,
+.daily-screen .daily-streak-badge {
+  font-weight: 800;
+  letter-spacing: -0.005em;
+}
+.daily-screen .daily-editor-title,
+.daily-screen .daily-editor-card .daily-entry-label {
+  font-weight: 900;
+  letter-spacing: -0.035em;
 }
 
 .daily-plan-prompt {
