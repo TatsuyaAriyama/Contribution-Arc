@@ -6157,30 +6157,33 @@
 }
 
 .plan-checklist-text {
-  /* 未フォーカス時は常に 1 行ぶんの固定高さで一覧として詰めて見せる。
-     フォーカスしたとき (= ユーザーが編集する瞬間) だけ JS 側で
-     scrollHeight を代入して伸ばす。「最初から枠が大きい」感を防ぐ。 */
+  /* シンプルな 1 行 input。Notion / Linear 流の todo 行と同じ密度感。
+     未フォーカス / フォーカス中で高さは変わらない。長文は input 内で
+     横スクロールするが、一覧の縦リズムを優先する設計。 */
   width: 100%;
-  height: 28px;
-  padding: 5px 8px;
+  height: 32px;
+  padding: 0 8px;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 8px;
   background: transparent;
   color: var(--ink);
   font: inherit;
   font-size: 13.5px;
-  line-height: 1.45;
-  resize: none;
-  overflow: hidden;
-  overflow-wrap: anywhere;
-  white-space: pre-wrap;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.005em;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
   transition: border-color 120ms ease-out, background-color 120ms ease-out;
 }
-/* フォーカス中は固定高さを解除して JS の auto-grow に追従させる。
-   max-height は付けないので長文でも全行見える。 */
-.plan-checklist-text:focus {
-  height: auto;
-  min-height: 28px;
+/* モバイルでは更にフォントを詰めて、横スクロールが必要になる文字数の
+   閾値を実用的に押し上げる。 */
+@media (max-width: 720px) {
+  .plan-checklist-text {
+    font-size: 13px;
+    padding: 0 6px;
+  }
 }
 /* モバイルは更にコンパクトに。長い文章でも横にあふれず、複数行で
    折り返して見える。 */
