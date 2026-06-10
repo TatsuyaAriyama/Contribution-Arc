@@ -68,23 +68,28 @@ export function DailyPlanChecklist({
      before typing — a small but real friction point.
 
      input[type="text"] から textarea に変更 (モバイルで長い文章が
-     1 行に押し込まれて見えなくなる不具合への対応)。auto-grow は
-     onInput で scrollHeight を直接 height に代入する素朴な方式と、
-     CSS の field-sizing: content の二段構え。 */
+     1 行に押し込まれて見えなくなる不具合への対応)。ただし「最初から
+     枠が大きいのは嫌」報告に合わせて、未フォーカス時は CSS で 1 行
+     固定、フォーカス時のみ scrollHeight に追従して伸ばす。 */
   const lastAddedIdRef = useRef<string | null>(null);
   const textInputRefs = useRef<Map<string, HTMLTextAreaElement | null>>(new Map());
 
+  // フォーカス中のみ scrollHeight に追従して伸ばす。フォーカスが外れたら
+  // 高さは CSS のデフォルト (1 行) に戻す = 一覧として常に詰めて見える。
   const autoGrow = (el: HTMLTextAreaElement) => {
+    if (document.activeElement !== el) return;
     el.style.height = "auto";
     el.style.height = `${el.scrollHeight}px`;
+  };
+  const resetHeight = (el: HTMLTextAreaElement) => {
+    el.style.height = "";
   };
 
   const setItemRef = useCallback((id: string) => (el: HTMLTextAreaElement | null) => {
     if (el) {
       textInputRefs.current.set(id, el);
-      // 初期マウント時にも 1 度 auto-grow を走らせて、長い既存テキスト
-      // (前日からの繰越など) が 1 行押し込みで切れないようにする。
-      autoGrow(el);
+      // 初期マウント時には高さを伸ばさない。一覧として常に 1 行ぶんで
+      // 始まり、タップで focus したときだけ伸ばす方針に変更。
       if (lastAddedIdRef.current === id) {
         el.focus();
         lastAddedIdRef.current = null;
@@ -185,6 +190,8 @@ export function DailyPlanChecklist({
                       autoGrow(event.currentTarget);
                     }}
                     onInput={(event) => autoGrow(event.currentTarget)}
+                    onFocus={(event) => autoGrow(event.currentTarget)}
+                    onBlur={(event) => resetHeight(event.currentTarget)}
                     onKeyDown={(event) => handleTextKeyDown(event, item)}
                   />
                   {item.carriedFrom ? (
