@@ -20958,29 +20958,27 @@ function App() {
             </svg>
             <span>記録する</span>
           </button>
-          {/* ユーザー要望: 旧「投稿」タブを「学習記録」にリネーム + 中身を
-              旧ホーム (お知らせ等) に入れ替え。view 名はそのまま "home" を
-              使う (=旧ホームコンテンツへ遷移)。 */}
+          {/* プロフィール導線。元は「投稿 → 学習記録」と rename していたが
+              実体は home view に飛ばすブリッジ用ボタン。ユーザー要望で
+              ラベルとアイコンを「プロフィール」(人物アイコン) に変更し、
+              遷移先も実際のプロフィール view へ。 */}
           <button
             type="button"
-            className={currentView === "home" ? "is-active" : ""}
-            onClick={() => setCurrentView("home")}
-            aria-label="学習記録"
+            className={currentView === "profile" ? "is-active" : ""}
+            onClick={() => setCurrentView("profile")}
+            aria-label="プロフィール"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <rect
-                x="3"
-                y="5"
-                width="18"
-                height="14"
-                rx="2.5"
+              <circle cx="12" cy="8.5" r="3.6" fill="none" stroke="currentColor" strokeWidth="1.6" />
+              <path
+                d="M4.5 20c1.4-3.4 4.4-5.4 7.5-5.4s6.1 2 7.5 5.4"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.6"
+                strokeLinecap="round"
               />
-              <path d="M7 10h10M7 14h6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
             </svg>
-            <span>学習記録</span>
+            <span>プロフィール</span>
           </button>
           <button
             type="button"
