@@ -6157,12 +6157,11 @@
 }
 
 .plan-checklist-text {
-  /* input から textarea に変更したので、textarea デフォルトの
-     resize グリップを無効化、改行は wrap、初期高さは 1 行ぶん。
-     auto-grow は JS 側 (setItemRef / onInput) で scrollHeight を
-     代入して内容に応じて伸ばす。 */
+  /* 未フォーカス時は常に 1 行ぶんの固定高さで一覧として詰めて見せる。
+     フォーカスしたとき (= ユーザーが編集する瞬間) だけ JS 側で
+     scrollHeight を代入して伸ばす。「最初から枠が大きい」感を防ぐ。 */
   width: 100%;
-  min-height: 28px;
+  height: 28px;
   padding: 5px 8px;
   border: 1px solid transparent;
   border-radius: 6px;
@@ -6175,11 +6174,13 @@
   overflow: hidden;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
-  /* モダンブラウザでは field-sizing: content が JS 不要で auto-grow
-     を担保してくれる (Chrome 123+ / Firefox 126+)。Safari は未対応
-     なので JS フォールバックも残す。 */
-  field-sizing: content;
   transition: border-color 120ms ease-out, background-color 120ms ease-out;
+}
+/* フォーカス中は固定高さを解除して JS の auto-grow に追従させる。
+   max-height は付けないので長文でも全行見える。 */
+.plan-checklist-text:focus {
+  height: auto;
+  min-height: 28px;
 }
 /* モバイルは更にコンパクトに。長い文章でも横にあふれず、複数行で
    折り返して見える。 */
