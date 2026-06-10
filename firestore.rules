@@ -112,7 +112,8 @@ service cloud.firestore {
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.text is string
         && request.resource.data.text.size() > 0
-        && request.resource.data.text.size() <= 2000;
+        && request.resource.data.text.size() <= 2000
+        && request.resource.data.createdAt is string;
       allow read: if isDeveloper();
       allow update, delete: if false;
     }
@@ -192,11 +193,18 @@ service cloud.firestore {
             && get(/databases/$(database)/documents/organizations/$(resource.data.organizationId)).data.ownerUid == request.auth.uid
           )
         );
+      // studyMinutes / earnedExp に常識的な上限を課す。1 レコード最大
+      // 24 時間 (1440 分)。負数・巨大値による EXP / ランキング汚染を
+      // ルール側でも遮断する (クライアント側のバリデーションの二重化)。
       allow create: if signedIn()
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.category is string
         && request.resource.data.studyMinutes is number
-        && request.resource.data.earnedExp is number;
+        && request.resource.data.studyMinutes > 0
+        && request.resource.data.studyMinutes <= 1440
+        && request.resource.data.earnedExp is number
+        && request.resource.data.earnedExp >= 0
+        && request.resource.data.earnedExp <= 14400;
       allow update: if signedIn()
         && resource.data.userId == request.auth.uid
         && request.resource.data.userId == request.auth.uid;
@@ -475,7 +483,13 @@ service cloud.firestore {
         && request.resource.data.recipientUid is string
         && request.resource.data.recipientUid != request.auth.uid
         && request.resource.data.createdAt is string;
-      allow update, delete: if false;
+      allow update: if false;
+      // 退会カスケード (GDPR / 個人情報保護法の削除権) のため、送信者・
+      // 受信者どちらの当事者も削除できる。spam 防止の本丸は「update 禁止 +
+      // doc ID が日付固定」なので、削除を許してもその日の再 create が
+      // 可能になるだけで悪用余地は小さい。
+      allow delete: if signedIn()
+        && (resource.data.senderUid == request.auth.uid || resource.data.recipientUid == request.auth.uid);
     }
 
     match /friendRequests/{requestId} {
