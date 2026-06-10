@@ -5800,6 +5800,17 @@
   padding: clamp(16px, 2vw, 24px);
 }
 
+/* 画面トップに大きく置く「日報」見出し。Habit アプリ風の display weight
+   で、ページの主役を一目で立たせる。 */
+.daily-editor-title {
+  margin: 8px 0 4px;
+  color: var(--ink);
+  font-size: clamp(34px, 9vw, 48px);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+}
+
 .daily-editor-head,
 .daily-history-head,
 .daily-today-card {
@@ -5949,15 +5960,14 @@
 }
 
 .daily-mode-toggle {
-  /* 破線枠 / 緑薄塗りを撤去。白 + 1px solid hairline でシンプルに。
-     accent-color は ink にして「白黒方針」を貫く (緑は左バー一筋に限定)。 */
+  /* Habit カードと同じ chrome：ink 1.5px hairline + 大きい角丸 + 白。 */
   display: grid;
   grid-template-columns: auto 1fr;
   align-items: start;
-  gap: 10px;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1.5px solid var(--ink);
+  border-radius: 18px;
   background: var(--surface);
   cursor: pointer;
   width: 100%;
@@ -6500,22 +6510,23 @@
    学習記録カード (左 3-4px 緑アクセント + 本体白) と同じ語彙で統一。
    濃い緑グラデ塗りは廃止。 */
 .daily-reward-banner {
+  /* Habit カードと統一語彙：ink 1.5px hairline + 大角丸 + 白。
+     左バーは廃止 (カードとして完結したオブジェクトに見える方が筋が通る)。 */
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   margin: 0 0 12px;
-  padding: 12px 14px;
-  /* 左 4px だけ緑、他は白 + hairline。 */
-  border: 1px solid var(--line);
-  border-left: 4px solid var(--green);
-  border-radius: 14px;
+  padding: 16px 18px;
+  border: 1.5px solid var(--ink);
+  border-radius: 18px;
   background: var(--surface);
   color: var(--ink);
   font-size: 13px;
 }
 .daily-reward-banner.is-earned {
-  /* 獲得済みは左を金にスワップ。塗りはなし。 */
-  border-left-color: var(--rare);
+  /* 獲得済みは ink 反転で「達成済み」を強く示す。 */
+  background: var(--ink);
+  color: var(--cta-fg);
 }
 .daily-reward-banner-icon {
   display: inline-flex;
@@ -34523,15 +34534,15 @@ select:disabled {
   color: var(--cta-fg);
 }
 
-/* その日の学習サマリー。緑薄塗りの背景を撤去して白 + hairline に。 */
+/* 学習サマリー。Habit カードに合わせて ink 1.5px hairline + 大角丸。 */
 .daily-day-summary {
   display: flex;
   align-items: stretch;
   gap: 0;
   margin: 14px 0 12px;
-  padding: 14px 16px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
+  padding: 18px 20px;
+  border: 1.5px solid var(--ink);
+  border-radius: 22px;
   background: var(--surface);
 }
 .daily-day-summary-item {
@@ -34701,23 +34712,27 @@ select:disabled {
    =============================================================== */
 
 .daily-editor-card .daily-entry-card {
+  /* Habit アプリ風：白ベースの独立したオブジェクトとして、ink hairline で
+     しっかり囲み、角丸は大きく (22px)、内側余白も大胆に取る。
+     左バー (緑/ink) は廃止 — カード自体が完結したオブジェクトに見える方が
+     "アーティスト感" のあるレイアウトになる。 */
   position: relative;
   overflow: hidden;
-  padding: 18px 16px;
-  border: 1px solid var(--line);
-  border-left: 4px solid var(--green);
-  border-radius: 14px;
+  padding: 24px 22px;
+  border: 1.5px solid var(--ink);
+  border-radius: 22px;
   background: var(--surface);
-  box-shadow: none;
+  box-shadow:
+    0 1px 0 rgba(var(--ink-rgb), 0.04),
+    0 8px 24px rgba(var(--ink-rgb), 0.04);
 }
 .daily-editor-card .daily-entry-card::before {
-  /* 旧グラデ左バー (グロー付き) は撤去。border-left で代替。 */
   display: none;
 }
-/* 振り返り (2 枚目) はアンバーではなく落ち着いた warm-ink で。 */
+/* 振り返りカードも plan と完全同じ chrome。区別は中身 (見出し) で。 */
 .daily-editor-card form.daily-entry-card:nth-of-type(2),
 .daily-editor-card > form.daily-entry-card + form.daily-entry-card {
-  border-left-color: var(--ink);
+  border-color: var(--ink);
 }
 
 /* セクションラベル ─ "今日やること" を display 寄りで大きく、
@@ -34728,13 +34743,14 @@ select:disabled {
   padding-left: 0;
 }
 .daily-editor-card .daily-entry-label {
+  /* Habit 風の display heading：black weight + tight tracking。 */
   display: block;
   margin-bottom: 4px;
   color: var(--ink);
-  font-size: 22px;
+  font-size: 28px;
   font-weight: 900;
-  letter-spacing: -0.025em;
-  line-height: 1.05;
+  letter-spacing: -0.035em;
+  line-height: 1;
 }
 .daily-editor-card .daily-entry-hint {
   display: block;
