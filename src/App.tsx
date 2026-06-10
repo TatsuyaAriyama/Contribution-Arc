@@ -17708,6 +17708,7 @@ function App() {
             <div className="daily-editor-head">
               <div>
                 <p className="card-kicker">Daily Report</p>
+                <h1 className="daily-editor-title">日報</h1>
                 {/* 連続記録ストリーク。1日以上連続なら表示。0日なら出さない
                     (新規ユーザーへのプレッシャーを抑制)。 */}
                 {dailyReportStreak > 0 ? (
