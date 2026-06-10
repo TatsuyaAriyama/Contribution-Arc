@@ -4651,12 +4651,36 @@ function App() {
   // the feed / replies / daily reports, keyed by uid. Posts only snapshot
   // the color at write time and never the shape, so to make an avatar
   // mirror its author's *currently equipped* character we resolve it from
-  // their live profile here. Populated lazily on load and cached for the
-  // session (fetchedAppearanceIdsRef) so each author costs at most one read.
+  // their live profile here. localStorage に前回 fetch の結果をキャッシュ
+  // しておくことで、リロード直後から live 色で sprite が描画される。
+  // これがないと「最初に snapshot 色 (古い色) → fetch 完了で live 色」の
+  // 2 段階チラつきが毎リロードで発生し、ユーザーから「リロードのたびに
+  // 他人の色が変わる」と見える。
   const [authorAppearances, setAuthorAppearances] = useState<
     Record<string, AuthorAppearance>
-  >({});
+  >(() => {
+    try {
+      const raw = window.localStorage.getItem("ca:author-appearances");
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  });
   const fetchedAppearanceIdsRef = useRef<Set<string>>(new Set());
+
+  // authorAppearances が変わるたびに localStorage へ書き戻す。容量爆発を
+  // 防ぐため直近 200 件まで（最後に書いた author を優先）に絞る。
+  useEffect(() => {
+    try {
+      const entries = Object.entries(authorAppearances);
+      const trimmed = Object.fromEntries(entries.slice(-200));
+      window.localStorage.setItem("ca:author-appearances", JSON.stringify(trimmed));
+    } catch {
+      /* quota exceeded — ignore */
+    }
+  }, [authorAppearances]);
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [replyError, setReplyError] = useState("");
   const [openReplyPostIds, setOpenReplyPostIds] = useState<Set<string>>(() => new Set());
