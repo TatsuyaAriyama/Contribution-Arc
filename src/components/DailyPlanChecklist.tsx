@@ -64,32 +64,19 @@ export function DailyPlanChecklist({
   const l = { ...DEFAULT_LABELS, ...labels };
 
   /* Track the most recently added row so we can move focus into it.
-     Without this, "+ 項目を追加" forces the user to click the new row
-     before typing — a small but real friction point.
+     "+ 項目を追加" の後に自動でカーソルが新規行に入るための ref ハンドラ。
 
-     input[type="text"] から textarea に変更 (モバイルで長い文章が
-     1 行に押し込まれて見えなくなる不具合への対応)。ただし「最初から
-     枠が大きいのは嫌」報告に合わせて、未フォーカス時は CSS で 1 行
-     固定、フォーカス時のみ scrollHeight に追従して伸ばす。 */
+     設計判断：input[type="text"] を採用 (Notion / Linear 系の todo 行と
+     同じ)。textarea で auto-grow させる方式は「最初から枠が大きい」と
+     「押すと縮む」が起きやすく一覧の見え方が壊れたため撤回。長い文章は
+     行内で横スクロールするが、デザイン一貫性 (一行で詰めて見える) を
+     優先する。 */
   const lastAddedIdRef = useRef<string | null>(null);
-  const textInputRefs = useRef<Map<string, HTMLTextAreaElement | null>>(new Map());
+  const textInputRefs = useRef<Map<string, HTMLInputElement | null>>(new Map());
 
-  // フォーカス中のみ scrollHeight に追従して伸ばす。フォーカスが外れたら
-  // 高さは CSS のデフォルト (1 行) に戻す = 一覧として常に詰めて見える。
-  const autoGrow = (el: HTMLTextAreaElement) => {
-    if (document.activeElement !== el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  };
-  const resetHeight = (el: HTMLTextAreaElement) => {
-    el.style.height = "";
-  };
-
-  const setItemRef = useCallback((id: string) => (el: HTMLTextAreaElement | null) => {
+  const setItemRef = useCallback((id: string) => (el: HTMLInputElement | null) => {
     if (el) {
       textInputRefs.current.set(id, el);
-      // 初期マウント時には高さを伸ばさない。一覧として常に 1 行ぶんで
-      // 始まり、タップで focus したときだけ伸ばす方針に変更。
       if (lastAddedIdRef.current === id) {
         el.focus();
         lastAddedIdRef.current = null;
@@ -114,17 +101,16 @@ export function DailyPlanChecklist({
   };
 
   /* Enter on the text input adds a new row — mirrors how Notion / Linear
-     todo lists feel. Shift+Enter は textarea のデフォルト改行を許可
-     (長文タスクが折り返しだけでなく明示改行できるように)。 */
+     todo lists feel. */
   const handleTextKeyDown = (
-    event: React.KeyboardEvent<HTMLTextAreaElement>,
+    event: React.KeyboardEvent<HTMLInputElement>,
     item: PlanItem,
   ) => {
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
       // If this row is empty, blur instead of adding another empty row.
       if (!item.text.trim()) {
-        (event.currentTarget as HTMLTextAreaElement).blur();
+        (event.currentTarget as HTMLInputElement).blur();
         return;
       }
       addItem();
@@ -178,20 +164,14 @@ export function DailyPlanChecklist({
               </label>
               <div className="plan-checklist-body">
                 <div className="plan-checklist-line">
-                  <textarea
+                  <input
                     ref={setItemRef(item.id)}
-                    rows={1}
+                    type="text"
                     className="plan-checklist-text"
                     value={item.text}
                     placeholder={l.placeholderText}
                     disabled={disabled}
-                    onChange={(event) => {
-                      updateItem(item.id, { text: event.target.value });
-                      autoGrow(event.currentTarget);
-                    }}
-                    onInput={(event) => autoGrow(event.currentTarget)}
-                    onFocus={(event) => autoGrow(event.currentTarget)}
-                    onBlur={(event) => resetHeight(event.currentTarget)}
+                    onChange={(event) => updateItem(item.id, { text: event.target.value })}
                     onKeyDown={(event) => handleTextKeyDown(event, item)}
                   />
                   {item.carriedFrom ? (
