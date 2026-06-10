@@ -65,13 +65,26 @@ export function DailyPlanChecklist({
 
   /* Track the most recently added row so we can move focus into it.
      Without this, "+ 項目を追加" forces the user to click the new row
-     before typing — a small but real friction point. */
-  const lastAddedIdRef = useRef<string | null>(null);
-  const textInputRefs = useRef<Map<string, HTMLInputElement | null>>(new Map());
+     before typing — a small but real friction point.
 
-  const setItemRef = useCallback((id: string) => (el: HTMLInputElement | null) => {
+     input[type="text"] から textarea に変更 (モバイルで長い文章が
+     1 行に押し込まれて見えなくなる不具合への対応)。auto-grow は
+     onInput で scrollHeight を直接 height に代入する素朴な方式と、
+     CSS の field-sizing: content の二段構え。 */
+  const lastAddedIdRef = useRef<string | null>(null);
+  const textInputRefs = useRef<Map<string, HTMLTextAreaElement | null>>(new Map());
+
+  const autoGrow = (el: HTMLTextAreaElement) => {
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  };
+
+  const setItemRef = useCallback((id: string) => (el: HTMLTextAreaElement | null) => {
     if (el) {
       textInputRefs.current.set(id, el);
+      // 初期マウント時にも 1 度 auto-grow を走らせて、長い既存テキスト
+      // (前日からの繰越など) が 1 行押し込みで切れないようにする。
+      autoGrow(el);
       if (lastAddedIdRef.current === id) {
         el.focus();
         lastAddedIdRef.current = null;
@@ -96,17 +109,17 @@ export function DailyPlanChecklist({
   };
 
   /* Enter on the text input adds a new row — mirrors how Notion / Linear
-     todo lists feel. Shift+Enter is reserved as "no-op" since the input
-     is single-line; the comment field handles longer notes. */
+     todo lists feel. Shift+Enter は textarea のデフォルト改行を許可
+     (長文タスクが折り返しだけでなく明示改行できるように)。 */
   const handleTextKeyDown = (
-    event: React.KeyboardEvent<HTMLInputElement>,
+    event: React.KeyboardEvent<HTMLTextAreaElement>,
     item: PlanItem,
   ) => {
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
       // If this row is empty, blur instead of adding another empty row.
       if (!item.text.trim()) {
-        (event.currentTarget as HTMLInputElement).blur();
+        (event.currentTarget as HTMLTextAreaElement).blur();
         return;
       }
       addItem();
@@ -160,14 +173,18 @@ export function DailyPlanChecklist({
               </label>
               <div className="plan-checklist-body">
                 <div className="plan-checklist-line">
-                  <input
+                  <textarea
                     ref={setItemRef(item.id)}
-                    type="text"
+                    rows={1}
                     className="plan-checklist-text"
                     value={item.text}
                     placeholder={l.placeholderText}
                     disabled={disabled}
-                    onChange={(event) => updateItem(item.id, { text: event.target.value })}
+                    onChange={(event) => {
+                      updateItem(item.id, { text: event.target.value });
+                      autoGrow(event.currentTarget);
+                    }}
+                    onInput={(event) => autoGrow(event.currentTarget)}
                     onKeyDown={(event) => handleTextKeyDown(event, item)}
                   />
                   {item.carriedFrom ? (
