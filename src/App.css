@@ -3303,14 +3303,16 @@
 }
 
 .profile-topbar button {
-  min-height: 38px;
-  padding: 0 14px;
+  /* 38 → 32px、ステータスとの間隔も縮めるため上下マージン削減。
+     上部ナビとステータスの間が空きすぎる報告への対応。 */
+  min-height: 32px;
+  padding: 0 12px;
   border: 1px solid rgba(31, 111, 74, 0.14);
   border-radius: 999px;
   background: rgba(var(--surface-rgb), 0.86);
   color: var(--ink);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 850;
 }
 
@@ -7343,22 +7345,23 @@
 .profile-quick-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 6px;
+  /* ステータスカードのすぐ下に置くアクション群。間隔をコンパクトに。 */
+  margin-top: 8px;
 }
 
 .profile-quick-action {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-height: 40px;
-  padding: 0 16px;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 12px;
   border: 1px solid var(--line-strong);
   border-radius: 999px;
   background: var(--surface);
   color: var(--ink);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
   transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
 }
