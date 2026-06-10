@@ -5796,17 +5796,28 @@
 
 .daily-editor-card {
   display: grid;
-  gap: 18px;
-  padding: clamp(18px, 2.4vw, 28px);
+  gap: 16px;
+  padding: clamp(16px, 2vw, 24px);
 }
 
 .daily-editor-head,
 .daily-history-head,
 .daily-today-card {
+  /* 縦に積む構成に変更。"DAILY REPORT" eyebrow → 連続バッジ → 日付セレクタ
+     と、上から「ラベル / メタ / コントロール」の層になり横並びの詰まりが解消。
+     アーティスト寄りの大胆な余白配置。 */
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.daily-editor-head > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
 }
 
 .daily-editor-head h2 {
@@ -5814,27 +5825,30 @@
   color: var(--ink);
   font-size: clamp(26px, 3vw, 42px);
   line-height: 1.05;
-  letter-spacing: 0;
+  letter-spacing: -0.02em;
 }
 
 .daily-editor-head label {
-  display: grid;
-  gap: 6px;
-  min-width: 170px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
 }
 
 .daily-editor-head label span,
 .daily-editor-form label span {
   color: var(--muted);
-  font-size: 12px;
-  font-weight: 880;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .daily-editor-head input,
 .daily-editor-form textarea {
-  border: 1px solid rgba(var(--ink-rgb), 0.1);
-  border-radius: 16px;
-  background: rgba(var(--surface-rgb), 0.86);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
   color: var(--ink);
   font: inherit;
   font-weight: 760;
@@ -5842,8 +5856,12 @@
 }
 
 .daily-editor-head input {
-  min-height: 42px;
+  min-height: 38px;
   padding: 0 12px;
+  flex: 1;
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: -0.005em;
 }
 
 .daily-editor-form {
@@ -5931,21 +5949,23 @@
 }
 
 .daily-mode-toggle {
+  /* 破線枠 / 緑薄塗りを撤去。白 + 1px solid hairline でシンプルに。
+     accent-color は ink にして「白黒方針」を貫く (緑は左バー一筋に限定)。 */
   display: grid;
   grid-template-columns: auto 1fr;
   align-items: start;
   gap: 10px;
-  padding: 10px 14px;
-  border: 1px dashed rgba(31, 111, 74, 0.22);
+  padding: 12px 14px;
+  border: 1px solid var(--line);
   border-radius: 12px;
-  background: rgba(var(--surface-rgb), 0.62);
+  background: var(--surface);
   cursor: pointer;
   width: 100%;
 }
 
 .daily-mode-toggle input[type="checkbox"] {
   margin-top: 3px;
-  accent-color: rgba(31, 111, 74, 0.85);
+  accent-color: var(--ink);
 }
 
 .daily-mode-toggle strong {
@@ -34484,42 +34504,35 @@ select:disabled {
 /* 連続記録バッジ。kicker (Daily Report) の下に並べる subtle ピル。
    炎絵文字 + 数字でゲーミフィケーション要素を付与しつつ、控えめに。 */
 .daily-streak-badge {
+  /* オレンジグラデ → ink-on-canvas pill。「白黒 + 緑」方針に揃える。
+     2 日連続というメトリクスを「達成記号」として ink で力強く出す。 */
   margin: 4px 0 0;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 4px 12px;
   border-radius: 999px;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 152, 0, 0.16),
-    rgba(255, 87, 34, 0.18)
-  );
-  color: #c45a18;
-  font-size: 12px;
+  background: var(--ink);
+  color: var(--cta-fg);
+  font-size: 11.5px;
   font-weight: 800;
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
 }
 [data-theme="dark"] .daily-streak-badge {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 152, 0, 0.22),
-    rgba(255, 87, 34, 0.24)
-  );
-  color: #ffb678;
+  background: var(--cta-bg);
+  color: var(--cta-fg);
 }
 
-/* その日の学習サマリー。daily-editor-card の head 下、editor-form の上。
-   3 列 (or 2 列) のフラット行で、過剰装飾なくスッと読める情報密度に。 */
+/* その日の学習サマリー。緑薄塗りの背景を撤去して白 + hairline に。 */
 .daily-day-summary {
   display: flex;
   align-items: stretch;
   gap: 0;
   margin: 14px 0 12px;
-  padding: 12px 14px;
+  padding: 14px 16px;
   border: 1px solid var(--line);
-  border-radius: 12px;
-  background: rgba(var(--green-rgb, 31, 111, 74), 0.04);
+  border-radius: 14px;
+  background: var(--surface);
 }
 .daily-day-summary-item {
   display: flex;
