@@ -34645,9 +34645,11 @@ select:disabled {
   transition: background 0.14s ease, border-color 0.14s ease, transform 0.1s ease-out;
 }
 .daily-plan-quick-action:hover {
-  background: rgba(var(--green-rgb, 31, 111, 74), 0.06);
-  border-color: rgba(var(--green-rgb, 31, 111, 74), 0.28);
-  color: var(--green);
+  /* 色塗りや色文字ではなく、ink の薄い tint だけで反応する控えめな
+     hover に変更 (白黒 + 緑アクセント方針)。 */
+  background: rgba(var(--ink-rgb), 0.04);
+  border-color: var(--line-strong);
+  color: var(--ink);
 }
 .daily-plan-quick-action:active {
   transform: scale(0.97);
@@ -34670,150 +34672,127 @@ select:disabled {
 }
 
 /* ===============================================================
-   Daily 画面の "はっきりした" バージョン (PC + モバイル 両対応)。
-   - 配色が単調で見づらいとの報告
-   - 操作していて気持ちのいいエフェクト
-   - 進捗が一目で分かるバー
-   を一括で改善するブロック。色変化 / 進捗バー / エフェクトは全
-   ビューポートに適用、モバイル限定の "full-width 送信" などだけは
-   下の @media で上書き。
+   Daily 画面 — ミニマル / アーティスト寄りの再設計。
+
+   以前は「はっきり版」として緑グラデの左バー / glow / shine 流し /
+   amber アクセント / 派手な progress バー を仕込んでいたが、
+   ブランドアイコン (黒地に緑のコミット粒子) と乖離してダサく
+   なっていた。
+
+   新方針：
+   - 配色は徹底して白黒 + 左 4px 緑アクセント
+   - 装飾アニメーション (shine / celebrate) は全部撤去
+   - section ラベルは display 寄りに大きく
+   - progress は 2px hairline で控えめに、達成色は緑のみ
+   - CTA は ink-on-canvas pill (DESIGN.md の cta-bg)
    =============================================================== */
 
-/* やること / 振り返り の 2 つのエントリーカードに、色アクセントの
-   左ボーダーと深さのあるドロップシャドウを付けて、画面内での
-   "セクション" の境界を強くする。1 枚目 = 緑系 (=action)、
-   2 枚目 = アンバー系 (=reflection) で意味づけ。 */
 .daily-editor-card .daily-entry-card {
   position: relative;
   overflow: hidden;
   padding: 18px 16px;
-  border: 1px solid rgba(var(--ink-rgb), 0.1);
-  border-radius: 18px;
-  background:
-    linear-gradient(180deg, rgba(var(--surface-rgb), 0.96), rgba(var(--surface-rgb), 0.82));
-  box-shadow:
-    0 10px 22px rgba(var(--ink-rgb), 0.08),
-    inset 0 1px 0 rgba(var(--surface-rgb), 0.9);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--green);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: none;
 }
 .daily-editor-card .daily-entry-card::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 4px;
-  border-radius: 4px 0 0 4px;
+  /* 旧グラデ左バー (グロー付き) は撤去。border-left で代替。 */
+  display: none;
 }
-/* 1 枚目 = 今日やること (action) */
-.daily-editor-card form.daily-entry-card:nth-of-type(1)::before,
-.daily-editor-card > form.daily-entry-card:first-of-type::before {
-  background: linear-gradient(180deg, #1f6f4a 0%, #4fa362 50%, #b6e08a 100%);
-  box-shadow: 0 0 12px rgba(91, 154, 117, 0.55);
-}
-/* 2 枚目 = 振り返り (reflection) — 温かみのあるアンバー */
-.daily-editor-card form.daily-entry-card:nth-of-type(2)::before,
-.daily-editor-card > form.daily-entry-card + form.daily-entry-card::before {
-  background: linear-gradient(180deg, #d18a2b 0%, #e9b56a 60%, #f7d99c 100%);
-  box-shadow: 0 0 12px rgba(231, 174, 95, 0.55);
+/* 振り返り (2 枚目) はアンバーではなく落ち着いた warm-ink で。 */
+.daily-editor-card form.daily-entry-card:nth-of-type(2),
+.daily-editor-card > form.daily-entry-card + form.daily-entry-card {
+  border-left-color: var(--ink);
 }
 
-/* セクションラベルを大きく/濃くして "ここは何を書く所か" を即わかる
-   コントラストに。 */
+/* セクションラベル ─ "今日やること" を display 寄りで大きく、
+   サブテキストは下に小さく置く。横並びの詰め込みを解消。 */
 .daily-editor-card .daily-entry-label-row {
-  margin-bottom: 10px;
-  padding-left: 8px;
+  display: block;
+  margin-bottom: 14px;
+  padding-left: 0;
 }
 .daily-editor-card .daily-entry-label {
-  font-size: 16px;
-  font-weight: 850;
+  display: block;
+  margin-bottom: 4px;
   color: var(--ink);
-  letter-spacing: 0.01em;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
 }
 .daily-editor-card .daily-entry-hint {
-  font-size: 12px;
+  display: block;
   color: var(--muted);
-  line-height: 1.4;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0;
 }
 
-/* === 進捗バーをはっきり大きく ===
-   5px → 10px、メタ情報も大きめに。100% 時は緑のグロウを脈動させて
-   "完了した感" を出す。 */
+/* === Progress：細い hairline で控えめに、テキストで主張。 === */
 .daily-editor-card .daily-plan-progress {
   gap: 6px;
   margin: 6px 0 14px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: rgba(31, 111, 74, 0.08);
-  border: 1px solid rgba(31, 111, 74, 0.18);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 .daily-editor-card .daily-plan-progress-meta {
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--ink);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 .daily-editor-card .daily-plan-progress-meta strong {
-  font-size: 16px;
-  color: var(--green);
-  text-shadow: 0 0 8px rgba(91, 154, 117, 0.4);
+  font-size: 13px;
+  color: var(--ink);
+  font-weight: 900;
+  text-shadow: none;
+  letter-spacing: -0.005em;
 }
 .daily-editor-card .daily-plan-progress-track {
-  height: 10px;
-  background: rgba(var(--ink-rgb), 0.1);
-  box-shadow: inset 0 1px 2px rgba(var(--ink-rgb), 0.18);
+  height: 2px;
+  background: var(--line-strong);
+  box-shadow: none;
+  border-radius: 0;
 }
 .daily-editor-card .daily-plan-progress-fill {
-  background:
-    linear-gradient(90deg, #1f6f4a 0%, #4fa362 45%, #87cc7b 75%, #b6e08a 100%);
-  box-shadow:
-    0 0 10px rgba(91, 154, 117, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.32);
+  background: var(--green);
+  box-shadow: none;
   position: relative;
+  border-radius: 0;
 }
-/* 流れる shine — "動いている" 感 */
+/* shine / celebrate animation は廃止。動きで主張せず、数字とブランド
+   アクセント色で完了感を伝える方針。 */
 .daily-editor-card .daily-plan-progress-fill::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.32) 50%,
-    transparent 100%
-  );
-  transform: translateX(-100%);
-  animation: daily-progress-shine 2.4s ease-in-out infinite;
+  display: none;
 }
-@keyframes daily-progress-shine {
-  0% { transform: translateX(-100%); }
-  60%, 100% { transform: translateX(280%); }
-}
-/* 100% 完了で track 周りも光らせる */
-.daily-editor-card .daily-plan-progress[aria-valuenow][aria-valuemax]:not([aria-valuenow="0"]) .daily-plan-progress-track {
-  transition: box-shadow 0.4s ease;
-}
-/* progress fill が track と同等 width なら 100% と判定し celebration */
 .daily-editor-card .daily-plan-progress-track:has(.daily-plan-progress-fill[style*="100%"]) {
-  box-shadow:
-    inset 0 1px 2px rgba(var(--ink-rgb), 0.18),
-    0 0 0 2px rgba(91, 154, 117, 0.32),
-    0 0 18px rgba(91, 154, 117, 0.5);
-  animation: daily-progress-celebrate 1.8s ease-in-out infinite;
-}
-@keyframes daily-progress-celebrate {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.012); }
+  box-shadow: none;
+  animation: none;
 }
 
-/* === Plan checklist 行を読みやすく ===
-   行に薄い背景 + hover/active 反応。チェックボックスは大きめ。 */
+/* === Plan checklist 行 — hover で薄い ink tint だけ。 === */
 .daily-editor-card .plan-checklist-row {
-  border-radius: 10px;
-  padding: 4px;
+  border-radius: 8px;
+  padding: 2px 4px;
   transition: background 0.16s ease;
 }
 .daily-editor-card .plan-checklist-row.is-done {
-  background: rgba(91, 154, 117, 0.06);
+  background: transparent;
+}
+.daily-editor-card .plan-checklist-row.is-done .plan-checklist-text {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
 }
 .daily-editor-card .plan-checklist-row:focus-within {
-  background: rgba(31, 111, 74, 0.08);
+  background: rgba(var(--ink-rgb), 0.04);
 }
 
 /* === Reflection 再掲 行 のコントラストを上げる ===
@@ -34850,56 +34829,41 @@ select:disabled {
    PC は inline 配置、モバイルは下の @media で full-width 化。 */
 .daily-editor-card .daily-editor-actions {
   gap: 10px;
-  margin-top: 4px;
+  margin-top: 8px;
 }
+/* CTA は ink-on-canvas pill に統一 (DESIGN.md: cta-bg)。
+   緑グラデ + 大きいドロップシャドウは廃止。アーティスト感は色ではなく
+   タイポと余白で出す。 */
 .daily-editor-card .daily-editor-actions > button {
-  min-height: 50px;
+  min-height: 44px;
   padding: 0 22px;
   border: 0;
   border-radius: 999px;
-  background:
-    linear-gradient(180deg, #1f6f4a 0%, #145238 100%);
-  color: #ecf3ef;
-  font-size: 14px;
-  font-weight: 850;
-  letter-spacing: 0.02em;
-  box-shadow:
-    0 10px 22px rgba(31, 111, 74, 0.42),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
-  transition:
-    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.18s ease,
-    filter 0.18s ease;
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0;
+  box-shadow: none;
+  transition: opacity 0.14s ease, transform 0.12s ease;
 }
 .daily-editor-card .daily-editor-actions > button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow:
-    0 14px 28px rgba(31, 111, 74, 0.52),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  opacity: 0.88;
 }
 .daily-editor-card .daily-editor-actions > button:active:not(:disabled) {
   transform: scale(0.97);
 }
 .daily-editor-card .daily-editor-actions > button:disabled {
-  background: rgba(var(--ink-rgb), 0.18);
-  color: rgba(var(--ink-rgb), 0.55);
+  background: rgba(var(--ink-rgb), 0.14);
+  color: rgba(var(--ink-rgb), 0.45);
   box-shadow: none;
   cursor: not-allowed;
 }
-/* 振り返りカード(2枚目)の送信ボタンはアンバー寄りで意味を区別 */
+/* 振り返りカード(2枚目)も同じ ink pill に統一 (アンバー区別は廃止)。 */
 .daily-editor-card form.daily-entry-card:nth-of-type(2) .daily-editor-actions > button:not(:disabled),
 .daily-editor-card > form.daily-entry-card + form.daily-entry-card .daily-editor-actions > button:not(:disabled) {
-  background:
-    linear-gradient(180deg, #b8742a 0%, #8a5318 100%);
-  box-shadow:
-    0 10px 22px rgba(184, 116, 42, 0.42),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
-}
-.daily-editor-card form.daily-entry-card:nth-of-type(2) .daily-editor-actions > button:not(:disabled):hover,
-.daily-editor-card > form.daily-entry-card + form.daily-entry-card .daily-editor-actions > button:not(:disabled):hover {
-  box-shadow:
-    0 14px 28px rgba(184, 116, 42, 0.52),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  background: var(--cta-bg);
+  box-shadow: none;
 }
 
 /* === textarea (振り返り) のフォーカスをはっきりさせる === */
