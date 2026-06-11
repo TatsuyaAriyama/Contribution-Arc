@@ -33285,6 +33285,67 @@ body.workspace-popover-active .preset-message-panel.hud-fab,
   .workspace-actor:active {
     transform: translate(-50%, -50%) scale(0.74) !important;
   }
+
+  /* ── ポケ森風 箱庭レイアウト（ルームタブ）──────────────────
+     俯瞰縮小ではなく「横から見た 1 枚のシーン」にして、地面に
+     キャラを大きく並べる。空(上) + 地面(下) の落ち着いた 2 トーン
+     背景に、整列した大きめアクターが立つ。data-mobile-tab="room"
+     のときだけ適用。みんな/自分タブでは stage 自体が非表示。 */
+  .workspace-2d-shell[data-mobile-tab="room"] .workspace-stage {
+    background:
+      linear-gradient(
+        180deg,
+        var(--surface) 0%,
+        var(--surface) 44%,
+        rgba(var(--ink-rgb), 0.04) 44%,
+        rgba(var(--ink-rgb), 0.07) 100%
+      );
+  }
+  /* 地面の水平線をうっすら。床の "立っている感" を出す控えめな 1 本。 */
+  .workspace-2d-shell[data-mobile-tab="room"] .workspace-stage::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 44%;
+    height: 1px;
+    background: rgba(var(--ink-rgb), 0.08);
+    pointer-events: none;
+  }
+  /* 俯瞰用のパース床グリッドは箱庭では使わないので隠す。 */
+  .workspace-2d-shell[data-mobile-tab="room"] .workspace-floor-grid {
+    display: none;
+  }
+  /* 箱庭ではキャラを縮小せず大きく見せる（縮小 0.78 を上書き）。
+     アンカーは既存と同じ中心 (-50%,-50%) のまま拡大だけ変える。 */
+  .workspace-2d-shell[data-mobile-tab="room"] .workspace-actor {
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+  .workspace-2d-shell[data-mobile-tab="room"] .workspace-actor:active {
+    transform: translate(-50%, -50%) scale(1.03) !important;
+  }
+  /* 整列配置なので入室ドロップインは scale(1.08) で着地させる。 */
+  .workspace-2d-shell[data-mobile-tab="room"] .workspace-actor.is-just-joined {
+    animation: workspace-actor-arrive-garden 540ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @keyframes workspace-actor-arrive-garden {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, calc(-50% - 18px)) scale(0.94);
+    }
+    60% {
+      opacity: 1;
+      transform: translate(-50%, calc(-50% + 4px)) scale(1.12);
+    }
+    100% {
+      transform: translate(-50%, -50%) scale(1.08);
+    }
+  }
+  @media (hover: none) {
+    .workspace-2d-shell[data-mobile-tab="room"] .workspace-actor:hover {
+      transform: translate(-50%, -50%) scale(1.08);
+    }
+  }
   /* hover/focus でホバー時拡大があると視覚的に違和感が出る場合は
      抑制（PC のみのスタイルだが念のため）。 */
   @media (hover: none) {

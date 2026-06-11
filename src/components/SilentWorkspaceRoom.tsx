@@ -211,6 +211,28 @@ function getActorStayLabel(member: RoomActor) {
   return restMinutes > 0 ? `${hours}h ${restMinutes}m` : `${hours}h`;
 }
 
+/* ポケ森風の "箱庭" レイアウト：スマホのルームでは、各メンバーが
+   自由移動で持っている保存座標 (member.x/y) を無視し、地面エリアに
+   キャラを大きく等間隔で並べ直す。俯瞰マップを縮小すると小さくて
+   何も分からない問題への対処。最大 3 列、人数で行を増やし、奥(上)→
+   手前(下)の行でざっくり奥行きを出す。x/y だけ差し替えて他のフィー
+   ルドは保持するので、吹き出し・フォーカスリング等はそのまま動く。 */
+function arrangeBoxGardenActors(list: RoomActor[]): RoomActor[] {
+  const n = list.length;
+  if (n === 0) return list;
+  const perRow = n <= 3 ? n : 3;
+  const rows = Math.ceil(n / perRow);
+  return list.map((member, i) => {
+    const row = Math.floor(i / perRow);
+    const colCount = Math.min(perRow, n - row * perRow);
+    const col = i % perRow;
+    const x = ((col + 1) / (colCount + 1)) * 100;
+    // 1 行なら床の中ほど、複数行なら 52%〜82% に散らして奥行きを出す。
+    const y = rows === 1 ? 72 : 52 + (row / (rows - 1)) * 30;
+    return { ...member, x, y };
+  });
+}
+
 /* Focus-ring state for an actor. The ring fills clockwise over a single
    12-hour session: it starts empty (no color) when the actor joins and
    reaches a full revolution after 12 hours of active focus, then holds at
@@ -293,6 +315,20 @@ export function SilentWorkspaceRoom({
      散らばっていた情報を 3 つの目的に整理する。PC ではタブ UI を
      CSS で隠し、この値は "room" 固定のまま従来の 2D ステージを使う。 */
   const [mobileTab, setMobileTab] = useState<"room" | "people" | "me">("room");
+  /* スマホ幅かどうか。ルームタブの「ポケ森風 箱庭レイアウト」を出す
+     判定に使う。PC では false のまま従来の俯瞰 2D を使う。 */
+  const [isPhone, setIsPhone] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(max-width: 720px)").matches;
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 720px)");
+    const handle = (event: MediaQueryListEvent) => setIsPhone(event.matches);
+    setIsPhone(mq.matches);
+    mq.addEventListener("change", handle);
+    return () => mq.removeEventListener("change", handle);
+  }, []);
   // Forces a re-render every 500ms while any actor has a fresh bubble
   // — the render-time TTL on `member.bubble` otherwise relies on some
   // other prop change to take effect, which means a bubble could
@@ -593,6 +629,11 @@ export function SilentWorkspaceRoom({
   const showGhostHint =
     trimmedTask.length > 0 && !matchedLearningItem && Boolean(onLearningItemRegister);
 
+  /* スマホのルームタブのときだけ、ポケ森風に整列した座標でアクターを
+     描画する。それ以外（PC / みんな・自分タブ）は保存座標のまま。 */
+  const isMobileRoomLayout = isPhone && mobileTab === "room";
+  const displayMembers = isMobileRoomLayout ? arrangeBoxGardenActors(members) : members;
+
   return (
     <div
       className={`workspace-2d-shell ${isFocusPresentation ? "focus-presentation" : ""}`}
@@ -639,6 +680,8 @@ export function SilentWorkspaceRoom({
             // をタップした場合は、それぞれのハンドラが既に動作するので
             // ここでは無視する (event.target === currentTarget)。
             if (event.target !== event.currentTarget) return;
+            // 箱庭レイアウト中は座標を整列管理しているので、タップ移動は無効。
+            if (isMobileRoomLayout) return;
             if (!onStageTap) return;
             const rect = event.currentTarget.getBoundingClientRect();
             const x = ((event.clientX - rect.left) / rect.width) * 100;
@@ -666,7 +709,7 @@ export function SilentWorkspaceRoom({
           ) : null}
 
           {/* 初回タップ移動ヒント。タッチ端末のみ、初回入室時のみ 5 秒。 */}
-          {showTapHint ? (
+          {showTapHint && !isMobileRoomLayout ? (
             <div className="workspace-tap-hint" role="status">
               <span aria-hidden="true">👆</span>
               床をタップして移動できます
@@ -919,7 +962,7 @@ export function SilentWorkspaceRoom({
             </aside>
           ) : null}
 
-          {members.map((member) => {
+          {displayMembers.map((member) => {
             const isCurrentUser = member.userId === currentUserId;
             // Drop-in animation gate: any actor whose `joinedAt` is within
             // the last ~6s gets the `is-just-joined` class, which triggers
