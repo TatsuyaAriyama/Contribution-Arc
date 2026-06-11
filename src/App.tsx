@@ -782,7 +782,7 @@ const shapeShopCatalog: ShapeShopItem[] = [
     shape: "ghost",
     name: "朧 Oboro",
     tagline: "ふわりと漂う魂",
-    description: "脚のない魂のシルエット。作業部屋の片隅でふわりと漂う、もう一人のあなた。",
+    description: "脚のない魂のシルエット。アトリエの片隅でふわりと漂う、もう一人のあなた。",
     price: 500,
   },
   {
@@ -2316,7 +2316,7 @@ function readAppNotifications(scope: string): NotificationItem[] {
 function getNotificationSourceText(type: NotificationItem["type"]) {
   if (type === "dailyLog") return "日報";
   if (type === "post") return "投稿";
-  if (type === "workspaceInvite") return "作業部屋への招待";
+  if (type === "workspaceInvite") return "アトリエへの招待";
   if (type === "like") return "いいね";
   if (type === "reply") return "返信";
   return "フレンド申請";
@@ -3233,7 +3233,7 @@ async function saveWorkspaceRoomToCloud(room: WorkspaceRoom, currentUserUid?: st
   });
 }
 
-// 開発者アカウント専用：任意のユーザーを作業部屋の在室リストから外す。通常の
+// 開発者アカウント専用：任意のユーザーをアトリエの在室リストから外す。通常の
 // saveWorkspaceRoomToCloud は「自分以外のメンバーは必ずリモートの値を維持」する
 // 設計なので他人を消せない。ここではリモートの activeMembers を読み、対象だけを
 // 取り除いて書き戻すトランザクションで、他メンバーの最新データを保ったまま退出させる。
@@ -4420,7 +4420,7 @@ function App() {
   const [desktopNotificationSettings, setDesktopNotificationSettings] = useState<DesktopNotificationSettings>(
     defaultDesktopNotificationSettings,
   );
-  // 「学習記録の進捗 / 作業部屋退室の積み上げ」を FEED に自動投稿するか。
+  // 「学習記録の進捗 / アトリエ退室の積み上げ」を FEED に自動投稿するか。
   // デフォルト ON で“仲間と作業している感”を出すが、静かに使いたいユーザーが
   // 抜けないよう設定で OFF できる。永続化は localStorage（uid スコープ）。
   const [isAutoPostEnabled, setIsAutoPostEnabled] = useState<boolean>(true);
@@ -7229,7 +7229,7 @@ function App() {
   const studyKnowledgeGraph = useMemo(() => buildStudyKnowledgeGraph(studyLogs), [studyLogs]);
 
   const currentUserUid = currentUser?.uid || "";
-  // 開発者（管理）アカウント。このアカウントだけが他ユーザーを作業部屋から
+  // 開発者（管理）アカウント。このアカウントだけが他ユーザーをアトリエから
   // 強制退出させられる。判定は profile ロード側（ADMIN_EMAIL）と同じメール。
   const isDeveloperAccount =
     (currentUser?.email || "").toLowerCase() === "ari.initx@gmail.com";
@@ -8385,7 +8385,7 @@ function App() {
           {
             id: notificationId,
             type: "workspaceInvite",
-            title: "作業部屋への招待",
+            title: "アトリエへの招待",
             body: `${invite.fromName}が「${invite.roomName}」に招待しました`,
             createdAt: invite.createdAt,
             read: false,
@@ -8959,7 +8959,7 @@ function App() {
     }
   };
 
-  // 「学習記録の進捗」「作業部屋退室の積み上げ」を FEED に自動投稿する共通入口。
+  // 「学習記録の進捗」「アトリエ退室の積み上げ」を FEED に自動投稿する共通入口。
   // 通常の handlePostSubmit と違って draft / toast / Arc 報酬 / オンボーディング
   // ステップを動かさず、サイレントに 1 件足す（連投を防ぐため、同 kind は 60 分
   // 集約、設定 OFF / 未ログインなら no-op）。これで「ユーザーが投稿ボタンを
@@ -9892,7 +9892,7 @@ function App() {
 
   const useRoomPresenceAsPost = () => {
     const currentPostRoom = activeRoom || selectedRoom;
-    setPostDraft(`${currentPostRoom?.name || "作業部屋"}で${currentBuilding}を進めています。`);
+    setPostDraft(`${currentPostRoom?.name || "アトリエ"}で${currentBuilding}を進めています。`);
   };
 
   const handleSettingsOpen = () => {
@@ -10686,7 +10686,7 @@ function App() {
   const handleSendWorkspaceInvite = async (friend: FriendPreview) => {
     if (!currentUser) return;
     if (!selectedRoom) {
-      showToast("先に作業部屋を選んでください", { kind: "info" });
+      showToast("先にアトリエを選んでください", { kind: "info" });
       return;
     }
 
@@ -10726,7 +10726,7 @@ function App() {
   const handleBatchInvite = async (targetUids: string[]) => {
     if (!currentUser) return;
     if (!selectedRoom) {
-      showToast("先に作業部屋を選んでください", { kind: "info" });
+      showToast("先にアトリエを選んでください", { kind: "info" });
       return;
     }
     if (targetUids.length === 0) return;
@@ -10904,7 +10904,7 @@ function App() {
     setOpenMonumentId(null);
   };
 
-  // 開発者アカウント専用：任意のユーザーを作業部屋から強制退出させる。誤操作で
+  // 開発者アカウント専用：任意のユーザーをアトリエから強制退出させる。誤操作で
   // 取り返しがつかないので、必ず window.confirm の確認フェーズを一度挟んでから
   // 実行する。本人の EXP は当人の領域なので加算できず、ここでは在室表示だけを外す。
   const handleAdminForceLeave = (member: WorkspaceMember, roomId: string) => {
@@ -10912,7 +10912,7 @@ function App() {
       return;
     }
     const confirmed = window.confirm(
-      `${member.name} を作業部屋から強制退出させますか？この操作は取り消せません。`,
+      `${member.name} をアトリエから強制退出させますか？この操作は取り消せません。`,
     );
     if (!confirmed) {
       return;
@@ -11257,7 +11257,7 @@ function App() {
           {
             id: `workspace-auto-leave-${session.id}`,
             type: "dailyLog",
-            title: "作業部屋を自動退室しました",
+            title: "アトリエを自動退室しました",
             body: isGhostCleanup
               ? `在室時間が上限を超えていたため自動退室しました。今回は${formatStayTime(session.durationMinutes)}（+${session.earnedExp} EXP）として記録しています。`
               : `無操作が続いたため、最終操作までの${formatStayTime(session.durationMinutes)}（+${session.earnedExp} EXP）を記録しました。`,
@@ -11429,7 +11429,7 @@ function App() {
       currentOrganization.slackEvents?.roomJoins
     ) {
       const room = allWorkspaceRooms.find((item) => item.id === roomId);
-      const roomName = room?.name || "作業部屋";
+      const roomName = room?.name || "アトリエ";
       void postToSlackWebhook(
         currentOrganization.slackWebhookUrl,
         buildRoomJoinBlocks(
@@ -11514,7 +11514,7 @@ function App() {
   const handleCreateRecruitmentSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!currentUser || !selectedRoom) {
-      setRecruitmentError("入室する作業部屋を選択してください。");
+      setRecruitmentError("入室するアトリエを選択してください。");
       return;
     }
     const task = workspaceTask.trim();
@@ -12539,7 +12539,7 @@ function App() {
   const handleRoomDelete = (roomId: string) => {
     const room = customRooms.find((item) => item.id === roomId);
     /* デベロッパーアカウント (ari.initx@gmail.com) は作成者でなくても
-       どの作業部屋でも解体できる。それ以外は従来通り作成者本人のみ。 */
+       どのアトリエでも解体できる。それ以外は従来通り作成者本人のみ。 */
     if (!room || (room.createdBy !== currentUser.uid && !isDeveloperAccount)) {
       return;
     }
@@ -12884,7 +12884,7 @@ function App() {
     const isLiked = post.likedUserIds.includes(currentUserUid);
     const isAuto = post.postType === "auto-study" || post.postType === "auto-workspace";
 
-    // 自動投稿 (学習記録 / 作業部屋退室) は手書きの長文と並べると圧迫感が
+    // 自動投稿 (学習記録 / アトリエ退室) は手書きの長文と並べると圧迫感が
     // 出るので、1 行横並びのコンパクト pill カードで描画する。like ボタンも
     // 縮約してハートだけにする。reply 系の機能は省略 (auto-* に reply を
     // ぶら下げる UX は意味が薄い)。
@@ -12962,7 +12962,7 @@ function App() {
             <strong>
               {post.username}
               {post.postType === "auto-workspace" ? (
-                <span className="log-post-auto-badge" data-kind="workspace" aria-label="作業部屋での積み上げ">
+                <span className="log-post-auto-badge" data-kind="workspace" aria-label="アトリエでの積み上げ">
                   ✦ 作業ログ
                 </span>
               ) : post.postType === "auto-study" ? (
@@ -14306,8 +14306,8 @@ function App() {
               </strong>
               <span>
                 {timelineFilter === "following"
-                  ? "気になるエンジニアをフォローすると、ここに学びと作業部屋の募集が流れます。"
-                  : "今日作っているもの、学んだこと、作業部屋の募集が静かに流れます。"}
+                  ? "気になるエンジニアをフォローすると、ここに学びとアトリエの募集が流れます。"
+                  : "今日作っているもの、学んだこと、アトリエの募集が静かに流れます。"}
               </span>
             </article>
           )}
@@ -14343,7 +14343,7 @@ function App() {
 
           <div className="desktop-app-context">
             <span>{activeRoom ? "In room" : "Viewing"}</span>
-            <strong>{activeRoom?.name || selectedRoom?.name || "作業部屋"}</strong>
+            <strong>{activeRoom?.name || selectedRoom?.name || "アトリエ"}</strong>
           </div>
 
           <div className="desktop-app-actions">
@@ -14561,7 +14561,7 @@ function App() {
           >
             {t("ホーム")}
           </button>
-          {/* 作業部屋を「ホームの直後」=動線上で必ず通る位置に移動。
+          {/* アトリエを「ホームの直後」=動線上で必ず通る位置に移動。
               在室者がいるときは小さなドットとカウントを添えて、
               「今、誰かが居る」気配を静かに伝える（煽らない）。 */}
           <button
@@ -14574,7 +14574,7 @@ function App() {
             {activeMembers.length > 0 ? (
               <span className="topbar-presence-dot" aria-hidden="true" />
             ) : null}
-            <span className="workspace-tab-label">{t("作業部屋")}</span>
+            <span className="workspace-tab-label">{t("アトリエ")}</span>
             {activeMembers.length > 0 ? (
               <span
                 className="topbar-presence-count"
@@ -14721,17 +14721,17 @@ function App() {
             </button>
           ) : null}
 
-          {/* 作業部屋 ショートカット (モバイル限定で表示)。bottom-nav から
-              作業部屋を外した代わりに、上のバーへ移動する設計。 */}
+          {/* アトリエ ショートカット (モバイル限定で表示)。bottom-nav から
+              アトリエを外した代わりに、上のバーへ移動する設計。 */}
           <button
             type="button"
             className={`topbar-icon-button topbar-workspace-button${currentView === "workspace" ? " is-open" : ""}${activeMembers.length > 0 ? " has-presence" : ""}`}
             aria-label={
               activeMembers.length > 0
-                ? t("作業部屋 — 現在 {count} 人が作業中", { count: activeMembers.length })
-                : t("作業部屋")
+                ? t("アトリエ — 現在 {count} 人が作業中", { count: activeMembers.length })
+                : t("アトリエ")
             }
-            data-tooltip={t("作業部屋")}
+            data-tooltip={t("アトリエ")}
             aria-pressed={currentView === "workspace"}
             onClick={() => {
               setCurrentView("workspace");
@@ -14746,7 +14746,7 @@ function App() {
             {activeMembers.length > 0 ? (
               <span className="topbar-icon-badge">{activeMembers.length}</span>
             ) : null}
-            <span className="topbar-icon-label" aria-hidden="true">作業部屋</span>
+            <span className="topbar-icon-label" aria-hidden="true">アトリエ</span>
           </button>
 
           <button
@@ -14883,7 +14883,7 @@ function App() {
                       setIsFriendsPopoverOpen(false);
                     }}
                   >
-                    すべてのフレンドを見る・作業部屋に招待
+                    すべてのフレンドを見る・アトリエに招待
                   </button>
                 ) : null}
               </section>
@@ -16134,7 +16134,7 @@ function App() {
                     招待先の部屋: <strong>{selectedRoom.name}</strong>
                   </>
                 ) : (
-                  "作業部屋を選ぶと、フレンドを招待できます。"
+                  "アトリエを選ぶと、フレンドを招待できます。"
                 )}
               </p>
 
@@ -16511,14 +16511,14 @@ function App() {
           >
             <div>
               <p className="card-kicker">Workspace Recruitment</p>
-              <h2 id="recruitment-modal-title">作業部屋の募集を投稿</h2>
+              <h2 id="recruitment-modal-title">アトリエの募集を投稿</h2>
               <p className="recruitment-modal-help">
                 {selectedRoom ? (
                   <>
                     部屋: <strong>{selectedRoom.name}</strong> / 作業: <strong>{workspaceTask.trim() || "(作業内容を入力してください)"}</strong>
                   </>
                 ) : (
-                  "作業部屋を選択してください。"
+                  "アトリエを選択してください。"
                 )}
               </p>
             </div>
@@ -17051,7 +17051,7 @@ function App() {
                   />
                   <div>
                     <strong>入室通知</strong>
-                    <small>メンバーが作業部屋に入った時</small>
+                    <small>メンバーがアトリエに入った時</small>
                   </div>
                 </label>
                 <label className={`org-admin-slack-toggle ${slackDraftRoomLeaves ? "is-on" : ""}`}>
@@ -17640,7 +17640,7 @@ function App() {
                     <span>
                       <strong>{t("学習・作業の積み上げを自動で投稿する")}</strong>
                       <small>
-                        {t("作業部屋を5分以上利用したり、本のページが進んだら自動でタイムラインに流れます。仲間の積み上げが見えるようになり、お互いを応援しやすくなります。")}
+                        {t("アトリエを5分以上利用したり、本のページが進んだら自動でタイムラインに流れます。仲間の積み上げが見えるようになり、お互いを応援しやすくなります。")}
                       </small>
                     </span>
                     <input
@@ -17693,7 +17693,7 @@ function App() {
                       <dd>{t("フレンドや仲間の投稿・日報が流れてきます。ハートやリプライで反応できます。")}</dd>
                     </div>
                     <div className="settings-guide-item">
-                      <dt>{t("作業部屋")}</dt>
+                      <dt>{t("アトリエ")}</dt>
                       <dd>{t("同じ部屋に入って一緒に作業できます。今やっていることがリアルタイムで共有されます。")}</dd>
                     </div>
                     <div className="settings-guide-item">
@@ -17702,7 +17702,7 @@ function App() {
                     </div>
                     <div className="settings-guide-item">
                       <dt>{t("組織")}</dt>
-                      <dd>{t("会社やチームで使うときは、組織を作って招待リンクで仲間を招きます。組織限定の作業部屋が作れます。")}</dd>
+                      <dd>{t("会社やチームで使うときは、組織を作って招待リンクで仲間を招きます。組織限定のアトリエが作れます。")}</dd>
                     </div>
                   </dl>
                 </details>
@@ -19069,7 +19069,7 @@ function App() {
             <aside className="log-side-panel" aria-label="Room logs">
               <div>
                 <p className="card-kicker">Current Room</p>
-                <strong>{selectedRoom?.name || "作業部屋"}</strong>
+                <strong>{selectedRoom?.name || "アトリエ"}</strong>
                 <span>{roomOnlineCount} online · {formatStudyTimeJa(roomTotalMinutes)}</span>
               </div>
               <div className="room-log-preview">
@@ -19099,7 +19099,7 @@ function App() {
               title={t("プロフィール — あなたの足跡と設定")}
               body={t("積み上げの累計と、見た目・連携の設定をここでまとめます。")}
               bullets={[
-                t("キャラクターの色を変えて、作業部屋での自分を識別しやすく"),
+                t("キャラクターの色を変えて、アトリエでの自分を識別しやすく"),
                 t("GitHub を連携すると、commit が学習グラフに重なります"),
                 t("「決意」欄に短い宣言を書いておくと、毎日の起動時に思い出せます"),
                 t("あなたのユーザーID (@xxx) は他の人があなたを検索する手掛かり"),
@@ -19253,7 +19253,7 @@ function App() {
                 </div>
 
                 {/* シンプルな投稿 + 日報アプリへの方向転換に伴い、トップバーの
-                    管理 / 作業部屋 / ショップ / フレンド / 検索 / 通知 / 設定
+                    管理 / アトリエ / ショップ / フレンド / 検索 / 通知 / 設定
                     エントリをプロフィール画面に集約。モバイル topbar は非表示
                     にし、ここから全機能にアクセスする。 */}
                 <div className="profile-nondo-section profile-nondo-section--menu">
@@ -19321,7 +19321,7 @@ function App() {
                         <path d="M4 10h16M9 6V4M15 6V4" />
                       </svg>
                     </span>
-                    <span className="profile-menu-label">作業部屋</span>
+                    <span className="profile-menu-label">アトリエ</span>
                     <span className="profile-menu-arrow" aria-hidden="true">›</span>
                   </button>
                   <button
@@ -19435,7 +19435,7 @@ function App() {
             <TutorialHint
               uid={currentUser.uid}
               feature="workspace"
-              title={t("作業部屋 — 同じ時間に手を動かす場所")}
+              title={t("アトリエ — 同じ時間に手を動かす場所")}
               body={t("通話なしで、気配だけを共有しながら集中作業ができる空間です。")}
               bullets={[
                 t("「今やってること」を入力 → 入室すると 2D 部屋にあなたのキャラが現れます"),
@@ -19481,11 +19481,11 @@ function App() {
             <div className="workspace-layout">
               {/* Compact room selector — pills along the top so the
                   character map below gets the full canvas. */}
-              <div className="workspace-room-strip" aria-label={t("作業部屋")}>
+              <div className="workspace-room-strip" aria-label={t("アトリエ")}>
                 {/* モバイル専用ヘッダー：タイトル + "+ 部屋を作る"
                     トグル。PC 版では CSS で非表示。 */}
                 <div className="workspace-room-strip-header" aria-hidden="false">
-                  <h2 className="workspace-room-strip-title">{t("作業部屋")}</h2>
+                  <h2 className="workspace-room-strip-title">{t("アトリエ")}</h2>
                   <button
                     type="button"
                     className={`workspace-room-create-toggle${isRoomCreatorOpen ? " is-open" : ""}`}
@@ -19516,7 +19516,7 @@ function App() {
                     }}
                     placeholder={t("新しい場所を作る")}
                     maxLength={32}
-                    aria-label={t("作業部屋を作成")}
+                    aria-label={t("アトリエを作成")}
                     onKeyDown={(event) => {
                       if (event.nativeEvent.isComposing) {
                         return;
@@ -19635,7 +19635,7 @@ function App() {
                     <div
                       className="workspace-room-pills"
                       role="tablist"
-                      aria-label={t("作業部屋")}
+                      aria-label={t("アトリエ")}
                     >
                       {joinedRooms.length > 0 ? (
                         <>
@@ -20132,7 +20132,7 @@ function App() {
               静かに可視化する。
             </h1>
             <p className="teams-hero-lede">
-              通知も通話もない作業部屋に集まるだけ。学習時間と GitHub コミットが
+              通知も通話もないアトリエに集まるだけ。学習時間と GitHub コミットが
               自動で積み上がり、チームが学びに投じた時間が静かに可視化されます。
             </p>
             <div className="teams-hero-cta">
@@ -20283,7 +20283,7 @@ function App() {
 
           <section className="teams-values" aria-label="価値提案">
             <article>
-              <h3>組織限定の作業部屋</h3>
+              <h3>組織限定のアトリエ</h3>
               <p>
                 社内・チーム内だけで共有できるルーム。他社や個人ユーザーからは
                 見えず、招待リンクで仲間を招きます。
@@ -20319,7 +20319,7 @@ function App() {
               <li>
                 <span className="teams-step-no">02</span>
                 <h3>招待リンクを配る</h3>
-                <p>リンクを共有するだけ。メンバーは作業部屋に入るだけで集計が始まります。</p>
+                <p>リンクを共有するだけ。メンバーはアトリエに入るだけで集計が始まります。</p>
               </li>
               <li>
                 <span className="teams-step-no">03</span>
@@ -20425,7 +20425,7 @@ function App() {
 
           <section className="teams-cta-band" aria-label="始める">
             <h2>チームの学びを、今日から可視化する。</h2>
-            <p>β 期間中は全機能無料。まずは組織を作って、作業部屋を開いてみてください。</p>
+            <p>β 期間中は全機能無料。まずは組織を作って、アトリエを開いてみてください。</p>
             <div className="teams-hero-cta">
               {currentOrganization ? (
                 <button
@@ -20994,7 +20994,7 @@ function App() {
       {/* 没入型 "ブランド" トップ画面。Jungle 系のフルブリードな
           イラストレーション + 手書きロゴを参考に、Contribution Arc の
           世界観を一枚絵で見せる演出スクリーン。
-          既存のホーム/プロフィール/作業部屋等とは完全に別レイヤーで、
+          既存のホーム/プロフィール/アトリエ等とは完全に別レイヤーで、
           ボタンから入って戻るボタンで抜けるだけ。データへの副作用なし。 */}
       {currentView === "showcase" ? (
         <article className="app-view-showcase" aria-label="Contribution Arc の世界">
@@ -21167,7 +21167,7 @@ function App() {
             </svg>
             <span>日報</span>
           </button>
-          {/* 中央タブはクイック記録 CTA から「アトリエ」(作業部屋) への
+          {/* 中央タブはクイック記録 CTA から「アトリエ」(アトリエ) への
               入口に変更。記録はライブラリ側の +1m/+10m… で完結するため、
               中央は仲間と静かに作業する場所への動線にした。在室者がいる
               ときは黒丸の右上に人数バッジを出して「今、誰かが居る」気配を

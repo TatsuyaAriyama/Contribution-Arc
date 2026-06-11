@@ -506,7 +506,7 @@ export function SilentWorkspaceRoom({
       <div className="workspace-2d-shell is-preview">
         <article className="workspace-room-preview">
           <header className="room-preview-header">
-            <p className="room-preview-kicker">作業部屋</p>
+            <p className="room-preview-kicker">アトリエ</p>
             <h3 className="room-preview-title">{roomName}</h3>
           </header>
 
