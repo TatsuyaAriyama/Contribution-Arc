@@ -23051,6 +23051,35 @@
   letter-spacing: 0;
 }
 
+/* 連続タップ中の保留合計 (「+3時間 記録中…」)。確定前のフィードバック
+   なので控えめな緑文字で、押せる要素には見えないプレーンなラベル。
+   .is-more が margin-left:auto で右に寄るため、これは … の直後に並ぶ。 */
+.learning-card-quicklog-pending {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--green);
+  white-space: nowrap;
+  animation: quicklog-pending-in 140ms ease-out both;
+}
+
+@keyframes quicklog-pending-in {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .learning-card-quicklog-pending {
+    animation: none;
+  }
+}
+
 /* インラインの「他の時間…」ピッカー. チップ列を置き換える形で
    現れる. 入力中にフォーカスが外に逃げないよう、コンテナ自体は
    そのまま、内容だけが差し替わる. */

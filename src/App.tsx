@@ -4076,6 +4076,16 @@ function App() {
      ようにした (チップ → 「他の時間…」 と段階を踏ませる方が逆に遅い、
      という指摘を受けての変更). */
   const [quickLogMinutesById, setQuickLogMinutesById] = useState<Record<string, string>>({});
+  /* 学習カードのクイック記録 (+1m / +10m / +1h) を「連続タップでまとめて
+     1 記録」にするための保留状態。直近のタップから QUICK_LOG_MERGE_MS の
+     間に押されたぶんを合算し、止まった時点で 1 件の StudyLog として確定
+     する。例: +1h を 3 連打すると 1h を 3 件刻まず 3h の 1 記録になる。
+     pendingById は加算中の合計 (分) を「+3時間 記録中…」のように見せる
+     表示用。確定タイマーと確定対象の item は ref で同期管理する。 */
+  const [quickLogPendingById, setQuickLogPendingById] = useState<Record<string, number>>({});
+  const quickLogMergeTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const quickLogPendingRef = useRef<Map<string, number>>(new Map());
+  const quickLogPendingItemRef = useRef<Map<string, LearningItem>>(new Map());
   const [selectedStudyDay, setSelectedStudyDay] = useState(dayLabels[(new Date().getDay() + 6) % 7]);
   const [selectedArcDayKey, setSelectedArcDayKey] = useState<string | null>(null);
   /* Donut legend インライン編集中の subject。null=非編集。
@@ -8465,6 +8475,49 @@ function App() {
       studyMinutesValue: safeMinutes,
     });
   };
+
+  /* クイック記録チップの連続タップを 1 件にまとめる猶予 (ms)。最後の
+     タップからこの時間が空いたら確定する。連打の間隔としては十分に
+     余裕があり、かつ確定が体感で遅すぎない値。 */
+  const QUICK_LOG_MERGE_MS = 1500;
+
+  /* +1m / +10m / +1h を押すたびに即記録せず、いったん保留合計に足して
+     確定タイマーを張り直す。タップが止まって QUICK_LOG_MERGE_MS 経つと
+     合計を 1 件の StudyLog として handleLearningQuickLog に渡す。 */
+  const accumulateLearningQuickLog = (item: LearningItem, minutes: number) => {
+    if (!currentUser) return;
+    const id = item.id;
+    const nextTotal = (quickLogPendingRef.current.get(id) || 0) + minutes;
+    quickLogPendingRef.current.set(id, nextTotal);
+    quickLogPendingItemRef.current.set(id, item);
+    setQuickLogPendingById((prev) => ({ ...prev, [id]: nextTotal }));
+
+    const existingTimer = quickLogMergeTimersRef.current.get(id);
+    if (existingTimer) clearTimeout(existingTimer);
+    const timer = setTimeout(() => {
+      const total = quickLogPendingRef.current.get(id) || 0;
+      const targetItem = quickLogPendingItemRef.current.get(id) || item;
+      quickLogPendingRef.current.delete(id);
+      quickLogPendingItemRef.current.delete(id);
+      quickLogMergeTimersRef.current.delete(id);
+      setQuickLogPendingById((prev) => {
+        const { [id]: _omit, ...rest } = prev;
+        return rest;
+      });
+      if (total > 0) handleLearningQuickLog(targetItem, total);
+    }, QUICK_LOG_MERGE_MS);
+    quickLogMergeTimersRef.current.set(id, timer);
+  };
+
+  /* アンマウント時に未確定タイマーを掃除する。保留中だった合計は破棄
+     されるが、画面遷移時に勝手な記録が走らない方が安全。 */
+  useEffect(() => {
+    const timers = quickLogMergeTimersRef.current;
+    return () => {
+      timers.forEach((timer) => clearTimeout(timer));
+      timers.clear();
+    };
+  }, []);
 
   // 入力中の学習名に一致する既存の学習対象（active のみ・大文字小文字無視）。
   // 同名は1つの学習対象に統一するための「集約先」。一致した場合は色も
@@ -18767,12 +18820,12 @@ function App() {
                           </div>
                         ) : (
                           <div className="learning-card-quicklog" role="group" aria-label={t("クイック記録")}>
-                            {[15, 30, 60].map((minutes) => (
+                            {[1, 10, 60].map((minutes) => (
                               <button
                                 key={minutes}
                                 type="button"
                                 className="learning-card-quicklog-chip"
-                                onClick={() => handleLearningQuickLog(item, minutes)}
+                                onClick={() => accumulateLearningQuickLog(item, minutes)}
                               >
                                 +{minutes < 60 ? `${minutes}m` : `${minutes / 60}h`}
                               </button>
@@ -18788,6 +18841,15 @@ function App() {
                             >
                               …
                             </button>
+                            {/* 連続タップ中の保留合計。止まると 1 記録に確定する。 */}
+                            {(quickLogPendingById[item.id] || 0) > 0 ? (
+                              <span
+                                className="learning-card-quicklog-pending"
+                                aria-live="polite"
+                              >
+                                +{formatStudyTimeJa(quickLogPendingById[item.id])} {t("記録中")}…
+                              </span>
+                            ) : null}
                           </div>
                         )
                       ) : null}
