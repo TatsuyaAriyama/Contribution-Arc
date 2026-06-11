@@ -927,6 +927,9 @@ const PINNED_ANNOUNCEMENT = ANNOUNCEMENTS.find((item) => item.pinned) || null;
 const NON_PINNED_ANNOUNCEMENTS = ANNOUNCEMENTS.filter((item) => !item.pinned);
 /* ホームにはこの最新 1 件だけ出す。残りは一覧モーダルへ。 */
 const LATEST_ANNOUNCEMENT = NON_PINNED_ANNOUNCEMENTS[0] || null;
+/* 新ホーム (feed) 最上部のコンパクト告知バナーに出す 1 件。配列の
+   先頭 = 最新の告知。タップで一覧モーダルを開く。 */
+const HEADLINE_ANNOUNCEMENT = ANNOUNCEMENTS[0] || null;
 const sanitizeStoragePart = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9_.-]/g, "_");
 const getAccountStorageScope = (uid: string, registeredUserId: string) =>
   sanitizeStoragePart(registeredUserId) || `uid-${uid}`;
@@ -20826,6 +20829,30 @@ function App() {
             }`}
           >
             <PullToRefresh onRefresh={handleFeedRefresh}>
+              {/* ホーム最上部のコンパクトなお知らせバナー。これまで
+                  プロフィールのメニューからしか辿れなかった運営からの
+                  お知らせを、1 行に収めてホーム先頭に出す。タップで
+                  一覧モーダル (全文) を開く。 */}
+              {HEADLINE_ANNOUNCEMENT ? (
+                <button
+                  type="button"
+                  className="home-notice-banner"
+                  onClick={() => setIsAnnouncementsModalOpen(true)}
+                  aria-label={`${t("お知らせ")}: ${HEADLINE_ANNOUNCEMENT.title}`}
+                >
+                  <span className="home-notice-banner-badge" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 11.5 17 4v16L3 12.5z" />
+                      <path d="M7 12.5v4l3 1.5v-4" />
+                    </svg>
+                  </span>
+                  <span className="home-notice-banner-text">
+                    <span className="home-notice-banner-kicker">{t("お知らせ")}</span>
+                    <span className="home-notice-banner-title">{HEADLINE_ANNOUNCEMENT.title}</span>
+                  </span>
+                  <span className="home-notice-banner-chevron" aria-hidden="true">›</span>
+                </button>
+              ) : null}
               {feedSection}
             </PullToRefresh>
           </div>
