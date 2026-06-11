@@ -15262,11 +15262,7 @@ function App() {
                   >
                     {learningEditorState.photo ? (
                       <img src={learningEditorState.photo} alt="" />
-                    ) : (
-                      <span className="learning-photo-preview-initial">
-                        {learningEditorState.name.trim().slice(0, 1) || "•"}
-                      </span>
-                    )}
+                    ) : null}
                   </span>
                   <div className="learning-photo-actions">
                     <label className="learning-photo-upload">
@@ -18602,11 +18598,7 @@ function App() {
                           >
                             {item.photo ? (
                               <img src={item.photo} alt="" loading="lazy" />
-                            ) : (
-                              <span className="learning-card-photo-initial">
-                                {item.name.trim().slice(0, 1) || "•"}
-                              </span>
-                            )}
+                            ) : null}
                           </span>
                           {isBook ? (
                             <span className="learning-card-badge" aria-hidden="true">
