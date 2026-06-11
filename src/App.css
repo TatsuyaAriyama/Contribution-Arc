@@ -5994,6 +5994,48 @@
   letter-spacing: -0.005em;
 }
 
+/* 「画像で共有」ボタン + 日付セレクタの行。日報を画像カードとして
+   書き出す導線（ホーム画面ウィジェットの代替）。 */
+.daily-editor-head > .daily-editor-head-actions {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.daily-editor-head-actions label {
+  flex: 1;
+}
+.daily-share-image-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    color 0.16s ease,
+    background 0.16s ease;
+}
+.daily-share-image-button:hover {
+  border-color: rgba(var(--green-rgb, 31, 111, 74), 0.45);
+  color: var(--green);
+}
+.daily-share-image-button:active {
+  transform: scale(0.98);
+}
+.daily-share-image-button svg {
+  width: 17px;
+  height: 17px;
+}
+
 .daily-editor-form {
   display: grid;
   /* コンパクト化：12 → 10px。各 entry-card 間の隙間を詰めて、

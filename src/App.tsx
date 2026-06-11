@@ -188,6 +188,7 @@ import {
   planItemsFromLegacyText,
   planItemsToMentionScannable,
 } from "./services/dailyPlanItems";
+import { shareDailyReportImage } from "./daily/shareCard";
 import { resetAllTutorials } from "./services/tutorial";
 import { showToast } from "./services/toast";
 import { useTranslation } from "./i18n/LanguageContext";
@@ -7933,6 +7934,41 @@ function App() {
   const todayDailyReport = dailyReports.find((report) => report.date === currentLearnerDate) || null;
   // 連続日報ストリーク (今日まで連続して書いた日数)
   const dailyReportStreak = useMemo(() => getDailyReportStreak(dailyReports), [dailyReports]);
+  // 日報を 1 枚の画像カードに書き出して共有/保存する。ネイティブな
+  // ホーム画面ウィジェットは Web では作れないため、「写真に保存 → iOS
+  // の写真ウィジェット/ショートカットで置く」導線の起点にする。
+  // 保存前のライブ下書きを優先し、無ければ保存済みレポートを使う。
+  const handleShareDailyImage = async () => {
+    const sourceItems =
+      dailyPlanItemsDraft.length > 0
+        ? dailyPlanItemsDraft
+        : selectedDailyReport?.planItems ?? [];
+    const planItems = sourceItems
+      .map((item) => ({ text: item.text, done: item.done }))
+      .filter((item) => item.text.trim());
+    const reflection = (dailyReflectionDraft || selectedDailyReport?.reflection || "").trim();
+    if (planItems.length === 0 && !reflection) {
+      setDailyMessage("共有できる内容がまだありません。");
+      return;
+    }
+    try {
+      const result = await shareDailyReportImage({
+        dateLabel: formatDailyDate(selectedDailyDate),
+        authorName: selectedDailyReport?.userName || playerName || "Developer",
+        authorTitle: selectedDailyReport?.currentTitle,
+        streakDays: dailyReportStreak,
+        planItems,
+        reflection,
+      });
+      if (result === "downloaded") {
+        setDailyMessage("画像を保存しました。ホーム画面の写真ウィジェットに置けます。");
+      } else if (result === "shared") {
+        setDailyMessage("");
+      }
+    } catch {
+      setDailyMessage("画像の作成に失敗しました。");
+    }
+  };
   // 選択日の学習サマリー：その日の学習合計分とログ件数。
   // 振り返り時に「今日どれだけ手を動かしたか」を即把握できるようにする。
   const selectedDayStudySummary = useMemo(() => {
@@ -18041,14 +18077,44 @@ function App() {
                   </p>
                 ) : null}
               </div>
-              <label>
-                <span>{t("日付")}</span>
-                <input
-                  type="date"
-                  value={selectedDailyDate}
-                  onChange={(event) => handleDailyDateChange(event.target.value)}
-                />
-              </label>
+              <div className="daily-editor-head-actions">
+                {/* 日報を画像カードとして共有/保存。ホーム画面ウィジェット
+                    の代替（写真に保存 → 写真ウィジェットに置ける）。 */}
+                <button
+                  type="button"
+                  className="daily-share-image-button"
+                  onClick={() => void handleShareDailyImage()}
+                  aria-label={t("日報を画像で共有")}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path
+                      d="M12 3v11m0-11 3.5 3.5M12 3 8.5 6.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M5 13v5.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V13"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <span>{t("画像で共有")}</span>
+                </button>
+                <label>
+                  <span>{t("日付")}</span>
+                  <input
+                    type="date"
+                    value={selectedDailyDate}
+                    onChange={(event) => handleDailyDateChange(event.target.value)}
+                  />
+                </label>
+              </div>
             </div>
 
             {/* シンプル投稿 + 日報アプリへの方向転換に伴い、日報上部の
