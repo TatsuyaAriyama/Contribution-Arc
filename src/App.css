@@ -23084,12 +23084,15 @@
    現れる. 入力中にフォーカスが外に逃げないよう、コンテナ自体は
    そのまま、内容だけが差し替わる. */
 .learning-card-quicklog.is-custom {
-  gap: 6px;
+  gap: 4px;
+  /* 時間欄 + 分欄 + 記録 + × が並ぶので、狭いカードでは折り返して
+     はみ出さないようにする。 */
+  flex-wrap: wrap;
 }
 
 .learning-card-quicklog input[type="number"] {
-  flex: 1 1 0;
-  min-width: 0;
+  flex: 1 1 2.5em;
+  min-width: 2.5em;
   padding: 4px 8px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -23097,6 +23100,7 @@
   color: var(--ink);
   font: inherit;
   font-size: 13px;
+  text-align: center;
 }
 
 .learning-card-quicklog input[type="number"]:focus {
@@ -23105,11 +23109,13 @@
 }
 
 .learning-card-quicklog-unit {
+  flex-shrink: 0;
   font-size: 11px;
   color: var(--muted);
 }
 
 .learning-card-quicklog-submit {
+  flex-shrink: 0;
   padding: 4px 12px;
   border: none;
   border-radius: 6px;
@@ -23127,6 +23133,7 @@
 }
 
 .learning-card-quicklog-cancel {
+  flex-shrink: 0;
   padding: 2px 6px;
   border: none;
   background: transparent;
@@ -23695,12 +23702,15 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  /* 時間欄 + 分欄 + 記録ボタンが並ぶので狭幅では折り返す。 */
+  flex-wrap: wrap;
 }
 
 .learning-detail-quicklog input {
-  width: 84px;
+  flex: 1 1 60px;
+  width: 60px;
   height: 40px;
-  min-width: 0;
+  min-width: 48px;
   border: 1px solid var(--line);
   border-radius: 11px;
   background: var(--surface);
@@ -23718,12 +23728,14 @@
 }
 
 .learning-detail-quicklog-unit {
+  flex-shrink: 0;
   color: var(--muted);
   font-size: 13px;
   font-weight: 800;
 }
 
 .learning-detail-quicklog-submit {
+  flex-shrink: 0;
   height: 40px;
   padding: 0 18px;
   border: 0;
