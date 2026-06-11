@@ -14788,6 +14788,49 @@ function App() {
             <span className="topbar-icon-label" aria-hidden="true">ショップ</span>
           </button>
 
+          {/* ポーカー導線。デスクトップはアトリエ画面内の入口ボタンを
+              使うため、このヘッダーボタンは CSS で ≤720px のみ表示する
+              （モバイルでは profile-topbar ごと隠れて入口が無くなるため）。
+              Focus Chip を持っているときは枚数バッジを添える。 */}
+          <button
+            type="button"
+            className="topbar-icon-button topbar-poker-button"
+            aria-label={
+              focusChips > 0
+                ? t("ポーカー — Focus Chip {n}枚で配当 ×1.5", { n: focusChips })
+                : t("ポーカー")
+            }
+            data-tooltip={t("ポーカー")}
+            onClick={() => {
+              setCurrentView("poker");
+              setIsFriendsPopoverOpen(false);
+              setIsLivePopoverOpen(false);
+            }}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path
+                d="M12 3.5c2.7 3 5.3 5 5.3 8.1a3.7 3.7 0 0 1-5.3 3.4 3.7 3.7 0 0 1-5.3-3.4C6.7 8.5 9.3 6.5 12 3.5z"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M12 14.6c0 2.1.6 3.9 2 5.4h-4c1.4-1.5 2-3.3 2-5.4z"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinejoin="round"
+              />
+            </svg>
+            {focusChips > 0 ? (
+              <span className="topbar-poker-focus" aria-hidden="true">
+                🔥{focusChips}
+              </span>
+            ) : null}
+            <span className="topbar-icon-label" aria-hidden="true">ポーカー</span>
+          </button>
+
           <div className="topbar-popover-wrap topbar-popover-wrap-friends" ref={friendsPopoverRef}>
             <button
               type="button"
