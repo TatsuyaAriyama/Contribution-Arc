@@ -17727,39 +17727,9 @@ function App() {
               </label>
             </div>
 
-            {/* 選択日の学習サマリー：何時間勉強したか、主に何をやったか。
-                振り返りの材料として常に上部に表示 (0分でも "まだ未記録" として
-                表示することで「書きたい」気持ちを引き出す)。 */}
-            <div className="daily-day-summary" aria-label={t("この日の学習サマリー")}>
-              <div className="daily-day-summary-item">
-                <span className="daily-day-summary-label">{t("学習時間")}</span>
-                <strong className="daily-day-summary-value">
-                  {selectedDayStudySummary.totalMinutes > 0
-                    ? formatStudyTimeJa(selectedDayStudySummary.totalMinutes)
-                    : "—"}
-                </strong>
-              </div>
-              <div className="daily-day-summary-divider" aria-hidden="true" />
-              <div className="daily-day-summary-item">
-                <span className="daily-day-summary-label">{t("記録")}</span>
-                <strong className="daily-day-summary-value">
-                  {selectedDayStudySummary.logCount > 0
-                    ? `${selectedDayStudySummary.logCount}件`
-                    : "—"}
-                </strong>
-              </div>
-              {selectedDayStudySummary.topSubject ? (
-                <>
-                  <div className="daily-day-summary-divider" aria-hidden="true" />
-                  <div className="daily-day-summary-item daily-day-summary-topic">
-                    <span className="daily-day-summary-label">{t("最も取り組んだ")}</span>
-                    <strong className="daily-day-summary-value">
-                      {selectedDayStudySummary.topSubject}
-                    </strong>
-                  </div>
-                </>
-              ) : null}
-            </div>
+            {/* シンプル投稿 + 日報アプリへの方向転換に伴い、日報上部の
+                学習サマリー (学習時間 / 記録 / 最も取り組んだ) は撤去。
+                書く行為そのものに集中するため、定量的なメタ情報は出さない。 */}
 
             {(() => {
               // 当日の日報を編集中なら「両方共有で +50 Arc」のバナーを出す。
@@ -17807,20 +17777,9 @@ function App() {
             ) : null}
 
             <div className="daily-editor-form">
-              <div className="daily-editor-mode" role="group" aria-label={t("公開設定")}>
-                <label className="daily-mode-toggle">
-                  <input
-                    type="checkbox"
-                    checked={dailyIsDraftDraft}
-                    disabled={!canEditSelectedDailyReport}
-                    onChange={(event) => setDailyIsDraftDraft(event.target.checked)}
-                  />
-                  <span>
-                    <strong>{t("下書きにする")}</strong>
-                    <small>{t("チームの Daily フィードに流れません。自分だけの場所として書けます。")}</small>
-                  </span>
-                </label>
-              </div>
+              {/* 下書きトグル UI は撤去。新規日報は常に共有扱い (= isDraft
+                  false)。過去日報の isDraft 値は state 側で引き継がれる
+                  ので、過去下書きが「強制的に共有される」事故は起きない。 */}
 
               <form className="daily-entry-card" onSubmit={(event) => handleDailyReportSectionSubmit(event, "plan")}>
                 <div className="daily-entry-label-row">
