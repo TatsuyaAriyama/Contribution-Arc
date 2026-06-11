@@ -25742,7 +25742,30 @@ select:focus-visible,
   }
 
   .mobile-bottom-nav button.is-cta {
+    position: relative;
     color: var(--ink-strong, var(--ink));
+  }
+
+  /* アトリエ (中央CTA) の在室者バッジ。黒丸アイコンの右上に緑の
+     人数ピルを重ねて「今、誰かが居る」気配をそっと示す。 */
+  .mobile-bottom-nav button.is-cta .mobile-cta-presence {
+    position: absolute;
+    top: 2px;
+    left: 50%;
+    transform: translateX(8px);
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--green);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 16px;
+    text-align: center;
+    border: 2px solid var(--surface);
+    box-shadow: 0 2px 6px rgba(var(--ink-rgb), 0.18);
+    pointer-events: none;
   }
 }
 

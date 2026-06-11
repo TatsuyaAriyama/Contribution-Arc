@@ -21167,21 +21167,31 @@ function App() {
             </svg>
             <span>日報</span>
           </button>
-          {/* Phase 10d: 中央CTA を「学習対象タブへの遷移」から「クイック
-              記録ポップオーバーを開く」に変更. ボタンのラベルが「記録する」
-              なので、押すと記録できる、が自然な動作. 学習対象の登録/編集
-              は popover 内の「学習対象を管理 →」から辿れる. */}
+          {/* 中央タブはクイック記録 CTA から「アトリエ」(作業部屋) への
+              入口に変更。記録はライブラリ側の +1m/+10m… で完結するため、
+              中央は仲間と静かに作業する場所への動線にした。在室者がいる
+              ときは黒丸の右上に人数バッジを出して「今、誰かが居る」気配を
+              そっと添える。 */}
           <button
             type="button"
-            className={`is-cta${isQuickLogPopoverOpen ? " is-active" : ""}`}
-            onClick={toggleQuickLogPopover}
-            aria-label={isQuickLogPopoverOpen ? "記録ポップオーバーを閉じる" : "記録する"}
-            aria-expanded={isQuickLogPopoverOpen}
+            className={`is-cta${currentView === "workspace" ? " is-active" : ""}${activeMembers.length > 0 ? " has-presence" : ""}`}
+            onClick={() => setCurrentView("workspace")}
+            aria-label={
+              activeMembers.length > 0
+                ? t("アトリエ — 現在 {count} 人が作業中", { count: activeMembers.length })
+                : t("アトリエ")
+            }
+            aria-pressed={currentView === "workspace"}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              {/* アトリエの入口を思わせるアーチ。Contribution "Arc" の弧にも掛かる。 */}
+              <path d="M5 20v-8a7 7 0 0 1 14 0v8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M3.5 20h17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
-            <span>記録する</span>
+            {activeMembers.length > 0 ? (
+              <span className="mobile-cta-presence" aria-hidden="true">{activeMembers.length}</span>
+            ) : null}
+            <span>{t("アトリエ")}</span>
           </button>
           {/* ユーザー要望でライブラリとプロフィールの並びを入れ替え、
               ライブラリを左、プロフィールを右端に配置する。 */}
