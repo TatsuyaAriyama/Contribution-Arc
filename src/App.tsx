@@ -21183,6 +21183,19 @@ function App() {
             </svg>
             <span>記録する</span>
           </button>
+          {/* ユーザー要望でライブラリとプロフィールの並びを入れ替え、
+              ライブラリを左、プロフィールを右端に配置する。 */}
+          <button
+            type="button"
+            className={currentView === "learning" ? "is-active" : ""}
+            onClick={() => setCurrentView("learning")}
+            aria-label={t("ライブラリ")}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M5 4h4v16H5zM11 4h4v16h-4zM16.5 4.8l3.4.9-3 14.6-3.4-.9z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+            </svg>
+            <span>{t("ライブラリ")}</span>
+          </button>
           {/* プロフィール導線。元は「投稿 → 学習記録」と rename していたが
               実体は home view に飛ばすブリッジ用ボタン。ユーザー要望で
               ラベルとアイコンを「プロフィール」(人物アイコン) に変更し、
@@ -21204,17 +21217,6 @@ function App() {
               />
             </svg>
             <span>プロフィール</span>
-          </button>
-          <button
-            type="button"
-            className={currentView === "learning" ? "is-active" : ""}
-            onClick={() => setCurrentView("learning")}
-            aria-label={t("ライブラリ")}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M5 4h4v16H5zM11 4h4v16h-4zM16.5 4.8l3.4.9-3 14.6-3.4-.9z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-            </svg>
-            <span>{t("ライブラリ")}</span>
           </button>
         </nav>
       ) : null}
