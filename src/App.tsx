@@ -20637,10 +20637,16 @@ function App() {
           <p className="home-announcements-empty">{t("いまは新しいお知らせはありません。")}</p>
         ) : (
           <ol className="home-announcements-list">
-            {/* ホームには固定のお知らせ (ウェルカム) だけ出す。今後追加される
-                非固定のお知らせは「すべて見る」モーダルから閲覧する設計。 */}
-            {[PINNED_ANNOUNCEMENT]
+            {/* ホームには固定のお知らせ (ウェルカム) + 非固定の最新 1 件を
+                出す。固定を先頭に、その下へ最新 1 件。残りは「すべて見る」
+                モーダルから閲覧する設計。重複（固定が最新を兼ねる場合）は
+                id で除外する。 */}
+            {[PINNED_ANNOUNCEMENT, LATEST_ANNOUNCEMENT]
               .filter((item): item is Announcement => item !== null)
+              .filter(
+                (item, index, list) =>
+                  list.findIndex((other) => other.id === item.id) === index,
+              )
               .map((announcement, index) => {
                 const isOpen = openAnnouncementId === announcement.id;
                 return (
