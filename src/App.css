@@ -36685,3 +36685,86 @@ select:disabled {
   line-height: 1;
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
 }
+
+/* ===============================================================
+   Phase 11c: ダークモード視認性パス
+   スクショ (nondo dark) の世界観に合わせ、主要カードを
+   「純黒背景 + 純白 1.5px hairline」に揃えて視認性とデザイン性を改善。
+   ライトモードは変更なし、ダーク時のみ上書きする。
+   =============================================================== */
+[data-theme="dark"] .learning-card {
+  /* 枠が見えない (--border 未定義) 問題と、左バーが暗背景で目立ちすぎる
+     問題を解消。白 hairline で囲み、左バーは細く保つ。 */
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  border-left: 3px solid var(--learning-card-color, rgba(255, 255, 255, 0.9));
+  background: #0b0c0e;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+[data-theme="dark"] .learning-card:hover {
+  border-color: #ffffff;
+}
+
+[data-theme="dark"] .home-announcements,
+[data-theme="dark"] .card {
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+[data-theme="dark"] .profile-menu {
+  border-color: rgba(255, 255, 255, 0.85);
+  background: #0b0c0e;
+}
+[data-theme="dark"] .profile-menu-item {
+  border-top-color: rgba(255, 255, 255, 0.16);
+}
+[data-theme="dark"] .profile-menu-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .profile-nondo-corner-btn,
+[data-theme="dark"] .profile-nondo-metric {
+  border-color: rgba(255, 255, 255, 0.85);
+  background: #0b0c0e;
+}
+[data-theme="dark"] .profile-nondo-section {
+  border-bottom-color: rgba(255, 255, 255, 0.85);
+}
+
+/* 日報エディタの主役カード (plan / reflection) も白 1.5px hairline に。
+   .daily-editor-card 配下の specificity に合わせて指定。 */
+[data-theme="dark"] .daily-editor-card .daily-entry-card {
+  border-color: rgba(255, 255, 255, 0.85);
+  background: #0b0c0e;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+[data-theme="dark"] .daily-entry-card {
+  border-color: rgba(255, 255, 255, 0.85);
+  background: #0b0c0e;
+}
+
+/* plan checklist の編集モード時カード化も白 hairline に。 */
+[data-theme="dark"] .plan-checklist-row.is-editing {
+  background: #0b0c0e;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.22),
+    0 10px 28px rgba(0, 0, 0, 0.55);
+}
+[data-theme="dark"] .plan-checklist-text.is-editing {
+  background: #0b0c0e;
+  border-color: rgba(255, 255, 255, 0.30);
+  box-shadow:
+    0 0 0 3px rgba(74, 222, 128, 0.14),
+    0 6px 18px rgba(0, 0, 0, 0.5);
+}
+
+/* fallback アイコンは光彩が暗背景で潰れがちなので、white inset を強める。 */
+[data-theme="dark"] .learning-card-photo.is-fallback,
+[data-theme="dark"] .learning-photo-preview.is-fallback {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -8px 16px rgba(0, 0, 0, 0.32),
+    0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+/* セクション見出しの "Inbox 43 >" 風下線、daily editor の label など
+   ink hairline を使う場所はもともと var(--ink) = 白なので問題なし。
+   muted テキストだけ上で c8cdd2 に持ち上げたので、サブ説明文も読みやすい。 */

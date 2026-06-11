@@ -62,8 +62,10 @@
   color-scheme: dark;
   color: #ffffff;
   background: #000000;
-  /* Twitter/Instagram-style: pure black canvas, pure white text,
-     separation via 1px borders rather than tonal layering. */
+  /* Twitter/Instagram/nondo-style: pure black canvas, pure white text,
+     separation via 1.5px hairline borders rather than tonal layering.
+     Phase 11c: 視認性パスで hairline を 0.14 → 0.22 / 0.20 → 0.40 に
+     強め、muted も a7adb3 → c8cdd2 に持ち上げて読みやすくした。 */
   --bg: #000000;
   --surface: #16181c;
   --surface-warm: #16181c;
@@ -77,10 +79,13 @@
   --cta-bg: #ffffff;
   --cta-fg: #000000;
   --cta-fg-rgb: 0, 0, 0;
-  --muted: #a7adb3;
-  --line: rgba(255, 255, 255, 0.14);
-  --line-soft: rgba(255, 255, 255, 0.07);
-  --line-strong: rgba(255, 255, 255, 0.20);
+  --muted: #c8cdd2;
+  --line: rgba(255, 255, 255, 0.22);
+  --line-soft: rgba(255, 255, 255, 0.12);
+  --line-strong: rgba(255, 255, 255, 0.40);
+  /* 一部レガシーで使われている --border (未定義) も white 寄りに定義。
+     これで learning-card 等の枠が "見えない" 状態が解消される。 */
+  --border: rgba(255, 255, 255, 0.40);
   --green: #4ade80;
   --green-hover: #6ee7b7;
   --green-soft: rgba(74, 222, 128, 0.16);
