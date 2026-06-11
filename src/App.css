@@ -6246,45 +6246,42 @@
 .plan-checklist-line {
   display: grid;
   grid-template-columns: 1fr auto auto;
-  align-items: center;
+  /* textarea が複数行に伸びても carry chip / remove ボタンは
+     先頭行の高さに揃える。 */
+  align-items: start;
   gap: 6px;
 }
 
 .plan-checklist-text {
-  /* シンプルな 1 行 input。Notion / Linear 流の todo 行と同じ密度感。
-     未フォーカス / フォーカス中で高さは変わらない。長文は input 内で
-     横スクロールするが、一覧の縦リズムを優先する設計。 */
+  /* Phase 11: input → textarea に変更。1 行起点 + auto-grow で
+     長い日本語タスクも全文 wrap 表示。振り返り側 reflection-recap-text
+     (font 14px + 複数行 wrap) と密度感を統一した。 */
   width: 100%;
-  height: 32px;
-  padding: 0 8px;
+  min-height: 28px;
+  padding: 4px 8px;
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
   color: var(--ink);
   font: inherit;
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 600;
-  line-height: 1;
+  line-height: 1.45;
   letter-spacing: -0.005em;
   outline: none;
   appearance: none;
   -webkit-appearance: none;
+  resize: none;
+  /* textarea は scrollHeight に合わせて JS 側で高さを同期するので、
+     overflow は隠す。 */
+  overflow: hidden;
+  word-break: break-word;
   transition: border-color 120ms ease-out, background-color 120ms ease-out;
 }
-/* モバイルでは更にフォントを詰めて、横スクロールが必要になる文字数の
-   閾値を実用的に押し上げる。 */
 @media (max-width: 720px) {
   .plan-checklist-text {
-    font-size: 13px;
-    padding: 0 6px;
-  }
-}
-/* モバイルは更にコンパクトに。長い文章でも横にあふれず、複数行で
-   折り返して見える。 */
-@media (max-width: 720px) {
-  .plan-checklist-text {
-    font-size: 13px;
-    padding: 4px 6px;
+    font-size: 13.5px;
+    padding: 3px 6px;
     min-height: 26px;
   }
 }
