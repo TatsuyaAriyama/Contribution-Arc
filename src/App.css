@@ -36511,3 +36511,108 @@ select:disabled {
   color: var(--muted);
   letter-spacing: -0.005em;
 }
+
+/* ===============================================================
+   ライブラリ：写真アイコン (Learning Item photo)
+   教科書の表紙などをアップロードし、カード/エディタでアイコン表示。
+   data URL (144px JPEG) を Firestore doc に直接保存する方式。
+   =============================================================== */
+/* エディタ内のアップロード列 */
+.learning-photo-field {
+  display: grid;
+  gap: 6px;
+}
+.learning-photo-field > span {
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.learning-photo-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.learning-photo-preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  border: 1.5px solid var(--ink);
+  overflow: hidden;
+  flex-shrink: 0;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 900;
+}
+.learning-photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.learning-photo-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.learning-photo-upload {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.14s ease;
+}
+.learning-photo-upload:hover {
+  background: rgba(var(--ink-rgb), 0.05);
+}
+.learning-photo-upload input[type="file"] {
+  display: none;
+}
+.learning-photo-remove {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.learning-photo-remove:hover {
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+.learning-photo-hint {
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+/* ライブラリカード上の写真アイコン */
+.learning-card-photo {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--line-strong);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.learning-card-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}

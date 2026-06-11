@@ -280,6 +280,8 @@ type LearningItem = {
   totalPages?: number;
   currentPages?: number;
   note?: string;
+  /** 表紙/アイコン写真 (data URL, 144px JPEG ~10-25KB)。 */
+  photo?: string;
   status: LearningStatus;
   archived: boolean;
   createdAt: string;
@@ -3954,6 +3956,36 @@ function writeLocalDailyDraft(date: string, patch: LocalDailyDraft) {
   }
 }
 
+/* ===============================================================
+   ライブラリの写真アイコン：File → 正方形 cover crop → 144px JPEG
+   data URL に圧縮する。Firebase Storage 未導入のため Firestore doc に
+   直接保存する前提で、サイズを強く絞る (typ. 10-25KB)。
+   =============================================================== */
+const LEARNING_PHOTO_SIZE = 144;
+async function fileToLearningPhotoDataUrl(file: File): Promise<string> {
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("image-load-failed"));
+      img.src = objectUrl;
+    });
+    const side = Math.min(image.naturalWidth, image.naturalHeight);
+    const sx = (image.naturalWidth - side) / 2;
+    const sy = (image.naturalHeight - side) / 2;
+    const canvas = document.createElement("canvas");
+    canvas.width = LEARNING_PHOTO_SIZE;
+    canvas.height = LEARNING_PHOTO_SIZE;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("canvas-2d-unavailable");
+    ctx.drawImage(image, sx, sy, side, side, 0, 0, LEARNING_PHOTO_SIZE, LEARNING_PHOTO_SIZE);
+    return canvas.toDataURL("image/jpeg", 0.8);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 function App() {
   const { language, setLanguage, t } = useTranslation();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -3974,6 +4006,8 @@ function App() {
     totalPages: string;
     currentPages: string;
     note: string;
+    /** 表紙/アイコン写真 (data URL)。空文字 = 写真なし。 */
+    photo: string;
     status: LearningStatus;
   } | null>(null);
   const [learningCategoryTab, setLearningCategoryTab] = useState<"all" | "active" | "done" | "archived">("all");
@@ -8526,6 +8560,7 @@ function App() {
       totalPages: "",
       currentPages: "",
       note: "",
+      photo: "",
       status: "active",
     });
   };
@@ -8682,6 +8717,7 @@ function App() {
       totalPages: typeof item.totalPages === "number" ? String(item.totalPages) : "",
       currentPages: typeof item.currentPages === "number" ? String(item.currentPages) : "",
       note: item.note ?? "",
+      photo: item.photo ?? "",
       status: item.status ?? "active",
     });
   };
@@ -8728,6 +8764,7 @@ function App() {
         ...(hasTotal ? { totalPages: totalPagesNum } : {}),
         ...(clampedCurrent !== undefined ? { currentPages: clampedCurrent } : {}),
         ...(trimmedNote ? { note: trimmedNote } : {}),
+        ...(learningEditorState.photo ? { photo: learningEditorState.photo } : {}),
       };
       setLearningItems((items) => [...items, newItem]);
       void saveLearningItemToCloud(db, newItem).catch((error) => {
@@ -8746,6 +8783,7 @@ function App() {
         status: learningEditorState.status,
         updatedAt: nowIso,
         note: trimmedNote || undefined,
+        photo: learningEditorState.photo || undefined,
         ...(hasTotal ? { totalPages: totalPagesNum } : { totalPages: undefined }),
         ...(clampedCurrent !== undefined ? { currentPages: clampedCurrent } : { currentPages: undefined }),
       };
@@ -15192,6 +15230,63 @@ function App() {
                 />
               </label>
 
+              {/* 写真アイコン：教科書の表紙などを撮ってアイコンにする。
+                  クライアントで 144px JPEG に圧縮して Firestore doc に
+                  直接保存 (Storage 不使用)。 */}
+              <div className="learning-photo-field">
+                <span>{t("写真 (任意)")}</span>
+                <div className="learning-photo-row">
+                  <span
+                    className={`learning-photo-preview${learningEditorState.photo ? " has-photo" : ""}`}
+                    style={!learningEditorState.photo ? { background: learningEditorState.color } : undefined}
+                    aria-hidden="true"
+                  >
+                    {learningEditorState.photo ? (
+                      <img src={learningEditorState.photo} alt="" />
+                    ) : (
+                      learningEditorState.name.trim().slice(0, 1) || "?"
+                    )}
+                  </span>
+                  <div className="learning-photo-actions">
+                    <label className="learning-photo-upload">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          event.target.value = "";
+                          if (!file) return;
+                          void fileToLearningPhotoDataUrl(file)
+                            .then((dataUrl) => {
+                              setLearningEditorState((state) =>
+                                state ? { ...state, photo: dataUrl } : state,
+                              );
+                            })
+                            .catch(() => {
+                              showToast("画像を読み込めませんでした", { kind: "error" });
+                            });
+                        }}
+                      />
+                      {learningEditorState.photo ? t("写真を変更") : t("写真を追加")}
+                    </label>
+                    {learningEditorState.photo ? (
+                      <button
+                        type="button"
+                        className="learning-photo-remove"
+                        onClick={() =>
+                          setLearningEditorState((state) => (state ? { ...state, photo: "" } : state))
+                        }
+                      >
+                        {t("削除")}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+                <small className="learning-photo-hint">
+                  {t("教科書の表紙などを撮ると、ライブラリでアイコンとして表示されます。")}
+                </small>
+              </div>
+
               <label className="learning-book-toggle">
                 <input
                   type="checkbox"
@@ -18475,6 +18570,11 @@ function App() {
                         aria-label={t("{name}の詳細", { name: item.name })}
                       >
                         <div className="learning-card-head">
+                          {item.photo ? (
+                            <span className="learning-card-photo" aria-hidden="true">
+                              <img src={item.photo} alt="" loading="lazy" />
+                            </span>
+                          ) : null}
                           {isBook ? (
                             <span className="learning-card-badge" aria-hidden="true">
                               書籍
