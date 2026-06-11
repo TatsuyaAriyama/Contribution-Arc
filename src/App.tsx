@@ -15252,14 +15252,20 @@ function App() {
                 <span>{t("写真 (任意)")}</span>
                 <div className="learning-photo-row">
                   <span
-                    className={`learning-photo-preview${learningEditorState.photo ? " has-photo" : ""}`}
-                    style={!learningEditorState.photo ? { background: learningEditorState.color } : undefined}
+                    className={`learning-photo-preview${learningEditorState.photo ? " has-photo" : " is-fallback"}`}
+                    style={
+                      !learningEditorState.photo
+                        ? ({ "--learning-thumb-color": learningEditorState.color } as CSSProperties)
+                        : undefined
+                    }
                     aria-hidden="true"
                   >
                     {learningEditorState.photo ? (
                       <img src={learningEditorState.photo} alt="" />
                     ) : (
-                      learningEditorState.name.trim().slice(0, 1) || "?"
+                      <span className="learning-photo-preview-initial">
+                        {learningEditorState.name.trim().slice(0, 1) || "•"}
+                      </span>
                     )}
                   </span>
                   <div className="learning-photo-actions">
@@ -18585,11 +18591,23 @@ function App() {
                         aria-label={t("{name}の詳細", { name: item.name })}
                       >
                         <div className="learning-card-head">
-                          {item.photo ? (
-                            <span className="learning-card-photo" aria-hidden="true">
+                          <span
+                            className={`learning-card-photo${item.photo ? "" : " is-fallback"}`}
+                            style={
+                              item.photo
+                                ? undefined
+                                : ({ "--learning-thumb-color": item.color } as CSSProperties)
+                            }
+                            aria-hidden="true"
+                          >
+                            {item.photo ? (
                               <img src={item.photo} alt="" loading="lazy" />
-                            </span>
-                          ) : null}
+                            ) : (
+                              <span className="learning-card-photo-initial">
+                                {item.name.trim().slice(0, 1) || "•"}
+                              </span>
+                            )}
+                          </span>
                           {isBook ? (
                             <span className="learning-card-badge" aria-hidden="true">
                               書籍
