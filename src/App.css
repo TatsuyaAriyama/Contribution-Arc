@@ -36371,3 +36371,26 @@ select:disabled {
   .profile-nondo-metric-value { font-size: 20px; }
   .profile-nondo-name { letter-spacing: -0.05em; }
 }
+
+/* 「分身キャラクター」エントリのアイコン枠だけは line icon の代わりに
+   実際のキャラ silhouette を見せるので、サイズを揃え背景を ink hairline
+   の円にして他エントリと視覚的にバランスを取る。 */
+.profile-menu-icon--avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(var(--ink-rgb), 0.04);
+  border: 1.5px solid var(--ink);
+  overflow: hidden;
+  padding: 2px;
+}
+.profile-menu-icon--avatar svg,
+.profile-menu-icon--avatar > * {
+  width: 100% !important;
+  height: 100% !important;
+}
+.profile-menu-item--avatar {
+  /* avatar 枠が大きい分、項目側の縦余白だけ僅かに増やす */
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
