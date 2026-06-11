@@ -17856,6 +17856,9 @@ function App() {
               {/* 下書きトグル UI は撤去。新規日報は常に共有扱い (= isDraft
                   false)。過去日報の isDraft 値は state 側で引き継がれる
                   ので、過去下書きが「強制的に共有される」事故は起きない。 */}
+              <p className="daily-editor-autosave-note">
+                {t("ローカル下書きとして自動保存されます。")}
+              </p>
 
               <form className="daily-entry-card" onSubmit={(event) => handleDailyReportSectionSubmit(event, "plan")}>
                 <div className="daily-entry-label-row">

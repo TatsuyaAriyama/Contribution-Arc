@@ -36394,3 +36394,12 @@ select:disabled {
   padding-top: 12px;
   padding-bottom: 12px;
 }
+
+/* 日報エディタ上部の小さな自動保存補足 */
+.daily-editor-autosave-note {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: -0.005em;
+}
