@@ -288,6 +288,11 @@ export function SilentWorkspaceRoom({
   // overlay starts collapsed to a single-line pill (room name + meta)
   // and expands to show the task input + actions when ⋯ is tapped.
   const [isOverlayExpanded, setIsOverlayExpanded] = useState(false);
+  /* モバイル専用：アトリエを「ルーム(眺める) / みんな(在室一覧) /
+     自分(操作)」の 3 タブに分割するための選択状態。小画面で四方に
+     散らばっていた情報を 3 つの目的に整理する。PC ではタブ UI を
+     CSS で隠し、この値は "room" 固定のまま従来の 2D ステージを使う。 */
+  const [mobileTab, setMobileTab] = useState<"room" | "people" | "me">("room");
   // Forces a re-render every 500ms while any actor has a fresh bubble
   // — the render-time TTL on `member.bubble` otherwise relies on some
   // other prop change to take effect, which means a bubble could
@@ -589,7 +594,41 @@ export function SilentWorkspaceRoom({
     trimmedTask.length > 0 && !matchedLearningItem && Boolean(onLearningItemRegister);
 
   return (
-    <div className={`workspace-2d-shell ${isFocusPresentation ? "focus-presentation" : ""}`}>
+    <div
+      className={`workspace-2d-shell ${isFocusPresentation ? "focus-presentation" : ""}`}
+      data-mobile-tab={mobileTab}
+    >
+      {/* モバイル専用のタブバー。PC では CSS で display:none。 */}
+      <nav className="workspace-mobile-tabs" role="tablist" aria-label="アトリエの表示">
+        <button
+          type="button"
+          role="tab"
+          className={`workspace-mobile-tab${mobileTab === "room" ? " is-active" : ""}`}
+          aria-selected={mobileTab === "room"}
+          onClick={() => setMobileTab("room")}
+        >
+          ルーム
+        </button>
+        <button
+          type="button"
+          role="tab"
+          className={`workspace-mobile-tab${mobileTab === "people" ? " is-active" : ""}`}
+          aria-selected={mobileTab === "people"}
+          onClick={() => setMobileTab("people")}
+        >
+          みんな
+          <span className="workspace-mobile-tab-count">{members.length}</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          className={`workspace-mobile-tab${mobileTab === "me" ? " is-active" : ""}`}
+          aria-selected={mobileTab === "me"}
+          onClick={() => setMobileTab("me")}
+        >
+          自分
+        </button>
+      </nav>
       <div className="workspace-2d-main">
         <div
           className="workspace-stage"
@@ -1237,6 +1276,159 @@ export function SilentWorkspaceRoom({
             : null}
         </div>
 
+        {/* モバイル「みんな」タブ：在室者を縦カードで一覧。誰が何を
+            しているかを座標配置ではなくリストで即把握できる。タップで
+            既存のプロフィール popover を開く。PC では CSS で非表示。 */}
+        <div className="workspace-mobile-panel workspace-mobile-people" role="tabpanel" aria-label="在室者">
+          <div className="workspace-mobile-panel-head">
+            <strong>{roomName}</strong>
+            <span>{members.length > 0 ? `${members.length}人が作業中` : "まだ誰もいません"}</span>
+          </div>
+          <ul className="workspace-people-list">
+            {members.length === 0 ? (
+              <li className="workspace-people-empty">
+                まだ誰もいません。最初の一人になりましょう。
+              </li>
+            ) : (
+              members.map((member) => {
+                const isMe = member.userId === currentUserId;
+                const onBreak = member.status === "on-break";
+                const task = member.currentTask?.trim();
+                return (
+                  <li key={member.id}>
+                    <button
+                      type="button"
+                      className="workspace-people-card"
+                      onClick={() => onMemberOpen(member)}
+                    >
+                      <span
+                        className="workspace-people-avatar"
+                        style={{ "--people-color": member.characterColor || member.color } as CSSProperties}
+                        aria-hidden="true"
+                      >
+                        {member.name.slice(0, 1)}
+                      </span>
+                      <span className="workspace-people-text">
+                        <span className="workspace-people-name">
+                          {member.name}
+                          {isMe ? "（あなた）" : ""}
+                        </span>
+                        <span className="workspace-people-task">{task || "—"}</span>
+                      </span>
+                      <span className="workspace-people-meta">
+                        <span className={`workspace-people-status${onBreak ? " is-break" : ""}`}>
+                          {onBreak ? "休憩中" : "集中中"}
+                        </span>
+                        <span className="workspace-people-stay">{getActorStayLabel(member)}</span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })
+            )}
+          </ul>
+        </div>
+
+        {/* モバイル「自分」タブ：操作をここに一元化。状態切替・今やって
+            ること・定型文・置き手紙・着替え・募集・退出。散らばっていた
+            導線を 1 画面にまとめて迷わないようにする。PC では非表示。 */}
+        <div className="workspace-mobile-panel workspace-mobile-me" role="tabpanel" aria-label="自分の操作">
+          <div className="workspace-me-status">
+            <div className="workspace-me-status-text">
+              <span className={`workspace-me-status-label${isCurrentUserOnBreak ? " is-break" : ""}`}>
+                {isJoined ? (isCurrentUserOnBreak ? "休憩中" : "集中中") : "未入室"}
+              </span>
+              <span className="workspace-me-status-stay">
+                {isJoined ? `${joinedAtLabel}〜 ${currentStayLabel}` : roomName}
+              </span>
+            </div>
+            {isJoined ? (
+              <button
+                type="button"
+                className={`workspace-me-break${isCurrentUserOnBreak ? " is-active" : ""}`}
+                onClick={() => onPresetMessage(isCurrentUserOnBreak ? "集中します" : "休憩します")}
+                aria-pressed={isCurrentUserOnBreak}
+              >
+                {isCurrentUserOnBreak ? "集中に戻る" : "休憩する"}
+              </button>
+            ) : null}
+          </div>
+
+          <label className="workspace-me-task">
+            <span className="workspace-me-section-label">今やってること</span>
+            <input
+              value={taskValue}
+              onChange={handleTaskChange}
+              placeholder="今やってること"
+              maxLength={48}
+              aria-label="今やってること"
+            />
+            {showGhostHint ? (
+              <button
+                type="button"
+                className="workspace-me-ghost-hint"
+                onClick={() => onLearningItemRegister?.(trimmedTask)}
+              >
+                + 「{trimmedTask}」を記録に追加
+              </button>
+            ) : null}
+          </label>
+
+          {visiblePresetMessages.length > 0 && isJoined ? (
+            <div className="workspace-me-presets">
+              <span className="workspace-me-section-label">ひとこと送る</span>
+              <div className="workspace-me-preset-grid">
+                {visiblePresetMessages.map((message, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => onPresetMessage(message)}
+                  >
+                    {message}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {isJoined ? (
+            <div className="workspace-me-actions">
+              {canDropFloorNote && onComposeFloorNote ? (
+                <button type="button" onClick={onComposeFloorNote}>
+                  <span aria-hidden="true">✉</span> 置き手紙
+                </button>
+              ) : null}
+              {onComposeAppearance ? (
+                <button type="button" onClick={onComposeAppearance}>
+                  <span aria-hidden="true">✦</span> 着替え
+                </button>
+              ) : null}
+              {onOpenRecruitmentModal && !activeRecruitmentSummary ? (
+                <button type="button" onClick={onOpenRecruitmentModal}>
+                  <span aria-hidden="true">📣</span> 募集
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+
+          {activeRecruitmentSummary ? (
+            <div className="workspace-me-recruitment" role="status">
+              <span>
+                {activeRecruitmentSummary.stateLabel}（{activeRecruitmentSummary.joinedCount}人）
+              </span>
+              <button type="button" onClick={activeRecruitmentSummary.onCancel}>
+                取消
+              </button>
+            </div>
+          ) : null}
+
+          {isJoined ? (
+            <button type="button" className="workspace-me-leave" onClick={onLeave}>
+              退出する
+            </button>
+          ) : null}
+        </div>
+
         {/* 下部 HUD：FAB スピードダイヤル + 定型文トレイ。
             通常時は右下に "+" 1 つだけ。タップで「定型文・置き手紙・着替え」
             が縦に展開。各アクション選択で HUD は自動で閉じる。
@@ -1256,6 +1448,9 @@ export function SilentWorkspaceRoom({
                   "hud-fab",
                   isHudOpen ? "is-hud-open" : "",
                   isPresetTrayOpen ? "is-open" : "",
+                  // モバイルで「みんな/自分」タブ表示中は FAB を隠す
+                  // （操作は「自分」タブに集約）。PC は room 固定なので影響なし。
+                  mobileTab !== "room" ? "is-hidden-by-tab" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
