@@ -34774,18 +34774,17 @@ select:disabled {
 
 .daily-editor-card .daily-entry-card {
   /* Habit アプリ風：白ベースの独立したオブジェクトとして、ink hairline で
-     しっかり囲み、角丸は大きく (22px)、内側余白も大胆に取る。
+     しっかり囲み、角丸は大きく (22px)、内側余白は密度優先で詰める。
      左バー (緑/ink) は廃止 — カード自体が完結したオブジェクトに見える方が
-     "アーティスト感" のあるレイアウトになる。 */
+     "アーティスト感" のあるレイアウトになる。
+     コンパクト化: padding 24/22 → 14/16、shadow も控えめに。 */
   position: relative;
   overflow: hidden;
-  padding: 24px 22px;
+  padding: 14px 16px;
   border: 1.5px solid var(--ink);
   border-radius: 22px;
   background: var(--surface);
-  box-shadow:
-    0 1px 0 rgba(var(--ink-rgb), 0.04),
-    0 8px 24px rgba(var(--ink-rgb), 0.04);
+  box-shadow: 0 1px 0 rgba(var(--ink-rgb), 0.03);
 }
 .daily-editor-card .daily-entry-card::before {
   display: none;
@@ -34796,29 +34795,30 @@ select:disabled {
   border-color: var(--ink);
 }
 
-/* セクションラベル ─ "今日やること" を display 寄りで大きく、
-   サブテキストは下に小さく置く。横並びの詰め込みを解消。 */
+/* セクションラベル ─ "今日やること" を display 寄りで、
+   サブテキストは下に小さく置く。コンパクト化で 28 → 18px、
+   margin も詰めて 1 画面情報量を最大化。 */
 .daily-editor-card .daily-entry-label-row {
   display: block;
-  margin-bottom: 14px;
+  margin-bottom: 6px;
   padding-left: 0;
 }
 .daily-editor-card .daily-entry-label {
-  /* Habit 風の display heading：black weight + tight tracking。 */
+  /* Habit 風の display heading だが密度優先で 18px に圧縮。 */
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   color: var(--ink);
-  font-size: 28px;
+  font-size: 18px;
   font-weight: 900;
-  letter-spacing: -0.035em;
-  line-height: 1;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
 }
 .daily-editor-card .daily-entry-hint {
   display: block;
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 600;
-  line-height: 1.5;
+  line-height: 1.35;
   letter-spacing: 0;
 }
 
@@ -34918,20 +34918,21 @@ select:disabled {
    loading 時は薄くなる。これだけで "操作した感" が増す。
    PC は inline 配置、モバイルは下の @media で full-width 化。 */
 .daily-editor-card .daily-editor-actions {
-  gap: 10px;
-  margin-top: 8px;
+  gap: 6px;
+  margin-top: 4px;
 }
 /* CTA は ink-on-canvas pill に統一 (DESIGN.md: cta-bg)。
    緑グラデ + 大きいドロップシャドウは廃止。アーティスト感は色ではなく
    タイポと余白で出す。 */
 .daily-editor-card .daily-editor-actions > button {
-  min-height: 44px;
-  padding: 0 22px;
+  /* コンパクト化: 44 → 36px。CTA は読みやすさ維持しつつ密度向上。 */
+  min-height: 36px;
+  padding: 0 16px;
   border: 0;
   border-radius: 999px;
   background: var(--cta-bg);
   color: var(--cta-fg);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0;
   box-shadow: none;
@@ -34995,20 +34996,22 @@ select:disabled {
    full-width 化してタップしやすく。 */
 @media (max-width: 720px) {
   .daily-editor-card .daily-entry-card {
-    padding: 16px 14px;
+    /* モバイルでも更にコンパクト：12/12px。 */
+    padding: 12px 12px;
   }
   .daily-editor-card .daily-entry-label {
-    font-size: 15px;
+    font-size: 16px;
   }
   .daily-editor-card .daily-entry-hint {
-    font-size: 11px;
+    font-size: 10.5px;
   }
   .daily-editor-card .daily-editor-actions {
     justify-content: stretch;
   }
   .daily-editor-card .daily-editor-actions > button {
     flex: 1 1 100%;
-    padding: 0 18px;
+    padding: 0 16px;
+    min-height: 38px;
   }
 }
 
