@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { makePlanItem, type PlanItem } from "../services/dailyPlanItems";
 
 /**
@@ -63,17 +63,16 @@ export function DailyPlanChecklist({
 }: DailyPlanChecklistProps) {
   const l = { ...DEFAULT_LABELS, ...labels };
 
-  /* Track the most recently added row so we can move focus into it.
-     "+ 項目を追加" の後に自動でカーソルが新規行に入るための ref ハンドラ。
-
-     設計判断 (Phase 11 改訂)：input → textarea に変更。長い日本語タスク
-     (例: 「モバイル版の取捨選択、UI見直し」) が input の横スクロールで
-     切れて読めなくなる問題があり、振り返り側の reflection-recap と
-     見た目を統一するため複数行 wrap できる textarea に揃える。
-     1 行から開始し、入力に応じて auto-grow させる。Enter は新規アイテム
-     追加に維持 (Notion / Linear 感)、改行は Shift+Enter。 */
+  /* Phase 11b：通常時は 1 行 ellipsis の読み取り表示、タップで textarea
+     に切り替えて scale 拡大 → 編集 → blur で元の 1 行表示に戻る、という
+     SNS 投稿 Composer 風 (X / Threads) のインタラクションに変更。
+     - editingId に編集対象の item.id を持つ
+     - 通常時は <button> + ellipsis、押すと editingId 切替
+     - 編集時は <textarea autoFocus> + auto-grow
+     - blur で editingId=null に戻して縮小演出 (CSS transition) */
   const lastAddedIdRef = useRef<string | null>(null);
   const textInputRefs = useRef<Map<string, HTMLTextAreaElement | null>>(new Map());
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   /* textarea の内容に合わせて高さを scrollHeight に同期。1 行起点を保つ
      ため最小値は CSS 側の min-height に委ねる。 */
@@ -96,6 +95,18 @@ export function DailyPlanChecklist({
     }
   }, [autoSizeTextarea]);
 
+  /* 編集モードに切り替わった瞬間に textarea を auto-grow & focus。 */
+  useEffect(() => {
+    if (!editingId) return;
+    const el = textInputRefs.current.get(editingId);
+    if (el) {
+      autoSizeTextarea(el);
+      el.focus();
+      const end = el.value.length;
+      el.setSelectionRange(end, end);
+    }
+  }, [editingId, autoSizeTextarea]);
+
   const updateItem = (id: string, patch: Partial<PlanItem>) => {
     onChange(items.map((item) => (item.id === id ? { ...item, ...patch } : item)));
   };
@@ -107,6 +118,8 @@ export function DailyPlanChecklist({
   const addItem = () => {
     const created = makePlanItem({ text: "" });
     lastAddedIdRef.current = created.id;
+    /* 新規追加した行はそのまま編集モードに入る (SNS 投稿風)。 */
+    setEditingId(created.id);
     onChange([...items, created]);
   };
 
@@ -158,10 +171,13 @@ export function DailyPlanChecklist({
       <ul className="plan-checklist-list">
         {items.map((item) => {
           const showComment = item.done || (item.comment?.length ?? 0) > 0;
+          const isEditing = editingId === item.id;
           return (
             <li
               key={item.id}
-              className={`plan-checklist-row${item.done ? " is-done" : ""}`}
+              className={`plan-checklist-row${item.done ? " is-done" : ""}${
+                isEditing ? " is-editing" : ""
+              }`}
             >
               <label className="plan-checklist-check">
                 <input
@@ -175,19 +191,39 @@ export function DailyPlanChecklist({
               </label>
               <div className="plan-checklist-body">
                 <div className="plan-checklist-line">
-                  <textarea
-                    ref={setItemRef(item.id)}
-                    className="plan-checklist-text"
-                    value={item.text}
-                    placeholder={l.placeholderText}
-                    disabled={disabled}
-                    rows={1}
-                    onChange={(event) => {
-                      updateItem(item.id, { text: event.target.value });
-                      autoSizeTextarea(event.currentTarget);
-                    }}
-                    onKeyDown={(event) => handleTextKeyDown(event, item)}
-                  />
+                  {isEditing ? (
+                    <textarea
+                      ref={setItemRef(item.id)}
+                      className="plan-checklist-text is-editing"
+                      value={item.text}
+                      placeholder={l.placeholderText}
+                      disabled={disabled}
+                      rows={1}
+                      autoFocus
+                      onChange={(event) => {
+                        updateItem(item.id, { text: event.target.value });
+                        autoSizeTextarea(event.currentTarget);
+                      }}
+                      onKeyDown={(event) => handleTextKeyDown(event, item)}
+                      onBlur={() => setEditingId(null)}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      className="plan-checklist-text-display"
+                      onClick={() => !disabled && setEditingId(item.id)}
+                      disabled={disabled}
+                      aria-label={item.text || l.placeholderText}
+                    >
+                      {item.text ? (
+                        <span className="plan-checklist-text-display-text">{item.text}</span>
+                      ) : (
+                        <span className="plan-checklist-text-display-placeholder">
+                          {l.placeholderText}
+                        </span>
+                      )}
+                    </button>
+                  )}
                   {item.carriedFrom ? (
                     <span
                       className="plan-checklist-carry"
