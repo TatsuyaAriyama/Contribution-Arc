@@ -3088,6 +3088,77 @@
   }
 }
 
+/* 新ホーム (feed) 最上部のコンパクトお知らせバナー。1 行に収めて
+   ホームを煩雑にせず、タップで一覧モーダル (全文) を開く導線にする。
+   surface + 左の緑バッジ + 右シェブロンで「押せる行」だと示す。 */
+.home-notice-banner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(var(--ink-rgb), 0.04);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.12s ease;
+}
+.home-notice-banner:hover {
+  border-color: rgba(var(--green-rgb, 31, 111, 74), 0.4);
+  box-shadow: 0 4px 14px rgba(var(--ink-rgb), 0.08);
+}
+.home-notice-banner:active {
+  transform: scale(0.99);
+}
+
+.home-notice-banner-badge {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: rgba(var(--green-rgb, 31, 111, 74), 0.12);
+  color: var(--green);
+  flex-shrink: 0;
+}
+
+.home-notice-banner-text {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.home-notice-banner-kicker {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--green);
+}
+
+.home-notice-banner-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.home-notice-banner-chevron {
+  flex-shrink: 0;
+  font-size: 18px;
+  line-height: 1;
+  color: rgba(var(--ink-rgb), 0.4);
+}
+
 /* お知らせ一覧モーダル。settings-modal-backdrop の上に乗る中央パネル。
    行スタイルは home-announcement-* を流用する。 */
 .announcements-modal {
