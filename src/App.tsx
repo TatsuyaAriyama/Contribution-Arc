@@ -4416,6 +4416,20 @@ function App() {
   const [friendsBulkSelectMode, setFriendsBulkSelectMode] = useState(false);
   const [friendsBulkSelectedUids, setFriendsBulkSelectedUids] = useState<Set<string>>(() => new Set());
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  // 通知パネルのトリガーボタンはトップバーから撤去し、アバターメニューに
+  // 移したので、開いている間はパネル外クリックで閉じる（旧はボタン再押下で
+  // トグルしていた）。ref はパネルを包む wrap に付ける。
+  const notificationsWrapRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!isNotificationsOpen) return;
+    const handler = (event: MouseEvent) => {
+      if (notificationsWrapRef.current && !notificationsWrapRef.current.contains(event.target as Node)) {
+        setIsNotificationsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [isNotificationsOpen]);
   const [lastNotificationReadAt, setLastNotificationReadAt] = useState("");
   const [appNotifications, setAppNotifications] = useState<NotificationItem[]>([]);
   const [desktopNotificationSettings, setDesktopNotificationSettings] = useState<DesktopNotificationSettings>(
@@ -14685,381 +14699,16 @@ function App() {
         </div>
 
         <div className="user-session">
-          {currentOrganization && currentUser?.uid === currentOrganization.ownerUid ? (
-            <button
-              type="button"
-              className="topbar-icon-button topbar-manager-button"
-              aria-label="Manager Dashboard"
-              data-tooltip="Manager Dashboard"
-              onClick={() => {
-                setCurrentView("manager");
-                setIsFriendsPopoverOpen(false);
-                setIsLivePopoverOpen(false);
-              }}
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <rect x="3" y="6" width="8" height="10" fill="none" stroke="currentColor" strokeWidth="1.6" rx="0.5" />
-                <rect x="13" y="6" width="8" height="10" fill="none" stroke="currentColor" strokeWidth="1.6" rx="0.5" />
-                <circle cx="7" cy="10.5" r="1.2" fill="currentColor" />
-                <circle cx="17" cy="10.5" r="1.2" fill="currentColor" />
-                <path d="M7 12.5v3 M17 12.5v3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-              </svg>
-              <span className="topbar-icon-label" aria-hidden="true">管理</span>
-            </button>
-          ) : null}
+          {/* 旧トップバー右側のアイコン群（管理 / FEED / アトリエ / ショップ /
+              フレンド / ライブ / 検索 / 通知）は撤去し、すべてアバターの
+              ユーザーメニューに集約した。スマホの bottom-nav に倣い、PC でも
+              トップバーはコンテキスト＋アバターのみのミニマル構成にする。
+              検索・通知パネルは引き続きここに（トリガー無しで）描画し、
+              メニュー項目から isSearchOpen / isNotificationsOpen を立てて開く。 */}
 
-          {/* FEED open/close toggle. Hidden on the workspace view —
-              the right pane is already suppressed there because it
-              would compete with the immersive 2D stage. On every
-              other view this lets the user collapse the FEED to give
-              the main content the full canvas.
-              モバイルでは bottom-nav の "投稿" ボタンが FEED 単独画面を
-              開くので、このトグルは CSS で非表示にして avatar が右端に
-              入りきるよう topbar の幅を確保する。 */}
-          {currentView !== "workspace" ? (
-            <button
-              type="button"
-              className={`topbar-icon-button topbar-feed-toggle${isFeedOpen ? " is-open" : ""}`}
-              aria-pressed={isFeedOpen}
-              aria-label={isFeedOpen ? "フィードを閉じる" : "フィードを開く"}
-              data-tooltip={isFeedOpen ? "フィードを閉じる" : "フィードを開く"}
-              onClick={() => {
-                if (window.matchMedia("(max-width: 720px)").matches) {
-                  setCurrentView("feed");
-                } else {
-                  setIsFeedOpen((prev) => !prev);
-                }
-              }}
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <rect
-                  x="3"
-                  y="4"
-                  width="18"
-                  height="16"
-                  rx="2"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                />
-                <rect
-                  x="14"
-                  y="4"
-                  width="7"
-                  height="16"
-                  rx="2"
-                  fill={isFeedOpen ? "currentColor" : "none"}
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                />
-              </svg>
-              <span className="topbar-icon-label" aria-hidden="true">FEED</span>
-            </button>
-          ) : null}
-
-          {/* アトリエ ショートカット (モバイル限定で表示)。bottom-nav から
-              アトリエを外した代わりに、上のバーへ移動する設計。 */}
-          <button
-            type="button"
-            className={`topbar-icon-button topbar-workspace-button${currentView === "workspace" ? " is-open" : ""}${activeMembers.length > 0 ? " has-presence" : ""}`}
-            aria-label={
-              activeMembers.length > 0
-                ? t("アトリエ — 現在 {count} 人が作業中", { count: activeMembers.length })
-                : t("アトリエ")
-            }
-            data-tooltip={t("アトリエ")}
-            aria-pressed={currentView === "workspace"}
-            onClick={() => {
-              setCurrentView("workspace");
-              setIsFriendsPopoverOpen(false);
-              setIsLivePopoverOpen(false);
-            }}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-              <path d="M4 10h16" fill="none" stroke="currentColor" strokeWidth="1.6" />
-            </svg>
-            {activeMembers.length > 0 ? (
-              <span className="topbar-icon-badge">{activeMembers.length}</span>
-            ) : null}
-            <span className="topbar-icon-label" aria-hidden="true">アトリエ</span>
-          </button>
-
-          <button
-            type="button"
-            className="topbar-icon-button topbar-shop-button"
-            aria-label={
-              coins > 0
-                ? t("ショップ ({coins} Arc)", { coins: coins.toLocaleString() })
-                : t("ショップ")
-            }
-            data-tooltip={t("ショップ")}
-            onClick={() => {
-              setCurrentView("shop");
-              setIsFriendsPopoverOpen(false);
-              setIsLivePopoverOpen(false);
-            }}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path
-                d="M5 8h14l-1.1 11.2a1.6 1.6 0 0 1-1.6 1.5H7.7a1.6 1.6 0 0 1-1.6-1.5L5 8z"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M9 8V6.4a3 3 0 0 1 6 0V8"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-              />
-            </svg>
-            {coins > 0 ? (
-              <span className="topbar-shop-coins" aria-hidden="true">
-                {coins.toLocaleString()}
-              </span>
-            ) : null}
-            <span className="topbar-icon-label" aria-hidden="true">ショップ</span>
-          </button>
-
-          {/* ポーカー導線。デスクトップはアトリエ画面内の入口ボタンを
-              使うため、このヘッダーボタンは CSS で ≤720px のみ表示する
-              （モバイルでは profile-topbar ごと隠れて入口が無くなるため）。
-              Focus Chip を持っているときは枚数バッジを添える。 */}
-          <button
-            type="button"
-            className="topbar-icon-button topbar-poker-button"
-            aria-label={
-              focusChips > 0
-                ? t("ポーカー — Focus Chip {n}枚で配当 ×1.5", { n: focusChips })
-                : t("ポーカー")
-            }
-            data-tooltip={t("ポーカー")}
-            onClick={() => {
-              setCurrentView("poker");
-              setIsFriendsPopoverOpen(false);
-              setIsLivePopoverOpen(false);
-            }}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path
-                d="M12 3.5c2.7 3 5.3 5 5.3 8.1a3.7 3.7 0 0 1-5.3 3.4 3.7 3.7 0 0 1-5.3-3.4C6.7 8.5 9.3 6.5 12 3.5z"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M12 14.6c0 2.1.6 3.9 2 5.4h-4c1.4-1.5 2-3.3 2-5.4z"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinejoin="round"
-              />
-            </svg>
-            {focusChips > 0 ? (
-              <span className="topbar-poker-focus" aria-hidden="true">
-                🔥{focusChips}
-              </span>
-            ) : null}
-            <span className="topbar-icon-label" aria-hidden="true">ポーカー</span>
-          </button>
-
-          <div className="topbar-popover-wrap topbar-popover-wrap-friends" ref={friendsPopoverRef}>
-            <button
-              type="button"
-              className={`topbar-icon-button${isFriendsPopoverOpen ? " is-open" : ""}`}
-              aria-label={`Friends${sidebarFriends.length > 0 ? ` (${sidebarFriends.length})` : ""}`}
-              data-tooltip="Friends"
-              aria-expanded={isFriendsPopoverOpen}
-              onClick={() => {
-                // モバイル（≤720px）では popover が窮屈なので、タップで
-                // フル幅の Friends modal を直接開く。PC は従来通り popover。
-                if (typeof window !== "undefined" && window.matchMedia("(max-width: 720px)").matches) {
-                  setIsFriendsModalOpen(true);
-                  setIsFriendsPopoverOpen(false);
-                  setIsLivePopoverOpen(false);
-                  return;
-                }
-                setIsFriendsPopoverOpen((prev) => !prev);
-                setIsLivePopoverOpen(false);
-              }}
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <circle cx="9" cy="8" r="3.4" fill="none" stroke="currentColor" strokeWidth="1.6" />
-                <circle cx="16.5" cy="9" r="2.6" fill="none" stroke="currentColor" strokeWidth="1.4" />
-                <path
-                  d="M3 19c1-3 3.4-4.6 6-4.6s5 1.6 6 4.6"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M14.6 19c.8-2.4 2.5-3.6 4.4-3.6s3.6 1.2 4.4 3.6"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                />
-              </svg>
-              {sidebarFriends.length > 0 ? (
-                <span className="topbar-icon-badge">{sidebarFriends.length}</span>
-              ) : null}
-              <span className="topbar-icon-label" aria-hidden="true">フレンド</span>
-            </button>
-            {isFriendsPopoverOpen ? (
-              <section className="topbar-popover topbar-popover-friends" aria-label="Friends">
-                <div className="topbar-popover-head">
-                  <p className="card-kicker">Friends</p>
-                  {sidebarFriends.length > 0 ? <span>{sidebarFriends.length}/20</span> : null}
-                </div>
-                <div className="topbar-popover-list">
-                  {sidebarFriends.length > 0 ? (
-                    sidebarFriends.slice(0, 8).map((friend) => (
-                      <button
-                        type="button"
-                        key={friend.uid}
-                        className="topbar-popover-row"
-                        onClick={() => {
-                          handleFriendOpen(friend);
-                          setIsFriendsPopoverOpen(false);
-                        }}
-                      >
-                        <span className="topbar-popover-avatar">
-                          {friend.avatar ? <img src={friend.avatar} alt="" /> : friend.name.slice(0, 1).toUpperCase()}
-                          <i className={`topbar-popover-dot ${friend.status}`} />
-                        </span>
-                        <span>
-                          <strong>{friend.name}</strong>
-                          <small>{friend.activity}</small>
-                        </span>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="topbar-popover-empty">
-                      <p>{t("フレンドを招待して、一緒に学びを積み上げよう")}</p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCurrentView("profile");
-                          setIsFriendsPopoverOpen(false);
-                        }}
-                      >
-                        {t("フレンドを招待する")}
-                      </button>
-                    </div>
-                  )}
-                </div>
-                {sidebarFriends.length > 0 ? (
-                  <button
-                    type="button"
-                    className="topbar-popover-foot"
-                    onClick={() => {
-                      setIsFriendsModalOpen(true);
-                      setIsFriendsPopoverOpen(false);
-                    }}
-                  >
-                    すべてのフレンドを見る・アトリエに招待
-                  </button>
-                ) : null}
-              </section>
-            ) : null}
-          </div>
-
-          <div className="topbar-popover-wrap" ref={livePopoverRef}>
-            <button
-              type="button"
-              className={`topbar-icon-button${isLivePopoverOpen ? " is-open" : ""}`}
-              aria-label={`Live Activity${liveActivities.length > 0 ? ` (${liveActivities.length})` : ""}`}
-              data-tooltip="Live Activity"
-              aria-expanded={isLivePopoverOpen}
-              onClick={() => {
-                setIsLivePopoverOpen((prev) => !prev);
-                setIsFriendsPopoverOpen(false);
-              }}
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <path
-                  d="M4 12h3l2-6 4 12 2-6h5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              {liveActivities.length > 0 ? (
-                <span className="topbar-icon-badge">{liveActivities.length}</span>
-              ) : null}
-              <span className="topbar-icon-label" aria-hidden="true">ライブ</span>
-            </button>
-            {isLivePopoverOpen ? (
-              <section className="topbar-popover topbar-popover-live" aria-label="Live Activity">
-                <div className="topbar-popover-head">
-                  <p className="card-kicker">Live Activity</p>
-                </div>
-                <div className="topbar-popover-list">
-                  {liveActivities.length > 0 ? (
-                    liveActivities.map((activity) => (
-                      <button
-                        type="button"
-                        key={activity.id}
-                        className="topbar-popover-row"
-                        onClick={() => {
-                          handleLiveActivityOpen(activity);
-                          setIsLivePopoverOpen(false);
-                        }}
-                      >
-                        <span className="topbar-popover-avatar">
-                          {activity.avatar ? <img src={activity.avatar} alt="" /> : activity.userName.slice(0, 1).toUpperCase()}
-                          <i className={`topbar-popover-dot ${activity.status}`} />
-                        </span>
-                        <span>
-                          <strong>{activity.text}</strong>
-                          <small>{activity.meta}</small>
-                        </span>
-                      </button>
-                    ))
-                  ) : (
-                    <p className="topbar-popover-empty-text">{t("今は静かです。誰かの記録が始まるとここに流れます。")}</p>
-                  )}
-                </div>
-              </section>
-            ) : null}
-          </div>
-          <div className="topbar-popover-wrap topbar-popover-wrap-search" ref={searchPopoverRef}>
-            <button
-              type="button"
-              className={`user-search-button${isSearchOpen ? " is-open" : ""}`}
-              onClick={() => {
-                setIsSearchOpen((prev) => !prev);
-                setIsFriendsPopoverOpen(false);
-                setIsLivePopoverOpen(false);
-              }}
-              aria-label={t("ユーザーを探す")}
-              aria-expanded={isSearchOpen}
-            >
-              <span aria-hidden="true" className="user-search-icon">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  focusable="false"
-                  aria-hidden="true"
-                >
-                  <circle cx="10.5" cy="10.5" r="6.5" />
-                  <line x1="20" y1="20" x2="15.5" y2="15.5" />
-                </svg>
-              </span>
-              <strong>Search</strong>
-              <em>⌘K</em>
-            </button>
+          {/* 検索パネルはトリガー無しでここに描画。アバターメニューの
+              「ユーザーを探す」項目（または ⌘K）で isSearchOpen を立てて開く。 */}
+          <div className="topbar-popover-wrap topbar-popover-wrap-search topbar-popover-wrap-headless" ref={searchPopoverRef}>
             {isSearchOpen ? (
               <section
                 className="topbar-popover topbar-popover-search"
@@ -15134,21 +14783,9 @@ function App() {
               </section>
             ) : null}
           </div>
-          <div className="notification-wrap">
-            <button
-              type="button"
-              className={hasUnreadNotifications ? "notification-button has-unread" : "notification-button"}
-              aria-label={`${t("お知らせ")}${unreadNotificationCount > 0 ? ` ${unreadNotificationCount}${t("件の未読")}` : ""}`}
-              data-tooltip={t("お知らせ")}
-              aria-expanded={isNotificationsOpen}
-              onClick={handleNotificationsToggle}
-            >
-              <BellIcon />
-              {unreadNotificationCount > 0 ? (
-                <span className="notification-dot" aria-hidden="true" />
-              ) : null}
-            </button>
-
+          {/* 通知パネルもトリガー無しで描画。アバターメニューの「お知らせ」
+              項目から handleNotificationsToggle で開く（未読は同項目にバッジ）。 */}
+          <div className="notification-wrap notification-wrap-headless" ref={notificationsWrapRef}>
             {isNotificationsOpen ? (
               <section className="notification-panel" aria-label="お知らせ">
                 <div className="notification-head">
@@ -15280,6 +14917,164 @@ function App() {
                     ) : null}
                   </span>
                 </div>
+
+                {/* === トップバーから移設したハブ項目 ===
+                    管理 / アトリエ / ショップ / フレンド / ライブ / 検索 /
+                    通知 / フィード表示 をここに集約。旧アイコン群は撤去済み。 */}
+                {currentOrganization && currentUser?.uid === currentOrganization.ownerUid ? (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      setCurrentView("manager");
+                    }}
+                  >
+                    <svg className="user-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <rect x="3" y="6" width="8" height="10" fill="none" stroke="currentColor" strokeWidth="1.6" rx="0.5" />
+                      <rect x="13" y="6" width="8" height="10" fill="none" stroke="currentColor" strokeWidth="1.6" rx="0.5" />
+                      <circle cx="7" cy="10.5" r="1.2" fill="currentColor" />
+                      <circle cx="17" cy="10.5" r="1.2" fill="currentColor" />
+                      <path d="M7 12.5v3 M17 12.5v3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                    </svg>
+                    <span>{t("管理")}</span>
+                  </button>
+                ) : null}
+
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    setCurrentView("workspace");
+                  }}
+                >
+                  <svg className="user-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+                    <path d="M4 10h16" fill="none" stroke="currentColor" strokeWidth="1.6" />
+                  </svg>
+                  <span>{t("アトリエ")}</span>
+                  {activeMembers.length > 0 ? (
+                    <span className="user-menu-badge">{activeMembers.length}</span>
+                  ) : null}
+                </button>
+
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    setCurrentView("shop");
+                  }}
+                >
+                  <svg className="user-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path
+                      d="M5 8h14l-1.1 11.2a1.6 1.6 0 0 1-1.6 1.5H7.7a1.6 1.6 0 0 1-1.6-1.5L5 8z"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M9 8V6.4a3 3 0 0 1 6 0V8"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <span>{t("ショップ")}</span>
+                  {coins > 0 ? (
+                    <span className="user-menu-badge user-menu-badge-coins">{coins.toLocaleString()}</span>
+                  ) : null}
+                </button>
+
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    setIsFriendsModalOpen(true);
+                  }}
+                >
+                  <svg className="user-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <circle cx="9" cy="8" r="3.4" fill="none" stroke="currentColor" strokeWidth="1.6" />
+                    <circle cx="16.5" cy="9" r="2.6" fill="none" stroke="currentColor" strokeWidth="1.4" />
+                    <path d="M3 19c1-3 3.4-4.6 6-4.6s5 1.6 6 4.6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                    <path d="M14.6 19c.8-2.4 2.5-3.6 4.4-3.6s3.6 1.2 4.4 3.6" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                  </svg>
+                  <span>{t("フレンド")}</span>
+                  {sidebarFriends.length > 0 ? (
+                    <span className="user-menu-badge">{sidebarFriends.length}</span>
+                  ) : null}
+                </button>
+
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    setIsSearchOpen(true);
+                  }}
+                >
+                  <svg
+                    className="user-menu-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <circle cx="10.5" cy="10.5" r="6.5" />
+                    <line x1="20" y1="20" x2="15.5" y2="15.5" />
+                  </svg>
+                  <span>{t("ユーザーを探す")}</span>
+                  <em className="user-menu-hint" aria-hidden="true">⌘K</em>
+                </button>
+
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    if (!isNotificationsOpen) {
+                      handleNotificationsToggle();
+                    } else {
+                      setIsNotificationsOpen(true);
+                    }
+                  }}
+                >
+                  <BellIcon />
+                  <span>{t("お知らせ")}</span>
+                  {unreadNotificationCount > 0 ? (
+                    <span className="user-menu-badge user-menu-badge-unread">{unreadNotificationCount}</span>
+                  ) : null}
+                </button>
+
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    if (typeof window !== "undefined" && window.matchMedia("(max-width: 720px)").matches) {
+                      setCurrentView("feed");
+                    } else {
+                      setIsFeedOpen((prev) => !prev);
+                    }
+                  }}
+                >
+                  <svg className="user-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+                    <rect x="14" y="4" width="7" height="16" rx="2" fill={isFeedOpen ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.6" />
+                  </svg>
+                  <span>{isFeedOpen ? t("フィードを閉じる") : t("フィードを開く")}</span>
+                </button>
+
+                <div className="user-menu-separator" aria-hidden="true" />
+
                 <button
                   type="button"
                   role="menuitem"

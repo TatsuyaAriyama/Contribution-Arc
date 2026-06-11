@@ -22483,6 +22483,59 @@
   flex-shrink: 0;
 }
 
+/* トップバーから移設したハブ項目の右肩バッジ（人数 / コイン / 未読数）と
+   検索のショートカットヒント（⌘K）。margin-left:auto で行末へ寄せる。 */
+.user-menu-badge {
+  margin-left: auto;
+  flex: 0 0 auto;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(var(--ink-rgb), 0.08);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.user-menu-badge-coins {
+  background: rgba(246, 196, 83, 0.18);
+  color: rgba(150, 110, 20, 0.95);
+}
+
+.user-menu-badge-unread {
+  background: rgba(220, 60, 60, 0.16);
+  color: rgba(190, 40, 40, 0.95);
+}
+
+.user-menu-hint {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+/* 検索 / 通知パネルはトリガーボタンを撤去して headless wrap だけ残した。
+   wrap 自体は幅 0 でアバターの直前に置かれるので、パネルは右端基準で
+   ドロップする。notification-panel の旧 right:-58px（ボタン幅補正）は
+   ボタンが無くなったぶん 0 に戻す。 */
+.notification-wrap-headless {
+  position: relative;
+}
+.notification-wrap-headless > .notification-panel {
+  right: 0;
+}
+.topbar-popover-wrap-headless {
+  position: relative;
+}
+
 .user-menu-separator {
   height: 1px;
   background: rgba(var(--ink-rgb), 0.06);
