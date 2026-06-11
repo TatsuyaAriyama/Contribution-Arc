@@ -16951,7 +16951,7 @@ function App() {
                   + カラーに統一する設計に揃えた (写真とキャラの二重表示が
                   崩れていた報告への対応)。 */}
 
-              <div className="settings-character-color-panel">
+              <div className="settings-character-color-panel" id="settings-character-panel">
                 <div className="settings-character-color-head">
                   <span>{t("分身キャラクター")}</span>
                   <ProfileCharacterPreview
@@ -18965,7 +18965,7 @@ function App() {
                     </svg>
                   </span>
                   <span className="profile-nondo-section-label profile-nondo-marker">Menu</span>
-                  <span className="profile-nondo-section-count">{currentOrganization?.ownerUid === currentUser.uid ? 7 : 6}</span>
+                  <span className="profile-nondo-section-count">{currentOrganization?.ownerUid === currentUser.uid ? 8 : 7}</span>
                   <span className="profile-nondo-section-arrow" aria-hidden="true">›</span>
                 </div>
                 <nav className="profile-menu" aria-label="メニュー">
@@ -19060,6 +19060,31 @@ function App() {
                   ) : null}
                   <button
                     type="button"
+                    className="profile-menu-item profile-menu-item--avatar"
+                    onClick={() => {
+                      handleSettingsOpen();
+                      requestAnimationFrame(() => {
+                        const el = document.getElementById("settings-character-panel");
+                        if (el) {
+                          el.scrollIntoView({ behavior: "smooth", block: "start" });
+                        }
+                      });
+                    }}
+                  >
+                    {/* アイコン枠を line icon ではなく、実際の分身キャラの
+                        小型プレビューに差し替えて「これがあなたの分身」
+                        だと一目で伝える。 */}
+                    <span className="profile-menu-icon profile-menu-icon--avatar" aria-hidden="true">
+                      <ProfileCharacterPreview
+                        color={playerCharacterColor}
+                        shape={playerCharacterShape}
+                      />
+                    </span>
+                    <span className="profile-menu-label">分身キャラクター</span>
+                    <span className="profile-menu-arrow" aria-hidden="true">›</span>
+                  </button>
+                  <button
+                    type="button"
                     className="profile-menu-item"
                     onClick={handleSettingsOpen}
                   >
@@ -19074,108 +19099,6 @@ function App() {
                   </button>
                 </nav>
 
-                {/* 分身キャラクター — ステータスカードのすぐ上に置き、
-                    プロフィールの主役（自分のアバター）を最初に見せる。 */}
-                <article className="card character-color-card">
-                  <div className="character-color-head">
-                    <div>
-                      <p className="card-kicker">分身キャラクター</p>
-                      <h3>形とカラーをカスタマイズ</h3>
-                    </div>
-                    <ProfileCharacterPreview
-                      color={playerCharacterColor}
-                      shape={playerCharacterShape}
-                    />
-                  </div>
-
-                  {(() => {
-                    const active = characterShapeOptions.find((o) => o.value === playerCharacterShape);
-                    if (!active) return null;
-                    return (
-                      <p className="character-active-intro">
-                        <strong>
-                          {active.name} <span>{active.romaji}</span>
-                        </strong>
-                        {active.intro}
-                      </p>
-                    );
-                  })()}
-
-                  <div className="character-customize-section">
-                    <p className="character-customize-section-label">シルエット</p>
-                    <div className="character-shape-grid" aria-label="キャラクターの形">
-                      {characterShapeOptions.map((option) => {
-                        const isLocked = !ownedCharacterShapes.includes(option.value);
-                        const isActive = playerCharacterShape === option.value;
-                        return (
-                          <button
-                            type="button"
-                            key={option.value}
-                            className={`shape-tile ${isActive ? "active " : ""}${
-                              isLocked ? "is-locked" : ""
-                            }`}
-                            onClick={() => {
-                              if (isLocked) {
-                                setCurrentView("shop");
-                              } else {
-                                chooseCharacterShape(option.value);
-                              }
-                            }}
-                            title={isLocked ? `${option.name} ${option.romaji}（ショップで購入）` : `${option.name} ${option.romaji}`}
-                            aria-label={
-                              isLocked
-                                ? `${option.name} ${option.romaji}はショップで購入できます`
-                                : `${option.name} ${option.romaji}を選択`
-                            }
-                            aria-pressed={isActive}
-                          >
-                            <span className="shape-tile-stage" aria-hidden="true">
-                              <ProfileCharacterPreview
-                                color={playerCharacterColor}
-                                shape={option.value}
-                              />
-                            </span>
-                            <span className="shape-tile-text">
-                              <strong className="shape-tile-name">
-                                {option.name}
-                                <span className="shape-tile-romaji">{option.romaji}</span>
-                              </strong>
-                              <small className="shape-tile-tag">{option.tagline}</small>
-                            </span>
-                            {isLocked ? (
-                              <span className="shape-tile-badge is-lock" aria-hidden="true">
-                                🔒
-                              </span>
-                            ) : isActive ? (
-                              <span className="shape-tile-badge is-check" aria-hidden="true">
-                                ✓
-                              </span>
-                            ) : null}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="character-customize-section">
-                    <p className="character-customize-section-label">カラー</p>
-                    <div className="character-color-grid" aria-label="分身カラー">
-                      {characterColorOptions.map((color) => (
-                        <button
-                          type="button"
-                          key={color.value}
-                          className={playerCharacterColor === color.value ? "active" : ""}
-                          onClick={() => chooseCharacterColor(color.value)}
-                          title={color.name}
-                          aria-label={`${color.name}を選択`}
-                        >
-                          <span style={{ background: color.value }} />
-                          <small>{color.name}</small>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </article>
                 {/* Lifetime stats + profile-panel-stack は要望により削除 (簡素化)。 */}
               </>
             )}
