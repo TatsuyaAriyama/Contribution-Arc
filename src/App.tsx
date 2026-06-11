@@ -18821,6 +18821,97 @@ function App() {
               userProfileCard(profileUser)
             ) : (
               <>
+                {/* === nondo インスパイアの hero ===
+                    巨大ロゴ風ユーザー名 + 右上 line icon ペア +
+                    3 メトリックピル + 紫マーカーの手書き下線付き
+                    セクション見出しで「シンプル投稿アプリ」っぽい
+                    手触りを最上段に。Player Status カードは下に残す。 */}
+                <header className="profile-nondo-hero" aria-label="プロフィールヘッダー">
+                  <div className="profile-nondo-corner" aria-hidden="false">
+                    <button
+                      type="button"
+                      className="profile-nondo-corner-btn"
+                      onClick={() => {
+                        if (!userId) return;
+                        const baseUrl = `${window.location.origin}${window.location.pathname}`;
+                        const url = `${baseUrl}?u=${encodeURIComponent(userId)}`;
+                        try {
+                          void navigator.clipboard.writeText(url);
+                          showToast("プロフィールリンクをコピーしました", { kind: "success" });
+                        } catch {
+                          window.prompt("プロフィールリンク（コピーしてください）", url);
+                        }
+                      }}
+                      aria-label="プロフィールリンクをコピー"
+                      title="プロフィールリンクをコピー"
+                    >
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <rect x="8" y="5" width="11" height="14" rx="2" />
+                        <path d="M5 16V4a1 1 0 0 1 1-1h9" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      className="profile-nondo-corner-btn"
+                      onClick={handleSettingsOpen}
+                      aria-label="設定を開く"
+                      title="設定"
+                    >
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="3" />
+                        <path d="M19.4 13a7 7 0 0 0 0-2l2-1.5-2-3.4-2.4.9a7 7 0 0 0-1.7-1l-.4-2.5h-3.8l-.4 2.5a7 7 0 0 0-1.7 1l-2.4-.9-2 3.4 2 1.5a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.4-.9a7 7 0 0 0 1.7 1l.4 2.5h3.8l.4-2.5a7 7 0 0 0 1.7-1l2.4.9 2-3.4z" />
+                      </svg>
+                    </button>
+                  </div>
+                  <h1 className="profile-nondo-name">
+                    {playerName}
+                  </h1>
+                  <p className="profile-nondo-handle">
+                    {userId ? `@${userId}` : "—"}
+                  </p>
+                  <div className="profile-nondo-section">
+                    <span className="profile-nondo-section-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 12 L12 5 L20 12 V19 a1 1 0 0 1 -1 1 H5 a1 1 0 0 1 -1 -1 z" />
+                      </svg>
+                    </span>
+                    <span className="profile-nondo-section-label">Profile</span>
+                    <span className="profile-nondo-section-count">Lv.{levelState.level}</span>
+                    <span className="profile-nondo-section-arrow" aria-hidden="true">›</span>
+                  </div>
+                  <div className="profile-nondo-metrics" role="group" aria-label="サマリー">
+                    <div className="profile-nondo-metric">
+                      <span className="profile-nondo-metric-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 3v18M5 12h14" />
+                          <circle cx="12" cy="12" r="9" />
+                        </svg>
+                      </span>
+                      <span className="profile-nondo-metric-value">{levelState.level}</span>
+                      <span className="profile-nondo-metric-label">Lv</span>
+                    </div>
+                    <div className="profile-nondo-metric">
+                      <span className="profile-nondo-metric-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 3c1 4 4 5 4 9a4 4 0 0 1-8 0c0-2 1-3 1-5 2 1 3 0 3-4z" />
+                        </svg>
+                      </span>
+                      <span className="profile-nondo-metric-value">{studyStreak}</span>
+                      <span className="profile-nondo-metric-label">連続</span>
+                    </div>
+                    <div className="profile-nondo-metric">
+                      <span className="profile-nondo-metric-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="8" />
+                          <path d="M12 8v4l2.5 1.5" />
+                        </svg>
+                      </span>
+                      <span className="profile-nondo-metric-value">{Math.round(todayStudyMinutes)}</span>
+                      <span className="profile-nondo-metric-label">今日(分)</span>
+                    </div>
+                  </div>
+                </header>
+
                 {/* Player Status はプロフィールの主役なので最上部に固定。 */}
                 {playerStatusCard(false)}
 
@@ -18867,6 +18958,16 @@ function App() {
                     管理 / 作業部屋 / ショップ / フレンド / 検索 / 通知 / 設定
                     エントリをプロフィール画面に集約。モバイル topbar は非表示
                     にし、ここから全機能にアクセスする。 */}
+                <div className="profile-nondo-section profile-nondo-section--menu">
+                  <span className="profile-nondo-section-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 7h14M5 12h14M5 17h14" />
+                    </svg>
+                  </span>
+                  <span className="profile-nondo-section-label profile-nondo-marker">Menu</span>
+                  <span className="profile-nondo-section-count">{currentOrganization?.ownerUid === currentUser.uid ? 7 : 6}</span>
+                  <span className="profile-nondo-section-arrow" aria-hidden="true">›</span>
+                </div>
                 <nav className="profile-menu" aria-label="メニュー">
                   <button
                     type="button"
