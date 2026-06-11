@@ -3915,6 +3915,45 @@ function LoginScreen() {
   );
 }
 
+/* ===============================================================
+   日報のローカル下書き (Phase 11)
+   「下書きにする」トグルを撤去したので、ユーザーが「今日やること」
+   「振り返り」を送信しない限り入力中のテキストはローカルに残るよう
+   にする (リロード / 日付切り替え / 別画面往復に強い)。
+   ・key は YYYY-MM-DD 単位
+   ・plan items と reflection を分けて保存
+   ・送信成功時は明示的にクリアしない (state が送信内容と同期するので
+     復元しても結果が変わらない)
+   =============================================================== */
+const DAILY_DRAFT_STORAGE_PREFIX = "ca-daily-draft-v1";
+type LocalDailyDraft = {
+  planItems?: PlanItem[];
+  reflection?: string;
+  updatedAt?: number;
+};
+function readLocalDailyDraft(date: string): LocalDailyDraft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(`${DAILY_DRAFT_STORAGE_PREFIX}:${date}`);
+    return raw ? (JSON.parse(raw) as LocalDailyDraft) : null;
+  } catch {
+    return null;
+  }
+}
+function writeLocalDailyDraft(date: string, patch: LocalDailyDraft) {
+  if (typeof window === "undefined") return;
+  try {
+    const current = readLocalDailyDraft(date) || {};
+    const next: LocalDailyDraft = { ...current, ...patch, updatedAt: Date.now() };
+    window.localStorage.setItem(
+      `${DAILY_DRAFT_STORAGE_PREFIX}:${date}`,
+      JSON.stringify(next),
+    );
+  } catch {
+    /* localStorage が満杯 / 無効でも編集自体は continue */
+  }
+}
+
 function App() {
   const { language, setLanguage, t } = useTranslation();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -6137,19 +6176,44 @@ function App() {
        Priority: explicit planItems > legacy plan text (lifted lazily)
        > carryover from the most recent prior report (only when there
        is no report at all for today — we don't want to clobber an
-       in-progress edit). */
-    if (nextReport?.planItems && nextReport.planItems.length > 0) {
-      setDailyPlanItemsDraft(nextReport.planItems);
+       in-progress edit).
+       Phase 11: 「下書きにする」トグルを廃止した代わりに、未送信の
+       入力をローカル下書き (localStorage) に保持する。サーバー側の
+       report より新しいローカル下書きがあれば必ずそれを優先する。 */
+    const localDraft = readLocalDailyDraft(selectedDailyDate);
+
+    let nextPlanItems: PlanItem[];
+    if (localDraft?.planItems && localDraft.planItems.length > 0) {
+      nextPlanItems = localDraft.planItems;
+    } else if (nextReport?.planItems && nextReport.planItems.length > 0) {
+      nextPlanItems = nextReport.planItems;
     } else if (nextReport?.plan) {
-      setDailyPlanItemsDraft(planItemsFromLegacyText(nextReport.plan));
+      nextPlanItems = planItemsFromLegacyText(nextReport.plan);
     } else if (!nextReport) {
-      setDailyPlanItemsDraft(getCarriedOverItems(dailyReports, selectedDailyDate));
+      nextPlanItems = getCarriedOverItems(dailyReports, selectedDailyDate);
     } else {
-      setDailyPlanItemsDraft([]);
+      nextPlanItems = [];
     }
-    setDailyReflectionDraft(nextReport?.reflection || "");
+    setDailyPlanItemsDraft(nextPlanItems);
+
+    if (typeof localDraft?.reflection === "string") {
+      setDailyReflectionDraft(localDraft.reflection);
+    } else {
+      setDailyReflectionDraft(nextReport?.reflection || "");
+    }
     setDailyIsDraftDraft(nextReport?.isDraft === true);
   }, [dailyReports, selectedDailyDate]);
+
+  /* Phase 11: 入力中の plan / reflection を localStorage に同期。
+     送信前のテキストがリロード / 日付切替で消えないようにする。
+     書き込みは debounce せず毎回行う (localStorage は十分速い)。 */
+  useEffect(() => {
+    writeLocalDailyDraft(selectedDailyDate, { planItems: dailyPlanItemsDraft });
+  }, [dailyPlanItemsDraft, selectedDailyDate]);
+
+  useEffect(() => {
+    writeLocalDailyDraft(selectedDailyDate, { reflection: dailyReflectionDraft });
+  }, [dailyReflectionDraft, selectedDailyDate]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
@@ -9374,17 +9438,29 @@ function App() {
   const handleDailyDateChange = (date: string) => {
     const nextReport = dailyReports.find((report) => report.date === date);
     setSelectedDailyDate(date);
-    /* Same priority as the load effect — see comment above. */
-    if (nextReport?.planItems && nextReport.planItems.length > 0) {
-      setDailyPlanItemsDraft(nextReport.planItems);
+    /* Same priority as the load effect — see comment above.
+       Phase 11: 切り替え先日付のローカル下書きがあれば最優先で復元。 */
+    const localDraft = readLocalDailyDraft(date);
+
+    let nextPlanItems: PlanItem[];
+    if (localDraft?.planItems && localDraft.planItems.length > 0) {
+      nextPlanItems = localDraft.planItems;
+    } else if (nextReport?.planItems && nextReport.planItems.length > 0) {
+      nextPlanItems = nextReport.planItems;
     } else if (nextReport?.plan) {
-      setDailyPlanItemsDraft(planItemsFromLegacyText(nextReport.plan));
+      nextPlanItems = planItemsFromLegacyText(nextReport.plan);
     } else if (!nextReport) {
-      setDailyPlanItemsDraft(getCarriedOverItems(dailyReports, date));
+      nextPlanItems = getCarriedOverItems(dailyReports, date);
     } else {
-      setDailyPlanItemsDraft([]);
+      nextPlanItems = [];
     }
-    setDailyReflectionDraft(nextReport?.reflection || "");
+    setDailyPlanItemsDraft(nextPlanItems);
+
+    if (typeof localDraft?.reflection === "string") {
+      setDailyReflectionDraft(localDraft.reflection);
+    } else {
+      setDailyReflectionDraft(nextReport?.reflection || "");
+    }
     // Carry the saved draft flag forward so reopening an in-progress
     // draft doesn't accidentally publish it on the next save.
     setDailyIsDraftDraft(nextReport?.isDraft === true);
