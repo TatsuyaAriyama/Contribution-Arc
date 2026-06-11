@@ -66,17 +66,27 @@ export function DailyPlanChecklist({
   /* Track the most recently added row so we can move focus into it.
      "+ 項目を追加" の後に自動でカーソルが新規行に入るための ref ハンドラ。
 
-     設計判断：input[type="text"] を採用 (Notion / Linear 系の todo 行と
-     同じ)。textarea で auto-grow させる方式は「最初から枠が大きい」と
-     「押すと縮む」が起きやすく一覧の見え方が壊れたため撤回。長い文章は
-     行内で横スクロールするが、デザイン一貫性 (一行で詰めて見える) を
-     優先する。 */
+     設計判断 (Phase 11 改訂)：input → textarea に変更。長い日本語タスク
+     (例: 「モバイル版の取捨選択、UI見直し」) が input の横スクロールで
+     切れて読めなくなる問題があり、振り返り側の reflection-recap と
+     見た目を統一するため複数行 wrap できる textarea に揃える。
+     1 行から開始し、入力に応じて auto-grow させる。Enter は新規アイテム
+     追加に維持 (Notion / Linear 感)、改行は Shift+Enter。 */
   const lastAddedIdRef = useRef<string | null>(null);
-  const textInputRefs = useRef<Map<string, HTMLInputElement | null>>(new Map());
+  const textInputRefs = useRef<Map<string, HTMLTextAreaElement | null>>(new Map());
 
-  const setItemRef = useCallback((id: string) => (el: HTMLInputElement | null) => {
+  /* textarea の内容に合わせて高さを scrollHeight に同期。1 行起点を保つ
+     ため最小値は CSS 側の min-height に委ねる。 */
+  const autoSizeTextarea = useCallback((el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, []);
+
+  const setItemRef = useCallback((id: string) => (el: HTMLTextAreaElement | null) => {
     if (el) {
       textInputRefs.current.set(id, el);
+      autoSizeTextarea(el);
       if (lastAddedIdRef.current === id) {
         el.focus();
         lastAddedIdRef.current = null;
@@ -84,7 +94,7 @@ export function DailyPlanChecklist({
     } else {
       textInputRefs.current.delete(id);
     }
-  }, []);
+  }, [autoSizeTextarea]);
 
   const updateItem = (id: string, patch: Partial<PlanItem>) => {
     onChange(items.map((item) => (item.id === id ? { ...item, ...patch } : item)));
@@ -101,16 +111,17 @@ export function DailyPlanChecklist({
   };
 
   /* Enter on the text input adds a new row — mirrors how Notion / Linear
-     todo lists feel. */
+     todo lists feel. Shift+Enter で textarea 内改行 (=長文タスクの折返し
+     ではなく明示的な複数行入力)。 */
   const handleTextKeyDown = (
-    event: React.KeyboardEvent<HTMLInputElement>,
+    event: React.KeyboardEvent<HTMLTextAreaElement>,
     item: PlanItem,
   ) => {
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
       // If this row is empty, blur instead of adding another empty row.
       if (!item.text.trim()) {
-        (event.currentTarget as HTMLInputElement).blur();
+        (event.currentTarget as HTMLTextAreaElement).blur();
         return;
       }
       addItem();
@@ -164,14 +175,17 @@ export function DailyPlanChecklist({
               </label>
               <div className="plan-checklist-body">
                 <div className="plan-checklist-line">
-                  <input
+                  <textarea
                     ref={setItemRef(item.id)}
-                    type="text"
                     className="plan-checklist-text"
                     value={item.text}
                     placeholder={l.placeholderText}
                     disabled={disabled}
-                    onChange={(event) => updateItem(item.id, { text: event.target.value })}
+                    rows={1}
+                    onChange={(event) => {
+                      updateItem(item.id, { text: event.target.value });
+                      autoSizeTextarea(event.currentTarget);
+                    }}
                     onKeyDown={(event) => handleTextKeyDown(event, item)}
                   />
                   {item.carriedFrom ? (
