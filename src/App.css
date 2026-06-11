@@ -36538,21 +36538,60 @@ select:disabled {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  position: relative;
   width: 56px;
   height: 56px;
   border-radius: 14px;
   border: 1.5px solid var(--ink);
   overflow: hidden;
   flex-shrink: 0;
-  color: #fff;
-  font-size: 22px;
-  font-weight: 900;
 }
 .learning-photo-preview img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
+}
+.learning-photo-preview.is-fallback {
+  /* color-mix で「同色 → 18% 暗め」のグラデを生成。色設定が変わっても
+     コードを書き換えずに追従。光彩を右上から内側に当てて立体感を出す。 */
+  background:
+    radial-gradient(
+      130% 90% at 28% 18%,
+      rgba(255, 255, 255, 0.45) 0%,
+      rgba(255, 255, 255, 0) 55%
+    ),
+    linear-gradient(
+      138deg,
+      color-mix(in srgb, var(--learning-thumb-color) 92%, #fff) 0%,
+      color-mix(in srgb, var(--learning-thumb-color) 78%, #000) 100%
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -8px 16px rgba(0, 0, 0, 0.12);
+}
+.learning-photo-preview.is-fallback::after {
+  /* 右下に小さな丸のアクセント (ステッカーっぽさ) */
+  content: "";
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.08);
+}
+.learning-photo-preview-initial {
+  color: #fff;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.16);
+  /* CJK 1 文字 / アルファベット 1 文字どちらでも中心に。 */
+  position: relative;
+  z-index: 1;
 }
 .learning-photo-actions {
   display: flex;
@@ -36603,6 +36642,9 @@ select:disabled {
 /* ライブラリカード上の写真アイコン */
 .learning-card-photo {
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
   width: 34px;
   height: 34px;
   border-radius: 9px;
@@ -36615,4 +36657,31 @@ select:disabled {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+/* 写真未設定時の fallback：エディタと同じ glossy グラデ + 頭文字。
+   サイズは小型 (34px) なので頭文字は 14px, アクセント丸も省略。 */
+.learning-card-photo.is-fallback {
+  border-color: rgba(var(--ink-rgb), 0.18);
+  background:
+    radial-gradient(
+      130% 90% at 28% 18%,
+      rgba(255, 255, 255, 0.42) 0%,
+      rgba(255, 255, 255, 0) 60%
+    ),
+    linear-gradient(
+      138deg,
+      color-mix(in srgb, var(--learning-thumb-color) 92%, #fff) 0%,
+      color-mix(in srgb, var(--learning-thumb-color) 78%, #000) 100%
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    inset 0 -6px 12px rgba(0, 0, 0, 0.10);
+}
+.learning-card-photo-initial {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
 }
