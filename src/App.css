@@ -6252,15 +6252,17 @@
   gap: 6px;
 }
 
+/* Phase 11b：通常時は 1 行 ellipsis の読み取り表示 (button)、
+   タップで textarea に切り替えて scale 拡大 → 編集 → blur で縮小、
+   という SNS Composer 風インタラクション。
+   ベース変数：font / color / padding / radius は両モードで揃え、
+   差は scale + shadow + 高さだけにして「シュッと」感を出す。 */
+.plan-checklist-text-display,
 .plan-checklist-text {
-  /* Phase 11: input → textarea に変更。1 行起点 + auto-grow で
-     長い日本語タスクも全文 wrap 表示。振り返り側 reflection-recap-text
-     (font 14px + 複数行 wrap) と密度感を統一した。 */
   width: 100%;
-  min-height: 28px;
   padding: 4px 8px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 10px;
   background: transparent;
   color: var(--ink);
   font: inherit;
@@ -6271,18 +6273,111 @@
   outline: none;
   appearance: none;
   -webkit-appearance: none;
+  text-align: left;
+}
+
+/* 通常時：1 行 ellipsis、min-height 28px。中身は span。 */
+.plan-checklist-text-display {
+  display: flex;
+  align-items: center;
+  min-height: 28px;
+  min-width: 0;
+  cursor: text;
+  transition: background 0.16s ease, transform 0.18s cubic-bezier(0.2, 0.9, 0.2, 1),
+    box-shadow 0.18s ease;
+}
+.plan-checklist-text-display:hover:not(:disabled) {
+  background: rgba(var(--ink-rgb), 0.04);
+}
+.plan-checklist-text-display:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.plan-checklist-text-display-text,
+.plan-checklist-text-display-placeholder {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.plan-checklist-text-display-placeholder {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* 編集モード：textarea を表示。同じ位置から scale + shadow で
+   「シュッ」と前に出る演出。背景を白く浮かせて中央寄せ感を出す。 */
+.plan-checklist-text.is-editing {
+  min-height: 28px;
   resize: none;
-  /* textarea は scrollHeight に合わせて JS 側で高さを同期するので、
-     overflow は隠す。 */
   overflow: hidden;
   word-break: break-word;
-  transition: border-color 120ms ease-out, background-color 120ms ease-out;
+  background: var(--surface);
+  border-color: rgba(var(--ink-rgb), 0.18);
+  box-shadow:
+    0 0 0 3px rgba(31, 111, 74, 0.08),
+    0 6px 18px rgba(var(--ink-rgb), 0.10);
+  transform-origin: left center;
+  animation: plan-checklist-text-pop 220ms cubic-bezier(0.2, 0.9, 0.2, 1);
+  position: relative;
+  z-index: 2;
 }
+.plan-checklist-text.is-editing:focus {
+  border-color: rgba(31, 111, 74, 0.4);
+  box-shadow:
+    0 0 0 4px rgba(31, 111, 74, 0.14),
+    0 8px 22px rgba(var(--ink-rgb), 0.12);
+}
+
+@keyframes plan-checklist-text-pop {
+  0% {
+    transform: scale(0.97);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(1.02);
+    opacity: 1;
+  }
+}
+
+/* 編集中の行全体も僅かに前に出して中央寄せ感を強める。 */
+.plan-checklist-row.is-editing {
+  position: relative;
+  z-index: 2;
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 6px 4px;
+  margin: 2px 0;
+  box-shadow:
+    0 0 0 1px rgba(var(--ink-rgb), 0.05),
+    0 10px 28px rgba(var(--ink-rgb), 0.10);
+  transition: background 0.18s ease, box-shadow 0.18s ease,
+    padding 0.18s ease, margin 0.18s ease;
+}
+
 @media (max-width: 720px) {
+  .plan-checklist-text-display,
   .plan-checklist-text {
     font-size: 13.5px;
     padding: 3px 6px;
+  }
+  .plan-checklist-text-display {
     min-height: 26px;
+  }
+  .plan-checklist-text.is-editing {
+    min-height: 26px;
+  }
+}
+
+/* reduced-motion: 拡大演出をオフ。 */
+@media (prefers-reduced-motion: reduce) {
+  .plan-checklist-text.is-editing {
+    animation: none;
+    transform: none;
+  }
+  .plan-checklist-row.is-editing {
+    transition: none;
   }
 }
 
