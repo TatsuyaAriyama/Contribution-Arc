@@ -24,6 +24,10 @@ export type LearningItemRecord = {
   totalPages?: number;
   currentPages?: number;
   note?: string;
+  /** ユーザーがアップロードした表紙/アイコン写真。クライアント側で
+   *  正方形 144px JPEG に圧縮した data URL (~10-25KB)。Firebase Storage
+   *  を使わず Firestore doc に直接入れる (1MB 上限に対して十分小さい)。 */
+  photo?: string;
   status: LearningStatus;
   archived: boolean;
   createdAt: string;
@@ -68,6 +72,7 @@ function mapLearningItemDocs(snapshot: QuerySnapshot, userId: string): LearningI
       const totalPages = readNumber(data.totalPages);
       const currentPages = readNumber(data.currentPages);
       const note = readString(data.note);
+      const photo = readString(data.photo);
       return {
         id: entry.id,
         userId: readString(data.userId, userId),
@@ -77,6 +82,7 @@ function mapLearningItemDocs(snapshot: QuerySnapshot, userId: string): LearningI
         totalPages,
         currentPages,
         ...(note ? { note } : {}),
+        ...(photo ? { photo } : {}),
         status: readStatus(data.status),
         archived: Boolean(data.archived),
         createdAt: readCreatedAt(data.createdAt),
@@ -125,6 +131,11 @@ export async function saveLearningItemToCloud(db: Firestore, item: LearningItemR
   // Always write note (even empty) so clearing it propagates — with
   // merge:true an omitted field would leave the stale value in place.
   payload.note = typeof item.note === "string" ? item.note.trim().slice(0, 280) : "";
+  // photo も同じ理由で常に書く (空 = 削除を反映)。data URL は
+  // クライアント側で圧縮済みの前提だが、安全側で 200KB を超える文字列は
+  // 落とす (Firestore doc 1MB 制限のガード)。
+  payload.photo =
+    typeof item.photo === "string" && item.photo.length <= 200_000 ? item.photo : "";
   await setDoc(doc(db, "learningItems", item.id), payload, { merge: true });
 }
 
