@@ -5925,13 +5925,16 @@
 
 .daily-editor-form {
   display: grid;
-  gap: 14px;
+  /* コンパクト化：12 → 10px。各 entry-card 間の隙間を詰めて、
+     スクロールせずに「今日やること」「振り返り」両方を視界に入れる。 */
+  gap: 10px;
 }
 
 .daily-entry-card {
   display: grid;
-  gap: 10px;
-  padding: 12px 14px;
+  /* 各 entry-card 内のラベル / 入力 / ボタンの間隔も 10 → 6px に。 */
+  gap: 6px;
+  padding: 10px 12px;
   /* 「枠だけにカラー、本体は白黒」方針：左 3px だけ緑、他は hairline。
      学習記録カードと統一したミニマル語彙。 */
   border: 1px solid var(--line);
@@ -5943,16 +5946,19 @@
 .daily-editor-form label,
 .daily-entry-card label {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .daily-editor-form textarea {
   width: 100%;
-  min-height: 150px;
+  /* コンパクト化：150 → 96px。手書きスペースは維持しつつ、画面に
+     占める割合を減らして他カードを視界に入る位置に押し上げる。
+     ユーザーが書き始めれば resize: vertical で伸びる。 */
+  min-height: 96px;
   resize: vertical;
-  padding: 14px;
+  padding: 10px 12px;
   font-size: 14px;
-  line-height: 1.65;
+  line-height: 1.55;
 }
 
 .daily-editor-form textarea:disabled {
@@ -5972,19 +5978,21 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 9px;
+  gap: 6px;
 }
 
 .daily-editor-actions button,
 .daily-today-card button {
-  min-height: 38px;
-  padding: 0 14px;
+  /* コンパクト化：38 → 32px、padding と font も詰める。
+     tap target 32px は WCAG 24px 推奨を満たす最小限の縮小。 */
+  min-height: 32px;
+  padding: 0 12px;
   border: 1px solid rgba(31, 111, 74, 0.14);
   border-radius: 999px;
   background: rgba(var(--surface-rgb), 0.86);
   color: var(--ink);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 850;
 }
 
@@ -6162,32 +6170,36 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 6px;
+  gap: 10px;
+  /* コンパクト化：6 → 2px。ラベルと入力欄を密着させて視線を短縮。 */
+  margin-bottom: 2px;
 }
 
 .daily-entry-label {
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 800;
   color: var(--ink);
+  letter-spacing: -0.005em;
 }
 
 .daily-entry-hint {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--muted);
+  line-height: 1.35;
 }
 
 .plan-checklist {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 4px 0;
+  /* コンパクト化：行間と上下 padding を詰めて 1 画面に多く入るように。 */
+  gap: 2px;
+  padding: 2px 0;
 }
 
 .plan-checklist-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -6198,7 +6210,7 @@
   grid-template-columns: 22px 1fr;
   align-items: start;
   gap: 8px;
-  padding: 4px 2px;
+  padding: 2px 2px;
   border-radius: 6px;
   transition: background-color 120ms ease-out;
 }
@@ -6211,7 +6223,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-top: 8px;
+  /* コンパクト化：行の padding を詰めたので check 位置も上に寄せる。 */
+  margin-top: 5px;
   cursor: pointer;
 }
 
