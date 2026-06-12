@@ -35891,6 +35891,67 @@ select:disabled {
    ink hairline を使う場所はもともと var(--ink) = 白なので問題なし。
    muted テキストだけ上で c8cdd2 に持ち上げたので、サブ説明文も読みやすい。 */
 
+/* =========================================================
+   日報：紙・アナログの温かみ（試作 / daily-screen 限定）
+   現状の純白フラットをやめ、暖かい紙のテクスチャ + 明朝の見出し +
+   手描き風の下線で「手帳のページ」感を出し、生成UIテンプレ的な
+   "AI 感" を脱する。気に入れば全体展開 + DESIGN.md 追記の予定。
+   ライト専用（ダークは純黒設計を維持）。
+   ========================================================= */
+html:not([data-theme="dark"]) .daily-screen {
+  background-color: #fbf9f2;
+  background-image:
+    /* 紙の繊維：ごく薄い横の筋 */
+    repeating-linear-gradient(
+      0deg,
+      rgba(26, 24, 23, 0.014) 0 1px,
+      transparent 1px 4px
+    ),
+    /* 上からの暖かい光 */
+    radial-gradient(
+      130% 90% at 50% -12%,
+      rgba(255, 252, 244, 0.7),
+      rgba(251, 249, 242, 0) 55%
+    );
+}
+
+/* エディタカード = 暖かい紙のページ。白の硬さを外し、微細な紙目を敷く。 */
+.daily-screen .daily-editor-card {
+  background-color: var(--surface-warm, #fffdfa);
+  background-image: radial-gradient(rgba(26, 24, 23, 0.02) 1px, transparent 1.4px);
+  background-size: 4px 4px;
+  border: 1px solid var(--hairline, #e6e3df);
+}
+
+/* 見出し「日報」とセクションラベルを明朝に。Inter 一辺倒の均質さを破り、
+   一気に "手で書いた紙面" の表情になる。 */
+.daily-screen .daily-editor-title,
+.daily-screen .daily-editor-card .daily-entry-label {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP", serif;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+/* タイトル下の手描き風アンダーライン（揺らいだ緑のインク線）。 */
+.daily-screen .daily-editor-title {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 11px;
+}
+.daily-screen .daily-editor-title::after {
+  content: "";
+  position: absolute;
+  left: -2px;
+  right: -8px;
+  bottom: 0;
+  height: 8px;
+  background: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20120%208'%20preserveAspectRatio='none'%3E%3Cpath%20d='M1%205%20C%2025%201%2045%207%2070%204%20S%20110%202%20119%205'%20fill='none'%20stroke='%231f6f4a'%20stroke-width='2.4'%20stroke-linecap='round'/%3E%3C/svg%3E")
+    no-repeat center / 100% 100%;
+}
+[data-theme="dark"] .daily-screen .daily-editor-title::after {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20120%208'%20preserveAspectRatio='none'%3E%3Cpath%20d='M1%205%20C%2025%201%2045%207%2070%204%20S%20110%202%20119%205'%20fill='none'%20stroke='%234ade80'%20stroke-width='2.4'%20stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
 /* === Phase 5: keyframes / dark を分離 === */
 @import "./styles/animations.css";
 @import "./styles/dark.css";
