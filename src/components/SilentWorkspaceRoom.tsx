@@ -100,7 +100,6 @@ type SilentWorkspaceRoomProps = {
   onTaskChange: (value: string) => void;
   onJoin: () => void;
   onLeave: () => void;
-  onResetPresence: () => void;
   presetMessages: string[];
   onPresetMessagesChange: (messages: string[]) => void;
   onPresetMessage: (message: string) => void;
@@ -110,7 +109,6 @@ type SilentWorkspaceRoomProps = {
      Newest entry first; the parent caps the list (~12). */
   presetLog?: PresetLogEntry[];
   isPlayerWalking: boolean;
-  activityItems: RoomActivityItem[];
   /* ステージ床をタップした座標 (%)。スマホ向けの "Tap to walk" 操作で、
      キーボードが使えない端末でも自分のアバターを動かせるようにする。
      親 (App.tsx) はこの座標を walk-loop の目的地として消費する。
@@ -122,7 +120,6 @@ type SilentWorkspaceRoomProps = {
   /* タイマー終了時の通知 (親で state クリア)。 */
   onTapWalkMarkerExpire?: (id: number) => void;
   onMemberOpen: (member: RoomActor) => void;
-  onActivityOpen: (item: RoomActivityItem) => void;
   /* In-stage compact profile popover. When `selectedMemberId` matches a
      member, `memberPanel` is rendered as a small card anchored near that
      member's avatar (instead of navigating to the full profile screen).
@@ -144,11 +141,8 @@ type SilentWorkspaceRoomProps = {
   /* Shared dismiss for any of the in-stage popovers above (profile /
      note / monument). The backdrop calls it. */
   onPanelClose?: () => void;
-  lastSessionLabel: string;
   totalLearnedLabel: string;
-  contributionLabel: string;
   learningItemSuggestions?: LearningItemSuggestion[];
-  recentLearningItemIds?: string[];
   onLearningItemRegister?: (presetName: string) => void;
   onOpenRecruitmentModal?: () => void;
   activeRecruitmentSummary?: ActiveRecruitmentSummary | null;
@@ -257,19 +251,16 @@ export function SilentWorkspaceRoom({
   onTaskChange,
   onJoin,
   onLeave,
-  onResetPresence,
   presetMessages,
   onPresetMessagesChange,
   onPresetMessage,
   bubbleMessage,
   presetLog = [],
   isPlayerWalking,
-  activityItems,
   onStageTap,
   tapWalkMarker = null,
   onTapWalkMarkerExpire,
   onMemberOpen,
-  onActivityOpen,
   selectedMemberId = null,
   memberPanel,
   floorNotes = [],
@@ -281,10 +272,7 @@ export function SilentWorkspaceRoom({
   onMonumentOpen,
   monumentPanel,
   onPanelClose,
-  lastSessionLabel,
-  contributionLabel,
   learningItemSuggestions = [],
-  recentLearningItemIds = [],
   onLearningItemRegister,
   onOpenRecruitmentModal,
   activeRecruitmentSummary = null,
