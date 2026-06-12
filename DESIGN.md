@@ -26,6 +26,12 @@ colors:
   accent-auto-study: "#2c8a5a"
   reward-gold: "#d49a1a"
 
+  # Handcrafted layer — 日報 (daily-report) 専用の手描き / 紙アナログ表現
+  paper-canvas-light: "#fbf9f2"
+  washi-sepia: "rgba(201, 184, 140, 0.40)"
+  washi-sage: "rgba(149, 193, 172, 0.38)"
+  pencil-ink: "rgba(26, 24, 23, 0.42)"
+
   # Dark theme overrides — applied via [data-theme="dark"]
   dark-canvas: "#000000"
   dark-surface: "#16181c"
@@ -108,6 +114,11 @@ typography:
     fontWeight: 800
     lineHeight: 1.3
     letterSpacing: 0.08em
+  mincho-heading:
+    description: 例外。日報 (daily-report) の見出しのみ。Inter 一族の均質さ＝AI 感を意図的に崩す紙面用。
+    fontFamily: '"Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP", serif'
+    fontWeight: 700
+    letterSpacing: 0.01em
 
 rounded:
   xs: 4px
@@ -317,6 +328,41 @@ components:
     rounded: "{rounded.xl}"
     padding: "{spacing.md}"
 
+  # --- Handcrafted layer（日報 daily-report 限定の Signature 表現）---
+  daily-paper-surface:
+    description: 日報画面の地。純白フラットをやめ暖かい紙テクスチャを敷く（ライト専用、ダークは純黒設計を維持）。
+    backgroundColor: "{colors.paper-canvas-light}"
+    backgroundTexture: "repeating-linear-gradient(0deg, rgba(26,24,23,0.014) 0 1px, transparent 1px 4px), radial-gradient(130% 90% at 50% -12%, rgba(255,252,244,0.7), transparent 55%)"
+    note: "entry-card 自体は {colors.surface-warm} + 微細な dot grain（radial-gradient rgba(26,24,23,0.02) / 4px グリッド）"
+
+  handdrawn-underline:
+    description: 見出し下の手描きインク下線。揺らいだ SVG ストロークを background に置き、要素ごとに波形を変えて「揃いすぎない」手の痕跡を残す。
+    titleStroke: "{colors.primary} / width 2.4（タイトル「日報」）"
+    sectionStroke: "{colors.primary} opacity 0.5 / width 1.8 — 鉛筆風（セクション見出し、2 波形）"
+    dark: "{colors.dark-primary}"
+
+  ink-checkbox:
+    description: 日報チェックリストのチェック。ネイティブ枠を隠し span を箱として描き、チェック時に枠をはみ出す手描きの✓を弾ませる。
+    box: "18px / 1.8px border {colors.ink} 40% / radius 5px"
+    checked: "枠 {colors.primary} 70% + 背景 {colors.primary} 7% + 手描き✓ SVG（{colors.primary} / dark {colors.dark-primary}）"
+    motion: "daily-check-pop 0.26s cubic-bezier(0.2,0.9,0.3,1.4) — scale 0.4→1.12→1 + rotate -12°→0"
+
+  strike-through:
+    description: 完了タスクの手描き取り消し線。左から右へ clip-path で引かれる。
+    stroke: "{colors.pencil-ink}（揺らいだ SVG / dark は白 40%）"
+    motion: "daily-strike-draw 0.36s — clip-path inset(0 100% 0 0) → inset(0)"
+
+  masking-tape:
+    description: entry-card を机に留めた紙片に。カード上端に半透明テープを貼り、2 枚で色と角度を変えてコラージュ感を出す。
+    tapeA: "{colors.washi-sepia} / rotate -4°"
+    tapeB: "{colors.washi-sage} / rotate 3.5°"
+
+  card-tilt:
+    description: 日報の entry-card をごく僅かに傾けて整列を崩す（机に置いた紙）。入力 / ホバー時は水平に戻して操作性を担保。
+    rest: "rotate ±0.4〜0.5°"
+    active: "rotate 0 + lift shadow（:hover / :focus-within）"
+    motion: "transform 0.28s cubic-bezier(0.2,0.8,0.3,1)"
+
 ---
 
 
@@ -383,6 +429,8 @@ Contribution Arc は「静かな書斎」のような学習トラッキング SN
 
 ### Font Family
 全文 **`Inter`**（fallback: `ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial`）。serif / monospace は使わない。OpenType `lnum` を本文 / 数値で有効にし、player chip の Lv 数字を等幅に揃える。
+
+> **唯一の例外** — 日報 (daily-report) の見出しだけは明朝体 (`{typography.mincho-heading}`) を許可する。Inter 一族の均質さが生む「生成 UI テンプレ感」を意図的に崩し、手帳の紙面に寄せるための逸脱。詳細は **[Handcrafted Layer](#handcrafted-layer--日報の紙アナログ表現)** を参照。この例外を日報以外へ広げない。
 
 ### Hierarchy
 
@@ -552,6 +600,37 @@ Inter が読み込めない環境では `system-ui` にフォールバック。d
 - `{colors.surface}` + 左端 4px 赤アクセント (`#e53935`) + 右端 26px 赤シェブロン。ピン留め + 最新 1 件のみ表示し、それ以外は一覧モーダルへ。
 
 
+## Handcrafted Layer — 日報の紙アナログ表現
+
+> **スコープ厳守** — このレイヤーは **日報 (`daily-screen`) に閉じた Signature 表現**。全体は引き続き「Inter / フラット / hairline」の静かな書斎で、日報だけが「手帳のページ」に振り切る。広げたくなったら、まず DESIGN.md を更新してから横展開する。
+
+### なぜ例外を許すか
+均質に整った Inter + フラット白 + 完璧なグリッドは、読みやすい反面「どこかで見た生成 UI」に見える。日報は毎日書く最も個人的な画面なので、ここだけ **手の気配（不完全さ・紙の温かみ）** を入れて、決まりすぎた整列をわざと崩す。崩す方向は「ノイズの追加」ではなく「手描き・紙・少しのズレ」という一貫した語彙で行う。
+
+### 構成要素
+
+**1. 紙の地（`daily-paper-surface`）**
+純白フラットをやめ、暖かい紙 `{colors.paper-canvas-light}` (#fbf9f2) に微細な横繊維 + 上からの淡い光を重ねる。ライト専用で、ダークは純黒設計を維持。エディタカードは `{colors.surface-warm}` + dot grain で紙目を出す。
+
+**2. 明朝の見出し（`{typography.mincho-heading}`）**
+タイトル「日報」とセクション見出し（今日やること / 振り返り）だけ明朝体に。本文・入力・ボタンは Inter のまま。
+
+**3. 手描きインク下線（`handdrawn-underline`）**
+見出し下に、揺らいだ SVG ストロークの下線。タイトルは緑インク（`{colors.primary}` / width 2.4）、セクション見出しは鉛筆風（同色 opacity 0.5 / width 1.8）。**要素ごとに波形を変える** ことで「揃いすぎない」を作るのが肝。
+
+**4. インクのチェック（`ink-checkbox`）+ 取り消し線（`strike-through`）**
+チェックは手描きの✓が枠をはみ出して `daily-check-pop` で弾ける。完了タスクは手描きの取り消し線が `daily-strike-draw` で左から引かれる。タスクを消す「手応え」を演出する。
+
+**5. マスキングテープ（`masking-tape`）+ カードの微傾き（`card-tilt`）**
+entry-card を机にテープで留めた紙片に見立て、ごく僅かに傾ける（±0.4〜0.5°）。テープは 2 枚で色（`{colors.washi-sepia}` / `{colors.washi-sage}`）と角度を変える。入力 / ホバー時はカードが水平に戻り、操作性を損なわない。
+
+### 実装ルール
+- 手描きの揺らぎは **inline SVG data-uri** で描く（画像アセットを足さない）。
+- 線の色は **既存トークンを流用**（`{colors.primary}` / `{colors.ink}` / `{colors.pencil-ink}`）。手描きのために新しい構造色を増やさない。
+- 「揃いすぎない」は **波形・角度を要素ごとに変える** ことで出す。ランダム JS ではなく、2〜3 バリアントの使い分けで十分。
+- 動きは短く（0.26〜0.36s）、一回性の手応え（pop / draw）に留める。常時アニメは置かない。
+
+
 ## Do's and Don'ts
 
 ### Do
@@ -565,6 +644,8 @@ Inter が読み込めない環境では `system-ui` にフォールバック。d
 - モーダルの上に出るオーバーレイ要素（toast、popover）は必ず Portal で document.body に出して `position: fixed` の祖先 transform 罠を避ける。
 - 色とウェイトのコントラストで階層を作る（罫線を引かない、塗りを増やさない）。
 - ダークモードは「全部書き直す」のではなく `[data-theme="dark"]` で token を polarity flip するだけ。
+- 手描き / 紙アナログ表現は **日報 (`daily-screen`) に閉じた Signature レイヤー**として扱う（[Handcrafted Layer](#handcrafted-layer--日報の紙アナログ表現)）。
+- 手描きの揺らぎは inline SVG data-uri で描き、線色は `{colors.primary}` / `{colors.ink}` / `{colors.pencil-ink}` を流用する。波形・角度を要素ごとに変えて「揃いすぎない」を出す。
 
 ### Don't
 - ❌ 赤・紫・水色を構造色として使わない。エラーも `{colors.accent-warm}` か文中ラベルで伝える。
@@ -577,3 +658,5 @@ Inter が読み込めない環境では `system-ui` にフォールバック。d
 - ❌ 2 つ目の構造アクセント色を追加しない。新しい色を増やしたくなったら、まず既存の `{colors.primary}` / `{colors.cta-bg}` / `{colors.accent-warm}` で代用できないか検討する。
 - ❌ モーダルの中に position: fixed を直接置かない（祖先 motion.main の transform で祖先基準になる）。Portal を使う。
 - ❌ 「ホバーで色が変わる」だけの装飾を増やさない。モバイル優先のため `:active` / `aria-pressed` で状態を表すのが基本。
+- ❌ Handcrafted Layer（明朝・手描き下線・インクチェック・テープ・カード傾き）を日報以外の画面に無断で広げない。世界観が薄まる。横展開するなら先に DESIGN.md を更新する。
+- ❌ 手描きのために新しい構造色やフォントを足さない。明朝は日報見出しのみ、線色は既存トークンの流用に留める。
