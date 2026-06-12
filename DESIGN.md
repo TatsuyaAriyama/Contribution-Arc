@@ -26,7 +26,7 @@ colors:
   accent-auto-study: "#2c8a5a"
   reward-gold: "#d49a1a"
 
-  # Handcrafted layer — 日報 (daily-report) 専用の手描き / 紙アナログ表現
+  # Handcrafted layer — 日報 (daily-report) と FEED (home-feed) の手描き / 紙アナログ表現
   paper-canvas-light: "#fbf9f2"
   washi-sepia: "rgba(201, 184, 140, 0.40)"
   washi-sage: "rgba(149, 193, 172, 0.38)"
@@ -115,7 +115,7 @@ typography:
     lineHeight: 1.3
     letterSpacing: 0.08em
   mincho-heading:
-    description: 例外。日報 (daily-report) の見出しのみ。Inter 一族の均質さ＝AI 感を意図的に崩す紙面用。
+    description: 例外。日報 (daily-report) と FEED (home-feed) の見出しのみ。Inter 一族の均質さ＝AI 感を意図的に崩す紙面用。
     fontFamily: '"Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP", serif'
     fontWeight: 700
     letterSpacing: 0.01em
@@ -328,7 +328,7 @@ components:
     rounded: "{rounded.xl}"
     padding: "{spacing.md}"
 
-  # --- Handcrafted layer（日報 daily-report 限定の Signature 表現）---
+  # --- Handcrafted layer（日報 daily-report と FEED home-feed の Signature 表現）---
   daily-paper-surface:
     description: 日報画面の地。純白フラットをやめ暖かい紙テクスチャを敷く（ライト専用、ダークは純黒設計を維持）。
     backgroundColor: "{colors.paper-canvas-light}"
@@ -430,7 +430,7 @@ Contribution Arc は「静かな書斎」のような学習トラッキング SN
 ### Font Family
 全文 **`Inter`**（fallback: `ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial`）。serif / monospace は使わない。OpenType `lnum` を本文 / 数値で有効にし、player chip の Lv 数字を等幅に揃える。
 
-> **唯一の例外** — 日報 (daily-report) の見出しだけは明朝体 (`{typography.mincho-heading}`) を許可する。Inter 一族の均質さが生む「生成 UI テンプレ感」を意図的に崩し、手帳の紙面に寄せるための逸脱。詳細は **[Handcrafted Layer](#handcrafted-layer--日報の紙アナログ表現)** を参照。この例外を日報以外へ広げない。
+> **唯一の例外** — 日報 (daily-report) と FEED (home-feed) の見出しだけは明朝体 (`{typography.mincho-heading}`) を許可する。Inter 一族の均質さが生む「生成 UI テンプレ感」を意図的に崩し、手帳の紙面に寄せるための逸脱。詳細は **[Handcrafted Layer](#handcrafted-layer--日報の紙アナログ表現)** を参照。この例外を日報 / FEED 以外へ広げない。
 
 ### Hierarchy
 
@@ -602,7 +602,7 @@ Inter が読み込めない環境では `system-ui` にフォールバック。d
 
 ## Handcrafted Layer — 日報の紙アナログ表現
 
-> **スコープ厳守** — このレイヤーは **日報 (`daily-screen`) に閉じた Signature 表現**。全体は引き続き「Inter / フラット / hairline」の静かな書斎で、日報だけが「手帳のページ」に振り切る。広げたくなったら、まず DESIGN.md を更新してから横展開する。
+> **スコープ厳守** — このレイヤーは **日報 (`daily-screen`) と FEED (`app-view-feed` / `home-feed-section`) に適用する Signature 表現**。それ以外（プロフィール / 設定 / アトリエ / モーダル等）は引き続き「Inter / フラット / hairline」の静かな書斎を保つ。さらに広げたくなったら、まず DESIGN.md を更新してから横展開する。
 
 ### なぜ例外を許すか
 均質に整った Inter + フラット白 + 完璧なグリッドは、読みやすい反面「どこかで見た生成 UI」に見える。日報は毎日書く最も個人的な画面なので、ここだけ **手の気配（不完全さ・紙の温かみ）** を入れて、決まりすぎた整列をわざと崩す。崩す方向は「ノイズの追加」ではなく「手描き・紙・少しのズレ」という一貫した語彙で行う。
@@ -624,6 +624,15 @@ Inter が読み込めない環境では `system-ui` にフォールバック。d
 **5. マスキングテープ（`masking-tape`）+ カードの微傾き（`card-tilt`）**
 entry-card を机にテープで留めた紙片に見立て、ごく僅かに傾ける（±0.4〜0.5°）。テープは 2 枚で色（`{colors.washi-sepia}` / `{colors.washi-sage}`）と角度を変える。入力 / ホバー時はカードが水平に戻り、操作性を損なわない。
 
+### FEED への適用（home-feed）
+投稿が主役なので、可読性を最優先に語彙を**選んで**使う。
+
+- **紙の地**：モバイル単独 FEED (`app-view-feed`) の地を `{colors.paper-canvas-light}` の紙テクスチャに（ライト専用）。
+- **明朝＋手描き下線**：フィード見出し `home-feed-head h2` に適用（日報タイトルと同じ緑下線）。
+- **コンポーザ = メモ用紙**：投稿作成欄 (`home-feed-composer`) を `daily-paper-surface` 風の暖色カードにし、`masking-tape`（sepia）+ `card-tilt`（rotate -0.5° → focus-within で水平）を付ける。日報エディタと対の存在。
+- **自分の投稿にテープ**：`log-post-card.is-own` の右上に washi テープ（sage）を留め、「自分のメモ」を一目で分かるアクセントにする。
+- **投稿カードは傾けない**：タイムラインは枚数が多いので `card-tilt` は使わず、読みやすさを保つ（傾き・取り消し線・インクチェックは日報専用）。
+
 ### 実装ルール
 - 手描きの揺らぎは **inline SVG data-uri** で描く（画像アセットを足さない）。
 - 線の色は **既存トークンを流用**（`{colors.primary}` / `{colors.ink}` / `{colors.pencil-ink}`）。手描きのために新しい構造色を増やさない。
@@ -644,7 +653,7 @@ entry-card を机にテープで留めた紙片に見立て、ごく僅かに傾
 - モーダルの上に出るオーバーレイ要素（toast、popover）は必ず Portal で document.body に出して `position: fixed` の祖先 transform 罠を避ける。
 - 色とウェイトのコントラストで階層を作る（罫線を引かない、塗りを増やさない）。
 - ダークモードは「全部書き直す」のではなく `[data-theme="dark"]` で token を polarity flip するだけ。
-- 手描き / 紙アナログ表現は **日報 (`daily-screen`) に閉じた Signature レイヤー**として扱う（[Handcrafted Layer](#handcrafted-layer--日報の紙アナログ表現)）。
+- 手描き / 紙アナログ表現は **日報 (`daily-screen`) と FEED (`app-view-feed` / `home-feed-section`) の Signature レイヤー**として扱う（[Handcrafted Layer](#handcrafted-layer--日報の紙アナログ表現)）。FEED では可読性優先で語彙を選んで使う。
 - 手描きの揺らぎは inline SVG data-uri で描き、線色は `{colors.primary}` / `{colors.ink}` / `{colors.pencil-ink}` を流用する。波形・角度を要素ごとに変えて「揃いすぎない」を出す。
 
 ### Don't
@@ -658,5 +667,6 @@ entry-card を机にテープで留めた紙片に見立て、ごく僅かに傾
 - ❌ 2 つ目の構造アクセント色を追加しない。新しい色を増やしたくなったら、まず既存の `{colors.primary}` / `{colors.cta-bg}` / `{colors.accent-warm}` で代用できないか検討する。
 - ❌ モーダルの中に position: fixed を直接置かない（祖先 motion.main の transform で祖先基準になる）。Portal を使う。
 - ❌ 「ホバーで色が変わる」だけの装飾を増やさない。モバイル優先のため `:active` / `aria-pressed` で状態を表すのが基本。
-- ❌ Handcrafted Layer（明朝・手描き下線・インクチェック・テープ・カード傾き）を日報以外の画面に無断で広げない。世界観が薄まる。横展開するなら先に DESIGN.md を更新する。
+- ❌ Handcrafted Layer（明朝・手描き下線・インクチェック・テープ・カード傾き）を日報 / FEED 以外の画面に無断で広げない。世界観が薄まる。横展開するなら先に DESIGN.md を更新する。
+- ❌ FEED の投稿タイムラインにカード傾き・取り消し線・インクチェックを持ち込まない（枚数が多く可読性を損なう）。FEED で使うのは紙の地・明朝見出し・コンポーザのメモ化・自分の投稿のテープに留める。
 - ❌ 手描きのために新しい構造色やフォントを足さない。明朝は日報見出しのみ、線色は既存トークンの流用に留める。

@@ -36140,6 +36140,125 @@ html:not([data-theme="dark"]) .daily-screen {
   );
 }
 
+/* =========================================================
+   FEED（ホーム投稿画面）にも Handcrafted Layer を展開。
+   日報と同じ「紙・手描き」語彙を、投稿が主役の可読性を保ちつつ適用する。
+   scope: .home-feed-section（desktop home + mobile feed の両方で使う）
+          + .app-view-feed（モバイル単独画面の地）
+   ========================================================= */
+
+/* モバイル単独 FEED 画面の地を暖かい紙に（ライト専用、ダークは純黒維持）。 */
+html:not([data-theme="dark"]) .app-view-feed,
+html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
+  background-color: #fbf9f2;
+}
+html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
+  background-image: repeating-linear-gradient(
+      0deg,
+      rgba(26, 24, 23, 0.014) 0 1px,
+      transparent 1px 4px
+    ),
+    radial-gradient(
+      130% 70% at 50% -8%,
+      rgba(255, 252, 244, 0.7),
+      rgba(251, 249, 242, 0) 55%
+    );
+}
+
+/* 見出しを明朝 + 手描き緑下線（日報タイトルと同じ語彙）。 */
+.home-feed-section .home-feed-head h2 {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP",
+    serif;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  position: relative;
+  display: inline-block;
+  padding-bottom: 9px;
+}
+.home-feed-section .home-feed-head h2::after {
+  content: "";
+  position: absolute;
+  left: -2px;
+  right: -6px;
+  bottom: 0;
+  height: 7px;
+  background: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20120%208'%20preserveAspectRatio='none'%3E%3Cpath%20d='M1%205%20C%2025%201%2045%207%2070%204%20S%20110%202%20119%205'%20fill='none'%20stroke='%231f6f4a'%20stroke-width='2.4'%20stroke-linecap='round'/%3E%3C/svg%3E")
+    no-repeat center / 100% 100%;
+}
+[data-theme="dark"] .home-feed-section .home-feed-head h2::after {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20120%208'%20preserveAspectRatio='none'%3E%3Cpath%20d='M1%205%20C%2025%201%2045%207%2070%204%20S%20110%202%20119%205'%20fill='none'%20stroke='%234ade80'%20stroke-width='2.4'%20stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+/* コンポーザ = メモ用紙。暖色の紙 + 紙目 + マスキングテープ + 微傾き。
+   入力（focus-within）で水平に戻して書きやすさを担保。 */
+.home-feed-section .home-feed-composer {
+  position: relative;
+  padding: 14px 16px;
+  border: 1px solid var(--hairline, #e6e3df);
+  border-radius: 16px;
+  background-color: var(--surface-warm, #fffdfa);
+  background-image: radial-gradient(
+    rgba(26, 24, 23, 0.02) 1px,
+    transparent 1.4px
+  );
+  background-size: 4px 4px;
+  transform: rotate(-0.5deg);
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.3, 1),
+    box-shadow 0.28s ease;
+}
+.home-feed-section .home-feed-composer:focus-within {
+  transform: rotate(0deg);
+  box-shadow: 0 6px 22px rgba(var(--ink-rgb), 0.08);
+}
+.home-feed-section .home-feed-composer::after {
+  content: "";
+  position: absolute;
+  top: -9px;
+  left: 34px;
+  width: 66px;
+  height: 21px;
+  transform: rotate(-3.5deg);
+  background: linear-gradient(
+    135deg,
+    rgba(201, 184, 140, 0.4),
+    rgba(201, 184, 140, 0.26)
+  );
+  border-left: 1px solid rgba(255, 255, 255, 0.28);
+  border-right: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 1px 2px rgba(var(--ink-rgb), 0.06);
+  pointer-events: none;
+}
+[data-theme="dark"] .home-feed-section .home-feed-composer {
+  background-color: var(--surface-elevated, #1e2024);
+  background-image: radial-gradient(
+    rgba(255, 255, 255, 0.025) 1px,
+    transparent 1.4px
+  );
+}
+
+/* 自分の投稿 = 机にテープで留めたメモ。washi テープ(若草)を右上に。 */
+.home-feed-section .home-feed-list .log-post-card.is-own {
+  position: relative;
+}
+.home-feed-section .home-feed-list .log-post-card.is-own::after {
+  content: "";
+  position: absolute;
+  top: -8px;
+  right: 18px;
+  width: 54px;
+  height: 18px;
+  transform: rotate(3deg);
+  background: linear-gradient(
+    135deg,
+    rgba(149, 193, 172, 0.42),
+    rgba(149, 193, 172, 0.24)
+  );
+  border-left: 1px solid rgba(255, 255, 255, 0.28);
+  border-right: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 1px 2px rgba(var(--ink-rgb), 0.06);
+  pointer-events: none;
+}
+
 /* === Phase 5: keyframes / dark を分離 === */
 @import "./styles/animations.css";
 @import "./styles/dark.css";
