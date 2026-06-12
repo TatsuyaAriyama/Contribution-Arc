@@ -11851,10 +11851,73 @@ function App() {
         post.characterColor,
         post.characterShape,
       );
+      const isOwnAuto = post.userId === currentUserUid;
+
+      /* 学習ログは「『科目』を N 学習しました」の一文をやめ、学習時間を
+         主役にしたインク印（蔵書印）風の "学習チケット" に仕立てる。
+         印の中の集中メーターは時間に応じて満ちる（4h で full）。 */
+      if (post.postType === "auto-study") {
+        const subjectMatch = post.text.match(/『(.+?)』/);
+        const subject = subjectMatch ? subjectMatch[1] : "";
+        const mins = Math.max(0, post.studyMinutes || 0);
+        let stampValue: string;
+        let stampUnit: string;
+        if (mins >= 60) {
+          const hours = mins / 60;
+          stampValue = Number.isInteger(hours) ? String(hours) : hours.toFixed(1);
+          stampUnit = "h";
+        } else {
+          stampValue = String(mins);
+          stampUnit = "min";
+        }
+        const focusFill = Math.min(mins / 240, 1);
+        return (
+          <article
+            className={`study-log-card${isOwnAuto ? " is-own" : ""}`}
+            data-kind="study"
+            key={post.id}
+          >
+            <button
+              type="button"
+              className="study-log-stamp"
+              style={{ ["--fill" as string]: String(focusFill) } as React.CSSProperties}
+              onClick={() => handlePostAuthorOpen(post)}
+              aria-label={`${post.username}・${post.text}`}
+            >
+              <span className="study-log-stamp-value">{stampValue}</span>
+              <span className="study-log-stamp-unit">{stampUnit}</span>
+            </button>
+            <button
+              type="button"
+              className="study-log-main"
+              onClick={() => handlePostAuthorOpen(post)}
+            >
+              <span className="study-log-eyebrow">学習の記録</span>
+              <strong className="study-log-subject">
+                {subject ? `『${subject}』` : post.text}
+              </strong>
+              <span className="study-log-byline">
+                {post.username}・{formatPostTime(post.createdAt)}
+              </span>
+            </button>
+            <button
+              type="button"
+              className={`log-post-compact-like${isLiked ? " is-liked" : ""}`}
+              onClick={() => handlePostLike(post)}
+              aria-label={isLiked ? "ハートを取り消す" : "ハートする"}
+              aria-pressed={isLiked}
+            >
+              <span aria-hidden="true">{isLiked ? "♥" : "♡"}</span>
+              {post.likesCount > 0 ? <span className="log-post-compact-like-count">{post.likesCount}</span> : null}
+            </button>
+          </article>
+        );
+      }
+
       return (
         <article
-          className={`log-post-card-compact${post.userId === currentUserUid ? " is-own" : ""}`}
-          data-kind={post.postType === "auto-study" ? "study" : "workspace"}
+          className={`log-post-card-compact${isOwnAuto ? " is-own" : ""}`}
+          data-kind="workspace"
           key={post.id}
         >
           <button

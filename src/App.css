@@ -36237,10 +36237,13 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
 }
 
 /* タイムライン = 机に重ねた / ボードに留めたメモの束。
+   手書き投稿・学習ログ(チケット)・作業ログを同じ scrapbook に揃える。
    傾きは ±2° まで大胆に散らし、hover / tap で水平に戻して読む。
    傾きは rotate 個別プロパティに持たせ、舞い込みアニメ（transform）
    と合成しても喧嘩しないようにする。紙の重なりは強めの多層影で出す。 */
-.home-feed-section .home-feed-list .log-post-card {
+.home-feed-section
+  .home-feed-list
+  :is(.log-post-card, .log-post-card-compact, .study-log-card) {
   --tilt: -1.6deg;
   position: relative;
   rotate: var(--tilt);
@@ -36256,20 +36259,32 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
     background 0.18s ease;
   animation: feed-flutter-in 0.55s cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
 }
-.home-feed-section .home-feed-list .log-post-card:nth-child(4n + 2) {
+.home-feed-section
+  .home-feed-list
+  :is(.log-post-card, .log-post-card-compact, .study-log-card):nth-child(4n + 2) {
   --tilt: 1.8deg;
 }
-.home-feed-section .home-feed-list .log-post-card:nth-child(4n + 3) {
+.home-feed-section
+  .home-feed-list
+  :is(.log-post-card, .log-post-card-compact, .study-log-card):nth-child(4n + 3) {
   --tilt: -1.2deg;
 }
-.home-feed-section .home-feed-list .log-post-card:nth-child(4n + 4) {
+.home-feed-section
+  .home-feed-list
+  :is(.log-post-card, .log-post-card-compact, .study-log-card):nth-child(4n + 4) {
   --tilt: 2deg;
 }
-.home-feed-section .home-feed-list .log-post-card:hover,
-.home-feed-section .home-feed-list .log-post-card:active {
+.home-feed-section
+  .home-feed-list
+  :is(.log-post-card, .log-post-card-compact, .study-log-card):hover,
+.home-feed-section
+  .home-feed-list
+  :is(.log-post-card, .log-post-card-compact, .study-log-card):active {
   rotate: 0deg;
 }
-.home-feed-section .home-feed-list .log-post-card:hover {
+.home-feed-section
+  .home-feed-list
+  :is(.log-post-card, .log-post-card-compact, .study-log-card):hover {
   box-shadow:
     0 2px 4px rgba(var(--ink-rgb), 0.06),
     0 14px 32px -12px rgba(var(--ink-rgb), 0.24);
@@ -36292,7 +36307,9 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
 }
 /* スクロール連動対応ブラウザ：画面に入ってくるたびにパラッと舞い込む。 */
 @supports (animation-timeline: view()) {
-  .home-feed-section .home-feed-list .log-post-card {
+  .home-feed-section
+    .home-feed-list
+    :is(.log-post-card, .log-post-card-compact, .study-log-card) {
     animation: feed-flutter-in linear both;
     animation-timeline: view();
     animation-range: entry 0% entry 55%;
@@ -36300,30 +36317,44 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
 }
 /* 非対応ブラウザは初回マウントで上から順にパラパラと階段着地。 */
 @supports not (animation-timeline: view()) {
-  .home-feed-section .home-feed-list .log-post-card:nth-child(2) {
+  .home-feed-section
+    .home-feed-list
+    :is(.log-post-card, .log-post-card-compact, .study-log-card):nth-child(2) {
     animation-delay: 0.05s;
   }
-  .home-feed-section .home-feed-list .log-post-card:nth-child(3) {
+  .home-feed-section
+    .home-feed-list
+    :is(.log-post-card, .log-post-card-compact, .study-log-card):nth-child(3) {
     animation-delay: 0.1s;
   }
-  .home-feed-section .home-feed-list .log-post-card:nth-child(4) {
+  .home-feed-section
+    .home-feed-list
+    :is(.log-post-card, .log-post-card-compact, .study-log-card):nth-child(4) {
     animation-delay: 0.15s;
   }
-  .home-feed-section .home-feed-list .log-post-card:nth-child(5) {
+  .home-feed-section
+    .home-feed-list
+    :is(.log-post-card, .log-post-card-compact, .study-log-card):nth-child(5) {
     animation-delay: 0.2s;
   }
-  .home-feed-section .home-feed-list .log-post-card:nth-child(n + 6) {
+  .home-feed-section
+    .home-feed-list
+    :is(.log-post-card, .log-post-card-compact, .study-log-card):nth-child(n + 6) {
     animation-delay: 0.25s;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .home-feed-section .home-feed-list .log-post-card {
+  .home-feed-section
+    .home-feed-list
+    :is(.log-post-card, .log-post-card-compact, .study-log-card) {
     animation: none;
   }
 }
 
 /* 折れ角 (dog-ear)：5 枚に 1 枚、右下の角がめくれている紙。 */
-.home-feed-section .home-feed-list .log-post-card:nth-child(5n + 3)::before {
+.home-feed-section
+  .home-feed-list
+  :is(.log-post-card, .log-post-card-compact, .study-log-card):nth-child(5n + 3)::before {
   content: "";
   position: absolute;
   right: 0;
@@ -36337,12 +36368,14 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
 [data-theme="dark"]
   .home-feed-section
   .home-feed-list
-  .log-post-card:nth-child(5n + 3)::before {
+  :is(.log-post-card, .log-post-card-compact, .study-log-card):nth-child(5n + 3)::before {
   background: linear-gradient(135deg, #2b2e34 20%, #1d2024 85%);
 }
 
 /* マスキングテープを全カードに。3 系統の色 + 左右 + 角度を散らす。 */
-.home-feed-section .home-feed-list .log-post-card::after {
+.home-feed-section
+  .home-feed-list
+  :is(.log-post-card, .log-post-card-compact, .study-log-card)::after {
   content: "";
   position: absolute;
   top: -8px;
@@ -36360,7 +36393,9 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   box-shadow: 0 1px 2px rgba(var(--ink-rgb), 0.06);
   pointer-events: none;
 }
-.home-feed-section .home-feed-list .log-post-card:nth-child(3n + 2)::after {
+.home-feed-section
+  .home-feed-list
+  :is(.log-post-card, .log-post-card-compact, .study-log-card):nth-child(3n + 2)::after {
   right: auto;
   left: 26px;
   transform: rotate(-3.5deg);
@@ -36370,7 +36405,9 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
     rgba(149, 193, 172, 0.24)
   );
 }
-.home-feed-section .home-feed-list .log-post-card:nth-child(3n)::after {
+.home-feed-section
+  .home-feed-list
+  :is(.log-post-card, .log-post-card-compact, .study-log-card):nth-child(3n)::after {
   right: 34px;
   transform: rotate(4.5deg);
   background: linear-gradient(
@@ -36380,7 +36417,9 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   );
 }
 /* 自分の投稿は緑みのテープで「自分のメモ」を強調（左 3px 緑 + 緑テープ）。 */
-.home-feed-section .home-feed-list .log-post-card.is-own::after {
+.home-feed-section
+  .home-feed-list
+  :is(.log-post-card, .log-post-card-compact, .study-log-card).is-own::after {
   right: 20px;
   left: auto;
   transform: rotate(2.5deg);
@@ -36392,7 +36431,9 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
 }
 /* 画鋲 (push-pin)：7 枚に 1 枚はテープの代わりにコルクボードの画鋲で留める。
    テープ系ルールより後置 = 同 specificity の後勝ちで上書きする。 */
-.home-feed-section .home-feed-list .log-post-card:nth-child(7n + 4)::after {
+.home-feed-section
+  .home-feed-list
+  :is(.log-post-card, .log-post-card-compact, .study-log-card):nth-child(7n + 4)::after {
   top: -7px;
   left: 50%;
   right: auto;
@@ -36405,6 +36446,127 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   box-shadow:
     0 2px 3px rgba(var(--ink-rgb), 0.28),
     inset 0 -2px 3px rgba(0, 0, 0, 0.18);
+}
+
+/* === 学習ログ = インク印（蔵書印）風の "学習チケット" ===
+   味気ない一文をやめ、学習時間を主役に。緑インクの印の中で集中メーターが
+   時間に応じて満ちる（4h で full）。科目は明朝で大きく。 */
+.study-log-card {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 12px 14px;
+  border: 1px solid var(--hairline, #e6e3df);
+  border-radius: 16px;
+  background-color: var(--surface-warm, #fffdfa);
+  background-image: radial-gradient(
+    rgba(26, 24, 23, 0.02) 1px,
+    transparent 1.4px
+  );
+  background-size: 4px 4px;
+  color: var(--ink);
+  min-width: 0;
+}
+.study-log-card.is-own {
+  border-left: 3px solid var(--green);
+}
+.study-log-card .study-log-stamp {
+  --fill: 0;
+  position: relative;
+  flex: none;
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 50%;
+  background: conic-gradient(
+    rgba(31, 111, 74, 0.22) calc(var(--fill) * 360deg),
+    rgba(31, 111, 74, 0.06) 0deg
+  );
+  color: var(--green);
+  transition: transform 0.18s cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+.study-log-card .study-log-stamp:hover {
+  transform: rotate(-4deg) scale(1.04);
+}
+.study-log-card .study-log-stamp::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  background: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2060%2060'%3E%3Cg%20fill='none'%20stroke='%231f6f4a'%20stroke-width='2'%3E%3Cellipse%20cx='30'%20cy='30'%20rx='25'%20ry='24'%20transform='rotate(-4%2030%2030)'/%3E%3Cellipse%20cx='30'%20cy='30'%20rx='23.5'%20ry='25'%20stroke-opacity='0.45'%20transform='rotate(3%2030%2030)'/%3E%3C/g%3E%3C/svg%3E")
+    center / 100% 100% no-repeat;
+  pointer-events: none;
+}
+.study-log-stamp-value {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP",
+    serif;
+  font-weight: 800;
+  font-size: 21px;
+  line-height: 0.82;
+  letter-spacing: -0.02em;
+}
+.study-log-stamp-unit {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+.study-log-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+.study-log-eyebrow {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--green);
+  opacity: 0.85;
+}
+.study-log-subject {
+  max-width: 100%;
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP",
+    serif;
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.study-log-byline {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+[data-theme="dark"] .study-log-card {
+  background-color: var(--surface-elevated, #1e2024);
+  background-image: radial-gradient(
+    rgba(255, 255, 255, 0.025) 1px,
+    transparent 1.4px
+  );
+}
+[data-theme="dark"] .study-log-card .study-log-stamp {
+  background: conic-gradient(
+    rgba(74, 222, 128, 0.26) calc(var(--fill) * 360deg),
+    rgba(74, 222, 128, 0.08) 0deg
+  );
+}
+[data-theme="dark"] .study-log-card .study-log-stamp::after {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2060%2060'%3E%3Cg%20fill='none'%20stroke='%234ade80'%20stroke-width='2'%3E%3Cellipse%20cx='30'%20cy='30'%20rx='25'%20ry='24'%20transform='rotate(-4%2030%2030)'/%3E%3Cellipse%20cx='30'%20cy='30'%20rx='23.5'%20ry='25'%20stroke-opacity='0.45'%20transform='rotate(3%2030%2030)'/%3E%3C/g%3E%3C/svg%3E");
 }
 
 /* === Phase 5: keyframes / dark を分離 === */

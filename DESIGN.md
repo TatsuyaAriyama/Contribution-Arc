@@ -373,6 +373,12 @@ components:
     description: FEED のカードが画面に入るとき、下からひらりと舞い込んで一拍ふわっと置いて着地する。
     motion: "feed-flutter-in — translateY 26px→-5px→0 + rotate -2.2°→1°→0 / 0.55s"
     scroll: "animation-timeline: view() 対応ブラウザはスクロール連動（entry 0%〜55%）、非対応は初回マウントで階段 delay、prefers-reduced-motion: reduce では無効"
+
+  study-log-ticket:
+    description: 学習ログ自動投稿 (auto-study) を「一文」から、学習時間を主役にしたインク印（蔵書印）風チケットに。味気ない pill を芸術的な記録票に置き換える。
+    stamp: "緑インクの手描き二重円（SVG 楕円 ×2）の中に学習時間を明朝で大きく。集中メーター = conic-gradient が時間に比例して満ちる（mins/240、4h で full）"
+    subject: "科目名 (『...』) を {typography.mincho-heading} で見出し化"
+    surface: "{colors.surface-warm} + dot grain。is-own は左 3px 緑。scrapbook（傾き / テープ / 舞い込み）に同調"
     active: "rotate 0 + lift shadow（:hover / :focus-within）"
     motion: "transform 0.28s cubic-bezier(0.2,0.8,0.3,1)"
 
@@ -646,6 +652,7 @@ entry-card を机にテープで留めた紙片に見立て、ごく僅かに傾
 - **タイムライン = メモの束**：投稿カードを `card-tilt` で **±2° まで大胆に**傾ける（角度は数バリアントで揃えない＝手の不確定さ）。hover / tap で水平に戻して読む。多層影（`paper-scraps.shadow`）で本当に重なって見せる。
 - **全カードにテープ + 小物**：テープは色（sepia / sage / faded-clay）・角度・左右を散らし、`paper-scraps` の折れ角（5 枚に 1 枚）と画鋲（7 枚に 1 枚）を機械的に混ぜてボードに貼った scrapbook 感を出す。`log-post-card.is-own` は左 3px 緑アクセント + 緑みのテープで「自分のメモ」を強調する。
 - **舞い込み（`flutter-in`）**：カードが画面に入るときに下からひらりと着地する。スクロール連動（view() timeline）を基本に、非対応ブラウザは初回マウントの階段 delay にフォールバック。
+- **学習ログ = 学習チケット（`study-log-ticket`）**：auto-study 投稿は「『科目』を N 学習しました」の一文をやめ、学習時間を主役にしたインク印風チケットに。緑の印の中で集中メーターが時間に比例して満ち、科目は明朝で見出し化する。作業ログ (auto-workspace) は従来のコンパクト pill のまま。
 - **取り消し線・インクチェックは日報専用**：FEED には持ち込まない（チェック対象が無く、文意も変わるため）。
 
 ### 実装ルール
