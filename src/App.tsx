@@ -2902,8 +2902,19 @@ function getSerializedWorkspaceRoomText(room: WorkspaceRoom) {
   return JSON.stringify(serializeWorkspaceRoom(room));
 }
 
-async function saveWorkspaceRoomToCloud(room: WorkspaceRoom, currentUserUid?: string) {
+async function saveWorkspaceRoomToCloud(
+  room: WorkspaceRoom,
+  currentUserUid?: string,
+  options?: { allowCreate?: boolean },
+) {
   const ref = doc(db, workspaceRoomsCollectionName, room.id);
+  /* 復活バグ対策 (2026-06-13): デフォルトは update-only。
+     部屋が Firestore から削除済み (= 他端末で解体) の場合、sync effect の
+     書き戻しが doc を再作成して「解体してもリロードで戻る」原因になっていた。
+     別タブ / スマホ PWA の customRooms に残った亡霊部屋が、presence 心拍の
+     たびに setDoc で蘇る構図。doc が存在しない時は書き込みをスキップする。
+     新規部屋の作成だけ allowCreate: true で明示的に許可。 */
+  const allowCreate = options?.allowCreate === true;
 
   // Without the transaction below, every room write would replace the
   // entire `activeMembers` array with the writer's local snapshot.
@@ -2921,6 +2932,23 @@ async function saveWorkspaceRoomToCloud(room: WorkspaceRoom, currentUserUid?: st
   // owner, etc.) still comes from the local payload because those
   // fields are owned by the writer.
   if (!currentUserUid) {
+    if (!allowCreate) {
+      /* update-only: 削除済み doc を merge:true setDoc が再作成しない
+         よう、存在チェックを transaction で行う。 */
+      await runTransaction(db, async (transaction) => {
+        const snap = await transaction.get(ref);
+        if (!snap.exists()) return;
+        transaction.set(
+          ref,
+          {
+            ...serializeWorkspaceRoom(room),
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true },
+        );
+      });
+      return;
+    }
     await setDoc(
       ref,
       {
@@ -2934,6 +2962,12 @@ async function saveWorkspaceRoomToCloud(room: WorkspaceRoom, currentUserUid?: st
 
   await runTransaction(db, async (transaction) => {
     const snap = await transaction.get(ref);
+    if (!snap.exists() && !allowCreate) {
+      /* 部屋は削除済み — 書き戻すと復活してしまうのでスキップ。
+         (transaction.get の後に return しても安全: 書き込みゼロの
+         transaction は commit が no-op になる) */
+      return;
+    }
     const remoteRoom = snap.exists()
       ? normalizeWorkspaceRoom({
           ...((snap.data() as Partial<WorkspaceRoom>) || {}),
@@ -11533,7 +11567,8 @@ function App() {
 
     pendingWorkspaceRoomsRef.current.set(room.id, room);
     setCustomRooms((rooms) => (rooms.some((item) => item.id === room.id) ? rooms : [...rooms, room].map(normalizeWorkspaceRoom)));
-    void saveWorkspaceRoomToCloud(room, currentUser.uid)
+    // 新規作成だけは doc が無い状態からの書き込みなので allowCreate を明示。
+    void saveWorkspaceRoomToCloud(room, currentUser.uid, { allowCreate: true })
       .then(() => {
         pendingWorkspaceRoomsRef.current.delete(room.id);
       })
