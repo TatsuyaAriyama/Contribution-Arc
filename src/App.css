@@ -36236,27 +36236,78 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   );
 }
 
-/* 自分の投稿 = 机にテープで留めたメモ。washi テープ(若草)を右上に。 */
-.home-feed-section .home-feed-list .log-post-card.is-own {
+/* タイムライン = 机に重ねた / ボードに留めたメモの束。
+   全カードを軽く傾け（角度はバリアントで揃えない＝手の不確定さ）、
+   hover / tap で水平に戻して読む。テープは色・角度・左右を散らして
+   scrapbook 感を出す。傾きは ±1° 未満に抑えて可読性を守る。 */
+.home-feed-section .home-feed-list .log-post-card {
   position: relative;
+  transform: rotate(-0.5deg);
 }
-.home-feed-section .home-feed-list .log-post-card.is-own::after {
+.home-feed-section .home-feed-list .log-post-card:nth-child(4n + 2) {
+  transform: rotate(0.55deg);
+}
+.home-feed-section .home-feed-list .log-post-card:nth-child(4n + 3) {
+  transform: rotate(-0.25deg);
+}
+.home-feed-section .home-feed-list .log-post-card:nth-child(4n + 4) {
+  transform: rotate(0.8deg);
+}
+.home-feed-section .home-feed-list .log-post-card:hover {
+  transform: rotate(0deg) translateY(-2px);
+}
+.home-feed-section .home-feed-list .log-post-card:active {
+  transform: rotate(0deg) translateY(-1px);
+}
+
+/* マスキングテープを全カードに。3 系統の色 + 左右 + 角度を散らす。 */
+.home-feed-section .home-feed-list .log-post-card::after {
   content: "";
   position: absolute;
   top: -8px;
-  right: 18px;
-  width: 54px;
+  right: 22px;
+  width: 52px;
   height: 18px;
   transform: rotate(3deg);
   background: linear-gradient(
     135deg,
-    rgba(149, 193, 172, 0.42),
-    rgba(149, 193, 172, 0.24)
+    rgba(201, 184, 140, 0.4),
+    rgba(201, 184, 140, 0.24)
   );
   border-left: 1px solid rgba(255, 255, 255, 0.28);
   border-right: 1px solid rgba(255, 255, 255, 0.28);
   box-shadow: 0 1px 2px rgba(var(--ink-rgb), 0.06);
   pointer-events: none;
+}
+.home-feed-section .home-feed-list .log-post-card:nth-child(3n + 2)::after {
+  right: auto;
+  left: 26px;
+  transform: rotate(-3.5deg);
+  background: linear-gradient(
+    135deg,
+    rgba(149, 193, 172, 0.4),
+    rgba(149, 193, 172, 0.24)
+  );
+}
+.home-feed-section .home-feed-list .log-post-card:nth-child(3n)::after {
+  right: 34px;
+  transform: rotate(4.5deg);
+  background: linear-gradient(
+    135deg,
+    rgba(211, 87, 59, 0.2),
+    rgba(211, 87, 59, 0.12)
+  );
+}
+/* 自分の投稿は緑みのテープで「自分のメモ」を強調（左 3px 緑 + 緑テープ）。 */
+.home-feed-section .home-feed-list .log-post-card.is-own::after {
+  right: 20px;
+  left: auto;
+  transform: rotate(2.5deg);
+  background: linear-gradient(
+    135deg,
+    rgba(31, 111, 74, 0.26),
+    rgba(31, 111, 74, 0.14)
+  );
 }
 
 /* === Phase 5: keyframes / dark を分離 === */

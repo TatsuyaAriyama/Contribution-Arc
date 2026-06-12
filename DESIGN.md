@@ -353,13 +353,15 @@ components:
     motion: "daily-strike-draw 0.36s — clip-path inset(0 100% 0 0) → inset(0)"
 
   masking-tape:
-    description: entry-card を机に留めた紙片に。カード上端に半透明テープを貼り、2 枚で色と角度を変えてコラージュ感を出す。
-    tapeA: "{colors.washi-sepia} / rotate -4°"
-    tapeB: "{colors.washi-sage} / rotate 3.5°"
+    description: カードを机に留めた紙片に。カード上端に半透明テープを貼り、色・角度・左右を散らしてコラージュ感を出す。日報は 2 枚、FEED は全カードに配る。
+    tapeSepia: "{colors.washi-sepia}"
+    tapeSage: "{colors.washi-sage}"
+    tapeClay: "rgba(211, 87, 59, 0.20)（{colors.accent-warm} を退色）"
+    tapeOwn: "rgba(31, 111, 74, 0.26)（自分の投稿 = {colors.primary} 退色）"
 
   card-tilt:
-    description: 日報の entry-card をごく僅かに傾けて整列を崩す（机に置いた紙）。入力 / ホバー時は水平に戻して操作性を担保。
-    rest: "rotate ±0.4〜0.5°"
+    description: 日報の entry-card / FEED の投稿カードをごく僅かに傾けて整列を崩す（机に重ねた紙）。FEED は ±1° 未満で角度バリアントを散らす。入力 / hover / tap で水平に戻して操作性と可読性を担保。
+    rest: "rotate ±0.25〜0.8°（FEED）／ ±0.4〜0.5°（日報）"
     active: "rotate 0 + lift shadow（:hover / :focus-within）"
     motion: "transform 0.28s cubic-bezier(0.2,0.8,0.3,1)"
 
@@ -630,8 +632,9 @@ entry-card を机にテープで留めた紙片に見立て、ごく僅かに傾
 - **紙の地**：モバイル単独 FEED (`app-view-feed`) の地を `{colors.paper-canvas-light}` の紙テクスチャに（ライト専用）。
 - **明朝＋手描き下線**：フィード見出し `home-feed-head h2` に適用（日報タイトルと同じ緑下線）。
 - **コンポーザ = メモ用紙**：投稿作成欄 (`home-feed-composer`) を `daily-paper-surface` 風の暖色カードにし、`masking-tape`（sepia）+ `card-tilt`（rotate -0.5° → focus-within で水平）を付ける。日報エディタと対の存在。
-- **自分の投稿にテープ**：`log-post-card.is-own` の右上に washi テープ（sage）を留め、「自分のメモ」を一目で分かるアクセントにする。
-- **投稿カードは傾けない**：タイムラインは枚数が多いので `card-tilt` は使わず、読みやすさを保つ（傾き・取り消し線・インクチェックは日報専用）。
+- **タイムライン = メモの束**：投稿カードを `card-tilt` で軽く傾ける（角度は数バリアントで揃えない＝手の不確定さ）。傾きは **±1° 未満**に抑え、hover / tap で水平に戻して読む。
+- **全カードにテープ**：色（sepia / sage / faded-clay）・角度・左右を散らしてボードに貼った scrapbook 感を出す。`log-post-card.is-own` は左 3px 緑アクセント + 緑みのテープで「自分のメモ」を強調する。
+- **取り消し線・インクチェックは日報専用**：FEED には持ち込まない（チェック対象が無く、文意も変わるため）。
 
 ### 実装ルール
 - 手描きの揺らぎは **inline SVG data-uri** で描く（画像アセットを足さない）。
@@ -668,5 +671,5 @@ entry-card を机にテープで留めた紙片に見立て、ごく僅かに傾
 - ❌ モーダルの中に position: fixed を直接置かない（祖先 motion.main の transform で祖先基準になる）。Portal を使う。
 - ❌ 「ホバーで色が変わる」だけの装飾を増やさない。モバイル優先のため `:active` / `aria-pressed` で状態を表すのが基本。
 - ❌ Handcrafted Layer（明朝・手描き下線・インクチェック・テープ・カード傾き）を日報 / FEED 以外の画面に無断で広げない。世界観が薄まる。横展開するなら先に DESIGN.md を更新する。
-- ❌ FEED の投稿タイムラインにカード傾き・取り消し線・インクチェックを持ち込まない（枚数が多く可読性を損なう）。FEED で使うのは紙の地・明朝見出し・コンポーザのメモ化・自分の投稿のテープに留める。
+- ❌ FEED の投稿カードの傾きは ±1° 未満に抑え、hover / tap で必ず水平に戻す（読めなくなる傾きにしない）。取り消し線・インクチェックは日報専用で FEED に持ち込まない。
 - ❌ 手描きのために新しい構造色やフォントを足さない。明朝は日報見出しのみ、線色は既存トークンの流用に留める。
