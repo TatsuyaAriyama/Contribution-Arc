@@ -262,3 +262,91 @@ button {
   }
 }
 
+
+/* ===============================================================
+   Phase 11d: 起動 splash と統一の「auth 復帰中」画面
+   index.html の inline splash と同じ chrome を再現し、JS バンドル
+   読み込み後の auth 復帰中も同じ世界観を維持する。
+   =============================================================== */
+.boot-loading-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  background: var(--bg);
+}
+.boot-loading-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 30px 28px 24px;
+  min-width: 240px;
+  max-width: 320px;
+  text-align: center;
+  border: 1.5px solid var(--ink);
+  border-radius: 22px;
+  background: var(--surface);
+  color: var(--ink);
+  animation: boot-loading-fade-in 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.boot-loading-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border: 1.5px solid currentColor;
+  border-radius: 16px;
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+.boot-loading-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+.boot-loading-subtitle {
+  margin: 0;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  opacity: 0.5;
+  text-transform: uppercase;
+}
+.boot-loading-dots {
+  display: inline-flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+.boot-loading-dots > span {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.2;
+  animation: boot-loading-dot 1.4s ease-in-out infinite;
+}
+.boot-loading-dots > span:nth-child(2) { animation-delay: 0.18s; }
+.boot-loading-dots > span:nth-child(3) { animation-delay: 0.36s; }
+
+@keyframes boot-loading-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes boot-loading-dot {
+  0%, 100% { opacity: 0.2; transform: translateY(0); }
+  50%      { opacity: 1;   transform: translateY(-2px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .boot-loading-card,
+  .boot-loading-dots > span {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+}
