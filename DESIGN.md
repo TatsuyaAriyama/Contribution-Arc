@@ -360,8 +360,19 @@ components:
     tapeOwn: "rgba(31, 111, 74, 0.26)（自分の投稿 = {colors.primary} 退色）"
 
   card-tilt:
-    description: 日報の entry-card / FEED の投稿カードをごく僅かに傾けて整列を崩す（机に重ねた紙）。FEED は ±1° 未満で角度バリアントを散らす。入力 / hover / tap で水平に戻して操作性と可読性を担保。
-    rest: "rotate ±0.25〜0.8°（FEED）／ ±0.4〜0.5°（日報）"
+    description: 日報の entry-card / FEED の投稿カードを傾けて整列を崩す（机に重ねた紙）。FEED は ±2° まで大胆に角度バリアントを散らし、傾きは rotate 個別プロパティに持たせて flutter-in（transform）と合成しても競合させない。入力 / hover / tap で水平に戻して操作性と可読性を担保。
+    rest: "rotate ±1.2〜2°（FEED）／ ±0.4〜0.5°（日報）"
+
+  paper-scraps:
+    description: FEED のタイムラインに混ぜる紙の小物。nth-child で機械的に散らし、ランダム JS を使わない。
+    dogEar: "5 枚に 1 枚、右下に折れ角（clip-path 三角 + 紙裏グラデ）"
+    pushPin: "7 枚に 1 枚、テープの代わりに画鋲（radial-gradient の赤玉、{colors.accent-warm} 系）"
+    shadow: "多層影で「重なった紙」を出す（0 1px / 0 6px 14px / 0 18px 30px の 3 段）"
+
+  flutter-in:
+    description: FEED のカードが画面に入るとき、下からひらりと舞い込んで一拍ふわっと置いて着地する。
+    motion: "feed-flutter-in — translateY 26px→-5px→0 + rotate -2.2°→1°→0 / 0.55s"
+    scroll: "animation-timeline: view() 対応ブラウザはスクロール連動（entry 0%〜55%）、非対応は初回マウントで階段 delay、prefers-reduced-motion: reduce では無効"
     active: "rotate 0 + lift shadow（:hover / :focus-within）"
     motion: "transform 0.28s cubic-bezier(0.2,0.8,0.3,1)"
 
@@ -632,8 +643,9 @@ entry-card を机にテープで留めた紙片に見立て、ごく僅かに傾
 - **紙の地**：モバイル単独 FEED (`app-view-feed`) の地を `{colors.paper-canvas-light}` の紙テクスチャに（ライト専用）。
 - **明朝＋手描き下線**：フィード見出し `home-feed-head h2` に適用（日報タイトルと同じ緑下線）。
 - **コンポーザ = メモ用紙**：投稿作成欄 (`home-feed-composer`) を `daily-paper-surface` 風の暖色カードにし、`masking-tape`（sepia）+ `card-tilt`（rotate -0.5° → focus-within で水平）を付ける。日報エディタと対の存在。
-- **タイムライン = メモの束**：投稿カードを `card-tilt` で軽く傾ける（角度は数バリアントで揃えない＝手の不確定さ）。傾きは **±1° 未満**に抑え、hover / tap で水平に戻して読む。
-- **全カードにテープ**：色（sepia / sage / faded-clay）・角度・左右を散らしてボードに貼った scrapbook 感を出す。`log-post-card.is-own` は左 3px 緑アクセント + 緑みのテープで「自分のメモ」を強調する。
+- **タイムライン = メモの束**：投稿カードを `card-tilt` で **±2° まで大胆に**傾ける（角度は数バリアントで揃えない＝手の不確定さ）。hover / tap で水平に戻して読む。多層影（`paper-scraps.shadow`）で本当に重なって見せる。
+- **全カードにテープ + 小物**：テープは色（sepia / sage / faded-clay）・角度・左右を散らし、`paper-scraps` の折れ角（5 枚に 1 枚）と画鋲（7 枚に 1 枚）を機械的に混ぜてボードに貼った scrapbook 感を出す。`log-post-card.is-own` は左 3px 緑アクセント + 緑みのテープで「自分のメモ」を強調する。
+- **舞い込み（`flutter-in`）**：カードが画面に入るときに下からひらりと着地する。スクロール連動（view() timeline）を基本に、非対応ブラウザは初回マウントの階段 delay にフォールバック。
 - **取り消し線・インクチェックは日報専用**：FEED には持ち込まない（チェック対象が無く、文意も変わるため）。
 
 ### 実装ルール
@@ -671,5 +683,6 @@ entry-card を机にテープで留めた紙片に見立て、ごく僅かに傾
 - ❌ モーダルの中に position: fixed を直接置かない（祖先 motion.main の transform で祖先基準になる）。Portal を使う。
 - ❌ 「ホバーで色が変わる」だけの装飾を増やさない。モバイル優先のため `:active` / `aria-pressed` で状態を表すのが基本。
 - ❌ Handcrafted Layer（明朝・手描き下線・インクチェック・テープ・カード傾き）を日報 / FEED 以外の画面に無断で広げない。世界観が薄まる。横展開するなら先に DESIGN.md を更新する。
-- ❌ FEED の投稿カードの傾きは ±1° 未満に抑え、hover / tap で必ず水平に戻す（読めなくなる傾きにしない）。取り消し線・インクチェックは日報専用で FEED に持ち込まない。
+- ❌ FEED の投稿カードの傾きは ±2° を上限とし、hover / tap で必ず水平に戻す（読めなくなる傾きにしない）。取り消し線・インクチェックは日報専用で FEED に持ち込まない。
+- ❌ 紙の小物（折れ角・画鋲）やアニメをランダム JS で散らさない。nth-child の機械的なバリアント分配で「揺らぎ」を出し、prefers-reduced-motion を必ず尊重する。
 - ❌ 手描きのために新しい構造色やフォントを足さない。明朝は日報見出しのみ、線色は既存トークンの流用に留める。

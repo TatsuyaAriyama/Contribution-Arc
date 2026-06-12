@@ -36237,27 +36237,108 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
 }
 
 /* タイムライン = 机に重ねた / ボードに留めたメモの束。
-   全カードを軽く傾け（角度はバリアントで揃えない＝手の不確定さ）、
-   hover / tap で水平に戻して読む。テープは色・角度・左右を散らして
-   scrapbook 感を出す。傾きは ±1° 未満に抑えて可読性を守る。 */
+   傾きは ±2° まで大胆に散らし、hover / tap で水平に戻して読む。
+   傾きは rotate 個別プロパティに持たせ、舞い込みアニメ（transform）
+   と合成しても喧嘩しないようにする。紙の重なりは強めの多層影で出す。 */
 .home-feed-section .home-feed-list .log-post-card {
+  --tilt: -1.6deg;
   position: relative;
-  transform: rotate(-0.5deg);
+  rotate: var(--tilt);
+  box-shadow:
+    0 1px 2px rgba(var(--ink-rgb), 0.05),
+    0 6px 14px -6px rgba(var(--ink-rgb), 0.14),
+    0 18px 30px -18px rgba(var(--ink-rgb), 0.2);
+  transition:
+    rotate 0.26s cubic-bezier(0.2, 0.8, 0.3, 1),
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.18s ease,
+    background 0.18s ease;
+  animation: feed-flutter-in 0.55s cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
 }
 .home-feed-section .home-feed-list .log-post-card:nth-child(4n + 2) {
-  transform: rotate(0.55deg);
+  --tilt: 1.8deg;
 }
 .home-feed-section .home-feed-list .log-post-card:nth-child(4n + 3) {
-  transform: rotate(-0.25deg);
+  --tilt: -1.2deg;
 }
 .home-feed-section .home-feed-list .log-post-card:nth-child(4n + 4) {
-  transform: rotate(0.8deg);
+  --tilt: 2deg;
+}
+.home-feed-section .home-feed-list .log-post-card:hover,
+.home-feed-section .home-feed-list .log-post-card:active {
+  rotate: 0deg;
 }
 .home-feed-section .home-feed-list .log-post-card:hover {
-  transform: rotate(0deg) translateY(-2px);
+  box-shadow:
+    0 2px 4px rgba(var(--ink-rgb), 0.06),
+    0 14px 32px -12px rgba(var(--ink-rgb), 0.24);
 }
-.home-feed-section .home-feed-list .log-post-card:active {
-  transform: rotate(0deg) translateY(-1px);
+
+/* 舞い込み：下からひらりと落ちて、ふわっと一拍置いて着地する。 */
+@keyframes feed-flutter-in {
+  0% {
+    opacity: 0;
+    transform: translateY(26px) rotate(-2.2deg);
+  }
+  62% {
+    opacity: 1;
+    transform: translateY(-5px) rotate(1deg);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* スクロール連動対応ブラウザ：画面に入ってくるたびにパラッと舞い込む。 */
+@supports (animation-timeline: view()) {
+  .home-feed-section .home-feed-list .log-post-card {
+    animation: feed-flutter-in linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 55%;
+  }
+}
+/* 非対応ブラウザは初回マウントで上から順にパラパラと階段着地。 */
+@supports not (animation-timeline: view()) {
+  .home-feed-section .home-feed-list .log-post-card:nth-child(2) {
+    animation-delay: 0.05s;
+  }
+  .home-feed-section .home-feed-list .log-post-card:nth-child(3) {
+    animation-delay: 0.1s;
+  }
+  .home-feed-section .home-feed-list .log-post-card:nth-child(4) {
+    animation-delay: 0.15s;
+  }
+  .home-feed-section .home-feed-list .log-post-card:nth-child(5) {
+    animation-delay: 0.2s;
+  }
+  .home-feed-section .home-feed-list .log-post-card:nth-child(n + 6) {
+    animation-delay: 0.25s;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-feed-section .home-feed-list .log-post-card {
+    animation: none;
+  }
+}
+
+/* 折れ角 (dog-ear)：5 枚に 1 枚、右下の角がめくれている紙。 */
+.home-feed-section .home-feed-list .log-post-card:nth-child(5n + 3)::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 19px;
+  height: 19px;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+  background: linear-gradient(135deg, #f1ebdc 20%, #ddd3ba 85%);
+  pointer-events: none;
+}
+[data-theme="dark"]
+  .home-feed-section
+  .home-feed-list
+  .log-post-card:nth-child(5n + 3)::before {
+  background: linear-gradient(135deg, #2b2e34 20%, #1d2024 85%);
 }
 
 /* マスキングテープを全カードに。3 系統の色 + 左右 + 角度を散らす。 */
@@ -36308,6 +36389,22 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
     rgba(31, 111, 74, 0.26),
     rgba(31, 111, 74, 0.14)
   );
+}
+/* 画鋲 (push-pin)：7 枚に 1 枚はテープの代わりにコルクボードの画鋲で留める。
+   テープ系ルールより後置 = 同 specificity の後勝ちで上書きする。 */
+.home-feed-section .home-feed-list .log-post-card:nth-child(7n + 4)::after {
+  top: -7px;
+  left: 50%;
+  right: auto;
+  width: 15px;
+  height: 15px;
+  transform: translateX(-50%);
+  border: none;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #ef8f74, #c2452a 72%);
+  box-shadow:
+    0 2px 3px rgba(var(--ink-rgb), 0.28),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.18);
 }
 
 /* === Phase 5: keyframes / dark を分離 === */
