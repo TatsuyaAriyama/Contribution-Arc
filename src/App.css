@@ -3410,11 +3410,6 @@
   grid-column: 1;
   grid-row: 1;
 }
-.profile-layout > .character-color-card {
-  grid-column: 2;
-  grid-row: 1;
-}
-
 .determination-card {
   display: grid;
   gap: 12px;
@@ -3424,60 +3419,6 @@
 .profile-panel-stack {
   display: grid;
   gap: 16px;
-}
-
-.character-color-card {
-  display: grid;
-  gap: 16px;
-  padding: clamp(18px, 2.2vw, 24px);
-}
-
-.character-color-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-}
-
-.character-color-head h3 {
-  margin: 6px 0 0;
-  color: var(--ink);
-  font-size: clamp(22px, 2.4vw, 30px);
-  line-height: 1.05;
-  letter-spacing: 0;
-}
-
-.character-color-preview {
-  --actor-color: #1f6f4a;
-  position: relative;
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  width: 86px;
-  height: 86px;
-  border: 1px solid rgba(var(--ink-rgb), 0.08);
-  border-radius: 22px;
-  background:
-    linear-gradient(90deg, rgba(var(--ink-rgb), 0.045) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(var(--ink-rgb), 0.04) 1px, transparent 1px),
-    #fafafa;
-  background-size: 16px 16px;
-}
-
-.character-color-preview .actor-sprite {
-  transform: translateY(4px);
-}
-
-.character-color-preview.compact {
-  width: 62px;
-  height: 62px;
-  border-radius: 18px;
-}
-
-.character-color-preview.compact .actor-sprite {
-  width: 34px;
-  height: 34px;
-  transform: translateY(5px) scale(0.82);
 }
 
 .profile-character-preview {
@@ -5711,8 +5652,6 @@
    全要素は Inter 1 家族で完結する。 */
 .daily-screen .card-kicker,
 .daily-screen .daily-entry-hint,
-.daily-screen .daily-day-summary-label,
-.daily-screen .daily-mode-toggle small,
 .daily-screen .daily-reward-banner-text small,
 .daily-screen .daily-plan-progress-meta,
 .daily-screen .daily-editor-head label span {
@@ -5720,15 +5659,12 @@
   letter-spacing: 0;
 }
 .daily-screen .card-kicker,
-.daily-screen .daily-day-summary-label,
 .daily-screen .daily-plan-progress-meta,
 .daily-screen .daily-editor-head label span {
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-.daily-screen .daily-day-summary-value,
-.daily-screen .daily-mode-toggle strong,
 .daily-screen .daily-reward-banner-text strong,
 .daily-screen .daily-plan-progress-meta strong,
 .daily-screen .daily-streak-badge {
@@ -6118,48 +6054,6 @@
 .daily-editor-actions button:disabled {
   cursor: not-allowed;
   opacity: 0.46;
-}
-
-/* Phase 10a: 下書きトグル + @mention 関連. キーカラーは緑系で
-   既存の daily-entry-card と揃え、装飾はあえて薄めに止める. */
-.daily-editor-mode {
-  display: flex;
-  align-items: stretch;
-  margin-bottom: 4px;
-}
-
-.daily-mode-toggle {
-  /* Habit カードと同じ chrome：ink 1.5px hairline + 大きい角丸 + 白。 */
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: start;
-  gap: 12px;
-  padding: 16px 18px;
-  border: 1.5px solid var(--ink);
-  border-radius: 18px;
-  background: var(--surface);
-  cursor: pointer;
-  width: 100%;
-}
-
-.daily-mode-toggle input[type="checkbox"] {
-  margin-top: 3px;
-  accent-color: var(--ink);
-}
-
-.daily-mode-toggle strong {
-  display: block;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--ink);
-}
-
-.daily-mode-toggle small {
-  display: block;
-  margin-top: 2px;
-  font-size: 11.5px;
-  color: var(--muted);
-  line-height: 1.55;
 }
 
 .daily-history-badge {
@@ -10361,8 +10255,7 @@
     min-height: auto;
   }
 
-  .profile-layout > .status-card,
-  .profile-layout > .character-color-card {
+  .profile-layout > .status-card {
     grid-column: 1 / -1;
     grid-row: auto;
   }
@@ -14216,8 +14109,7 @@
     gap: 10px;
   }
 
-  .profile-layout > .status-card,
-  .profile-layout > .character-color-card {
+  .profile-layout > .status-card {
     grid-column: 1 / -1;
     grid-row: auto;
   }
@@ -14772,11 +14664,6 @@
   }
 
   .settings-avatar-field {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .character-color-head {
     align-items: flex-start;
     flex-direction: column;
   }
@@ -31273,8 +31160,7 @@ a[role="button"]:active,
     grid-template-columns: 1fr;
   }
 
-  .profile-layout > .status-card,
-  .profile-layout > .character-color-card {
+  .profile-layout > .status-card {
     grid-column: 1 / -1;
     grid-row: auto;
   }
