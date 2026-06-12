@@ -133,6 +133,19 @@ import {
 import { computeStudyStreak } from "./services/studyStreak";
 import { PLANS, getPlan, BETA_ALL_FEATURES_FREE, type PlanTier } from "./services/plans";
 import {
+  DAILY_CUTOFF_HOUR,
+  clampNumber,
+  formatDailyDate,
+  formatLearningLastLogged,
+  formatStayTime,
+  formatStudyTimeJa,
+  getCurrentWeekKey,
+  getDateInputValue,
+  getLearnerDate,
+  getTodayKey,
+  getWeekStart,
+} from "./utils/format";
+import {
   createCheckoutSession,
   createPortalSession,
   isBillingConfigured,
@@ -1045,27 +1058,6 @@ const characterOptions: CharacterOption[] = [
 
 const githubCallbackPath = "/auth/github/callback";
 
-function getWeekStart(date = new Date()) {
-  const weekStart = new Date(date);
-  const day = weekStart.getDay();
-  const mondayOffset = day === 0 ? -6 : 1 - day;
-  weekStart.setDate(weekStart.getDate() + mondayOffset);
-  weekStart.setHours(0, 0, 0, 0);
-  return weekStart;
-}
-
-/* Sunday-start week key (YYYY-M-D of the week's Sunday). Deliberately
-   matches the contribution-arc grid's week boundary (getDay()-based,
-   Sunday = 0), NOT getWeekStart() which is Monday-start. This keeps the
-   key aligned with `contributionArc.thisWeekMinutes` so the weekly
-   leaderboard treats a profile's weekMinutes as current iff its weekKey
-   equals this value. */
-function getCurrentWeekKey(date = new Date()): string {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - d.getDay());
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-}
 
 function withKnowledgeLayout(
   data: Omit<KnowledgeGraphData, "nodes"> & {
@@ -1781,17 +1773,7 @@ function formatReplyTime(createdAt: string) {
   });
 }
 
-function getDateInputValue(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
 
-// Engineers often work past midnight; treat the "day" as rolling over at 6:00 AM
-// local time. So 2 AM on May 24 still counts as May 23's session — and the new
-// day's prompt only appears once the user wakes up.
-const DAILY_CUTOFF_HOUR = 6;
 
 // LIVE ACTIVITY only surfaces study sessions of at least this many minutes.
 // Sub-5-minute pings would crowd the timeline with low-signal noise — they're
@@ -1799,23 +1781,7 @@ const DAILY_CUTOFF_HOUR = 6;
 // up if the feed still feels too chatty.
 const LIVE_ACTIVITY_MIN_MINUTES = 5;
 
-function getLearnerDate(now: Date = new Date()) {
-  const shifted = new Date(now.getTime() - DAILY_CUTOFF_HOUR * 60 * 60 * 1000);
-  return getDateInputValue(shifted);
-}
 
-function formatDailyDate(date: string) {
-  const parsedDate = new Date(`${date}T00:00:00`);
-  if (Number.isNaN(parsedDate.getTime())) {
-    return date;
-  }
-
-  return parsedDate.toLocaleDateString("ja-JP", {
-    month: "long",
-    day: "numeric",
-    weekday: "short",
-  });
-}
 
 function getDailyDateAgeInDays(date: string) {
   const parsedDate = new Date(`${date}T00:00:00`);
@@ -2428,44 +2394,8 @@ function formatStudyTime(minutes: number) {
   return `${hours}h`;
 }
 
-function formatStudyTimeJa(minutes: number) {
-  if (minutes < 60) {
-    return `${minutes}分`;
-  }
 
-  const hours = Math.round((minutes / 60) * 10) / 10;
-  return `${hours}時間`;
-}
 
-// Compact "last logged" label used on learning cards. Buckets into:
-//   未記録 (no logs)
-//   今日 / 昨日 / N日前 (within 6 days)
-//   N週間前 / Nヶ月前 (older)
-function formatLearningLastLogged(
-  lastTs: number | undefined,
-  todayMidnightMs: number,
-  dayMs: number,
-) {
-  if (!lastTs) return "未記録";
-  if (lastTs >= todayMidnightMs) return "今日";
-  const yesterdayMidnight = todayMidnightMs - dayMs;
-  if (lastTs >= yesterdayMidnight) return "昨日";
-  const diffDays = Math.max(1, Math.floor((todayMidnightMs - lastTs) / dayMs));
-  if (diffDays < 7) return `${diffDays}日前`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)}週間前`;
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)}ヶ月前`;
-  return `${Math.floor(diffDays / 365)}年前`;
-}
-
-function formatStayTime(minutes: number) {
-  if (minutes < 60) {
-    return `${minutes}分`;
-  }
-
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return rest > 0 ? `${hours}時間${rest}分` : `${hours}時間`;
-}
 
 function getElapsedMinutes(joinedAt: string, nowMs = Date.now()) {
   return Math.max(1, Math.floor((nowMs - new Date(joinedAt).getTime()) / 60000));
@@ -2556,9 +2486,6 @@ function seededRandom(seed: number) {
   };
 }
 
-function clampNumber(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
 
 function getWorkspaceStatusFromMessage(message: string): RoomUserStatus {
   if (message.includes("休憩")) {
@@ -2911,9 +2838,6 @@ function seedWorkspaceRooms(rooms: WorkspaceRoom[]): WorkspaceRoom[] {
     .filter((room) => !isLegacyWorkspaceRoom(room));
 }
 
-function getTodayKey(date = new Date()) {
-  return date.toDateString();
-}
 
 function normalizeWorkspaceRoom(room: Partial<WorkspaceRoom> | null | undefined): WorkspaceRoom {
   const safeRoom = room || {};
