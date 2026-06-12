@@ -36003,6 +36003,143 @@ html:not([data-theme="dark"]) .daily-screen {
   box-shadow: 0 6px 20px rgba(var(--ink-rgb), 0.08);
 }
 
+/* --- もっと面白みを：手描きインクのチェック / 取り消し線 / テープ ---
+   日報の核 = タスク達成の操作に手描きの質感と "ポン" という手応えを
+   与え、完了行は手で線を引いた todo のように消し込む。カードは机に
+   テープで留めた紙片のコラージュに。すべて daily-screen 限定。 */
+
+/* インクのチェックボックス。ネイティブ枠を隠し、span を箱として描き、
+   チェック時に枠をはみ出す手描きの✓を弾ませる。 */
+.daily-screen .plan-checklist-check {
+  position: relative;
+}
+.daily-screen .plan-checklist-check input[type="checkbox"] {
+  position: absolute;
+  inset: 0;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+.daily-screen .plan-checklist-check span {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border: 1.8px solid rgba(var(--ink-rgb), 0.4);
+  border-radius: 5px;
+  background: var(--surface);
+  position: relative;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.daily-screen .plan-checklist-check input:checked + span {
+  border-color: rgba(31, 111, 74, 0.7);
+  background: rgba(31, 111, 74, 0.07);
+}
+.daily-screen .plan-checklist-check input:checked + span::after {
+  content: "";
+  position: absolute;
+  inset: -5px -6px -4px -5px;
+  background: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M3%2013%20C%206%2016%208%2019%2010%2021%20C%2013%2014%2017%207%2022%202'%20fill='none'%20stroke='%231f6f4a'%20stroke-width='3'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E")
+    no-repeat center / contain;
+  animation: daily-check-pop 0.26s cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+  pointer-events: none;
+}
+.daily-screen .plan-checklist-check input:focus-visible + span {
+  outline: 2px solid rgba(31, 111, 74, 0.5);
+  outline-offset: 2px;
+}
+@keyframes daily-check-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) rotate(-12deg);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.12) rotate(2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+[data-theme="dark"] .daily-screen .plan-checklist-check span {
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.04);
+}
+[data-theme="dark"] .daily-screen .plan-checklist-check input:checked + span {
+  border-color: rgba(74, 222, 128, 0.6);
+  background: rgba(74, 222, 128, 0.1);
+}
+[data-theme="dark"] .daily-screen .plan-checklist-check input:checked + span::after {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M3%2013%20C%206%2016%208%2019%2010%2021%20C%2013%2014%2017%207%2022%202'%20fill='none'%20stroke='%234ade80'%20stroke-width='3'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+/* 完了タスク：手描きの取り消し線を左から引く。 */
+.daily-screen .plan-checklist-row.is-done .plan-checklist-text-display-text {
+  position: relative;
+  color: var(--muted);
+}
+.daily-screen .plan-checklist-row.is-done .plan-checklist-text-display-text::after {
+  content: "";
+  position: absolute;
+  left: -2px;
+  right: -3px;
+  top: 50%;
+  height: 8px;
+  transform: translateY(-50%);
+  background: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20200%208'%20preserveAspectRatio='none'%3E%3Cpath%20d='M2%204%20C%2040%201%2080%207%20120%203%20S%20190%205%20198%204'%20fill='none'%20stroke='%231a1817'%20stroke-opacity='0.42'%20stroke-width='1.6'%20stroke-linecap='round'/%3E%3C/svg%3E")
+    no-repeat center / 100% 100%;
+  animation: daily-strike-draw 0.36s ease forwards;
+  pointer-events: none;
+}
+[data-theme="dark"] .daily-screen .plan-checklist-row.is-done .plan-checklist-text-display-text::after {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20200%208'%20preserveAspectRatio='none'%3E%3Cpath%20d='M2%204%20C%2040%201%2080%207%20120%203%20S%20190%205%20198%204'%20fill='none'%20stroke='%23ffffff'%20stroke-opacity='0.4'%20stroke-width='1.6'%20stroke-linecap='round'/%3E%3C/svg%3E");
+}
+@keyframes daily-strike-draw {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* マスキングテープ：各カードを机に留めた紙片に。2 枚で色と角度を変える。 */
+.daily-screen .daily-editor-card .daily-entry-card {
+  overflow: visible;
+}
+.daily-screen .daily-editor-card .daily-entry-card::after {
+  content: "";
+  position: absolute;
+  top: -9px;
+  left: 26px;
+  width: 62px;
+  height: 21px;
+  transform: rotate(-4deg);
+  background: linear-gradient(
+    135deg,
+    rgba(201, 184, 140, 0.4),
+    rgba(201, 184, 140, 0.26)
+  );
+  border-left: 1px solid rgba(255, 255, 255, 0.28);
+  border-right: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 1px 2px rgba(var(--ink-rgb), 0.06);
+  pointer-events: none;
+}
+.daily-screen .daily-editor-card form.daily-entry-card:nth-of-type(2)::after,
+.daily-screen .daily-editor-card > form.daily-entry-card + form.daily-entry-card::after {
+  left: auto;
+  right: 30px;
+  transform: rotate(3.5deg);
+  background: linear-gradient(
+    135deg,
+    rgba(149, 193, 172, 0.38),
+    rgba(149, 193, 172, 0.24)
+  );
+}
+
 /* === Phase 5: keyframes / dark を分離 === */
 @import "./styles/animations.css";
 @import "./styles/dark.css";
