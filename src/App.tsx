@@ -9,11 +9,8 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type ChangeEvent,
   type FormEvent,
   type MouseEvent as ReactMouseEvent,
-  type PointerEvent as ReactPointerEvent,
-  type ReactNode,
 } from "react";
 import {
   createUserWithEmailAndPassword,
@@ -28,8 +25,6 @@ import {
   type User,
 } from "firebase/auth";
 import {
-  arrayRemove,
-  arrayUnion,
   collection,
   deleteDoc,
   doc,
@@ -45,7 +40,6 @@ import {
   setDoc,
   startAt,
   endAt,
-  updateDoc,
   where,
 } from "firebase/firestore";
 import { AnimatePresence, MotionConfig, motion } from "framer-motion";
@@ -55,7 +49,6 @@ import {
   backfillStudyLogOrganizationId,
   createOrganization,
   createOrganizationInvite,
-  deleteStudyLogFromCloud,
   fetchOrganizationStudyLogs,
   leaveOrganization,
   listAuditLogs,
@@ -118,7 +111,6 @@ import {
   type RecruitmentAuthor,
 } from "./components/feed/WorkspaceRecruitmentFeedCard";
 import {
-  fetchPostRepliesOnce,
   fetchRepliesForPosts,
   savePostToCloud,
   savePostReplyToCloud,
@@ -145,10 +137,9 @@ import {
   createPortalSession,
   isBillingConfigured,
 } from "./services/billing";
-import { type AppView, type FriendPreview, type LiveActivity } from "./components/PremiumNavigation";
+import { type AppView, type FriendPreview } from "./components/PremiumNavigation";
 import {
   SilentWorkspaceRoom,
-  type RoomActivityItem,
   type FloorNoteMarker,
   type MonumentMarker,
 } from "./components/SilentWorkspaceRoom";
@@ -245,16 +236,7 @@ declare global {
   }
 }
 
-type QuestEvent = "chest" | "sword" | "flame" | "star";
-type Terrain = "trail" | "plain" | "grove" | "ridge" | "citadel";
 
-type MapCell = {
-  id: number;
-  level: 0 | 1 | 2 | 3 | 4;
-  terrain: Terrain;
-  route: boolean;
-  event?: QuestEvent;
-};
 
 type StudyLog = {
   id: string;
@@ -304,12 +286,6 @@ type WeeklyStudyDay = {
   logs: StudyLog[];
 };
 
-type StudySegment = {
-  key: string;
-  subject: string;
-  minutes: number;
-  color: string;
-};
 
 type AuthErrorDetail = {
   title: string;
@@ -631,10 +607,6 @@ type KnowledgeGraphData = {
   links: KnowledgeLink[];
 };
 
-type ObsidianNoteSource = {
-  title: string;
-  content: string;
-};
 
 const dayLabels = ["月", "火", "水", "木", "金", "土", "日"];
 
@@ -701,17 +673,7 @@ const studyColorOptions = [
   { name: "Moss", labelJa: "苔", value: "#6f8f45" },
 ];
 
-// 記録フォームの時間クイック選択（分単位）。よく使う区切りを並べ、
-// 1タップで入力できるようにする。自由入力（分）と併用。
-const STUDY_TIME_PRESETS = [15, 30, 45, 60, 90, 120];
 
-// 分を人が読める表記に。60分以上は「N時間」「N時間M分」に丸める。
-function formatStudyMinutesLabel(minutes: number) {
-  if (minutes < 60) return `${minutes}分`;
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return rest === 0 ? `${hours}時間` : `${hours}時間${rest}分`;
-}
 
 /* Character silhouette options offered in the profile editor.
    Order is intentional — "default" stays first so it's the
@@ -946,7 +908,6 @@ const nishimiyaUserId = "npc-nishimiya";
 // 自動退室させる。タブ非表示中も「裏で作業中」とみなして退室はさせないので、
 // この上限だけがゴースト在室（退室し忘れた在席）の歯止めになる。
 const maxWorkspacePresenceMinutes = 20 * 60;
-const onboardingMessage = "ようこそContribution Arcへ";
 const workspacePresenceResetVersion = "2026-05-20-clear-stuck-presence";
 const workspaceMovementKeys = new Set(["w", "a", "s", "d", "arrowup", "arrowleft", "arrowdown", "arrowright"]);
 const defaultWorkspacePresetMessages = [
@@ -1082,51 +1043,6 @@ const characterOptions: CharacterOption[] = [
   },
 ];
 
-const eventCells = new Map<number, QuestEvent>([
-  [7, "star"],
-  [18, "chest"],
-  [31, "sword"],
-  [45, "flame"],
-  [61, "star"],
-  [77, "chest"],
-  [92, "sword"],
-  [105, "flame"],
-]);
-
-const routeCells = new Set([
-  96, 97, 98, 82, 66, 50, 51, 52, 36, 20, 21, 22, 23, 39, 55, 71, 72, 73, 74,
-  58, 42, 43, 44, 28, 12, 13, 14, 30, 46, 62, 78, 94, 110, 111,
-]);
-
-const contributionMap: MapCell[] = Array.from({ length: 112 }, (_, index) => {
-  const base = (index * 7 + Math.floor(index / 4) * 5 + (index % 6)) % 12;
-  const level = (base < 2 ? 0 : base < 5 ? 1 : base < 8 ? 2 : base < 10 ? 3 : 4) as
-    | 0
-    | 1
-    | 2
-    | 3
-    | 4;
-  const route = routeCells.has(index);
-  const event = eventCells.get(index);
-  const terrain: Terrain = event
-    ? "citadel"
-    : route
-      ? "trail"
-      : level >= 4
-        ? "ridge"
-        : level >= 2
-          ? "grove"
-          : "plain";
-
-  return {
-    id: index,
-    level,
-    terrain,
-    route,
-    event,
-  };
-});
-
 const githubCallbackPath = "/auth/github/callback";
 
 function getWeekStart(date = new Date()) {
@@ -1149,41 +1065,6 @@ function getCurrentWeekKey(date = new Date()): string {
   d.setHours(0, 0, 0, 0);
   d.setDate(d.getDate() - d.getDay());
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-}
-
-function normalizeKnowledgeTitle(value: string) {
-  const withoutHash = value.split("#")[0] || value;
-  const withoutAlias = withoutHash.split("|")[0] || withoutHash;
-  const decoded = decodeURIComponent(withoutAlias).replace(/\\/g, "/");
-  const filename = decoded.split("/").filter(Boolean).pop() || decoded;
-  return filename.replace(/\.md$/i, "").trim();
-}
-
-function getNoteTitle(file: File) {
-  const rawPath = (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
-  return normalizeKnowledgeTitle(rawPath);
-}
-
-function getObsidianLinks(content: string) {
-  const links = new Set<string>();
-  const wikiLinkPattern = /\[\[([^\]]+)\]\]/g;
-  const markdownLinkPattern = /\[[^\]]+\]\((?!https?:\/\/|mailto:)([^)#]+)(?:#[^)]+)?\)/g;
-
-  for (const match of content.matchAll(wikiLinkPattern)) {
-    const title = normalizeKnowledgeTitle(match[1] || "");
-    if (title) {
-      links.add(title);
-    }
-  }
-
-  for (const match of content.matchAll(markdownLinkPattern)) {
-    const title = normalizeKnowledgeTitle(match[1] || "");
-    if (title) {
-      links.add(title);
-    }
-  }
-
-  return [...links];
 }
 
 function withKnowledgeLayout(
@@ -1216,42 +1097,6 @@ function withKnowledgeLayout(
   };
 }
 
-function buildObsidianGraph(notes: ObsidianNoteSource[]): KnowledgeGraphData {
-  const nodeMap = new Map<string, Omit<KnowledgeNode, "x" | "y">>();
-  const linkSet = new Set<string>();
-  const connectionCount = new Map<string, number>();
-
-  notes.forEach((note) => {
-    if (!nodeMap.has(note.title)) {
-      nodeMap.set(note.title, { id: note.title, title: note.title, minutes: 0, size: 13 });
-    }
-
-    getObsidianLinks(note.content).forEach((targetTitle) => {
-      if (!targetTitle || targetTitle === note.title) {
-        return;
-      }
-
-      if (!nodeMap.has(targetTitle)) {
-        nodeMap.set(targetTitle, { id: targetTitle, title: targetTitle, minutes: 0, size: 13 });
-      }
-
-      linkSet.add(`${note.title}::${targetTitle}`);
-      connectionCount.set(note.title, (connectionCount.get(note.title) || 0) + 1);
-      connectionCount.set(targetTitle, (connectionCount.get(targetTitle) || 0) + 1);
-    });
-  });
-
-  return withKnowledgeLayout({
-    nodes: [...nodeMap.values()].map((node) => ({
-      ...node,
-      size: Math.min(32, 11 + (connectionCount.get(node.id) || 0) * 3.2),
-    })),
-    links: [...linkSet].map((key) => {
-      const [source, target] = key.split("::");
-      return { source, target };
-    }),
-  });
-}
 
 function buildStudyKnowledgeGraph(logs: StudyLog[]): KnowledgeGraphData {
   const grouped = new Map<string, number>();
@@ -2747,13 +2592,6 @@ function getRoomDescription(room: WorkspaceRoom) {
   return "小さく集中し、積み上げを共有するための静かな空間。";
 }
 
-function getRoomAccent(room: WorkspaceRoom) {
-  if (room.name.toLowerCase().includes("night")) {
-    return "night";
-  }
-
-  return "garden";
-}
 
 function getWorkspaceSeatPosition(task: string) {
   const normalizedTask = task.toLowerCase();
@@ -3263,138 +3101,9 @@ async function adminRemoveWorkspaceMemberFromCloud(roomId: string, targetUserId:
   });
 }
 
-function getSubjectSummary(logs: StudyLog[]) {
-  if (logs.length === 0) {
-    return "No study logged yet";
-  }
 
-  const summary = logs.reduce<Record<string, number>>((acc, log) => {
-    acc[log.subject] = (acc[log.subject] || 0) + log.minutes;
-    return acc;
-  }, {});
 
-  return Object.entries(summary)
-    .map(([subject, minutes]) => `${subject} ${formatStudyTime(minutes)}`)
-    .join(" / ");
-}
 
-function getStudySegments(logs: StudyLog[], learningItems: LearningItem[] = []): StudySegment[] {
-  if (logs.length === 0) {
-    return [];
-  }
-
-  const itemById = new Map(learningItems.map((item) => [item.id, item] as const));
-
-  const segments = logs.reduce<Record<string, StudySegment>>((acc, log) => {
-    const linkedItem = log.learningItemId ? itemById.get(log.learningItemId) : undefined;
-    const subject = linkedItem ? linkedItem.name : log.subject;
-    const color = linkedItem ? linkedItem.color : log.color || studyColorOptions[0].value;
-    const key = linkedItem ? `item:${linkedItem.id}` : `${subject}-${color}`;
-    acc[key] = acc[key] || {
-      key,
-      subject,
-      minutes: 0,
-      color,
-    };
-    acc[key].minutes += log.minutes;
-    return acc;
-  }, {});
-
-  return Object.values(segments).sort((a, b) => b.minutes - a.minutes);
-}
-
-function PixelIcon({ type }: { type: QuestEvent }) {
-  return (
-    <span className={`pixel-icon ${type}`} aria-hidden="true">
-      <span />
-      <span />
-      <span />
-      <span />
-    </span>
-  );
-}
-
-function ArcSproutCharacter() {
-  return (
-    <svg className="arc-sprout-character" viewBox="0 0 160 180" role="img" aria-label="アークの芽 Arc Sprout">
-      <defs>
-        <radialGradient id="sprout-body" cx="42%" cy="28%" r="72%">
-          <stop offset="0" stopColor="#ffffff" />
-          <stop offset="0.42" stopColor="#f4faf6" />
-          <stop offset="0.76" stopColor="#dce8e1" />
-          <stop offset="1" stopColor="#b8d0c3" />
-        </radialGradient>
-        <linearGradient id="sprout-belly" x1="47" y1="122" x2="119" y2="44">
-          <stop offset="0" stopColor="#1f6f4a" stopOpacity="0.94" />
-          <stop offset="1" stopColor="#83bb70" stopOpacity="0.82" />
-        </linearGradient>
-        <linearGradient id="sprout-arc" x1="35" y1="128" x2="132" y2="36">
-          <stop offset="0" stopColor="#1f6f4a" stopOpacity="0.05" />
-          <stop offset="0.48" stopColor="#1f6f4a" stopOpacity="0.38" />
-          <stop offset="1" stopColor="#9dcc80" stopOpacity="0.74" />
-        </linearGradient>
-        <filter id="sprout-soft-shadow" x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="14" stdDeviation="10" floodColor="#1f6f4a" floodOpacity="0.14" />
-        </filter>
-      </defs>
-      <path
-        className="sprout-arc"
-        d="M35 126 C61 106 73 70 123 42"
-        fill="none"
-        stroke="url(#sprout-arc)"
-        strokeWidth="3.5"
-        strokeLinecap="round"
-      />
-      <g className="sprout-arc-blocks">
-        <rect x="34" y="124" width="6" height="6" rx="2" />
-        <rect x="52" y="108" width="6" height="6" rx="2" />
-        <rect x="65" y="88" width="6" height="6" rx="2" />
-        <rect x="84" y="67" width="5" height="5" rx="1.7" />
-        <rect x="110" y="47" width="5" height="5" rx="1.7" />
-        <rect x="126" y="38" width="4" height="4" rx="1.4" />
-      </g>
-      <ellipse cx="80" cy="160" rx="42" ry="9" fill="rgba(31,111,74,0.13)" />
-      <g filter="url(#sprout-soft-shadow)">
-        <path
-          d="M73 37 C66 24 72 13 87 15 C99 17 105 29 99 41 C110 30 126 32 129 45 C132 59 118 70 102 64 C114 78 118 97 111 117 C104 137 89 149 72 146 C53 143 39 127 37 107 C35 86 46 72 59 64 C46 60 43 47 52 39 C59 33 67 33 73 37Z"
-          fill="url(#sprout-body)"
-          stroke="#dce8e1"
-          strokeWidth="2"
-        />
-        <path
-          d="M73 37 C69 22 76 10 90 14 C101 17 103 31 94 42 C109 29 126 33 128 46 C130 58 116 66 101 61 C94 57 85 50 73 37Z"
-          fill="#1f6f4a"
-          opacity="0.96"
-        />
-        <path
-          d="M77 34 C83 24 91 20 98 23 C99 31 94 39 84 43"
-          fill="#83bb70"
-          opacity="0.92"
-        />
-        <path
-          d="M71 83 C78 74 93 75 101 85 C107 94 105 111 94 119 C84 127 67 122 61 111 C56 100 61 90 71 83Z"
-          fill="url(#sprout-belly)"
-          opacity="0.18"
-        />
-        <circle cx="62" cy="89" r="10" fill="#111827" />
-        <circle cx="98" cy="91" r="10" fill="#111827" />
-        <circle cx="66" cy="86" r="3.2" fill="#fafaf8" />
-        <circle cx="101" cy="88" r="3.2" fill="#fafaf8" />
-        <path d="M77 108 C81 111 85 111 89 108" stroke="#111827" strokeWidth="2.4" strokeLinecap="round" fill="none" opacity="0.72" />
-        <path d="M39 107 C29 108 24 117 26 127" stroke="#b8d0c3" strokeWidth="7" strokeLinecap="round" />
-        <path d="M118 108 C129 111 134 120 132 130" stroke="#b8d0c3" strokeWidth="7" strokeLinecap="round" />
-        <path d="M61 145 L56 158 M99 144 L104 158" stroke="#8aa998" strokeWidth="7" strokeLinecap="round" />
-        <g className="sprout-contribution-mark">
-          <rect x="53" y="116" width="7" height="7" rx="2" />
-          <rect x="64" y="121" width="7" height="7" rx="2" />
-          <rect x="75" y="115" width="7" height="7" rx="2" />
-          <rect x="86" y="122" width="7" height="7" rx="2" />
-          <rect x="97" y="116" width="7" height="7" rx="2" />
-        </g>
-      </g>
-    </svg>
-  );
-}
 
 function GoogleIcon() {
   return (
@@ -3466,35 +3175,6 @@ function BellIcon() {
   );
 }
 
-function GiftIcon() {
-  return (
-    <svg className="gift-icon" viewBox="0 0 64 64" aria-hidden="true">
-      <path
-        d="M10 27h44v29H10V27Z"
-        fill="#ffffff"
-        stroke="currentColor"
-        strokeLinejoin="round"
-        strokeWidth="4"
-      />
-      <path
-        d="M8 20h48v11H8V20Z"
-        fill="#ffffff"
-        stroke="currentColor"
-        strokeLinejoin="round"
-        strokeWidth="4"
-      />
-      <path d="M32 20v36M8 31h48" fill="none" stroke="currentColor" strokeWidth="4" />
-      <path
-        d="M31 19c-7-10-16-11-18-5-2 7 6 10 18 6Zm2 0c7-10 16-11 18-5 2 7-6 10-18 6Z"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="4"
-      />
-    </svg>
-  );
-}
 
 function ContributionArcLogo() {
   return (
@@ -4009,11 +3689,6 @@ function App() {
   const { language, setLanguage, t } = useTranslation();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
-  // Forces a re-render after operations that mutate the Firebase User in
-  // place without firing onAuthStateChanged (e.g. linkWithPopup attaches a
-  // provider but keeps the same User reference, so React would otherwise
-  // never see providerData update).
-  const [authRefreshTick, setAuthRefreshTick] = useState(0);
   const [studyLogs, setStudyLogs] = useState<StudyLog[]>(defaultStudyLogs);
   const [learningItems, setLearningItems] = useState<LearningItem[]>([]);
   const [learningEditorState, setLearningEditorState] = useState<{
@@ -4043,9 +3718,6 @@ function App() {
   const [learningPageEditId, setLearningPageEditId] = useState<string | null>(null);
   const [learningPageEditValue, setLearningPageEditValue] = useState("");
   const [studySubject, setStudySubject] = useState("");
-  // 学習時間は「分」で保持する。1分単位で直感的に記録できるよう、
-  // 旧来の「時間/分の単位切替＋0.1刻み」は廃止して分一本に統一した。
-  const [studyAmount, setStudyAmount] = useState("30");
   const [studyColor, setStudyColor] = useState(studyColorOptions[0].value);
   /* Phase 10c: Learning Item ごとのインライン「他の時間…」入力. null
      なら閉, それ以外なら開いてるカードの id. 文字列入力なので空白や
@@ -4094,7 +3766,6 @@ function App() {
   const quickLogMergeTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const quickLogPendingRef = useRef<Map<string, number>>(new Map());
   const quickLogPendingItemRef = useRef<Map<string, LearningItem>>(new Map());
-  const [selectedStudyDay, setSelectedStudyDay] = useState(dayLabels[(new Date().getDay() + 6) % 7]);
   const [selectedArcDayKey, setSelectedArcDayKey] = useState<string | null>(null);
   /* Donut legend インライン編集中の subject。null=非編集。
      draft はそのまま input の controlled value。 */
@@ -4182,6 +3853,11 @@ function App() {
      既存 state を流用する。effect 本体は isSearchOpen 宣言の後で
      useEffect が呼ばれるので問題ないが、ref はここで先行宣言できる。 */
   const searchPopoverRef = useRef<HTMLDivElement>(null);
+  /* linkWithPopup は currentUser.providerData を in-place 更新するだけで
+     onAuthStateChanged を発火させないため、GitHub 連携直後に再 render
+     されない。この tick の bump が再 render トリガーとして機能している
+     意図的な state — read されないが削除しないこと。 */
+  const [, setAuthRefreshTick] = useState(0);
   useEffect(() => {
     if (!isLivePopoverOpen) return;
     const handler = (event: MouseEvent) => {
@@ -4685,7 +4361,9 @@ function App() {
   const [workspaceStartError, setWorkspaceStartError] = useState("");
   const [pendingJoinRoomId, setPendingJoinRoomId] = useState<string | null>(null);
   const [workspaceNow, setWorkspaceNow] = useState(Date.now());
-  const [lastRoomSession, setLastRoomSession] = useState<WorkspaceSessionHistory | null>(null);
+  /* setter のみ使用 (退室時のセッション記録)。表示 UI は撤去済みだが、
+     セッション確定処理が setLastRoomSession を呼ぶ構造は維持する。 */
+  const [, setLastRoomSession] = useState<WorkspaceSessionHistory | null>(null);
   const [playerPosition, setPlayerPosition] = useState({ x: 18, y: 72 });
   const [isPlayerWalking, setIsPlayerWalking] = useState(false);
   const [workspaceBubble, setWorkspaceBubble] = useState("");
@@ -4725,11 +4403,6 @@ function App() {
   }, [postDraft, currentUser?.uid]);
   const [postError, setPostError] = useState("");
   const [isPosting, setIsPosting] = useState(false);
-  // Quick Capture modal (⌘K / Ctrl+K). The textarea ref is used to focus
-  // the field as soon as the modal opens; the open flag is also toggled
-  // by the global keydown listener.
-  const [isQuickCaptureOpen, setIsQuickCaptureOpen] = useState(false);
-  const quickCaptureTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [timelineFilter, setTimelineFilter] = useState<"following" | "all">("all");
   const [workspaceRecruitments, setWorkspaceRecruitments] = useState<WorkspaceRecruitmentRecord[]>([]);
   const [incomingInvites, setIncomingInvites] = useState<WorkspaceInviteRecord[]>([]);
@@ -4817,9 +4490,7 @@ function App() {
   const [knowledgeGraph, setKnowledgeGraph] = useState<KnowledgeGraphData>(emptyKnowledgeGraph);
   const [selectedKnowledgeId, setSelectedKnowledgeId] = useState("");
   const [hoveredKnowledgeId, setHoveredKnowledgeId] = useState("");
-  const [knowledgeScale, setKnowledgeScale] = useState(1);
   const [knowledgePositions, setKnowledgePositions] = useState<Record<string, { x: number; y: number }>>({});
-  const [draggingKnowledgeId, setDraggingKnowledgeId] = useState("");
   const pressedWorkspaceKeysRef = useRef<Set<string>>(new Set());
   // Walk-state ref mirrors `isPlayerWalking` so the walk loop can read
   // the current value without a stale-closure capture, and so keydown
@@ -4839,7 +4510,6 @@ function App() {
     id: number;
   } | null>(null);
   const syncedRoomPositionRef = useRef<string | null>(null);
-  const graphSvgRef = useRef<SVGSVGElement | null>(null);
   const isApplyingRemoteRoomsRef = useRef(false);
   const lastSyncedWorkspaceRoomsRef = useRef("");
   // Cost control: the user-progress effect has ~15 deps, several of which are
@@ -7264,7 +6934,6 @@ function App() {
   const isDesktopApp = Boolean(window.contributionArcDesktop?.isElectron);
   const isOnboardingSettings = onboardingStep === "settings";
   const weeklyStudyHours = getWeeklyStudyHours(studyLogs);
-  const maxStudyMinutes = Math.max(1, ...weeklyStudyHours.map((item) => item.totalMinutes));
   const contributionArc = useMemo(() => getContributionArc(studyLogs), [studyLogs]);
   // GitHub contribution heatmap state. Fetched lazily from the public
   // jogruber endpoint once we know the user's GitHub username. Errors are
@@ -7606,10 +7275,6 @@ function App() {
     return ordered;
   }, [studyLogs, learningItems]);
 
-  const openQuickLogPopover = useCallback(() => {
-    setQuickLogMinutesById({});
-    setIsQuickLogPopoverOpen(true);
-  }, []);
 
   const closeQuickLogPopover = useCallback(() => {
     setIsQuickLogPopoverOpen(false);
@@ -7656,14 +7321,6 @@ function App() {
       return bTime - aTime;
     })[0];
   }, [studyLogs]);
-  const selectedStudyDayData =
-    weeklyStudyHours.find((item) => item.day === selectedStudyDay) ||
-    weeklyStudyHours.find((item) => item.isToday) ||
-    weeklyStudyHours[0];
-  const totalWeeklyLabel =
-    totalWeeklyMinutes > 0 && totalWeeklyMinutes < 60
-      ? formatStudyTime(totalWeeklyMinutes)
-      : `${(Math.round((totalWeeklyMinutes / 60) * 10) / 10).toLocaleString()}h`;
   const baseWorkspaceRooms = [...workspaceRooms, ...customRooms]
     .map(normalizeWorkspaceRoom)
     .filter((room) => !isLegacyWorkspaceRoom(room));
@@ -7820,58 +7477,12 @@ function App() {
     isUnread: note.userId !== currentUserUid && !readFloorNoteIds.has(note.id),
   }));
 
-  const roomActivityItems: RoomActivityItem[] = [
-    ...resolvedVisibleMembers.map((member) => {
-      const task = member.currentTask || member.building;
-      const activeMinutes = getWorkspaceActiveMinutes(member, workspaceNow);
-      const stayLabel = formatStayTime(activeMinutes);
-      const text =
-        member.status === "on-break"
-          ? `${member.name} stepped away for a quiet break`
-          : activeMinutes >= 180
-            ? `${member.name} reached ${stayLabel} focus`
-            : `${member.name} started building ${task}`;
-
-      return {
-        id: `active-${member.userId}-${member.joinedAt}`,
-        userId: member.userId,
-        userName: member.name,
-        avatar: "",
-        text,
-        meta: `${stayLabel} in ${selectedRoom?.name || "room"}`,
-        member,
-      };
-    }),
-    ...((selectedRoom?.history || []).slice(0, 4).map((item) => ({
-      id: `history-${item.id}`,
-      userId: item.userId,
-      userName: item.userName,
-      avatar: "",
-      text:
-        item.id === "seed-mina-beta"
-          ? `${item.userName} is quietly clearing work`
-          : `${item.userName} closed a ${formatStayTime(item.minutes)} ${item.building} session`,
-      meta: new Date(item.leftAt).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
-    })) satisfies RoomActivityItem[]),
-  ].slice(0, 7);
   const roomTotalMinutes =
     (selectedRoom?.totalMinutes || 0) +
     visibleMembers.reduce((sum, member) => sum + getWorkspaceActiveMinutes(member, workspaceNow), 0);
-  const todayRoomHistory = selectedRoom
-    ? selectedRoom.history.filter((item) => getTodayKey(new Date(item.leftAt)) === getTodayKey())
-    : [];
-  const roomContributions = todayRoomHistory.length + (isInSelectedRoom ? 1 : 0);
   const roomCommits = (selectedRoom?.commits || 0) + outputStats.commits;
   const roomOnlineCount = visibleMembers.length;
-  const userRoomHistory = allWorkspaceRooms
-    .flatMap((room) => room.history.filter((item) => item.userId === currentUserUid))
-    .sort((a, b) => new Date(b.leftAt).getTime() - new Date(a.leftAt).getTime())
-    .slice(0, 4);
   const activeMembers = allWorkspaceRooms.flatMap((room) => room.activeMembers);
-  const friendIds = new Set(friends.map((friend) => friend.uid));
-  const personalActivityMembers = activeMembers.filter(
-    (member) => member.userId === currentUserUid || friendIds.has(member.userId),
-  );
   const pinnedFriendUidSet = new Set(pinnedFriendUids);
   const sidebarFriends = friends
     .map((friend) => {
@@ -7921,27 +7532,6 @@ function App() {
       studyActivityGroups.push({ log, count: 1 });
     }
   }
-  const recentStudyActivities: LiveActivity[] = studyActivityGroups
-    .slice(0, 3)
-    .map(({ log, count }) => ({
-      id: `study-${log.id}`,
-      userId: currentUserUid,
-      userName: playerName,
-      avatar: playerAvatar,
-      text: `${playerName} completed ${formatStudyTimeJa(log.minutes)} ${log.subject}${count > 1 ? ` (×${count})` : ""}`,
-      meta: new Date(log.createdAt).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
-      status: "recent",
-    }));
-  const onlineActivities: LiveActivity[] = personalActivityMembers.slice(0, 3).map((member) => ({
-    id: `online-${member.userId}-${member.joinedAt}`,
-    userId: member.userId,
-    userName: member.name,
-    avatar: member.avatar,
-    text: `${member.name} is studying ${member.building}`,
-    meta: `${formatStayTime(getElapsedMinutes(member.joinedAt, workspaceNow))} active`,
-    status: "online",
-  }));
-  const liveActivities = [...onlineActivities, ...recentStudyActivities].slice(0, 5);
   const selectedRoomPosts = selectedRoom ? posts.filter((post) => post.roomId === selectedRoom.id).slice(0, 4) : [];
   const selectedDailyReport = dailyReports.find((report) => report.date === selectedDailyDate) || null;
   const currentLearnerDate = getLearnerDate(new Date(feedNowTick));
@@ -7983,35 +7573,6 @@ function App() {
       setDailyMessage("画像の作成に失敗しました。");
     }
   };
-  // 選択日の学習サマリー：その日の学習合計分とログ件数。
-  // 振り返り時に「今日どれだけ手を動かしたか」を即把握できるようにする。
-  const selectedDayStudySummary = useMemo(() => {
-    const dayStart = new Date(`${selectedDailyDate}T00:00:00`);
-    if (!Number.isFinite(dayStart.getTime())) {
-      return { totalMinutes: 0, logCount: 0, topSubject: "" };
-    }
-    const dayEnd = new Date(dayStart);
-    dayEnd.setDate(dayEnd.getDate() + 1);
-    const dayLogs = studyLogs.filter((log) => {
-      const t = new Date(log.createdAt).getTime();
-      return t >= dayStart.getTime() && t < dayEnd.getTime();
-    });
-    const totalMinutes = dayLogs.reduce((sum, log) => sum + (log.minutes || 0), 0);
-    // 最長 subject (= "今日のメインテーマ")
-    const subjectTotals = new Map<string, number>();
-    dayLogs.forEach((log) => {
-      subjectTotals.set(log.subject, (subjectTotals.get(log.subject) || 0) + log.minutes);
-    });
-    let topSubject = "";
-    let topMinutes = 0;
-    subjectTotals.forEach((minutes, subject) => {
-      if (minutes > topMinutes) {
-        topMinutes = minutes;
-        topSubject = subject;
-      }
-    });
-    return { totalMinutes, logCount: dayLogs.length, topSubject };
-  }, [selectedDailyDate, studyLogs]);
   // Plan items の完了率 (進捗バー用)
   const planProgress = useMemo(() => {
     const valid = dailyPlanItemsDraft.filter((item) => item.text.trim().length > 0);
@@ -8108,7 +7669,6 @@ function App() {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 12);
   const unreadNotificationCount = appNotifications.filter((item) => !item.read).length;
-  const hasUnreadNotifications = unreadNotificationCount > 0;
   const handleNotificationSoundTest = () => {
     lastNotificationSoundAtRef.current = 0;
     void playNotificationSound("default", desktopNotificationSettings);
@@ -8467,7 +8027,6 @@ function App() {
     ...node,
     ...(knowledgePositions[node.id] || {}),
   }));
-  const knowledgeNodeMap = new Map(graphNodes.map((node) => [node.id, node]));
   const selectedKnowledgeNode =
     graphNodes.find((node) => node.id === selectedKnowledgeId) || graphNodes[0] || null;
   const activeKnowledgeId = hoveredKnowledgeId || selectedKnowledgeNode?.id || "";
@@ -8597,86 +8156,7 @@ function App() {
     }
   }, [matchedStudyItem]);
 
-  const handleStudySubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
 
-    if (!currentUser) {
-      return;
-    }
-
-    const amount = Number(studyAmount);
-    if (!studySubject.trim() || !Number.isFinite(amount) || amount <= 0) {
-      return;
-    }
-
-    const minutes = Math.max(1, Math.round(amount));
-    const trimmedSubject = studySubject.trim();
-
-    // 同名統一の要: 既存の学習対象に一致すればそこへ、無ければ新しい
-    // 学習対象を「その場で」作成してから記録を紐付ける。これにより、
-    // 同じ名前の記録は必ず同一の学習対象（= 同じ色・同じ統計）に集約され、
-    // learningItemId を持たない宙ぶらりんの記録が生まれなくなる。
-    let targetItem = matchedStudyItem;
-    if (!targetItem) {
-      const nowIso = new Date().toISOString();
-      const createdItem: LearningItem = {
-        id: crypto.randomUUID(),
-        userId: currentUser.uid,
-        name: trimmedSubject.slice(0, 60),
-        category: "stack",
-        color: studyColor,
-        status: "active",
-        archived: false,
-        createdAt: nowIso,
-        updatedAt: nowIso,
-      };
-      setLearningItems((items) => [...items, createdItem]);
-      void saveLearningItemToCloud(db, createdItem).catch((error) => {
-        console.info("Learning item auto-create skipped.", error);
-      });
-      targetItem = createdItem;
-    }
-
-    const nextLog: StudyLog = {
-      id: crypto.randomUUID(),
-      subject: targetItem.name,
-      minutes,
-      createdAt: new Date().toISOString(),
-      color: targetItem.color,
-      learningItemId: targetItem.id,
-    };
-    setStudyLogs((logs) => [...logs, nextLog]);
-    void saveStudyLogToCloud(db, currentUser.uid, nextLog, {
-      earnedExp: Math.round(minutes * 1.25),
-      source: "manual",
-      organizationId: currentOrganization?.id,
-    }).catch((error) => {
-      // Surface to console as an error so silent persistence failures
-      // (rules / network) don't quietly lose records. Local state +
-      // localStorage still hold the log; the subscription merge step
-      // will retry the upload on the next snapshot.
-      console.error("Study log cloud save failed.", error);
-    });
-    // メインフォームからの学習記録も FEED に自動投稿する。以前は学習詳細
-    // モーダルからの quick log でしか流れていなかったため、ホームの記録
-    // フォームから記録するユーザーの積み上げが FEED に出ず、「みんなの
-    // 学習が流れてこない」状態になっていた。
-    void enqueueAutoPost({
-      kind: "auto-study",
-      text: `『${targetItem.name}』を ${formatStudyTimeJa(minutes)} 学習しました`,
-      studyMinutesValue: minutes,
-    });
-    setStudyAmount("30");
-  };
-
-  // 分入力の±ステッパー。最小1分。空欄や不正値は0扱いから加算する。
-  const adjustStudyMinutes = (delta: number) => {
-    setStudyAmount((prev) => {
-      const current = Number(prev);
-      const base = Number.isFinite(current) ? current : 0;
-      return String(Math.max(1, Math.round(base) + delta));
-    });
-  };
 
   const openLearningEditorForCreate = (presetName = "") => {
     setIsLearningDeleteConfirming(false);
@@ -8693,146 +8173,6 @@ function App() {
     });
   };
 
-  // 学習記録の本フォーム。プロフィールの学習ログと「記録する」ビュー
-  // 先頭の両方で同じものを出す。導線を1本化して "記録する=ここで記録"
-  // という期待にそのまま応えるための共有レンダラ(views は排他なので
-  // datalist id / state 共有でも衝突しない)。
-  const renderStudyForm = () => {
-    const trimmedSubject = studySubject.trim();
-    // 既存名にマッチしている＝色は学習対象に統一済み。記録フォームでは
-    // 色を選び直させず、登録色をロック表示する（同名統一の担保）。
-    const isExistingName = Boolean(matchedStudyItem);
-    const selectedColor =
-      studyColorOptions.find((color) => color.value === studyColor) ?? studyColorOptions[0];
-    return (
-    <form className="study-form" onSubmit={handleStudySubmit}>
-      <label className="study-subject-field">
-        <span>{t("学習内容")}</span>
-        {(() => {
-          const activeItems = learningItems.filter((item) => !item.archived);
-          const recentItemIds: string[] = [];
-          for (let logIdx = studyLogs.length - 1; logIdx >= 0 && recentItemIds.length < 3; logIdx--) {
-            const logItemId = studyLogs[logIdx].learningItemId;
-            if (logItemId && !recentItemIds.includes(logItemId) && activeItems.some((item) => item.id === logItemId)) {
-              recentItemIds.push(logItemId);
-            }
-          }
-          const recentChips = recentItemIds
-            .map((id) => activeItems.find((item) => item.id === id))
-            .filter((item): item is LearningItem => Boolean(item));
-          return (
-            <>
-              {recentChips.length > 0 ? (
-                <div className="study-subject-chips" aria-label="最近使った学習対象">
-                  {recentChips.map((item) => (
-                    <button
-                      type="button"
-                      key={item.id}
-                      className={matchedStudyItem?.id === item.id ? "active" : ""}
-                      onClick={() => {
-                        setStudySubject(item.name);
-                        setStudyColor(item.color);
-                      }}
-                      style={{ "--chip-color": item.color } as CSSProperties}
-                    >
-                      {item.name}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-              <input
-                value={studySubject}
-                onChange={(event) => setStudySubject(event.target.value)}
-                placeholder="Java / React / 資格勉強"
-                list="learning-items-datalist"
-              />
-              <datalist id="learning-items-datalist">
-                {activeItems.map((item) => (
-                  <option key={item.id} value={item.name} />
-                ))}
-              </datalist>
-            </>
-          );
-        })()}
-      </label>
-      <div className="study-time-field">
-        <span className="study-time-label">{t("時間")}</span>
-        <div className="study-time-quick" role="group" aria-label={t("時間")}>
-          {STUDY_TIME_PRESETS.map((preset) => (
-            <button
-              type="button"
-              key={preset}
-              className={Number(studyAmount) === preset ? "active" : ""}
-              onClick={() => setStudyAmount(String(preset))}
-            >
-              {formatStudyMinutesLabel(preset)}
-            </button>
-          ))}
-        </div>
-        <div className="study-time-input">
-          <button
-            type="button"
-            className="study-time-step"
-            aria-label="1分減らす"
-            onClick={() => adjustStudyMinutes(-1)}
-          >
-            −
-          </button>
-          <input
-            type="number"
-            min="1"
-            step="1"
-            inputMode="numeric"
-            value={studyAmount}
-            onChange={(event) => setStudyAmount(event.target.value)}
-            aria-label={t("時間")}
-          />
-          <span className="study-time-unit">分</span>
-          <button
-            type="button"
-            className="study-time-step"
-            aria-label="1分増やす"
-            onClick={() => adjustStudyMinutes(1)}
-          >
-            ＋
-          </button>
-        </div>
-      </div>
-      <div className="study-form-footer">
-        <fieldset className={`study-color-field${isExistingName ? " is-locked" : ""}`}>
-          <legend>
-            {isExistingName
-              ? `${matchedStudyItem?.name} のカラー`
-              : trimmedSubject
-                ? `「${trimmedSubject}」につける色`
-                : "カラー"}
-          </legend>
-          <div className="study-color-options" aria-disabled={isExistingName || undefined}>
-            {studyColorOptions.map((color) => (
-              <label key={color.value} title={color.labelJa}>
-                <input
-                  type="radio"
-                  name="study-color"
-                  value={color.value}
-                  checked={studyColor === color.value}
-                  disabled={isExistingName}
-                  onChange={(event) => setStudyColor(event.target.value)}
-                />
-                <span style={{ background: color.value }} />
-              </label>
-            ))}
-          </div>
-          <small className="study-color-caption">
-            {isExistingName
-              ? "同じ名前は色を統一。変更はライブラリから"
-              : `選択中: ${selectedColor.labelJa}`}
-          </small>
-        </fieldset>
-        <button type="submit">記録 +EXP</button>
-      </div>
-    </form>
-    );
-  };
 
   const openLearningEditorForEdit = (item: LearningItem) => {
     setIsLearningDeleteConfirming(false);
@@ -10846,49 +10186,6 @@ function App() {
     setCurrentView("profile");
   };
 
-  const handleFollowToggle = async (profile: UserProfile) => {
-    if (!userId) {
-      setSearchError("フォローする前に設定からユーザーIDを登録してください。");
-      return;
-    }
-
-    const isFollowing = following.includes(profile.uid);
-    const currentRef = doc(db, "users", currentUser.uid);
-
-    try {
-      await setDoc(
-        currentRef,
-        {
-          uid: currentUser.uid,
-          userId,
-          displayName: playerName,
-          photoURL: playerAvatar,
-          searchName: playerName.toLowerCase(),
-          determination,
-          characterColor: playerCharacterColor,
-          following,
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true },
-      );
-      await updateDoc(currentRef, {
-        following: isFollowing ? arrayRemove(profile.uid) : arrayUnion(profile.uid),
-        updatedAt: serverTimestamp(),
-      });
-
-      setFollowing((items) =>
-        isFollowing ? items.filter((item) => item !== profile.uid) : [...items, profile.uid],
-      );
-    } catch (error) {
-      setSearchError(
-        getFirestoreErrorMessage(
-          error,
-          "フォロー状態を更新できませんでした。",
-          "フォロー状態を保存する権限が有効になっていません。少し時間を置いて再度お試しください。",
-        ),
-      );
-    }
-  };
 
   const handleDeterminationSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -11113,88 +10410,9 @@ function App() {
     handleCloseRoomPanels();
   };
 
-  const handleRoomActivityOpen = (item: RoomActivityItem) => {
-    if (item.userId === currentUser.uid) {
-      setProfileMember(null);
-      setProfileUser(null);
-      setCurrentView("profile");
-      return;
-    }
 
-    const activeMember = item.member || activeMembers.find((member) => member.userId === item.userId);
-    if (activeMember) {
-      handleMemberProfileOpen(activeMember);
-      return;
-    }
 
-    setProfileMember(null);
-    setProfileUser({
-      uid: item.userId,
-      userId: item.userId.startsWith("npc-") ? item.userName.toLowerCase() : item.userId,
-      displayName: item.userName,
-      photoURL: item.avatar || "",
-      searchName: item.userName.toLowerCase(),
-      following: [],
-      followers: [],
-      determination: item.text,
-      characterColor: characterColorOptions[0].value,
-    });
-    setFriendMessage("");
-    setCurrentView("profile");
-  };
 
-  const handleLiveActivityOpen = (activity: LiveActivity) => {
-    if (activity.userId === currentUser.uid) {
-      setProfileMember(null);
-      setProfileUser(null);
-      setCurrentView("profile");
-      return;
-    }
-
-    const activeMember = activeMembers.find((member) => member.userId === activity.userId);
-    if (activeMember) {
-      handleMemberProfileOpen(activeMember);
-      return;
-    }
-
-    setProfileMember(null);
-    setProfileUser({
-      uid: activity.userId,
-      userId: activity.userId.startsWith("npc-") ? activity.userName.toLowerCase() : activity.userId,
-      displayName: activity.userName,
-      photoURL: activity.avatar || "",
-      searchName: activity.userName.toLowerCase(),
-      following: [],
-      followers: [],
-      determination: activity.text,
-      characterColor: characterColorOptions[0].value,
-    });
-    setFriendMessage("");
-    setCurrentView("profile");
-  };
-
-  const handleAvatarChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const nextAvatar = typeof reader.result === "string" ? reader.result : "";
-      const accountScope = getAccountStorageScope(currentUser.uid, userId);
-      setPlayerAvatar(nextAvatar);
-      safeSetLocalStorage(getAccountStorageKey(accountScope, "avatar"), nextAvatar);
-    };
-    reader.readAsDataURL(file);
-    event.target.value = "";
-  };
-
-  const handleAvatarRemove = () => {
-    const accountScope = getAccountStorageScope(currentUser.uid, userId);
-    setPlayerAvatar("");
-    window.localStorage.removeItem(getAccountStorageKey(accountScope, "avatar"));
-  };
 
   const closeWorkspaceSession = (
     roomId: string,
@@ -12646,12 +11864,6 @@ function App() {
     setLastRoomSession(null);
   };
 
-  const handleStudyLogDelete = (logId: string) => {
-    setStudyLogs((logs) => logs.filter((log) => log.id !== logId));
-    void deleteStudyLogFromCloud(db, logId).catch((error) => {
-      console.info("Study log cloud delete skipped.", error);
-    });
-  };
 
   // 過去に記録した学習ログの subject 名を変更する。
   // - 楽観的に local state を更新
@@ -12660,54 +11872,7 @@ function App() {
   // - 空文字は許可しない (空 → 何の subject か分からなくなる)
   /* 過去の学習記録の時間 (minutes) を変更する。
      - 1〜1440 分の範囲でクランプ (1日を超えない)
-     - 楽観更新 → saveStudyLogToCloud → 失敗時 rollback */
-  const handleStudyLogMinutesEdit = (logId: string, nextMinutes: number) => {
-    if (!currentUser) return;
-    if (!Number.isFinite(nextMinutes)) return;
-    const clamped = Math.max(1, Math.min(24 * 60, Math.round(nextMinutes)));
-    const original = studyLogs.find((log) => log.id === logId);
-    if (!original) return;
-    if (original.minutes === clamped) return;
 
-    const updated: StudyLog = { ...original, minutes: clamped };
-    setStudyLogs((logs) => logs.map((log) => (log.id === logId ? updated : log)));
-    void saveStudyLogToCloud(db, currentUser.uid, updated, {})
-      .then(() => {
-        showToast(`${formatStudyTimeJa(clamped)}に変更しました`, { kind: "success" });
-      })
-      .catch((error) => {
-        console.info("Study log minutes edit cloud sync skipped.", error);
-        setStudyLogs((logs) => logs.map((log) => (log.id === logId ? original : log)));
-        showToast("時間を変更できませんでした", { kind: "error" });
-      });
-  };
-
-  const handleStudyLogRename = (logId: string, nextSubject: string) => {
-    if (!currentUser) return;
-    const trimmed = nextSubject.trim().slice(0, 60);
-    if (!trimmed) {
-      showToast("名前を入力してください", { kind: "info" });
-      return;
-    }
-    const original = studyLogs.find((log) => log.id === logId);
-    if (!original) return;
-    if (original.subject === trimmed) return; // 変化なし
-
-    const updated: StudyLog = { ...original, subject: trimmed };
-    setStudyLogs((logs) => logs.map((log) => (log.id === logId ? updated : log)));
-    void saveStudyLogToCloud(db, currentUser.uid, updated, {
-      // 学習対象 (learningItemId) との連携は変更しない (学習対象自体は別管理)
-    })
-      .then(() => {
-        showToast(`「${trimmed}」に変更しました`, { kind: "success" });
-      })
-      .catch((error) => {
-        console.info("Study log rename cloud sync skipped.", error);
-        // rollback
-        setStudyLogs((logs) => logs.map((log) => (log.id === logId ? original : log)));
-        showToast("名前を変更できませんでした", { kind: "error" });
-      });
-  };
 
   /* Donut legend / ジャンル一覧 から同じ subject の study log をまとめて
      リネーム。「開発」「やあ」など重複・誤入力をユーザーが後から
@@ -12752,52 +11917,8 @@ function App() {
       });
   };
 
-  const handleKnowledgeImport = async (event: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []).filter((file) => file.name.toLowerCase().endsWith(".md"));
-    if (files.length === 0) {
-      return;
-    }
 
-    const notes = await Promise.all(
-      files.map(async (file) => ({
-        title: getNoteTitle(file),
-        content: await file.text(),
-      })),
-    );
-    const nextGraph = buildObsidianGraph(notes);
-    setKnowledgeGraph(nextGraph);
-    setSelectedKnowledgeId(nextGraph.nodes[0]?.id || "");
-    setHoveredKnowledgeId("");
-    setKnowledgePositions({});
-    event.target.value = "";
-  };
 
-  const getKnowledgePoint = (event: ReactPointerEvent<SVGSVGElement>) => {
-    const svg = graphSvgRef.current;
-    if (!svg) {
-      return { x: 0, y: 0 };
-    }
-
-    const rect = svg.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width) * 760;
-    const y = ((event.clientY - rect.top) / rect.height) * 460;
-    return {
-      x: 380 + (x - 380) / knowledgeScale,
-      y: 230 + (y - 230) / knowledgeScale,
-    };
-  };
-
-  const handleKnowledgeDrag = (event: ReactPointerEvent<SVGSVGElement>) => {
-    if (!draggingKnowledgeId) {
-      return;
-    }
-
-    const point = getKnowledgePoint(event);
-    setKnowledgePositions((positions) => ({
-      ...positions,
-      [draggingKnowledgeId]: point,
-    }));
-  };
 
   const playerStatusCard = (isInteractive = false) => {
     const hasGithub = Boolean(githubUsername || githubId);
@@ -19663,7 +18784,6 @@ function App() {
                       onTaskChange={setWorkspaceTask}
                       onJoin={() => handleRoomJoin(selectedRoom.id)}
                       onLeave={handleRoomLeave}
-                      onResetPresence={resetWorkspacePresence}
                       presetMessages={workspacePresetMessages}
                       onPresetMessagesChange={setWorkspacePresetMessages}
                       onPresetMessage={handleWorkspacePresetMessage}
@@ -19673,7 +18793,6 @@ function App() {
                       onRoomDelete={() => handleRoomDelete(selectedRoom.id)}
                       canDeleteRoom={selectedRoom.createdBy === currentUser.uid || isDeveloperAccount}
                       isPlayerWalking={isPlayerWalking}
-                      activityItems={roomActivityItems}
                       onStageTap={(x, y) => {
                         // タップした座標 (%) を目的地として walk loop に渡す。
                         // 自分が入室中かつポップオーバーが開いていない時のみ。
@@ -19698,7 +18817,6 @@ function App() {
                         )
                       }
                       onMemberOpen={handleRoomMemberTap}
-                      onActivityOpen={handleRoomActivityOpen}
                       selectedMemberId={roomMemberPanel?.userId ?? null}
                       memberPanel={
                         roomMemberPanel
@@ -19965,26 +19083,10 @@ function App() {
                           </article>
                         );
                       })()}
-                      lastSessionLabel={
-                        lastRoomSession
-                          ? `+${lastRoomSession.exp} EXP / ${formatStayTime(lastRoomSession.minutes)}を記録`
-                          : ""
-                      }
                       totalLearnedLabel={`${Math.round(roomTotalMinutes / 60).toLocaleString()}h learned`}
-                      contributionLabel={`${roomContributions.toLocaleString()} contributions today`}
                       learningItemSuggestions={learningItems
                         .filter((item) => !item.archived)
                         .map((item) => ({ id: item.id, name: item.name, color: item.color }))}
-                      recentLearningItemIds={(() => {
-                        const ids: string[] = [];
-                        for (let i = studyLogs.length - 1; i >= 0 && ids.length < 3; i--) {
-                          const lid = studyLogs[i].learningItemId;
-                          if (lid && !ids.includes(lid) && learningItems.some((item) => item.id === lid && !item.archived)) {
-                            ids.push(lid);
-                          }
-                        }
-                        return ids;
-                      })()}
                       onLearningItemRegister={(presetName) => openLearningEditorForCreate(presetName)}
                       onOpenRecruitmentModal={handleOpenRecruitmentModal}
                       activeRecruitmentSummary={(() => {
