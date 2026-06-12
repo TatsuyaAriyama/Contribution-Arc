@@ -6053,7 +6053,20 @@ function App() {
   // fetch + the live snapshot of the room the user is in) into `customRooms`.
   // Hoisted out of the old all-rooms subscription effect so the manual refresh
   // button and the single-room live subscription can both drive it.
-  const applyRemoteRooms = useCallback(() => {
+  //
+  // scope:
+  //   "lobby"      … remote が全 room を持つ (lobby fetch 直後)。
+  //                  → currentRooms に「remote にない」room があれば、それは
+  //                    削除済み or 自分以外が消したもの。cache 復活を防ぐため
+  //                    pending write 中のローカル新規 room 以外は捨てる。
+  //   "activeRoom" … remote は active room しか含まない (single-room snapshot)。
+  //                  → 他の room は currentRooms から保持する (既存挙動)。
+  //
+  // 不具合の原因だった「部屋を解体しても reload で復活する」は、リロード時の
+  // lobby fetch 後にも "remote にない → 保持" が走り、localStorage cache 内の
+  // 削除済み room が finalRoomMap に戻されていたことに起因する。scope="lobby"
+  // のときだけ「remote に存在しない room は捨てる」挙動に切り替える。
+  const applyRemoteRooms = useCallback((scope: "lobby" | "activeRoom" = "activeRoom") => {
     if (!currentUser) {
       return;
     }
@@ -6149,8 +6162,16 @@ function App() {
       // only refreshes the active room) — stay as-is until the next
       // lobby refresh. This keeps the lobby list stable between manual
       // refreshes instead of collapsing to just the active room.
+      //
+      // ただし scope="lobby" のときは remote が全 room を持つので、
+      // currentRooms にあって remote に無い room は「削除された」
+      // と判断できる。pending write 中 (未同期の新規 room) だけは保護し、
+      // それ以外は捨てる ─ これで「解体 → reload で復活」の経路を絶つ。
       currentRooms.forEach((room) => {
         if (!finalRoomMap.has(room.id) && !remoteRoomIds.has(room.id)) {
+          if (scope === "lobby" && !pendingWorkspaceRoomsRef.current.has(room.id)) {
+            return; // skip — remote が "存在しない" と確定したので cache 復活させない
+          }
           finalRoomMap.set(room.id, room);
         }
       });
@@ -6203,7 +6224,9 @@ function App() {
       ]);
       remoteWorkspaceRoomsRef.current.rooms = readRoomsSnapshot(modernSnap);
       remoteWorkspaceRoomsRef.current.legacyRooms = readRoomsSnapshot(legacySnap);
-      applyRemoteRooms();
+      // lobby fetch 後は remote が全 room を持つので、cache に居て remote に
+      // 居ない room は "削除済み" と確定できる。"lobby" scope で適用。
+      applyRemoteRooms("lobby");
     } catch (error) {
       console.info("Workspace lobby fetch skipped.", error);
     }
@@ -11620,6 +11643,18 @@ function App() {
     );
     const nextRooms = customRooms.filter((item) => item.id !== roomId);
     setCustomRooms(nextRooms);
+    /* localStorage cache を即時更新 — setCustomRooms → useEffect での
+       同期は非同期なので、解体直後にユーザーがリロードしたケースで
+       「削除前 cache」が残り、再 hydration で復活する経路を塞ぐ。
+       (applyRemoteRooms("lobby") も最後に削除済み判定を入れているが、
+       双方掛けてレース完全排除。) */
+    try {
+      const serialized = JSON.stringify(serializeWorkspaceRooms(nextRooms));
+      safeSetLocalStorage(sharedWorkspaceRoomsStorageKey, serialized);
+      lastSyncedWorkspaceRoomsRef.current = serialized;
+    } catch {
+      /* localStorage が落ちていても cloud delete は試みる */
+    }
     void deleteDoc(doc(db, workspaceRoomsCollectionName, roomId)).catch((error) => {
       console.info("Workspace room delete cloud sync skipped.", error);
     });
