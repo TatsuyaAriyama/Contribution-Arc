@@ -10156,11 +10156,18 @@ function App() {
   }
 
   if (!isAuthReady) {
+    /* Phase 11d: 起動 splash と同じ nondo 風語彙の「auth 復帰中」表示。
+       純黒/純白 + 1.5px ink hairline + 3 dot 呼吸で世界観を統一し、
+       「起動 splash → ここ → ログイン or ホーム」の流れに違和感を出さない。 */
     return (
-      <main className="login-shell loading-auth">
-        <section className="card login-card">
-          <p className="card-kicker">Contribution Arc</p>
-          <h2>Loading your workspace...</h2>
+      <main className="boot-loading-shell" aria-busy="true">
+        <section className="boot-loading-card" role="status" aria-live="polite">
+          <span className="boot-loading-mark" aria-hidden="true">A</span>
+          <h1 className="boot-loading-title">Contribution Arc</h1>
+          <p className="boot-loading-subtitle">Loading</p>
+          <div className="boot-loading-dots" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
         </section>
       </main>
     );
