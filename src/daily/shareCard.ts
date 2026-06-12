@@ -17,7 +17,6 @@ export type DailyShareData = {
   /** "6月11日(水)" のような表示用日付。 */
   dateLabel: string;
   authorName: string;
-  authorTitle?: string;
   /** 連続日数。0 なら非表示。 */
   streakDays?: number;
   planItems: DailyShareItem[];
@@ -320,13 +319,10 @@ export async function shareDailyReportImage(data: DailyShareData): Promise<Share
   ctx.stroke();
   y += 16;
 
-  // footer: 著者（左） + ブランド（右）
+  // footer: 著者（左） + ブランド（右）。称号は付けず名前だけにする。
   ctx.font = `700 13px ${FONT}`;
   ctx.fillStyle = COLOR.ink;
-  const author = data.authorTitle
-    ? `${data.authorName} · ${data.authorTitle}`
-    : data.authorName;
-  ctx.fillText(author, x, y);
+  ctx.fillText(data.authorName, x, y);
   ctx.font = `700 12px ${FONT}`;
   ctx.fillStyle = COLOR.sub;
   const brand = "Contribution Arc";

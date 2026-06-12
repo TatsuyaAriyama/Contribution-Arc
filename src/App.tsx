@@ -7483,7 +7483,6 @@ function App() {
       const result = await shareDailyReportImage({
         dateLabel: formatDailyDate(selectedDailyDate),
         authorName: selectedDailyReport?.userName || playerName || "Developer",
-        authorTitle: selectedDailyReport?.currentTitle,
         streakDays: dailyReportStreak,
         planItems,
         reflection,
