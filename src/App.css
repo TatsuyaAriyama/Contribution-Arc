@@ -240,14 +240,6 @@
   z-index: -1;
   animation: notification-dot-halo 2.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
-@keyframes notification-dot-bob {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.18); }
-}
-@keyframes notification-dot-halo {
-  0% { transform: scale(0.7); opacity: 0.55; }
-  70%, 100% { transform: scale(2.2); opacity: 0; }
-}
 @media (prefers-reduced-motion: reduce) {
   .notification-button .notification-dot,
   .notification-button .notification-dot::after {
@@ -1098,10 +1090,6 @@
   box-shadow: var(--shadow-card);
 }
 
-[data-theme="dark"] .settings-character-color-panel {
-  border-color: var(--line-strong);
-  background: var(--surface-warm);
-}
 
 .onboarding-settings-modal .settings-character-color-panel {
   gap: 10px;
@@ -1379,29 +1367,8 @@
   animation: onboarding-fade-up 0.55s ease 2.35s forwards;
 }
 
-@keyframes onboarding-type {
-  to {
-    max-width: 100%;
-  }
-}
 
-@keyframes onboarding-caret {
-  50% {
-    border-color: transparent;
-  }
-}
 
-@keyframes onboarding-fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
 .onboarding-firstpost-banner {
   position: relative;
@@ -1470,43 +1437,8 @@
   animation: onboarding-firstpost-pulse 2.4s ease-in-out infinite;
 }
 
-@keyframes onboarding-firstpost-fade {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
 
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
-@keyframes onboarding-firstpost-bounce {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(5px);
-  }
-}
-
-@keyframes onboarding-firstpost-pulse {
-  0%,
-  100% {
-    box-shadow:
-      0 0 0 4px rgba(31, 111, 74, 0.14),
-      var(--shadow-card);
-  }
-
-  50% {
-    box-shadow:
-      0 0 0 8px rgba(31, 111, 74, 0.22),
-      var(--shadow-card);
-  }
-}
 
 @media (prefers-reduced-motion: reduce) {
   .onboarding-firstpost-arrow,
@@ -3070,16 +3002,6 @@
 .home-announcement-feedback-cta:active {
   transform: scale(0.97);
 }
-@keyframes home-announcement-body-in {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   .home-announcement-body,
   .home-announcement-chevron {
@@ -3173,10 +3095,6 @@
   box-shadow: 0 30px 80px rgba(var(--ink-rgb), 0.22);
   overflow: hidden;
   animation: announcements-modal-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-@keyframes announcements-modal-in {
-  from { opacity: 0; transform: translateY(12px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 .announcements-modal-head {
   display: flex;
@@ -3850,14 +3768,6 @@
   background: #c8a95b;
 }
 
-[data-theme="dark"] .member-profile-status-chip.is-friend {
-  background: rgba(74, 222, 128, 0.12);
-  color: #6ee7a1;
-}
-[data-theme="dark"] .member-profile-status-chip.is-pending {
-  background: rgba(200, 169, 91, 0.18);
-  color: #e8c878;
-}
 
 /* "Now" panel — the focused live-activity strip that replaces the
    5-tile grid. Left column: task + room/stay context. Right column:
@@ -3958,13 +3868,7 @@
   white-space: nowrap;
 }
 
-[data-theme="dark"] .member-profile-now-exp {
-  background: rgba(74, 222, 128, 0.1);
-}
 
-[data-theme="dark"] .member-profile-now-exp strong {
-  color: #6ee7a1;
-}
 
 @media (max-width: 480px) {
   .member-profile-now {
@@ -4555,16 +4459,6 @@
   opacity: 1;
   animation: feed-fade-in 0.2s ease both;
 }
-@keyframes feed-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   .feed-view-content.is-hydrated {
     animation: none;
@@ -4603,11 +4497,6 @@
 }
 .pull-to-refresh-indicator.is-refreshing svg {
   animation: pull-refresh-spin 0.9s linear infinite;
-}
-@keyframes pull-refresh-spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   .pull-to-refresh-indicator.is-refreshing svg {
@@ -4883,12 +4772,6 @@
     0 4px 10px -6px rgba(var(--ink-rgb), 0.10);
 }
 
-[data-theme="dark"] .log-post-card:hover {
-  border-color: rgba(var(--ink-rgb), 0.18);
-  box-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.25),
-    0 10px 26px -10px rgba(0, 0, 0, 0.45);
-}
 
 .log-post-card.compact {
   gap: 8px;
@@ -4907,13 +4790,6 @@
   );
 }
 
-[data-theme="dark"] .log-post-card.is-own {
-  background: linear-gradient(
-    90deg,
-    rgba(74, 222, 128, 0.07) 0%,
-    var(--surface) 60%
-  );
-}
 
 /* ─── 自動投稿の細長コンパクト pill カード ───
    学習記録 / 作業部屋退室の自動投稿用。1 行に「avatar・kind icon・名前・
@@ -4935,13 +4811,6 @@
   background: linear-gradient(
     90deg,
     rgba(31, 111, 74, 0.06) 0%,
-    var(--surface) 70%
-  );
-}
-[data-theme="dark"] .log-post-card-compact.is-own {
-  background: linear-gradient(
-    90deg,
-    rgba(74, 222, 128, 0.07) 0%,
     var(--surface) 70%
   );
 }
@@ -5373,11 +5242,6 @@
   z-index: 30;
 }
 
-[data-theme="dark"] .log-like-button[data-tooltip]::after,
-[data-theme="dark"] .log-reply-toggle[data-tooltip]::after {
-  background: rgba(255, 255, 255, 0.94);
-  color: #000000;
-}
 
 .log-like-button[data-tooltip]:hover::after,
 .log-reply-toggle[data-tooltip]:hover::after {
@@ -6337,16 +6201,6 @@
     0 8px 22px rgba(var(--ink-rgb), 0.12);
 }
 
-@keyframes plan-checklist-text-pop {
-  0% {
-    transform: scale(0.97);
-    opacity: 0.85;
-  }
-  100% {
-    transform: scale(1.02);
-    opacity: 1;
-  }
-}
 
 /* 編集中の行全体も僅かに前に出して中央寄せ感を強める。 */
 .plan-checklist-row.is-editing {
@@ -7451,23 +7305,8 @@
   border-color: rgba(var(--ink-rgb), 0.24);
 }
 
-[data-theme="dark"] .player-chip-streak {
-  border-color: rgba(255, 170, 100, 0.32);
-  background: rgba(255, 170, 100, 0.1);
-  color: #ffb478;
-}
 
-[data-theme="dark"] .player-chip-today {
-  border-color: rgba(74, 222, 128, 0.32);
-  background: rgba(74, 222, 128, 0.1);
-  color: var(--green);
-}
 
-[data-theme="dark"] .player-chip-org {
-  border-color: rgba(96, 165, 250, 0.32);
-  background: rgba(96, 165, 250, 0.1);
-  color: #93c5fd;
-}
 
 /* 決意 panel rendered on the self-status card. Sits below the
    contribution summary; muted background frames the user's
@@ -10056,126 +9895,16 @@
   margin-top: 20px;
 }
 
-@keyframes exp-rise {
-  from {
-    transform: scaleX(0);
-    transform-origin: left center;
-  }
-  to {
-    transform: scaleX(1);
-    transform-origin: left center;
-  }
-}
 
-@keyframes bar-grow {
-  from {
-    height: 0;
-  }
-  to {
-    height: var(--bar-height);
-  }
-}
 
-@keyframes cell-appear {
-  from {
-    opacity: 0;
-    transform: translateY(5px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
 
-@keyframes hero-idle {
-  0%,
-  100% {
-    transform: translateY(-6px);
-  }
-  50% {
-    transform: translateY(-11px);
-  }
-}
 
-@keyframes quiet-glow {
-  0% {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  20%,
-  80% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-3px);
-  }
-}
 
-@keyframes workspace-sheen {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
 
-@keyframes workspace-dust {
-  0%,
-  100% {
-    opacity: 0.24;
-    transform: translateY(3px) scale(0.86);
-  }
-  45% {
-    opacity: 0.7;
-    transform: translateY(-3px) scale(1);
-  }
-}
 
-@keyframes workspace-orbit {
-  0%,
-  100% {
-    transform: rotate(-24deg) scale(1);
-  }
-  50% {
-    transform: rotate(-14deg) scale(1.04);
-  }
-}
 
-@keyframes workspace-pulse {
-  0%,
-  100% {
-    opacity: 0.42;
-    transform: scale(0.86);
-  }
-  50% {
-    opacity: 0.9;
-    transform: scale(1);
-  }
-}
 
-@keyframes today-bar-glow {
-  0%,
-  100% {
-    opacity: 0.46;
-  }
-  50% {
-    opacity: 0.95;
-  }
-}
 
-@keyframes contribution-line {
-  0%,
-  100% {
-    filter: brightness(1);
-  }
-  50% {
-    filter: brightness(1.08);
-  }
-}
 
 .social-card > div:first-child {
   max-width: 620px;
@@ -11034,10 +10763,6 @@
   transform: translateY(-1px);
 }
 
-[data-theme="dark"] .room-preview-join:hover {
-  background: var(--cta-bg);
-  filter: brightness(1.05);
-}
 
 /* 解体 (Dev / 作成者) — 入室せずにプレビューから部屋を消すための
    危険操作ボタン。入室 CTA より控えめな ghost スタイルにして
@@ -11200,16 +10925,6 @@
   overflow-wrap: anywhere;
 }
 
-@keyframes workspace-chat-log-in {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
 @media (max-width: 720px) {
   .workspace-chat-log {
@@ -11441,10 +11156,6 @@
   color: var(--green);
 }
 
-[data-theme="dark"] .workspace-room-overlay {
-  background: rgba(22, 24, 28, 0.88);
-  border-color: rgba(255, 255, 255, 0.12);
-}
 
 @media (max-width: 540px) {
   .workspace-room-overlay {
@@ -11928,19 +11639,6 @@
   animation: floor-note-glow 2.2s ease-in-out infinite;
 }
 
-@keyframes floor-note-glow {
-  0%,
-  100% {
-    box-shadow:
-      0 5px 10px rgba(var(--ink-rgb), 0.2),
-      0 0 0 0 rgba(245, 180, 80, 0);
-  }
-  50% {
-    box-shadow:
-      0 5px 10px rgba(var(--ink-rgb), 0.2),
-      0 0 16px 3px rgba(245, 180, 80, 0.75);
-  }
-}
 
 @media (prefers-reduced-motion: reduce) {
   .workspace-floor-note.is-unread .workspace-floor-note-icon {
@@ -11965,14 +11663,6 @@
   animation: workspace-popover-fade 0.18s ease;
 }
 
-@keyframes workspace-popover-fade {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
 
 .workspace-stage-popover {
   /* Portal 化により document.body 直下なので fixed + 確実な z-index。
@@ -11982,12 +11672,6 @@
   animation: workspace-popover-rise 0.2s ease;
 }
 
-@keyframes workspace-popover-rise {
-  from {
-    opacity: 0;
-    transform: translate(-50%, calc(-100% - 6px));
-  }
-}
 
 .workspace-member-popover {
   left: var(--anchor-x);
@@ -12018,12 +11702,6 @@
   animation: workspace-popover-pop 0.2s ease;
 }
 
-@keyframes workspace-popover-pop {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -46%) scale(0.96);
-  }
-}
 
 /* 着替えポップオーバー: wider than the note/monument cards to fit the
    shape + color pickers comfortably, and scrollable on short screens. */
@@ -12330,55 +12008,13 @@
    stretches tall and thin, settling into a slight squash at the bottom —
    the classic weightless-float read. Units are % of the group's own box
    (transform-box: fill-box) so the amplitude scales with the sprite. */
-@keyframes ghost-bob {
-  0%,
-  100% {
-    transform: translateY(2.5%) scaleX(1.03) scaleY(0.97);
-  }
-  50% {
-    transform: translateY(-5.5%) scaleX(0.975) scaleY(1.035);
-  }
-}
 
 /* Slow pendulum lean, pivoting from the tail. */
-@keyframes ghost-sway {
-  0%,
-  100% {
-    transform: rotate(-2.2deg);
-  }
-  50% {
-    transform: rotate(2.2deg);
-  }
-}
 
 /* Quick blink near the end of the cycle — eyes are open the vast
    majority of the time. */
-@keyframes ghost-blink {
-  0%,
-  90%,
-  100% {
-    transform: scaleY(1);
-  }
-  94% {
-    transform: scaleY(0.08);
-  }
-  97% {
-    transform: scaleY(1);
-  }
-}
 
 /* Faint breathing halo, synced to the bob period. */
-@keyframes ghost-aura-breathe {
-  0%,
-  100% {
-    opacity: 0.2;
-    transform: scale(0.98);
-  }
-  50% {
-    opacity: 0.32;
-    transform: scale(1.04);
-  }
-}
 
 @media (prefers-reduced-motion: reduce) {
   .actor-sprite.shape-ghost .ghost-bob,
@@ -12717,45 +12353,11 @@
   transform: translateX(-50%) rotate(0deg);
 }
 
-@keyframes workspace-owl-hop {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  35% {
-    transform: translateY(-7px);
-  }
-  60% {
-    transform: translateY(-2px);
-  }
-}
 
 /* Ambient ~270° head turn. The owl mostly faces forward (long
    dwell), then snaps to one side, holds, snaps back, snaps to the
    opposite side, holds, snaps back. Both turns visible in a
    single 7.2s cycle. */
-@keyframes workspace-owl-head-turn {
-  0%,
-  38% {
-    transform: translateX(-50%) rotate(0deg);
-  }
-  44%,
-  58% {
-    transform: translateX(-50%) rotate(-260deg);
-  }
-  64%,
-  78% {
-    transform: translateX(-50%) rotate(0deg);
-  }
-  84%,
-  92% {
-    transform: translateX(-50%) rotate(260deg);
-  }
-  98%,
-  100% {
-    transform: translateX(-50%) rotate(0deg);
-  }
-}
 
 @media (prefers-reduced-motion: reduce) {
   .actor-sprite.shape-owl .sprite-head,
@@ -13841,56 +13443,10 @@
   font-weight: 800;
 }
 
-@keyframes workspace-npc-idle {
-  0%,
-  100% {
-    transform: translate(-50%, -50%) translateY(0);
-  }
-  50% {
-    transform: translate(-50%, -50%) translateY(-3px);
-  }
-}
 
-@keyframes workspace-walk-body {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-3px);
-  }
-}
 
-@keyframes workspace-walk-left {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(4px);
-  }
-}
 
-@keyframes workspace-walk-right {
-  0%,
-  100% {
-    transform: translateY(4px);
-  }
-  50% {
-    transform: translateY(0);
-  }
-}
 
-@keyframes workspace-bubble-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, 6px);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
-}
 
 @media (max-width: 1080px) {
   .workspace-2d-card .workspace-layout,
@@ -14638,16 +14194,6 @@
     opacity: 0.6;
   }
 
-  @keyframes sheet-slide-up {
-    from {
-      transform: translateY(24px);
-      opacity: 0;
-    }
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  }
 
   @media (prefers-reduced-motion: reduce) {
     .settings-modal,
@@ -15156,29 +14702,6 @@
   transition: transform 0.28s ease;
 }
 
-@keyframes notification-bell-ring {
-  0%,
-  58%,
-  100% {
-    transform: rotate(0deg);
-  }
-
-  64% {
-    transform: rotate(-7deg);
-  }
-
-  70% {
-    transform: rotate(7deg);
-  }
-
-  76% {
-    transform: rotate(-4deg);
-  }
-
-  82% {
-    transform: rotate(4deg);
-  }
-}
 
 .premium-dashboard-header .connect-button {
   min-width: 92px;
@@ -15198,35 +14721,7 @@
   box-shadow: 0 18px 44px rgba(var(--ink-rgb), 0.08);
 }
 
-@keyframes workspace-breath-premium {
-  0%,
-  100% {
-    box-shadow:
-      0 18px 54px rgba(var(--ink-rgb), 0.075),
-      0 0 0 rgba(31, 111, 74, 0),
-      inset 0 1px 0 rgba(var(--surface-rgb), 0.94);
-  }
 
-  50% {
-    box-shadow:
-      0 22px 64px rgba(var(--ink-rgb), 0.09),
-      0 0 28px rgba(31, 111, 74, 0.06),
-      inset 0 1px 0 rgba(var(--surface-rgb), 0.98);
-  }
-}
-
-@keyframes workspace-live-drift {
-  0%,
-  100% {
-    opacity: 0.25;
-    transform: translate3d(0, 3px, 0) scale(0.86);
-  }
-
-  50% {
-    opacity: 0.88;
-    transform: translate3d(-8px, -3px, 0) scale(1);
-  }
-}
 
 @media (max-width: 1180px) {
   .premium-dashboard-header {
@@ -15906,16 +15401,6 @@
   font-weight: 740;
 }
 
-@keyframes friend-dot-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(31, 111, 74, 0.2);
-  }
-
-  50% {
-    box-shadow: 0 0 0 5px rgba(31, 111, 74, 0);
-  }
-}
 
 @media (max-width: 1080px) {
   .friend-sidebar-panel {
@@ -16229,23 +15714,6 @@
   pointer-events: none;
 }
 
-@keyframes desktopWelcome {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -8px);
-  }
-
-  16%,
-  72% {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
-
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -6px);
-  }
-}
 
 .desktop-shell .app-sidebar {
   top: 86px;
@@ -16432,16 +15900,6 @@
   color: rgba(var(--ink-rgb), 0.55);
 }
 
-@keyframes workspace-presence-breathe {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(76, 175, 133, 0.4);
-    opacity: 0.85;
-  }
-  50% {
-    box-shadow: 0 0 0 4px rgba(76, 175, 133, 0);
-    opacity: 1;
-  }
-}
 
 @media (prefers-reduced-motion: reduce) {
   .topbar-nav .workspace-tab .topbar-presence-dot {
@@ -16622,11 +16080,6 @@
   z-index: 40;
 }
 
-[data-theme="dark"] .topbar-icon-button[data-tooltip]::after,
-[data-theme="dark"] .notification-button[data-tooltip]::after {
-  background: rgba(255, 255, 255, 0.94);
-  color: #000000;
-}
 
 .topbar-icon-button[data-tooltip]:hover::after,
 .topbar-icon-button[data-tooltip]:focus-visible::after,
@@ -17606,66 +17059,9 @@
  *   95% → 100%  reset to facing right
  * The 5% pauses use identical `left` values so the sprite holds still
  * while the scaleX flips, instead of sliding through the flip. */
-@keyframes sidebar-character-walk {
-  0% {
-    left: 12px;
-    transform: scaleX(1);
-  }
-  40% {
-    left: calc(100% - 40px);
-    transform: scaleX(1);
-  }
-  45% {
-    left: calc(100% - 40px);
-    transform: scaleX(-1);
-  }
-  50% {
-    left: calc(100% - 40px);
-    transform: scaleX(-1);
-  }
-  90% {
-    left: 12px;
-    transform: scaleX(-1);
-  }
-  95% {
-    left: 12px;
-    transform: scaleX(1);
-  }
-  100% {
-    left: 12px;
-    transform: scaleX(1);
-  }
-}
 
-@keyframes sidebar-character-bob {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-1.5px);
-  }
-}
 
-@keyframes sidebar-character-leg-left {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(2px);
-  }
-}
 
-@keyframes sidebar-character-leg-right {
-  0%,
-  100% {
-    transform: translateY(2px);
-  }
-  50% {
-    transform: translateY(0);
-  }
-}
 
 @media (prefers-reduced-motion: reduce) {
   .sidebar-character-walker,
@@ -18337,18 +17733,6 @@
   box-shadow: 0 12px 26px rgba(var(--ink-rgb), 0.06);
 }
 
-@keyframes knowledgeBreath {
-  0%,
-  100% {
-    opacity: 0.52;
-    transform: scale(0.96);
-  }
-
-  50% {
-    opacity: 0.84;
-    transform: scale(1.04);
-  }
-}
 
 @media (max-width: 1080px) {
   .premium-shell {
@@ -19258,120 +18642,20 @@
      92-100% settle to neutral
    Rotation is intentionally avoided — keeping the actor upright the
    whole way feels more controlled / refined than a wobbly drop. */
-@keyframes workspace-drop-in {
-  0% {
-    transform: translate(-50%, -50%) translateY(-200px) scale(0.95, 0.95);
-    opacity: 0;
-    filter: blur(1.4px);
-  }
-  10% {
-    opacity: 0;
-    filter: blur(1.4px);
-  }
-  24% {
-    transform: translate(-50%, -50%) translateY(-130px) scale(0.92, 1.06);
-    opacity: 0.55;
-    filter: blur(0.9px);
-  }
-  50% {
-    transform: translate(-50%, -50%) translateY(-28px) scale(0.9, 1.1);
-    opacity: 1;
-    filter: blur(0.2px);
-  }
-  62% {
-    transform: translate(-50%, -50%) translateY(0) scale(1.18, 0.82);
-    filter: blur(0);
-  }
-  78% {
-    transform: translate(-50%, -50%) translateY(-10px) scale(0.97, 1.03);
-  }
-  92% {
-    transform: translate(-50%, -50%) translateY(-2px) scale(1.01, 0.99);
-  }
-  100% {
-    transform: translate(-50%, -50%) translateY(0) scale(1, 1);
-    opacity: 1;
-  }
-}
 
 /* Shadow choreography — barely visible while the actor is in the air
    (so the depth perception reads correctly), grows wider than rest
    on first impact, then settles in lockstep with the actor's
    rebound. */
-@keyframes workspace-drop-in-shadow {
-  0% {
-    opacity: 0;
-    transform: scaleX(0.15) scaleY(0.45);
-  }
-  24% {
-    opacity: 0.18;
-    transform: scaleX(0.28) scaleY(0.52);
-  }
-  50% {
-    opacity: 0.36;
-    transform: scaleX(0.6) scaleY(0.7);
-  }
-  62% {
-    opacity: 1;
-    transform: scaleX(1.36) scaleY(1.18);
-  }
-  78% {
-    opacity: 0.96;
-    transform: scaleX(0.92) scaleY(0.96);
-  }
-  92% {
-    opacity: 1;
-    transform: scaleX(1.02) scaleY(1.0);
-  }
-  100% {
-    opacity: 1;
-    transform: scaleX(1) scaleY(1);
-  }
-}
 
 /* Single impact ring — fires at the moment of landing (~62%) and
    expands outward as it fades. The previous version layered two
    rings which read as a game particle effect; one ring at a slightly
    softer opacity hits the right note for this app. */
-@keyframes workspace-drop-in-ring {
-  0%,
-  60% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.45);
-  }
-  64% {
-    opacity: 0.68;
-    transform: translate(-50%, -50%) scale(0.95);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(2.4);
-  }
-}
 
 /* Sprite flash — a single, restrained bloom at the actor's body the
    moment it lands. Softer than the previous version (no large outer
    glow) so the landing feels weighted, not "powered up". */
-@keyframes workspace-drop-in-flash {
-  0%,
-  60% {
-    box-shadow:
-      inset 0 1px 0 rgba(var(--surface-rgb), 0.18),
-      0 10px 18px rgba(0, 0, 0, 0.18);
-  }
-  64% {
-    box-shadow:
-      inset 0 1px 0 rgba(var(--surface-rgb), 0.3),
-      0 0 0 3px rgba(var(--surface-rgb), 0.12),
-      0 16px 24px rgba(0, 0, 0, 0.26);
-  }
-  78%,
-  100% {
-    box-shadow:
-      inset 0 1px 0 rgba(var(--surface-rgb), 0.18),
-      0 10px 18px rgba(0, 0, 0, 0.18);
-  }
-}
 
 .workspace-actor.is-just-joined {
   /* Asymmetric easing: heavy ease-in for the controlled fall, smooth
@@ -19425,16 +18709,6 @@
   }
 }
 
-@keyframes workspace-drop-in-reduced {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-}
 
 .workspace-actor.is-resting {
   animation: none;
@@ -19671,38 +18945,8 @@
   font-size: 10px;
 }
 
-@keyframes workspace-dust-drift {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
 
-  to {
-    transform: translate3d(92px, -92px, 0);
-  }
-}
 
-@keyframes workspace-npc-seated {
-  0%,
-  100% {
-    transform: translate(-50%, -50%) translateY(-8px);
-  }
-
-  50% {
-    transform: translate(-50%, -50%) translateY(-11px);
-  }
-}
-
-@keyframes workspace-stream-in {
-  from {
-    opacity: 0;
-    transform: translateY(5px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
 @media (max-width: 1080px) {
   .workspace-2d-card .workspace-layout,
@@ -20996,39 +20240,8 @@
     0 0 0 1px rgba(var(--surface-rgb), 0.55);
 }
 
-@keyframes workspace-growth-idle {
-  0%,
-  100% {
-    transform: translate(-50%, -50%) translateY(-4px);
-  }
 
-  50% {
-    transform: translate(-50%, -50%) translateY(-7px);
-  }
-}
 
-@keyframes workspace-coffee-steam {
-  0%,
-  100% {
-    opacity: 0;
-    transform: translateY(6px) scaleY(0.72);
-  }
-
-  45% {
-    opacity: 1;
-    transform: translateY(-4px) scaleY(1);
-  }
-}
-
-@keyframes workspace-rain-fall {
-  from {
-    transform: translate3d(0, -22px, 0);
-  }
-
-  to {
-    transform: translate3d(-20px, 22px, 0);
-  }
-}
 
 @media (max-width: 720px) {
   .workspace-growth-stage {
@@ -21526,22 +20739,6 @@
   background: #1f5a3a;
 }
 
-[data-theme="dark"] .contribution-arc-legend i.lv-1,
-[data-theme="dark"] .contribution-arc-cell.lv-1 {
-  background: #0e3d24;
-}
-[data-theme="dark"] .contribution-arc-legend i.lv-2,
-[data-theme="dark"] .contribution-arc-cell.lv-2 {
-  background: #1f6a3a;
-}
-[data-theme="dark"] .contribution-arc-legend i.lv-3,
-[data-theme="dark"] .contribution-arc-cell.lv-3 {
-  background: #3aa55a;
-}
-[data-theme="dark"] .contribution-arc-legend i.lv-4,
-[data-theme="dark"] .contribution-arc-cell.lv-4 {
-  background: #59e08a;
-}
 
 .contribution-arc-canvas {
   position: relative;
@@ -22453,9 +21650,6 @@
     0 6px 18px rgba(var(--ink-rgb), 0.04);
 }
 
-[data-theme="dark"] .premium-dashboard-header {
-  background: rgba(20, 22, 24, 0.78);
-}
 
 /* Remove the inner sheen that gave the header a card-like feel. */
 .premium-dashboard-header::before {
@@ -23085,16 +22279,6 @@
   animation: quicklog-pending-in 140ms ease-out both;
 }
 
-@keyframes quicklog-pending-in {
-  from {
-    opacity: 0;
-    transform: translateX(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
 
 @media (prefers-reduced-motion: reduce) {
   .learning-card-quicklog-pending {
@@ -24506,18 +23690,6 @@
     animation: cursor-spotlight-ripple 540ms cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
   }
 
-  @keyframes cursor-spotlight-ripple {
-    0% {
-      transform: translate3d(var(--ripple-x), var(--ripple-y), 0) scale(0.6);
-      opacity: 0.75;
-      border-width: 1.5px;
-    }
-    100% {
-      transform: translate3d(var(--ripple-x), var(--ripple-y), 0) scale(6);
-      opacity: 0;
-      border-width: 0.5px;
-    }
-  }
 
   /* Hover state: core contracts into a sharper accent, aura brightens.
      The size transition (4 → 8 px) combined with the colour bump
@@ -24544,31 +23716,9 @@
 
   /* Dark theme — phosphor-green palette. The blend mode flips to
      `screen` so the additive glow lights up against pure black. */
-  [data-theme="dark"] .cursor-spotlight-core {
-    background: rgba(74, 222, 128, 0.85);
-    box-shadow: 0 0 16px rgba(74, 222, 128, 0.6);
-  }
 
-  [data-theme="dark"] .cursor-spotlight-aura {
-    background: radial-gradient(
-      closest-side,
-      rgba(74, 222, 128, 0.16) 0%,
-      rgba(74, 222, 128, 0.08) 40%,
-      transparent 72%
-    );
-    mix-blend-mode: screen;
-  }
 
-  [data-theme="dark"] .cursor-spotlight.is-hover .cursor-spotlight-core {
-    background: rgba(110, 231, 183, 1);
-    box-shadow:
-      0 0 22px rgba(110, 231, 183, 0.8),
-      0 0 0 4px rgba(110, 231, 183, 0.12);
-  }
 
-  [data-theme="dark"] .cursor-spotlight-ripple {
-    border-color: rgba(74, 222, 128, 0.55);
-  }
 }
 
 @media (pointer: coarse) {
@@ -24595,9 +23745,6 @@
   transition: box-shadow 160ms ease, outline-color 160ms ease;
 }
 
-[data-theme="dark"] :focus-visible {
-  box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.18);
-}
 
 /* Buttons and inputs already define their own focus — make sure
    the global rule wins for accessibility but doesn't override
@@ -24679,29 +23826,8 @@ select:focus-visible,
   will-change: box-shadow;
 }
 
-@keyframes recruitment-breathe {
-  0%,
-  100% {
-    box-shadow: var(--shadow-card), 0 0 0 0 rgba(251, 113, 133, 0);
-  }
-  50% {
-    box-shadow: var(--shadow-card), 0 0 0 6px rgba(251, 113, 133, 0.10);
-  }
-}
 
-[data-theme="dark"] .recruitment-card.state-active {
-  animation-name: recruitment-breathe-dark;
-}
 
-@keyframes recruitment-breathe-dark {
-  0%,
-  100% {
-    box-shadow: var(--shadow-card), 0 0 0 0 rgba(251, 113, 133, 0);
-  }
-  50% {
-    box-shadow: var(--shadow-card), 0 0 0 6px rgba(251, 113, 133, 0.18);
-  }
-}
 
 .recruitment-state-badge {
   display: inline-flex;
@@ -24719,17 +23845,6 @@ select:focus-visible,
   will-change: transform, box-shadow;
 }
 
-@keyframes recruitment-dot-pulse {
-  0%,
-  100% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
-  }
-  50% {
-    transform: scale(1.18);
-    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
-  }
-}
 
 .recruitment-join-count {
   display: inline-flex;
@@ -24771,27 +23886,7 @@ select:focus-visible,
   }
 }
 
-@keyframes vt-fade-out {
-  from {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(-4px) scale(0.992);
-  }
-}
 
-@keyframes vt-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px) scale(0.994);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
 
 /* ============================================================
    Dark mode foundational overrides
@@ -24800,178 +23895,40 @@ select:focus-visible,
    will be polished iteratively.
    ============================================================ */
 
-[data-theme="dark"] {
-  /* Backdrops / shells */
-  --backdrop-glass: rgba(15, 15, 16, 0.72);
-}
 
-[data-theme="dark"] .app-shell,
-[data-theme="dark"] .app-main,
-[data-theme="dark"] .app-content,
-[data-theme="dark"] .home-screen,
-[data-theme="dark"] .premium-shell,
-[data-theme="dark"] .premium-main {
-  color: var(--ink);
-}
 
 /* Generic card/surface flips */
-[data-theme="dark"] .card,
-[data-theme="dark"] .feed-card,
-[data-theme="dark"] .post-card,
-[data-theme="dark"] .recruitment-card,
-[data-theme="dark"] .learning-card,
-[data-theme="dark"] .study-card,
-[data-theme="dark"] .daily-card,
-[data-theme="dark"] .profile-card,
-[data-theme="dark"] .home-feed-composer,
-[data-theme="dark"] .workspace-session-panel,
-[data-theme="dark"] .workspace-stage,
-[data-theme="dark"] .preset-message-bar,
-[data-theme="dark"] .preset-message-editor,
-[data-theme="dark"] .settings-modal,
-[data-theme="dark"] .learning-modal,
-[data-theme="dark"] .recruitment-modal,
-[data-theme="dark"] .app-error-card {
-  background: var(--surface);
-  border-color: var(--line);
-  color: var(--ink);
-  box-shadow: var(--shadow-card);
-}
 
 /* Modal backdrops */
-[data-theme="dark"] .settings-modal-backdrop,
-[data-theme="dark"] .learning-modal-backdrop,
-[data-theme="dark"] .recruitment-modal-backdrop,
-[data-theme="dark"] .modal-backdrop {
-  background: rgba(0, 0, 0, 0.62);
-}
 
 /* Inputs */
-[data-theme="dark"] input,
-[data-theme="dark"] textarea,
-[data-theme="dark"] select {
-  background: var(--surface-elevated);
-  color: var(--ink);
-  border-color: var(--line-strong);
-}
 
-[data-theme="dark"] input::placeholder,
-[data-theme="dark"] textarea::placeholder {
-  color: var(--muted);
-}
 
-[data-theme="dark"] input:focus,
-[data-theme="dark"] textarea:focus,
-[data-theme="dark"] select:focus {
-  outline: none;
-  box-shadow: var(--ring-focus);
-  border-color: var(--green);
-}
 
 /* Sidebar / navigation */
-[data-theme="dark"] .premium-sidebar,
-[data-theme="dark"] .app-sidebar,
-[data-theme="dark"] .nav-rail,
-[data-theme="dark"] .sidebar {
-  background: var(--surface);
-  border-color: var(--line);
-}
 
-[data-theme="dark"] .premium-nav-button,
-[data-theme="dark"] .nav-button {
-  color: var(--muted);
-}
 
-[data-theme="dark"] .premium-nav-button.active,
-[data-theme="dark"] .nav-button.active {
-  background: var(--green-soft);
-  color: var(--green);
-}
 
-[data-theme="dark"] .premium-nav-button:hover,
-[data-theme="dark"] .nav-button:hover {
-  background: rgba(var(--surface-rgb), 0.04);
-  color: var(--ink);
-}
 
 /* Headings / muted text */
-[data-theme="dark"] .card-kicker,
-[data-theme="dark"] small,
-[data-theme="dark"] .muted {
-  color: var(--muted);
-}
 
 /* Recruitment card state pills — re-tint for dark */
-[data-theme="dark"] .recruitment-state-badge.state-upcoming {
-  background: rgba(124, 92, 255, 0.16);
-  color: #b3a3ff;
-}
 
-[data-theme="dark"] .recruitment-state-badge.state-active {
-  background: rgba(251, 113, 133, 0.16);
-  color: #fb7185;
-}
 
-[data-theme="dark"] .recruitment-state-badge.state-ended {
-  background: rgba(var(--surface-rgb), 0.06);
-  color: var(--muted);
-}
 
-[data-theme="dark"] .recruitment-card.state-active {
-  border-color: rgba(251, 113, 133, 0.32);
-}
 
-[data-theme="dark"] .recruitment-card.state-upcoming {
-  border-color: rgba(124, 92, 255, 0.28);
-}
 
 /* Buttons that hard-coded ink color */
-[data-theme="dark"] .recruitment-join,
-[data-theme="dark"] .room-join-button,
-[data-theme="dark"] .learning-save-button {
-  background: var(--green);
-  color: var(--ink-strong);
-}
 
-[data-theme="dark"] .recruitment-join:hover,
-[data-theme="dark"] .room-join-button:hover,
-[data-theme="dark"] .learning-save-button:hover {
-  background: var(--green-hover);
-}
 
-[data-theme="dark"] .recruitment-cancel,
-[data-theme="dark"] .room-leave-button,
-[data-theme="dark"] .learning-cancel-button {
-  background: transparent;
-  color: var(--muted);
-  border-color: var(--line-strong);
-}
 
 /* Floor grid in workspace stage — invert subtle */
-[data-theme="dark"] .workspace-floor-grid {
-  opacity: 0.16;
-  filter: invert(1);
-}
 
 /* Subject donut / chart text */
-[data-theme="dark"] .subject-donut text,
-[data-theme="dark"] svg text {
-  fill: var(--ink);
-}
 
 /* Scrollbar tint for webkit */
-[data-theme="dark"] ::-webkit-scrollbar {
-  background: var(--bg);
-}
 
-[data-theme="dark"] ::-webkit-scrollbar-thumb {
-  background: rgba(var(--surface-rgb), 0.10);
-  border-radius: 8px;
-}
 
-[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
-  background: rgba(var(--surface-rgb), 0.16);
-}
 
 /* =====================================================================
    Sidebar Player Status — compact card at the top of the sidebar.
@@ -25307,10 +24264,6 @@ select:focus-visible,
   box-shadow: none;
 }
 
-[data-theme="dark"] .premium-dashboard-header {
-  background: rgba(20, 22, 24, 0.78);
-  border-bottom-color: rgba(255, 255, 255, 0.06);
-}
 
 /* Kill the inner gradient sheen that gave the header its
    card-like feel. */
@@ -26020,16 +24973,6 @@ select:focus-visible,
      "ふわっと" 着地。 */
   animation: toast-slide-up 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
-@keyframes toast-slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(16px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   .toast {
     animation: none !important;
@@ -26227,16 +25170,6 @@ a[role="button"]:active,
   background: rgba(var(--ink-rgb), 0.1);
 }
 
-@keyframes ios-install-hint-in {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
 /* Chromium "Add to home screen" prompt. Same bottom-sheet anatomy as
    `.ios-install-hint` but adds a primary CTA because beforeinstallprompt
@@ -26961,16 +25894,6 @@ a[role="button"]:active,
     animation: workspace-room-overlay-expand 180ms ease-out;
   }
 
-  @keyframes workspace-room-overlay-expand {
-    from {
-      opacity: 0;
-      transform: translateY(-4px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
 
   /* Step 5: the overlay-toggle button. Right-aligned, small, taps
      to expand/collapse. Hidden on desktop via the rule outside this
@@ -29986,14 +28909,6 @@ a[role="button"]:active,
   animation: quicklog-fade 140ms ease-out;
 }
 
-@keyframes quicklog-fade {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
 
 .quicklog-popover {
   width: 100%;
@@ -30008,16 +28923,6 @@ a[role="button"]:active,
   animation: quicklog-pop 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-@keyframes quicklog-pop {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
 
 .quicklog-popover-head {
   display: flex;
@@ -30225,30 +29130,10 @@ a[role="button"]:active,
     padding: 16px 16px 24px;
     animation: quicklog-slide 200ms cubic-bezier(0.22, 1, 0.36, 1);
   }
-  @keyframes quicklog-slide {
-    from {
-      opacity: 0;
-      transform: translateY(24px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
 }
 
 /* dark mode — popover surface. */
-[data-theme="dark"] .quicklog-popover {
-  background: var(--surface);
-  border-color: var(--line);
-  box-shadow: var(--shadow-card);
-}
 
-[data-theme="dark"] .quicklog-popover-cta,
-[data-theme="dark"] .topbar-quicklog {
-  background: var(--surface);
-  border-color: var(--line);
-}
 
 /* ===============================================================
    Contribution Arc 世界観 showcase 画面 (Jungle 系インスパイア)
@@ -30267,10 +29152,6 @@ a[role="button"]:active,
   color: #ecf3ef;
   isolation: isolate;
   animation: showcase-fade-in 0.55s cubic-bezier(0.22, 1, 0.36, 1);
-}
-@keyframes showcase-fade-in {
-  from { opacity: 0; transform: scale(1.015); }
-  to { opacity: 1; transform: scale(1); }
 }
 
 .app-view-showcase-close {
@@ -30373,10 +29254,6 @@ a[role="button"]:active,
   animation: showcase-grid-pulse 4.6s ease-in-out infinite;
   animation-delay: var(--cell-delay, 0s);
 }
-@keyframes showcase-grid-pulse {
-  0%, 100% { opacity: calc(0.6 + var(--cell-intensity) * 0.4); }
-  50% { opacity: 1; }
-}
 
 /* 中央人物 (プロフィールキャラ) — グリッドの中央少し奥に立つ。 */
 .showcase-figure {
@@ -30387,10 +29264,6 @@ a[role="button"]:active,
   z-index: 3;
   filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
   animation: showcase-figure-bob 5.6s ease-in-out infinite;
-}
-@keyframes showcase-figure-bob {
-  0%, 100% { transform: translate(-50%, 0) scale(1.35); }
-  50% { transform: translate(-50%, -4px) scale(1.35); }
 }
 
 /* 手前のシルエット — 画面下に立ち上がる暗い "シダ" の輪郭。 */
@@ -30419,10 +29292,6 @@ a[role="button"]:active,
   text-align: center;
   transform: translateY(-22%);
   animation: showcase-brand-rise 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-@keyframes showcase-brand-rise {
-  from { opacity: 0; transform: translateY(-14%); }
-  to { opacity: 1; transform: translateY(-22%); }
 }
 
 .showcase-brand-mark {
@@ -30699,10 +29568,6 @@ a[role="button"]:active,
   -webkit-backdrop-filter: blur(10px);
   animation: showcase-email-rise 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-@keyframes showcase-email-rise {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
 
 .login-shell-showcase .auth-mode-tabs {
   display: grid;
@@ -30875,10 +29740,6 @@ a[role="button"]:active,
   .showcase-tagline { font-size: 12px; }
   .showcase-grid { width: min(94vw, 380px); bottom: 22%; }
   .showcase-figure { bottom: 32%; transform: translate(-50%, 0) scale(1.2); }
-  @keyframes showcase-figure-bob {
-    0%, 100% { transform: translate(-50%, 0) scale(1.2); }
-    50% { transform: translate(-50%, -4px) scale(1.2); }
-  }
 }
 
 /* FEED 単独画面（スマホ版のみ） */
@@ -31291,10 +30152,6 @@ a[role="button"]:active,
   text-shadow: none;
   font-weight: 800;
 }
-[data-theme="dark"] .actor-name {
-  background: rgba(255, 255, 255, 0.96);
-  color: #0c1613;
-}
 .actor-task {
   background: rgba(7, 16, 13, 0.82);
   color: #ecf3ef;
@@ -31340,30 +30197,6 @@ a[role="button"]:active,
   box-shadow: 0 0 0 4px rgba(77, 208, 122, 0.18);
   animation: workspace-arrival-dot 1.2s ease-in-out infinite;
 }
-@keyframes workspace-arrival-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -20px);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
-}
-@keyframes workspace-arrival-out {
-  to {
-    opacity: 0;
-    transform: translate(-50%, -8px);
-  }
-}
-@keyframes workspace-arrival-dot {
-  0%, 100% {
-    box-shadow: 0 0 0 4px rgba(77, 208, 122, 0.18);
-  }
-  50% {
-    box-shadow: 0 0 0 7px rgba(77, 208, 122, 0.04);
-  }
-}
 
 /* ──────────── 4. 空状態 (自分一人) ────────────
    "静かな部屋。最初のひと言を残してみよう。" を
@@ -31398,10 +30231,6 @@ a[role="button"]:active,
 .workspace-stage-empty p {
   margin: 0;
 }
-@keyframes workspace-empty-pulse {
-  0%, 100% { opacity: 0.86; }
-  50% { opacity: 1; }
-}
 
 /* ──────────── 5. 置き手紙の未読バッジ ────────────
    既存 is-unread の glow に加え、小さな赤いドットを足して
@@ -31418,16 +30247,6 @@ a[role="button"]:active,
   pointer-events: none;
   animation: workspace-floor-badge-pulse 1.6s ease-in-out infinite;
 }
-@keyframes workspace-floor-badge-pulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.18);
-    opacity: 0.84;
-  }
-}
 
 /* ──────────── 6. チャットログの最新フラッシュ ────────────
    "今喋った" 感を出す。既存の workspace-chat-log-in アニメに
@@ -31438,16 +30257,6 @@ a[role="button"]:active,
     workspace-chat-log-in 220ms ease-out,
     workspace-chat-newest-flash 1.4s ease-out;
 }
-@keyframes workspace-chat-newest-flash {
-  0% {
-    background: rgba(var(--green-rgb, 31, 111, 74), 0.28);
-    box-shadow: 0 0 0 0 rgba(var(--green-rgb, 31, 111, 74), 0.4);
-  }
-  100% {
-    background: rgba(var(--green-rgb, 31, 111, 74), 0.12);
-    box-shadow: 0 0 0 6px rgba(var(--green-rgb, 31, 111, 74), 0);
-  }
-}
 
 /* ──────────── 7. バブルメッセージのフェード ────────────
    TTL 切れで突然消える代わりに、最後の 1 秒をフェードアウトで
@@ -31456,35 +30265,12 @@ a[role="button"]:active,
   animation: workspace-bubble-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
   transform-origin: 50% 100%;
 }
-@keyframes workspace-bubble-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px) scale(0.92);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
 
 /* ──────────── 8. 入室ドロップインの品質UP ────────────
    既存 is-just-joined 用のアニメに、軽い bounce を追加。
    既存の workspace-drop-in があるならそれを上書きしない。 */
 .workspace-actor.is-just-joined {
   animation: workspace-actor-arrive 540ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-@keyframes workspace-actor-arrive {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, calc(-50% - 18px)) scale(0.88);
-  }
-  60% {
-    opacity: 1;
-    transform: translate(-50%, calc(-50% + 4px)) scale(1.04);
-  }
-  100% {
-    transform: translate(-50%, -50%) scale(1);
-  }
 }
 
 /* ──────────── 9. アバター移動最適化 ────────────
@@ -31525,16 +30311,6 @@ a[role="button"]:active,
   .workspace-stage-popover.anchor-right,
   .workspace-stage-popover.anchor-below {
     transform: none !important;
-  }
-}
-@keyframes workspace-popover-up {
-  from {
-    transform: translateY(100%);
-    opacity: 0.6;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
   }
 }
 
@@ -31629,14 +30405,6 @@ a[role="button"]:active,
    "今稼働中" を視覚化。光量は最小限。 */
 .actor-focus-ring:not(.is-paused) {
   animation: workspace-focus-pulse 4.8s ease-in-out infinite;
-}
-@keyframes workspace-focus-pulse {
-  0%, 100% {
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 0.68;
-  }
 }
 
 /* ──────────── 14. 記念碑のホバーで微発光 ────────────
@@ -32154,9 +30922,6 @@ a[role="button"]:active,
   background: rgba(180, 130, 50, 0.12) !important;
   color: #876b34 !important;
 }
-[data-theme="dark"] .friends-modal-stale {
-  color: #ddc488 !important;
-}
 
 /* ───────── おすすめフレンド ───────── */
 .friends-modal-recommend {
@@ -32662,20 +31427,6 @@ a[role="button"]:active,
   /* 透視で床に貼り付いて見えるよう少し傾ける */
   transform: perspective(160px) rotateX(58deg);
 }
-@keyframes workspace-tap-marker {
-  0% {
-    opacity: 0;
-    transform: perspective(160px) rotateX(58deg) scale(0.3);
-  }
-  20% {
-    opacity: 1;
-    transform: perspective(160px) rotateX(58deg) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: perspective(160px) rotateX(58deg) scale(1.4);
-  }
-}
 
 /* ───────── 初回タップ移動ヒント ─────────
    入室直後の 5 秒だけ表示。ステージ上部中央に控えめなピル。
@@ -32704,22 +31455,6 @@ a[role="button"]:active,
   animation: workspace-tap-hint-in 300ms cubic-bezier(0.22, 1, 0.36, 1),
     workspace-tap-hint-out 400ms ease-in 4600ms forwards;
 }
-@keyframes workspace-tap-hint-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -16px);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
-}
-@keyframes workspace-tap-hint-out {
-  to {
-    opacity: 0;
-    transform: translate(-50%, -8px);
-  }
-}
 
 /* ───────── 自分のアバター強調 ─────────
    PC でも スマホでも、自分の actor が群衆の中で一目で見つかる
@@ -32737,12 +31472,6 @@ a[role="button"]:active,
   font-weight: 900;
   font-size: 9px;
   letter-spacing: 0.06em;
-}
-[data-theme="dark"] .workspace-actor.is-player .actor-sprite {
-  box-shadow:
-    0 0 0 3px rgba(91, 154, 117, 0.7),
-    0 0 0 6px rgba(91, 154, 117, 0.22),
-    0 10px 18px rgba(0, 0, 0, 0.32);
 }
 
 /* reduced-motion 配慮：マーカー/ヒントの装飾アニメを停止 */
@@ -32973,10 +31702,6 @@ div.preset-message-panel.hud-fab > *,
   cursor: default;
   animation: hud-fab-backdrop-in 0.18s ease;
 }
-@keyframes hud-fab-backdrop-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
 
 .hud-fab-actions {
   display: flex !important;
@@ -33076,16 +31801,6 @@ div.preset-message-panel.hud-fab > *,
 }
 .preset-message-panel.hud-fab.is-open .preset-message-editor {
   bottom: calc(96px + 24px + 56px);
-}
-@keyframes hud-fab-tray-up {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 /* popover (member/note/monument/appearance) 開放中は FAB を完全非表示 */
@@ -33288,19 +32003,6 @@ body.workspace-popover-active .preset-message-panel.hud-fab,
   .workspace-actor.is-just-joined {
     animation: workspace-actor-arrive-mobile 540ms cubic-bezier(0.22, 1, 0.36, 1);
   }
-  @keyframes workspace-actor-arrive-mobile {
-    0% {
-      opacity: 0;
-      transform: translate(-50%, calc(-50% - 18px)) scale(0.68);
-    }
-    60% {
-      opacity: 1;
-      transform: translate(-50%, calc(-50% + 4px)) scale(0.82);
-    }
-    100% {
-      transform: translate(-50%, -50%) scale(0.78);
-    }
-  }
   /* タップフィードバック (mobile-polish の button:active scale 0.97) も
      scale 値を維持しつつ縮ませる。 */
   .workspace-actor:active {
@@ -33348,19 +32050,6 @@ body.workspace-popover-active .preset-message-panel.hud-fab,
   /* 整列配置なので入室ドロップインは scale(1.08) で着地させる。 */
   .workspace-2d-shell[data-mobile-tab="room"] .workspace-actor.is-just-joined {
     animation: workspace-actor-arrive-garden 540ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  @keyframes workspace-actor-arrive-garden {
-    0% {
-      opacity: 0;
-      transform: translate(-50%, calc(-50% - 18px)) scale(0.94);
-    }
-    60% {
-      opacity: 1;
-      transform: translate(-50%, calc(-50% + 4px)) scale(1.12);
-    }
-    100% {
-      transform: translate(-50%, -50%) scale(1.08);
-    }
   }
   @media (hover: none) {
     .workspace-2d-shell[data-mobile-tab="room"] .workspace-actor:hover {
@@ -33585,16 +32274,6 @@ body.workspace-popover-active .preset-message-panel.hud-fab,
       transparent
     );
     animation: workspace-room-create-slide 0.22s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  @keyframes workspace-room-create-slide {
-    from {
-      opacity: 0;
-      transform: translateY(-8px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
   }
   .workspace-room-create.is-open input {
     width: 100% !important;
@@ -33840,9 +32519,6 @@ body.workspace-popover-active .preset-message-panel.hud-fab,
     transition: transform 80ms ease-out;
   }
   /* ダークモードで svg の線をやや薄めに */
-  [data-theme="dark"] .premium-dashboard-header .user-search-button .user-search-icon {
-    color: rgba(232, 234, 237, 0.92);
-  }
 
   /* topbar-feed-toggle / shop-button / friends 等のアイコンボタン
      スマホでアイコンだけでは何のボタンか分からないため、ラベル併記
@@ -34271,10 +32947,6 @@ body.workspace-popover-active .preset-message-panel.hud-fab,
     background-size: 200% 100%;
     animation: skeleton-shimmer 1.4s ease-in-out infinite;
   }
-  @keyframes skeleton-shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-  }
 
   /* (P3-38) Room create のエラーメッセージにアクション風の retry */
   .room-create-message.error {
@@ -34531,35 +33203,15 @@ body.workspace-popover-active .preset-message-panel.hud-fab,
    ========================================================= */
 
 /* (a) ダークモードでの focus-visible 色 */
-[data-theme="dark"] *:focus-visible {
-  outline: 2px solid #6cbb8b;
-  outline-offset: 2px;
-}
 
 /* (b) ダークモードでの selection color */
-[data-theme="dark"] ::selection {
-  background: rgba(91, 154, 117, 0.34);
-  color: #fff;
-}
 ::selection {
   background: rgba(31, 111, 74, 0.22);
 }
 
 /* (c) ダークモードでのスクロールバー */
-[data-theme="dark"] {
-  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
-}
-[data-theme="dark"] *::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.18);
-}
 
 /* (d) ダークモードでの toast / notification */
-[data-theme="dark"] .toast {
-  background: rgba(40, 44, 48, 0.96);
-  color: #f3f7f4;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.48);
-}
 
 /* (e) ボタンの focus-visible に common ring を保証
        既存の box-shadow 系も維持されるよう outline は補助線として */
@@ -34591,14 +33243,6 @@ a:focus-visible,
 /* (g) モバイル：text-shadow を持つ要素 (actor-name など) の
        ダークモード時のコントラスト微調整 */
 @media (max-width: 720px) {
-  [data-theme="dark"] .actor-name {
-    color: #1a2326 !important;
-    background: rgba(220, 232, 225, 0.96) !important;
-  }
-  [data-theme="dark"] .actor-task {
-    background: rgba(91, 154, 117, 0.92) !important;
-    color: #0b1411 !important;
-  }
 }
 
 /* (h) ボタンの :disabled 状態の見た目を統一 */
@@ -34682,10 +33326,6 @@ select:disabled {
 }
 
 /* (f) skeleton shimmer のグローバル定義 (mobile polish と統一) */
-@keyframes app-skeleton-pulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
 .is-skeleton {
   animation: app-skeleton-pulse 1.4s ease-in-out infinite;
 }
@@ -34694,16 +33334,6 @@ select:disabled {
 @media (max-width: 720px) {
   .preset-message-panel.hud-fab {
     animation: hud-fab-enter 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-}
-@keyframes hud-fab-enter {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.94);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
   }
 }
 
@@ -34804,13 +33434,6 @@ select:disabled {
     );
     pointer-events: none;
   }
-  [data-theme="dark"] .mobile-bottom-nav::before {
-    background: linear-gradient(
-      to top,
-      rgba(20, 22, 24, 0.92),
-      transparent
-    );
-  }
 
   /* (7) 入力フォーム内の長文 placeholder の折返し */
   input::placeholder,
@@ -34898,10 +33521,6 @@ select:disabled {
   font-size: 11.5px;
   font-weight: 800;
   letter-spacing: 0;
-}
-[data-theme="dark"] .daily-streak-badge {
-  background: var(--cta-bg);
-  color: var(--cta-fg);
 }
 
 /* 学習サマリー。Habit カードに合わせて ink 1.5px hairline + 大角丸。 */
@@ -35725,11 +34344,6 @@ select:disabled {
     inset 0 0 60px rgba(255, 140, 60, 0.18),
     0 18px 50px rgba(0, 0, 0, 0.3);
 }
-@keyframes poker-table-win-pulse {
-  0% { opacity: 0; }
-  20% { opacity: 1; }
-  100% { opacity: 0.6; }
-}
 
 .poker-hand {
   display: flex;
@@ -35772,22 +34386,6 @@ select:disabled {
     transform 180ms cubic-bezier(0.2, 0.9, 0.3, 1.1),
     box-shadow 180ms ease,
     filter 180ms ease;
-}
-@keyframes poker-card-deal {
-  0% {
-    transform: translate3d(-160%, -90px, 0) rotateZ(-28deg) rotateY(120deg) scale(0.9);
-    opacity: 0;
-    filter: brightness(0.7);
-  }
-  60% {
-    opacity: 1;
-    filter: brightness(1.05);
-  }
-  100% {
-    transform: translate3d(0, 0, 0) rotateZ(0) rotateY(0) scale(1);
-    opacity: 1;
-    filter: brightness(1);
-  }
 }
 .poker-card:hover:not(:disabled) {
   transform: translateY(-6px) rotateZ(-1deg);
@@ -35936,11 +34534,6 @@ select:disabled {
   position: relative;
   animation: poker-result-pop 520ms cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
 }
-@keyframes poker-result-pop {
-  0% { transform: translateY(12px) scale(0.94); opacity: 0; }
-  60% { transform: translateY(-2px) scale(1.04); opacity: 1; }
-  100% { transform: translateY(0) scale(1); opacity: 1; }
-}
 .poker-result-card.is-win {
   background: linear-gradient(135deg, rgba(255, 220, 130, 0.96), rgba(255, 180, 70, 0.96));
   color: #2a1700;
@@ -35957,11 +34550,6 @@ select:disabled {
   pointer-events: none;
   z-index: -1;
   animation: poker-result-halo 1.6s ease-out;
-}
-@keyframes poker-result-halo {
-  0% { opacity: 0; transform: scale(0.8); }
-  30% { opacity: 1; transform: scale(1); }
-  100% { opacity: 0; transform: scale(1.4); }
 }
 .poker-result-card.is-loss {
   background: rgba(0, 0, 0, 0.32);
@@ -36067,10 +34655,6 @@ select:disabled {
   font-weight: 500;
   color: #8a8a98;
   letter-spacing: 0.02em;
-}
-@keyframes poker-bet-amount-flip {
-  0% { opacity: 0.3; transform: translateY(-2px); }
-  100% { opacity: 1; transform: translateY(0); }
 }
 .poker-bet-chips {
   display: flex;
@@ -36359,14 +34943,6 @@ select:disabled {
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.1em;
-}
-@keyframes poker-streak-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.06); }
-}
-@keyframes poker-streak-flame-flicker {
-  0% { transform: scale(1) rotate(-2deg); filter: brightness(1); }
-  100% { transform: scale(1.12) rotate(2deg); filter: brightness(1.2); }
 }
 
 /* ── Exchange panel ──────────────────────────────────────────── */
@@ -37300,79 +35876,21 @@ select:disabled {
    「純黒背景 + 純白 1.5px hairline」に揃えて視認性とデザイン性を改善。
    ライトモードは変更なし、ダーク時のみ上書きする。
    =============================================================== */
-[data-theme="dark"] .learning-card {
-  /* 枠が見えない (--border 未定義) 問題と、左バーが暗背景で目立ちすぎる
-     問題を解消。白 hairline で囲み、左バーは細く保つ。 */
-  border: 1.5px solid rgba(255, 255, 255, 0.85);
-  border-left: 3px solid var(--learning-card-color, rgba(255, 255, 255, 0.9));
-  background: #0b0c0e;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
-}
-[data-theme="dark"] .learning-card:hover {
-  border-color: #ffffff;
-}
 
-[data-theme="dark"] .home-announcements,
-[data-theme="dark"] .card {
-  border-color: rgba(255, 255, 255, 0.28);
-}
 
-[data-theme="dark"] .profile-menu {
-  border-color: rgba(255, 255, 255, 0.85);
-  background: #0b0c0e;
-}
-[data-theme="dark"] .profile-menu-item {
-  border-top-color: rgba(255, 255, 255, 0.16);
-}
-[data-theme="dark"] .profile-menu-item:hover {
-  background: rgba(255, 255, 255, 0.06);
-}
 
-[data-theme="dark"] .profile-nondo-corner-btn,
-[data-theme="dark"] .profile-nondo-metric {
-  border-color: rgba(255, 255, 255, 0.85);
-  background: #0b0c0e;
-}
-[data-theme="dark"] .profile-nondo-section {
-  border-bottom-color: rgba(255, 255, 255, 0.85);
-}
 
 /* 日報エディタの主役カード (plan / reflection) も白 1.5px hairline に。
    .daily-editor-card 配下の specificity に合わせて指定。 */
-[data-theme="dark"] .daily-editor-card .daily-entry-card {
-  border-color: rgba(255, 255, 255, 0.85);
-  background: #0b0c0e;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
-}
-[data-theme="dark"] .daily-entry-card {
-  border-color: rgba(255, 255, 255, 0.85);
-  background: #0b0c0e;
-}
 
 /* plan checklist の編集モード時カード化も白 hairline に。 */
-[data-theme="dark"] .plan-checklist-row.is-editing {
-  background: #0b0c0e;
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.22),
-    0 10px 28px rgba(0, 0, 0, 0.55);
-}
-[data-theme="dark"] .plan-checklist-text.is-editing {
-  background: #0b0c0e;
-  border-color: rgba(255, 255, 255, 0.30);
-  box-shadow:
-    0 0 0 3px rgba(74, 222, 128, 0.14),
-    0 6px 18px rgba(0, 0, 0, 0.5);
-}
 
 /* fallback アイコンは光彩が暗背景で潰れがちなので、white inset を強める。 */
-[data-theme="dark"] .learning-card-photo.is-fallback,
-[data-theme="dark"] .learning-photo-preview.is-fallback {
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.45),
-    inset 0 -8px 16px rgba(0, 0, 0, 0.32),
-    0 0 0 1px rgba(255, 255, 255, 0.12);
-}
 
 /* セクション見出しの "Inbox 43 >" 風下線、daily editor の label など
    ink hairline を使う場所はもともと var(--ink) = 白なので問題なし。
    muted テキストだけ上で c8cdd2 に持ち上げたので、サブ説明文も読みやすい。 */
+
+/* === Phase 5: keyframes / dark を分離 === */
+@import "./styles/animations.css";
+@import "./styles/dark.css";
