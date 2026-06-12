@@ -8,6 +8,12 @@ type AppErrorBoundaryState = {
   error: Error | null;
 };
 
+/**
+ * Phase 11d: オリジナルのエラー画面。
+ * nondo 風の「純黒/純白 + 1.5px ink hairline + 太字見出し + ink pill CTA」
+ * の語彙に統一。装飾的な glass / shadow / 角丸 30px は廃止し、
+ * Habit / Profile menu と同じ視覚言語にする。
+ */
 export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorBoundaryState> {
   state: AppErrorBoundaryState = {
     error: null,
@@ -33,12 +39,25 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
 
     return (
       <main className="app-error-shell">
-        <section className="app-error-card">
-          <p className="card-kicker">Contribution Arc</p>
-          <h1>画面の復帰が必要です。</h1>
-          <p>Roomデータの読み込み中に表示が止まりました。再読み込みすると直前の状態から復帰します。</p>
-          <p className="app-error-detail">{this.state.error.message}</p>
-          <button type="button" onClick={this.handleReset}>
+        <section
+          className="app-error-card"
+          role="alert"
+          aria-live="assertive"
+        >
+          <span className="app-error-mark" aria-hidden="true">!</span>
+          <p className="app-error-kicker">Contribution Arc</p>
+          <h1 className="app-error-title">画面の復帰が必要です。</h1>
+          <p className="app-error-body">
+            データの読み込み中に表示が止まりました。再読み込みすると直前の状態から復帰します。
+          </p>
+          <pre className="app-error-detail" aria-label="エラー詳細">
+            {this.state.error.message}
+          </pre>
+          <button
+            type="button"
+            className="app-error-cta"
+            onClick={this.handleReset}
+          >
             再読み込み
           </button>
         </section>
