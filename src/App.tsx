@@ -133,14 +133,12 @@ import {
 import { computeStudyStreak } from "./services/studyStreak";
 import { PLANS, getPlan, BETA_ALL_FEATURES_FREE, type PlanTier } from "./services/plans";
 import {
-  DAILY_CUTOFF_HOUR,
   clampNumber,
   formatDailyDate,
   formatLearningLastLogged,
   formatStayTime,
   formatStudyTimeJa,
   getCurrentWeekKey,
-  getDateInputValue,
   getLearnerDate,
   getTodayKey,
   getWeekStart,
@@ -196,6 +194,11 @@ import { shareDailyReportImage } from "./daily/shareCard";
 import { resetAllTutorials } from "./services/tutorial";
 import { showToast } from "./services/toast";
 import { useTranslation } from "./i18n/LanguageContext";
+import { CharCountRing } from "./components/CharCountRing";
+import { ContributionArcLogo } from "./components/ContributionArcLogo";
+import { SettingsIcon } from "./components/icons/SettingsIcon";
+import { BellIcon } from "./components/icons/BellIcon";
+import { GitHubCallbackPage } from "./views/GitHubCallbackPage";
 import {
   LANGUAGE_LABELS,
   SUPPORTED_LANGUAGES,
@@ -628,49 +631,6 @@ const dayLabels = ["月", "火", "水", "木", "金", "土", "日"];
 const SPRING_SOFT = { type: "spring", stiffness: 280, damping: 28, mass: 0.7 } as const;
 const SPRING_SNAPPY = { type: "spring", stiffness: 380, damping: 30, mass: 0.6 } as const;
 
-// Visual char counter — circular ring that fills as you type and
-// switches to a remaining-count number in the danger zone.
-function CharCountRing({ value, max }: { value: number; max: number }) {
-  const radius = 9;
-  const circumference = 2 * Math.PI * radius;
-  const progress = Math.min(1, value / max);
-  const isNearLimit = value >= max - 20;
-  const isOverLimit = value >= max;
-  const remaining = max - value;
-  const strokeColor = isOverLimit
-    ? "var(--accent-warm, #d3573b)"
-    : isNearLimit
-    ? "#c8a95b"
-    : "var(--green, #1f6f4a)";
-  return (
-    <span className="char-count-ring" aria-label={`${value} / ${max} 文字`}>
-      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-        <circle
-          cx="12"
-          cy="12"
-          r={radius}
-          fill="none"
-          stroke="var(--line-strong, rgba(0,0,0,0.12))"
-          strokeWidth="2"
-        />
-        <circle
-          cx="12"
-          cy="12"
-          r={radius}
-          fill="none"
-          stroke={strokeColor}
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={circumference * (1 - progress)}
-          transform="rotate(-90 12 12)"
-          style={{ transition: "stroke-dashoffset 240ms ease, stroke 240ms ease" }}
-        />
-      </svg>
-      {isNearLimit ? <small>{remaining}</small> : null}
-    </span>
-  );
-}
 const studyColorOptions = [
   { name: "Evergreen", labelJa: "緑", value: "#1f6f4a" },
   { name: "Sage", labelJa: "若草", value: "#7aa874" },
@@ -3063,116 +3023,10 @@ function GitHubIcon() {
   );
 }
 
-function SettingsIcon() {
-  return (
-    <svg className="settings-icon" viewBox="0 0 256 256" aria-hidden="true">
-      <path
-        fill="currentColor"
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M107.4 7.6C111.6 2.8 117.8 0 124.2 0h7.6c6.4 0 12.6 2.8 16.8 7.6 3.4 3.9 5.2 8.9 5 14.1l-1.4 29.1c6.9 2.2 13.5 5.1 19.6 8.7l22.3-19.5c4-3.5 9.2-5.2 14.5-4.8 5.3.4 10.2 2.9 13.6 7l5.4 6.4c7.3 8.6 6.6 21.4-1.6 29.2l-21.6 20.5c1.4 6.3 2.1 12.9 2.1 19.7 0 3.6-.2 7.2-.6 10.7l27.8 10.5c10.4 3.9 16 15.2 12.8 25.8l-2.4 7.9c-1.6 5.3-5.3 9.7-10.2 12.2-4.9 2.5-10.7 2.9-15.9 1l-28.1-10.1c-4.4 5.2-9.4 9.9-14.9 14l8.5 28.3c1.5 5 .8 10.4-2 14.8-2.8 4.4-7.2 7.6-12.3 8.8l-8.1 1.9c-10.9 2.6-21.9-3.6-25.4-14.3l-9-28c-3.6.4-7.2.6-10.9.6-3.7 0-7.3-.2-10.9-.6l-9 28c-3.5 10.7-14.5 16.9-25.4 14.3l-8.1-1.9c-5.1-1.2-9.6-4.4-12.3-8.8-2.8-4.4-3.5-9.8-2-14.8l8.5-28.3c-5.5-4.1-10.5-8.8-14.9-14L38 176.1c-5.2 1.9-10.9 1.5-15.9-1-4.9-2.5-8.6-6.9-10.2-12.2L9.5 155c-3.2-10.6 2.4-21.9 12.8-25.8l27.8-10.5c-.4-3.5-.6-7.1-.6-10.7 0-6.8.7-13.4 2.1-19.7L30 67.8c-8.2-7.8-8.9-20.6-1.6-29.2l5.4-6.4c3.4-4.1 8.3-6.6 13.6-7 5.3-.4 10.5 1.3 14.5 4.8l22.3 19.5c6.1-3.6 12.7-6.5 19.6-8.7l-1.4-29.1c-.2-5.2 1.6-10.2 5-14.1ZM128 78a50 50 0 1 0 0 100 50 50 0 0 0 0-100Zm0 28a22 22 0 1 0 0 44 22 22 0 0 0 0-44Z"
-      />
-    </svg>
-  );
-}
-
-function BellIcon() {
-  return (
-    <svg className="bell-icon" viewBox="0 0 64 64" aria-hidden="true">
-      <path
-        d="M22 26c0-7.7 4.2-13.4 10-13.4S42 18.3 42 26v12.4l7 9.8H15l7-9.8V26Z"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="4"
-      />
-      <path
-        d="M28 12.8V9.6c0-2.2 1.8-4 4-4s4 1.8 4 4v3.2M27.2 48.2c.8 3 2.4 4.8 4.8 4.8s4-1.8 4.8-4.8M14 24.5c-2.9 2.8-4.6 6.5-4.9 10.7M50 24.5c2.9 2.8 4.6 6.5 4.9 10.7"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="4"
-      />
-    </svg>
-  );
-}
 
 
-function ContributionArcLogo() {
-  return (
-    <div className="brand-logo-stage" aria-label="Contribution Arc logo">
-      <svg
-        className="brand-logo-mark"
-        viewBox="0 0 160 160"
-        role="img"
-        aria-labelledby="contribution-arc-logo-title"
-      >
-        <title id="contribution-arc-logo-title">Contribution Arc</title>
-        <defs>
-          <linearGradient id="logo-border-gradient" x1="22" y1="134" x2="138" y2="24">
-            <stop offset="0" stopColor="#103d2a" />
-            <stop offset="0.48" stopColor="#1f6f4a" />
-            <stop offset="1" stopColor="#a7c978" />
-          </linearGradient>
-        </defs>
-        <rect className="logo-icon-base" x="10" y="10" width="140" height="140" rx="35" />
-        <rect className="logo-icon-border" x="13" y="13" width="134" height="134" rx="32" />
-        <rect className="logo-icon-inner-border" x="25" y="25" width="110" height="110" rx="27" />
-        <g className="logo-contribution-arc" aria-hidden="true">
-          <rect className="arc-block block-1" x="34" y="109" width="10" height="10" rx="2.4" />
-          <rect className="arc-block block-2" x="46" y="105" width="10" height="10" rx="2.4" />
-          <rect className="arc-block block-3" x="58" y="98" width="10" height="10" rx="2.4" />
-          <rect className="arc-block block-4" x="70" y="88" width="10" height="10" rx="2.4" />
-          <rect className="arc-block block-5" x="82" y="76" width="10" height="10" rx="2.4" />
-          <rect className="arc-block block-6" x="94" y="63" width="10" height="10" rx="2.4" />
-          <rect className="arc-block block-7" x="106" y="51" width="10" height="10" rx="2.4" />
-          <rect className="arc-block block-8" x="118" y="42" width="10" height="10" rx="2.4" />
-        </g>
-      </svg>
-    </div>
-  );
-}
 
-function GitHubCallbackPage() {
-  const params = new URLSearchParams(window.location.search);
-  const code = params.get("code");
-  const state = params.get("state");
-  const error = params.get("error");
 
-  return (
-    <main className="app-shell callback-shell">
-      <section className="card callback-card">
-        <p className="card-kicker">GitHub OAuth Callback</p>
-        <h1>Contribution Arc is ready to complete your GitHub connection.</h1>
-        {error ? (
-          <p className="callback-message error">
-            GitHub returned an error: <strong>{error}</strong>
-          </p>
-        ) : (
-          <p className="callback-message">
-            Authorization code received. The next step is exchanging this code on a
-            backend server, not in the browser.
-          </p>
-        )}
-
-        <div className="callback-detail">
-          <span>code</span>
-          <code>{code || "No code parameter found"}</code>
-        </div>
-        <div className="callback-detail">
-          <span>state</span>
-          <code>{state || "No state parameter found"}</code>
-        </div>
-
-        <a className="callback-back" href="/">
-          Back to Contribution Arc
-        </a>
-      </section>
-    </main>
-  );
-}
 
 function getAuthErrorCode(error: unknown) {
   return typeof error === "object" && error && "code" in error
