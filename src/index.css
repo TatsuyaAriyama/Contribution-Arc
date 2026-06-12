@@ -296,12 +296,14 @@ button {
   justify-content: center;
   width: 56px;
   height: 56px;
-  border: 1.5px solid currentColor;
   border-radius: 16px;
-  font-size: 30px;
-  font-weight: 900;
-  letter-spacing: -0.05em;
-  line-height: 1;
+  overflow: hidden;
+}
+.boot-loading-mark img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
 }
 .boot-loading-title {
   margin: 0;

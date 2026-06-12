@@ -9279,7 +9279,9 @@ function App() {
     return (
       <main className="boot-loading-shell" aria-busy="true">
         <section className="boot-loading-card" role="status" aria-live="polite">
-          <span className="boot-loading-mark" aria-hidden="true">A</span>
+          <span className="boot-loading-mark" aria-hidden="true">
+            <img src={`${import.meta.env.BASE_URL}contribution-arc-icon.svg`} alt="" />
+          </span>
           <h1 className="boot-loading-title">Contribution Arc</h1>
           <p className="boot-loading-subtitle">Loading</p>
           <div className="boot-loading-dots" aria-hidden="true">
