@@ -119,7 +119,11 @@ function drawCheck(ctx: CanvasRenderingContext2D, cx: number, cy: number, done: 
   }
 }
 
-export async function shareDailyReportImage(data: DailyShareData): Promise<ShareResult> {
+/**
+ * 日報を 1 枚の PNG（Blob）にレンダリングして返す純粋関数。共有/保存/
+ * プレビューのいずれにも使えるよう、書き出しと UI を分離している。
+ */
+export async function createDailyReportImageBlob(data: DailyShareData): Promise<Blob> {
   // 測定用の使い捨て context（measureText はキャンバスサイズに依らない）。
   const measureCanvas = document.createElement("canvas");
   const mctx = measureCanvas.getContext("2d");
@@ -329,13 +333,26 @@ export async function shareDailyReportImage(data: DailyShareData): Promise<Share
   const brandW = ctx.measureText(brand).width;
   ctx.fillText(brand, PAD + CARD_W - CARD_PAD - brandW, y + 1);
 
-  // --- 書き出し & 共有 ---
+  // --- 書き出し ---
   const blob = await new Promise<Blob | null>((resolve) =>
     canvas.toBlob(resolve, "image/png"),
   );
   if (!blob) throw new Error("export-failed");
+  return blob;
+}
 
-  const filename = `daily-${data.dateLabel}.png`.replace(/[\\/:*?"<>|()]/g, "");
+/** 共有用のファイル名（日付ラベルから生成、ファイル名に使えない文字を除去）。 */
+export function dailyShareFilename(dateLabel: string): string {
+  return `daily-${dateLabel}.png`.replace(/[\\/:*?"<>|()]/g, "");
+}
+
+/**
+ * 画像を生成し、Web Share API（ファイル共有対応）が使える環境では共有
+ * シートを開く。非対応（多くの PC ブラウザ）ではダウンロード保存に倒す。
+ */
+export async function shareDailyReportImage(data: DailyShareData): Promise<ShareResult> {
+  const blob = await createDailyReportImageBlob(data);
+  const filename = dailyShareFilename(data.dateLabel);
   const file = new File([blob], filename, { type: "image/png" });
 
   const nav = navigator as Navigator & {

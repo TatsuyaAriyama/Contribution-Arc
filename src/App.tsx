@@ -190,7 +190,10 @@ import {
   planItemsFromLegacyText,
   planItemsToMentionScannable,
 } from "./services/dailyPlanItems";
-import { shareDailyReportImage } from "./daily/shareCard";
+import {
+  createDailyReportImageBlob,
+  dailyShareFilename,
+} from "./daily/shareCard";
 import { resetAllTutorials } from "./services/tutorial";
 import { showToast } from "./services/toast";
 import { useTranslation } from "./i18n/LanguageContext";
@@ -4316,6 +4319,13 @@ function App() {
   // view in the Team Daily feed. Stores the full report; we look up
   // study/commit data for that date on the fly when rendering.
   const [expandedDailyReport, setExpandedDailyReport] = useState<DailyReport | null>(null);
+  // PC など Web Share(ファイル)非対応環境で「画像で共有」を押したときの
+  // プレビューモーダル。生成済み PNG を保存 / クリップボードにコピーできる。
+  const [dailySharePreview, setDailySharePreview] = useState<{
+    url: string;
+    blob: Blob;
+    filename: string;
+  } | null>(null);
   const [dailyMessage, setDailyMessage] = useState("");
   const [isSavingDailyReport, setIsSavingDailyReport] = useState(false);
   /* Phase 10a: 下書きモード. When true, the next save persists locally
@@ -7473,20 +7483,72 @@ function App() {
       return;
     }
     try {
-      const result = await shareDailyReportImage({
-        dateLabel: formatDailyDate(selectedDailyDate),
+      const dateLabel = formatDailyDate(selectedDailyDate);
+      const blob = await createDailyReportImageBlob({
+        dateLabel,
         authorName: selectedDailyReport?.userName || playerName || "Developer",
         streakDays: dailyReportStreak,
         planItems,
         reflection,
       });
-      if (result === "downloaded") {
-        setDailyMessage("画像を保存しました。ホーム画面の写真ウィジェットに置けます。");
-      } else if (result === "shared") {
-        setDailyMessage("");
+      const filename = dailyShareFilename(dateLabel);
+      const file = new File([blob], filename, { type: "image/png" });
+      const nav = navigator as Navigator & {
+        canShare?: (data?: ShareData) => boolean;
+      };
+      // モバイル等 (ファイル共有対応) は従来どおりネイティブ共有シート。
+      if (nav.share && nav.canShare && nav.canShare({ files: [file] })) {
+        try {
+          await nav.share({ files: [file], title: `${dateLabel}の日報` });
+          setDailyMessage("");
+          return;
+        } catch (err) {
+          // ユーザーキャンセルはそこで終了。それ以外はプレビューに倒す。
+          if (err instanceof DOMException && err.name === "AbortError") return;
+        }
       }
+      // PC など非対応環境: プレビューモーダルで保存 / コピーを選ばせる。
+      setDailySharePreview({ url: URL.createObjectURL(blob), blob, filename });
+      setDailyMessage("");
     } catch {
       setDailyMessage("画像の作成に失敗しました。");
+    }
+  };
+
+  const closeDailySharePreview = () => {
+    setDailySharePreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev.url);
+      return null;
+    });
+  };
+
+  const handleSaveDailyShareImage = () => {
+    if (!dailySharePreview) return;
+    const a = document.createElement("a");
+    a.href = dailySharePreview.url;
+    a.download = dailySharePreview.filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setDailyMessage("画像を保存しました。ホーム画面の写真ウィジェットに置けます。");
+  };
+
+  const handleCopyDailyShareImage = async () => {
+    if (!dailySharePreview) return;
+    const clip = navigator as Navigator & {
+      clipboard?: { write?: (items: ClipboardItem[]) => Promise<void> };
+    };
+    if (typeof ClipboardItem === "undefined" || !clip.clipboard?.write) {
+      setDailyMessage("この環境ではコピーに非対応です。保存をご利用ください。");
+      return;
+    }
+    try {
+      await clip.clipboard.write([
+        new ClipboardItem({ "image/png": dailySharePreview.blob }),
+      ]);
+      setDailyMessage("画像をクリップボードにコピーしました。");
+    } catch {
+      setDailyMessage("コピーに失敗しました。保存をご利用ください。");
     }
   };
   // Plan items の完了率 (進捗バー用)
@@ -14923,6 +14985,61 @@ function App() {
           </div>
         );
       })() : null}
+
+      {dailySharePreview ? (
+        <div
+          className="settings-modal-backdrop"
+          role="presentation"
+          onClick={closeDailySharePreview}
+        >
+          <section
+            className="settings-modal daily-share-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("日報の共有画像")}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="daily-share-modal-preview">
+              <img src={dailySharePreview.url} alt={t("日報の共有画像")} />
+            </div>
+            <p className="daily-share-modal-hint">
+              {t("画像を保存して SNS に投稿したり、写真ウィジェットに置けます。")}
+            </p>
+            <div className="daily-share-modal-actions">
+              <button
+                type="button"
+                className="daily-share-modal-copy"
+                onClick={() => void handleCopyDailyShareImage()}
+              >
+                {t("コピー")}
+              </button>
+              <button
+                type="button"
+                className="daily-share-modal-save"
+                onClick={handleSaveDailyShareImage}
+              >
+                {t("画像を保存")}
+              </button>
+            </div>
+            <button
+              type="button"
+              className="daily-share-modal-close"
+              onClick={closeDailySharePreview}
+              aria-label={t("閉じる")}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path
+                  d="M6 6l12 12M18 6 6 18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+          </section>
+        </div>
+      ) : null}
 
       <ShareToXModal
         open={isShareToXOpen}

@@ -5836,6 +5836,89 @@
   height: 17px;
 }
 
+/* 「画像で共有」プレビューモーダル。Web Share(ファイル) 非対応の PC では
+   ここで生成済み PNG を確認し、保存 / クリップボードにコピーできる。
+   backdrop は settings-modal-backdrop（blur + z-index）を流用。 */
+.daily-share-modal {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  width: min(92vw, 420px);
+  max-width: 420px;
+}
+.daily-share-modal-preview {
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(var(--ink-rgb), 0.04);
+}
+.daily-share-modal-preview img {
+  width: 100%;
+  height: auto;
+  max-height: 58vh;
+  object-fit: contain;
+  border-radius: 12px;
+}
+.daily-share-modal-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: center;
+}
+.daily-share-modal-actions {
+  display: flex;
+  gap: 10px;
+}
+.daily-share-modal-actions button {
+  flex: 1;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease,
+    border-color 0.16s ease, background 0.16s ease;
+}
+.daily-share-modal-save {
+  border: 0;
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+  box-shadow: 0 10px 26px rgba(26, 24, 23, 0.16);
+}
+.daily-share-modal-copy {
+  border: 1px solid rgba(var(--ink-rgb), 0.14);
+  background: var(--surface);
+  color: var(--ink);
+}
+.daily-share-modal-save:active,
+.daily-share-modal-copy:active {
+  transform: scale(0.97);
+}
+.daily-share-modal-close {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(var(--ink-rgb), 0.1);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(26, 24, 23, 0.12);
+}
+.daily-share-modal-close svg {
+  width: 17px;
+  height: 17px;
+}
+
 .daily-editor-form {
   display: grid;
   /* コンパクト化：12 → 10px。各 entry-card 間の隙間を詰めて、
