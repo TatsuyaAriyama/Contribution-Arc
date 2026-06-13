@@ -4243,6 +4243,9 @@ function App() {
   const [dailyReflectionDraft, setDailyReflectionDraft] = useState("");
   const [dailyHistoryDateFilter, setDailyHistoryDateFilter] = useState("");
   const [dailyHistorySearch, setDailyHistorySearch] = useState("");
+  // 右パネルのセグメントタブ: "mine" = 自分の過去日報 / "team" = みんなの日報。
+  // 性質の違う 2 リストを縦積みせず切替式にして、Team Daily の発見性を上げる。
+  const [dailyHistoryTab, setDailyHistoryTab] = useState<"mine" | "team">("mine");
   // Modal state for the "tap a past daily report" → expanded detail
   // view in the Team Daily feed. Stores the full report; we look up
   // study/commit data for that date on the fly when rendering.
@@ -17170,10 +17173,31 @@ function App() {
           </section>
 
           <aside className="daily-history-card">
-            <div className="daily-history-head">
-              <p className="card-kicker">History</p>
-              <strong>{filteredDailyReports.length}/{dailyReports.length} days</strong>
+            <div className="daily-history-tabs" role="tablist" aria-label={t("日報の記録")}>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={dailyHistoryTab === "mine"}
+                className={`daily-history-tab${dailyHistoryTab === "mine" ? " is-active" : ""}`}
+                onClick={() => setDailyHistoryTab("mine")}
+              >
+                <span>{t("自分の記録")}</span>
+                <small>{dailyReports.length}</small>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={dailyHistoryTab === "team"}
+                className={`daily-history-tab${dailyHistoryTab === "team" ? " is-active" : ""}`}
+                onClick={() => setDailyHistoryTab("team")}
+              >
+                <span>{t("みんなの日報")}</span>
+                {isSharedDailyLoaded ? <small>{visibleSharedDailyReports.length}</small> : null}
+              </button>
             </div>
+
+            {dailyHistoryTab === "mine" ? (
+            <div className="daily-history-panel" role="tabpanel">
             <div className="daily-history-filters" aria-label={t("過去の日報を絞り込む")}>
               <label>
                 <span>{t("日付")}</span>
@@ -17238,12 +17262,9 @@ function App() {
                 <p>{t("まだ日報はありません。")}</p>
               )}
             </div>
-
-            <div className="daily-shared-feed" aria-label={t("みんなの日報")}>
-              <div className="daily-history-head">
-                <p className="card-kicker">Team Daily</p>
-                <strong>{isSharedDailyLoaded ? visibleSharedDailyReports.length : ""}</strong>
-              </div>
+            </div>
+            ) : (
+            <div className="daily-shared-feed" role="tabpanel" aria-label={t("みんなの日報")}>
               {/* Team Daily は明示的に "読み込む" を押すまでネットワーク fetch
                   しない。100 件まで一括取得 → onSnapshot ではないので再読込
                   したい場合は再度ボタンを押す。 */}
@@ -17352,6 +17373,7 @@ function App() {
                 <p className="daily-shared-empty">{t("共有された日報はまだありません。")}</p>
               )}
             </div>
+            )}
           </aside>
         </motion.section>
       ) : currentView === "learning" ? (
