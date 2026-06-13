@@ -7159,8 +7159,21 @@ function App() {
   const baseWorkspaceRooms = [...workspaceRooms, ...customRooms]
     .map(normalizeWorkspaceRoom)
     .filter((room) => !isLegacyWorkspaceRoom(room));
-  const scheduledMinaRoomId = getScheduledMinaRoomId(baseWorkspaceRooms, workspaceNow);
-  const scheduledNishimiyaRoomId = getScheduledNishimiyaRoomId(baseWorkspaceRooms, workspaceNow);
+  /* mina / nishimiya は表示専用のスケジュール NPC。決定論的に部屋を
+     選ぶので、解体後の localStorage cache の幽霊部屋や、まだ
+     remote 同期されていない pending 新規部屋が候補に混じると
+     「解体した部屋に NPC が入る」謎演出になる。
+     → Firestore で実在が確認された (= remote snapshot に居る) 部屋
+     だけを NPC 配置の候補にして、幽霊部屋への注入を遮断する。 */
+  const npcCandidateRoomIds = new Set([
+    ...remoteWorkspaceRoomsRef.current.rooms.map((room) => room.id),
+    ...remoteWorkspaceRoomsRef.current.legacyRooms.map((room) => room.id),
+  ]);
+  const npcCandidateRooms = baseWorkspaceRooms.filter((room) =>
+    npcCandidateRoomIds.has(room.id),
+  );
+  const scheduledMinaRoomId = getScheduledMinaRoomId(npcCandidateRooms, workspaceNow);
+  const scheduledNishimiyaRoomId = getScheduledNishimiyaRoomId(npcCandidateRooms, workspaceNow);
   const allWorkspaceRooms = baseWorkspaceRooms
     .map((room) =>
       normalizeWorkspaceRoom(
