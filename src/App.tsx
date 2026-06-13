@@ -14107,25 +14107,6 @@ function App() {
                   ) : null}
                 </button>
 
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setIsUserMenuOpen(false);
-                    if (typeof window !== "undefined" && window.matchMedia("(max-width: 720px)").matches) {
-                      setCurrentView("feed");
-                    } else {
-                      setIsFeedOpen((prev) => !prev);
-                    }
-                  }}
-                >
-                  <svg className="user-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-                    <rect x="14" y="4" width="7" height="16" rx="2" fill={isFeedOpen ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.6" />
-                  </svg>
-                  <span>{isFeedOpen ? t("投稿を閉じる") : t("投稿を開く")}</span>
-                </button>
-
                 <div className="user-menu-separator" aria-hidden="true" />
 
                 <button
@@ -20068,26 +20049,6 @@ function App() {
           isFeedOpen preference (default true, persisted to localStorage). */}
       {currentView !== "workspace" && currentView !== "feed" && isFeedOpen ? (
         <aside className="two-pane-right" aria-label="投稿">
-          {/* ペイン上部に常駐する折りたたみハンドル。スクロールしても
-              sticky で右肩に留まるので、いつでもワンクリックで畳める。 */}
-          <button
-            type="button"
-            className="feed-collapse-btn"
-            onClick={() => setIsFeedOpen(false)}
-            aria-label={t("投稿を閉じる")}
-            data-tooltip={t("投稿を閉じる")}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path
-                d="M9 6l6 6-6 6"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
           {feedSection}
         </aside>
       ) : null}
@@ -20095,22 +20056,35 @@ function App() {
       </div>
       </div>
 
-      {/* 投稿ペインを畳んでいるときに、画面右端へ常駐する開き直しタブ。
-          スクロール位置やビューに関係なく、いつでも投稿を呼び戻せる。
+      {/* 投稿ペインの常駐トグル。開いていても畳んでいても画面右端に
+          固定で出続けるので、PC のどのビューからでもワンクリックで
+          投稿の表示/非表示を切り替えられる（アバターメニューから出した）。
+          矢印の向き = パネルの動く方向で直感的に：開いているときは右向き
+          (›＝右へ畳む)、畳んでいるときは左向き (‹＝左へ引き出す)。
           2 カラムになる ≥1081px でのみ意味を持つので、それ未満は CSS で
-          非表示（狭い幅では投稿はホーム下部や bottom-nav から辿れる）。 */}
-      {currentView !== "workspace" && currentView !== "feed" && !isFeedOpen ? (
+          非表示（狭い幅では投稿は bottom-nav のホームから辿れる）。 */}
+      {currentView !== "workspace" && currentView !== "feed" ? (
         <button
           type="button"
-          className="feed-reopen-tab"
-          onClick={() => setIsFeedOpen(true)}
-          aria-label={t("投稿を開く")}
+          className={`feed-dock-toggle${isFeedOpen ? " is-open" : ""}`}
+          onClick={() => setIsFeedOpen((prev) => !prev)}
+          aria-pressed={isFeedOpen}
+          aria-label={isFeedOpen ? t("投稿を閉じる") : t("投稿を開く")}
+          data-tooltip={isFeedOpen ? t("投稿を閉じる") : t("投稿を開く")}
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-            <rect x="14" y="4" width="7" height="16" rx="2" fill="currentColor" stroke="currentColor" strokeWidth="1.6" />
-          </svg>
-          <span>{t("投稿")}</span>
+          <span className="feed-dock-toggle-chevron" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path
+                d="M9 5l7 7-7 7"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+          <span className="feed-dock-toggle-label">{t("投稿")}</span>
         </button>
       ) : null}
 

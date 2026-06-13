@@ -15822,56 +15822,15 @@
   }
 }
 
-/* ===== 投稿（右ペイン）の開閉コントロール =====
-   旧 FEED トグルはトップバー → アバターメニューへ移したが「いつでも
-   どこでも畳める／開ける」導線が欲しいという要望に応えて、ペイン自身に
-   常駐ハンドルを足す。
-   - .feed-collapse-btn: ペイン内の sticky な折りたたみボタン（スクロール
-     しても右肩に留まる）。
-   - .feed-reopen-tab: 畳んでいるときに画面右端へ固定表示する開き直しタブ。
-   どちらも 2 カラムになる ≥1081px でのみ意味があるので、それ未満は隠す。 */
-.feed-collapse-btn {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  align-self: flex-end;
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  margin: -2px -2px -8px 0;
-  padding: 0;
-  border: 1px solid rgba(var(--ink-rgb), 0.1);
-  border-radius: 9px;
-  background: rgba(var(--surface-rgb), 0.82);
-  color: var(--muted);
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-  transition:
-    color 0.16s ease,
-    background 0.16s ease,
-    border-color 0.16s ease,
-    transform 0.16s ease;
-}
-
-.feed-collapse-btn:hover {
-  color: var(--ink);
-  background: var(--surface);
-  border-color: rgba(var(--ink-rgb), 0.18);
-}
-
-.feed-collapse-btn svg {
-  width: 16px;
-  height: 16px;
-}
-
-@media (max-width: 1080px) {
-  .feed-collapse-btn {
-    display: none;
-  }
-}
-
-.feed-reopen-tab {
+/* ===== 投稿（右ペイン）の常駐トグル =====
+   旧 FEED トグルはアバターメニューに埋まっていて扱いづらかったので、
+   画面右端に固定して「開いていても畳んでいても、PC のどのビューからでも
+   ワンクリックで切り替えられる」常駐コントロールにした。
+   矢印の向き = パネルの動く方向：
+   - is-open（投稿が見えている）: › 右向き → 右へ畳む合図
+   - 既定（投稿が畳まれている）: ‹ 左向き → 左へ引き出す合図
+   2 カラムになる ≥1081px でのみ意味があるので、それ未満は隠す。 */
+.feed-dock-toggle {
   position: fixed;
   top: 50%;
   right: 0;
@@ -15880,41 +15839,57 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 12px 7px;
+  gap: 8px;
+  padding: 12px 6px;
   border: 1px solid rgba(var(--ink-rgb), 0.1);
   border-right: none;
-  border-radius: 12px 0 0 12px;
+  border-radius: 13px 0 0 13px;
   background: var(--surface-elevated);
   color: var(--ink);
   cursor: pointer;
   box-shadow: var(--shadow-soft);
   transition:
-    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
     background 0.16s ease,
-    border-color 0.16s ease;
+    border-color 0.16s ease,
+    color 0.16s ease;
 }
 
-.feed-reopen-tab:hover {
+.feed-dock-toggle:hover {
   transform: translateY(-50%) translateX(-2px);
   border-color: rgba(var(--ink-rgb), 0.2);
+  background: var(--surface);
 }
 
-.feed-reopen-tab svg {
+/* シェブロン本体。既定（畳んでいる状態）は左向き＝引き出す合図。 */
+.feed-dock-toggle-chevron {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  transform: rotate(180deg);
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.feed-dock-toggle-chevron svg {
   width: 18px;
   height: 18px;
-  opacity: 0.8;
 }
 
-.feed-reopen-tab span {
+/* 開いている状態は右向き＝右へ畳む合図にひっくり返す。 */
+.feed-dock-toggle.is-open .feed-dock-toggle-chevron {
+  transform: rotate(0deg);
+}
+
+.feed-dock-toggle-label {
   writing-mode: vertical-rl;
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
 }
 
 @media (max-width: 1080px) {
-  .feed-reopen-tab {
+  .feed-dock-toggle {
     display: none;
   }
 }
