@@ -4285,6 +4285,12 @@ function App() {
   const [postError, setPostError] = useState("");
   const [isPosting, setIsPosting] = useState(false);
   const [timelineFilter, setTimelineFilter] = useState<"following" | "all">("all");
+  /* ホームフィードの種別フィルタ。範囲 (Following/All) と直交する軸。
+     - "posts": 人の声 (手動投稿) + 仲間募集。学習記録の自動投稿は隠す
+     - "study": 学習の記録 (auto-study) だけ
+     デフォルトは "posts"。学習記録がフィードを埋めて「ごちゃつく」
+     のを避け、別軸で見られるようにする。 */
+  const [feedKindFilter, setFeedKindFilter] = useState<"posts" | "study">("posts");
   const [workspaceRecruitments, setWorkspaceRecruitments] = useState<WorkspaceRecruitmentRecord[]>([]);
   const [incomingInvites, setIncomingInvites] = useState<WorkspaceInviteRecord[]>([]);
   const [feedNowTick, setFeedNowTick] = useState(() => Date.now());
@@ -13592,12 +13598,21 @@ function App() {
       })),
     ];
 
-    const filtered =
+    const scopeFiltered =
       timelineFilter === "following"
         ? allEntries.filter((entry) =>
             followingSet.has(entry.kind === "post" ? entry.post.userId : entry.recruitment.userId),
           )
         : allEntries;
+
+    /* 種別フィルタ:
+       - "study": 学習記録 (auto-study) の post のみ
+       - "posts": 学習記録以外 = 手動投稿 + アトリエ積み上げ (auto-workspace)
+                  + 仲間募集 (recruitment) */
+    const filtered = scopeFiltered.filter((entry) => {
+      const isStudyLog = entry.kind === "post" && entry.post.postType === "auto-study";
+      return feedKindFilter === "study" ? isStudyLog : !isStudyLog;
+    });
 
     const sorted = filtered.sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
@@ -13648,6 +13663,29 @@ function App() {
             </div>
           </form>
         </section>
+
+        {/* 種別セグメント: 投稿 (人の声 + 募集) / 学習の記録。
+            学習記録を別軸に分離してフィードのごちゃつきを解消する。 */}
+        <div className="feed-kind-segment" role="tablist" aria-label="フィードの種類">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={feedKindFilter === "posts"}
+            className={`feed-kind-tab${feedKindFilter === "posts" ? " is-active" : ""}`}
+            onClick={() => setFeedKindFilter("posts")}
+          >
+            投稿
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={feedKindFilter === "study"}
+            className={`feed-kind-tab${feedKindFilter === "study" ? " is-active" : ""}`}
+            onClick={() => setFeedKindFilter("study")}
+          >
+            学習の記録
+          </button>
+        </div>
 
         <div className="timeline-filter-tabs" role="tablist" aria-label="フィードの表示範囲">
           <button
@@ -13701,16 +13739,24 @@ function App() {
             )
           ) : (
             <article className="log-empty-card">
-              <p className="card-kicker">{timelineFilter === "following" ? "Following" : "Quiet Progress"}</p>
+              <p className="card-kicker">
+                {feedKindFilter === "study" ? "Study Logs" : timelineFilter === "following" ? "Following" : "Quiet Progress"}
+              </p>
               <strong>
-                {timelineFilter === "following"
-                  ? "フォロー中の投稿はまだありません。"
-                  : "まだ投稿はありません。"}
+                {feedKindFilter === "study"
+                  ? timelineFilter === "following"
+                    ? "フォロー中の学習記録はまだありません。"
+                    : "まだ学習記録はありません。"
+                  : timelineFilter === "following"
+                    ? "フォロー中の投稿はまだありません。"
+                    : "まだ投稿はありません。"}
               </strong>
               <span>
-                {timelineFilter === "following"
-                  ? "気になるエンジニアをフォローすると、ここに学びとアトリエの募集が流れます。"
-                  : "今日作っているもの、学んだこと、アトリエの募集が静かに流れます。"}
+                {feedKindFilter === "study"
+                  ? "ライブラリの各カードから学習時間を記録すると、ここに流れます。"
+                  : timelineFilter === "following"
+                    ? "気になるエンジニアをフォローすると、ここに学びとアトリエの募集が流れます。"
+                    : "今日作っているもの、学んだこと、アトリエの募集が静かに流れます。"}
               </span>
             </article>
           )}
