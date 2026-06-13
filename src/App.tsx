@@ -380,6 +380,10 @@ type UserProfile = {
      week's Sunday. When it doesn't match the current week, weekMinutes is
      stale and counts as zero on the leaderboard. */
   weekKey?: string;
+  /* 月曜始まりの曜日別学習分数 (7 要素, 月→日)。プロフィールで「今週
+     どれだけ学習したか」を棒グラフで見せるために保存する。weekKey が
+     現在の週と一致しないときは stale なので 0 扱い。 */
+  weekdayMinutes?: number[];
   /* Preferred UI language. Defaults to "ja" when missing for
      backward compatibility with pre-i18n accounts. */
   language?: Language;
@@ -1513,6 +1517,12 @@ function normalizeUserProfile(uid: string, data: Partial<UserProfile>): UserProf
         ? Math.max(0, Math.floor(data.weekMinutes))
         : 0,
     weekKey: typeof data.weekKey === "string" ? data.weekKey : "",
+    weekdayMinutes:
+      Array.isArray(data.weekdayMinutes) && data.weekdayMinutes.length === 7
+        ? data.weekdayMinutes.map((m) =>
+            typeof m === "number" && Number.isFinite(m) ? Math.max(0, Math.floor(m)) : 0,
+          )
+        : undefined,
     language: getSafeLanguage(data.language),
     /* cross-device 同期版フィールド。未設定は undefined / 空配列で
        後方互換を保つ。文字列で来た場合や配列以外は黙って弾いて
@@ -9269,6 +9279,8 @@ function App() {
       // reads. weekKey lets a stale (previous-week) value count as zero.
       weekMinutes: contributionArc.thisWeekMinutes,
       weekKey: getCurrentWeekKey(),
+      // 曜日別 (月→日) の学習分数。プロフィールの週棒グラフ用。
+      weekdayMinutes: weeklyStudyHours.map((day) => day.totalMinutes),
       /* cross-device 同期: 旧 localStorage 限定だった設定を user doc
          にも常時 mirror する。スマホで設定したら PC で反映、その逆も。 */
       language,
@@ -12347,24 +12359,66 @@ function App() {
     );
   };
 
-  const recentLogsCard = (ownerUid: string, title = "Recent Logs") => {
-    const recentPosts = posts.filter((post) => post.userId === ownerUid).slice(0, 3);
-
+  /* 今週の学習を曜日別の棒グラフで見せる。自分・他人どちらの
+     プロフィールでも「どれだけ積み上げたか」が一目で分かるようにする。
+     minutesByDay は月曜始まりの 7 要素 (月→日)。 */
+  const profileWeekChart = (minutesByDay: number[], todayIndex: number) => {
+    const max = Math.max(1, ...minutesByDay);
+    const total = minutesByDay.reduce((sum, m) => sum + m, 0);
+    const activeDays = minutesByDay.filter((m) => m > 0).length;
     return (
-      <article className="profile-log-card">
-        <div className="profile-log-head">
-          <p className="card-kicker">{title}</p>
-          <button type="button" onClick={() => setCurrentView("logs")}>
-            みんなの記録を見る
-          </button>
+      <section className="profile-week-chart" aria-label="今週の学習時間">
+        <div className="profile-week-chart-head">
+          <p className="card-kicker">This Week</p>
+          <div className="profile-week-chart-summary">
+            <strong>{formatStudyTimeJa(total)}</strong>
+            <span>{activeDays}日 / 7日</span>
+          </div>
         </div>
-        {recentPosts.length > 0 ? (
-          <div className="profile-log-list">{recentPosts.map((post) => postCard(post, "compact"))}</div>
-        ) : (
-          <p className="profile-log-empty">まだ静かなログはありません。</p>
-        )}
-      </article>
+        <div className="profile-week-chart-bars" role="img" aria-label={`今週の合計 ${formatStudyTimeJa(total)}`}>
+          {minutesByDay.map((minutes, index) => {
+            const heightPct = minutes > 0 ? Math.max(8, (minutes / max) * 100) : 0;
+            return (
+              <div
+                key={index}
+                className={`profile-week-chart-col${index === todayIndex ? " is-today" : ""}${
+                  minutes > 0 ? " has-value" : ""
+                }`}
+              >
+                <span className="profile-week-chart-value">
+                  {minutes > 0 ? formatStudyTimeJa(minutes) : ""}
+                </span>
+                <div className="profile-week-chart-track">
+                  <span className="profile-week-chart-bar" style={{ height: `${heightPct}%` }} />
+                </div>
+                <span className="profile-week-chart-day">{dayLabels[index]}</span>
+              </div>
+            );
+          })}
+        </div>
+      </section>
     );
+  };
+
+  /* 他人のプロフィール (UserProfile) から週グラフを描く。週キーが
+     今週と一致するときだけ weekdayMinutes を信頼し、stale / 未保存は
+     静かな空状態を返す。 */
+  const profileWeekChartFromProfile = (profile: UserProfile) => {
+    const todayIndex = (new Date().getDay() + 6) % 7; // 月=0 に正規化
+    const isCurrentWeek = profile.weekKey === getCurrentWeekKey();
+    const data =
+      isCurrentWeek && profile.weekdayMinutes?.length === 7 ? profile.weekdayMinutes : null;
+    if (!data || data.every((m) => m === 0)) {
+      return (
+        <section className="profile-week-chart is-empty" aria-label="今週の学習時間">
+          <div className="profile-week-chart-head">
+            <p className="card-kicker">This Week</p>
+          </div>
+          <p className="profile-week-chart-empty">今週はまだ記録がありません。</p>
+        </section>
+      );
+    }
+    return profileWeekChart(data, todayIndex);
   };
 
   const memberProfileCard = (member: WorkspaceMember) => {
@@ -12500,7 +12554,7 @@ function App() {
         </div>
 
         {friendMessage ? <p className="friend-message">{friendMessage}</p> : null}
-        {recentLogsCard(member.userId)}
+        {profileWeekChartFromProfile(memberLive || memberProfile)}
       </article>
     );
   };
@@ -12808,30 +12862,6 @@ function App() {
               </button>
             </>
           ) : null}
-          {profile.uid !== currentUserUid ? (
-            blockedFriendUids.includes(profile.uid) ? (
-              <button
-                type="button"
-                className="friend-action-block"
-                onClick={() => handleUnblockUser(profile.uid)}
-              >
-                ブロック解除
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="friend-action-block"
-                onClick={() => {
-                  const ok = window.confirm(
-                    `${profile.displayName || "このユーザー"} をブロックしますか？\nフレンド関係は解除され、申請も届かなくなります。`,
-                  );
-                  if (ok) void handleBlockUser({ uid: profile.uid, name: profile.displayName || "ユーザー" });
-                }}
-              >
-                ブロック
-              </button>
-            )
-          ) : null}
           {liveGithubUrl ? (
             <a href={liveGithubUrl} target="_blank" rel="noreferrer">
               GitHub →
@@ -12840,7 +12870,36 @@ function App() {
         </div>
 
         {friendMessage ? <p className="friend-message">{friendMessage}</p> : null}
-        {recentLogsCard(profile.uid)}
+        {profileWeekChartFromProfile(liveProfile)}
+
+        {/* ブロックは破壊的なので主要アクション列から外し、カード最下部に
+            目立たない控えめなテキストリンクとして置く (要望対応)。 */}
+        {profile.uid !== currentUserUid ? (
+          <div className="profile-block-row">
+            {blockedFriendUids.includes(profile.uid) ? (
+              <button
+                type="button"
+                className="profile-block-link"
+                onClick={() => handleUnblockUser(profile.uid)}
+              >
+                ブロックを解除する
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="profile-block-link"
+                onClick={() => {
+                  const ok = window.confirm(
+                    `${profile.displayName || "このユーザー"} をブロックしますか？\nフレンド関係は解除され、申請も届かなくなります。`,
+                  );
+                  if (ok) void handleBlockUser({ uid: profile.uid, name: profile.displayName || "ユーザー" });
+                }}
+              >
+                このユーザーをブロック
+              </button>
+            )}
+          </div>
+        ) : null}
       </article>
     );
   };
@@ -18228,6 +18287,13 @@ function App() {
 
                 {/* Player Status はプロフィールの主役なので最上部に固定。 */}
                 {playerStatusCard(false)}
+
+                {/* 今週の学習を曜日別の棒グラフで。自分の studyLogs から
+                    直接組むのでリアルタイム。 */}
+                {profileWeekChart(
+                  weeklyStudyHours.map((day) => day.totalMinutes),
+                  (new Date().getDay() + 6) % 7,
+                )}
 
                 {/* Quick actions row — profile-screen specific. Lets
                     the user jump straight to common follow-ups
