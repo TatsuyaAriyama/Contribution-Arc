@@ -4315,6 +4315,10 @@ function App() {
   // 右パネルのセグメントタブ: "mine" = 自分の過去日報 / "team" = みんなの日報。
   // 性質の違う 2 リストを縦積みせず切替式にして、Team Daily の発見性を上げる。
   const [dailyHistoryTab, setDailyHistoryTab] = useState<"mine" | "team">("mine");
+  // 他ユーザーのプロフィールカードの ⋯(その他)メニュー開閉。ブロック等の
+  // 破壊的アクションを主要動線から隠してここに収める。常に1ユーザー分の
+  // カードしか表示しないので単一の boolean で足りる。
+  const [profileActionsMenuOpen, setProfileActionsMenuOpen] = useState(false);
   // Modal state for the "tap a past daily report" → expanded detail
   // view in the Team Daily feed. Stores the full report; we look up
   // study/commit data for that date on the fly when rendering.
@@ -12800,6 +12804,51 @@ function App() {
     );
   };
 
+  /* 他人のプロフィール用の「今週」データを Contribution 風の7セル強度
+     ストリップに変換する。weekdayMinutes(曜日別)があれば各セルの強度を
+     段階化、無ければ週合計だけ・それも無ければ空状態。profileWeekChart の
+     バー版とは別物で、こちらは friend-profile-card 専用。 */
+  const friendWeekStripData = (profile: UserProfile) => {
+    const todayIndex = (new Date().getDay() + 6) % 7; // 月=0
+    const isCurrentWeek = profile.weekKey === getCurrentWeekKey();
+    const breakdown =
+      isCurrentWeek && profile.weekdayMinutes?.length === 7 ? profile.weekdayMinutes : null;
+    const levelFor = (minutes: number, max: number): 0 | 1 | 2 | 3 | 4 => {
+      if (minutes <= 0) return 0;
+      const ratio = max > 0 ? minutes / max : 0;
+      if (ratio >= 0.75) return 4;
+      if (ratio >= 0.5) return 3;
+      if (ratio >= 0.25) return 2;
+      return 1;
+    };
+    if (breakdown && breakdown.some((m) => m > 0)) {
+      const max = Math.max(...breakdown);
+      const cells = breakdown.map((minutes, index) => ({
+        level: levelFor(minutes, max),
+        minutes,
+        isToday: index === todayIndex,
+      }));
+      return {
+        cells,
+        totalMinutes: breakdown.reduce((sum, m) => sum + m, 0),
+        activeDays: breakdown.filter((m) => m > 0).length,
+        isEmpty: false,
+        noBreakdown: false,
+      };
+    }
+    const emptyCells = Array.from({ length: 7 }, (_, index) => ({
+      level: 0 as const,
+      minutes: 0,
+      isToday: index === todayIndex,
+    }));
+    const weekTotal =
+      isCurrentWeek && typeof profile.weekMinutes === "number" ? profile.weekMinutes : 0;
+    if (weekTotal > 0) {
+      return { cells: emptyCells, totalMinutes: weekTotal, activeDays: 0, isEmpty: false, noBreakdown: true };
+    }
+    return { cells: emptyCells, totalMinutes: 0, activeDays: 0, isEmpty: true, noBreakdown: false };
+  };
+
   const userProfileCard = (profile: UserProfile) => {
     const pendingOutgoingRequest = friendRequests.find(
       (request) => request.profile.uid === profile.uid && request.status === "pending" && request.direction === "outgoing",
@@ -12834,9 +12883,6 @@ function App() {
     const liveProfile = workspaceProfiles[profile.uid] || profile;
     const liveLevel = typeof liveProfile.level === "number" ? liveProfile.level : 1;
     const liveStreak = typeof liveProfile.streak === "number" ? liveProfile.streak : 0;
-    const liveEffort = typeof liveProfile.effortExp === "number" ? liveProfile.effortExp : 0;
-    const liveOutput = typeof liveProfile.outputExp === "number" ? liveProfile.outputExp : 0;
-    const liveContribCount = typeof liveProfile.contributionCount === "number" ? liveProfile.contributionCount : 0;
     const liveGithubUrl = liveProfile.githubUsername
       ? `https://github.com/${liveProfile.githubUsername}`
       : githubUrl;
@@ -12856,7 +12902,7 @@ function App() {
               {profile.displayName}{" "}
               {liveLevel > 1 ? <span className="player-level-badge">Lv.{liveLevel}</span> : null}
             </h2>
-            <small>@{profile.userId}</small>
+            {profile.userId ? <small>@{profile.userId}</small> : null}
             <div className="member-profile-chips">
               <span className={`member-profile-status-chip ${connectionState}`}>
                 <i />
@@ -12880,35 +12926,65 @@ function App() {
           </div>
         </header>
 
-        {liveEffort + liveOutput > 0 || liveContribCount > 0 ? (
-          <div className="member-profile-stats" aria-label="このユーザーの累計">
-            <div>
-              <strong>{liveEffort.toLocaleString()}</strong>
-              <span>Effort</span>
-            </div>
-            <div>
-              <strong>{liveOutput.toLocaleString()}</strong>
-              <span>Output</span>
-            </div>
-            <div>
-              <strong>{liveContribCount.toLocaleString()}</strong>
-              <span>commits</span>
-            </div>
-          </div>
-        ) : null}
+        {/* 決意 — 枠もグラデも持たない引用。細い 2px の緑アクセント線だけ
+            添えて、本人の宣言を静かに引き立てる。 */}
+        <blockquote className="friend-resolve">{profileResolveText(profile)}</blockquote>
 
-        <div className="profile-resolve-panel">
-          <span>決意</span>
-          <p>{profileResolveText(profile)}</p>
-        </div>
+        {/* THIS WEEK — このカードの視覚的中心。Contribution 風の7セル強度
+            ストリップ＋「今週◯分 · 連続◯日」。記録ゼロでもセルは残し、
+            空状態コピーを添える。 */}
+        {(() => {
+          const week = friendWeekStripData(liveProfile);
+          return (
+            <section className="friend-week" aria-label="今週の学習記録">
+              <div className="friend-week-head">
+                <p className="card-kicker">This Week</p>
+                {!week.isEmpty ? (
+                  <p className="friend-week-summary">
+                    {t("今週 {time}", { time: formatStudyTimeJa(week.totalMinutes) })}
+                    {liveStreak > 0 ? ` · ${t("連続 {days}日", { days: liveStreak })}` : ""}
+                  </p>
+                ) : null}
+              </div>
+              <div
+                className="friend-week-strip"
+                role="img"
+                aria-label={
+                  week.isEmpty
+                    ? "今週はまだ記録がありません"
+                    : `今週の合計 ${formatStudyTimeJa(week.totalMinutes)}`
+                }
+              >
+                {week.cells.map((cell, index) => (
+                  <span
+                    key={index}
+                    className={`friend-week-cell is-l${cell.level}${cell.isToday ? " is-today" : ""}`}
+                  >
+                    <small>{dayLabels[index]}</small>
+                  </span>
+                ))}
+              </div>
+              {week.isEmpty ? (
+                <p className="friend-week-foot is-empty">今週はまだ記録がありません。</p>
+              ) : week.noBreakdown ? (
+                <p className="friend-week-foot">曜日別の内訳はまもなく表示されます。</p>
+              ) : null}
+            </section>
+          );
+        })()}
 
         <div className="friend-profile-actions">
-          <button type="button" disabled={isFriend || hasPendingRequest} onClick={() => handleFriendRequest(profile)}>
+          <button
+            type="button"
+            className="friend-action-primary"
+            disabled={isFriend || hasPendingRequest}
+            onClick={() => handleFriendRequest(profile)}
+          >
             {isFriend ? "フレンド" : pendingIncomingRequest ? "申請が届いています" : pendingOutgoingRequest ? "申請中" : "フレンド申請"}
           </button>
           {pendingIncomingRequest ? (
             <>
-              <button type="button" onClick={() => handleFriendAccept(pendingIncomingRequest)}>
+              <button type="button" className="friend-action-accept" onClick={() => handleFriendAccept(pendingIncomingRequest)}>
                 承認する
               </button>
               <button
@@ -12921,69 +12997,91 @@ function App() {
             </>
           ) : null}
           {isFriend ? (
-            <>
-              <button
-                type="button"
-                className="friend-action-remove"
-                onClick={() => {
-                  const friend = friends.find((item) => item.uid === profile.uid);
-                  if (!friend) return;
-                  const ok = window.confirm(
-                    `${profile.displayName || friend.name} をフレンドから外しますか？`,
-                  );
-                  if (ok) void handleFriendRemove(friend);
-                }}
-              >
-                フレンド解除
-              </button>
-              <button
-                type="button"
-                className="friend-action-mute"
-                onClick={() => handleToggleFriendMute(profile.uid)}
-                title={mutedFriendUids.includes(profile.uid) ? "ミュート解除" : "通知をミュート"}
-              >
-                {mutedFriendUids.includes(profile.uid) ? "ミュート解除" : "ミュート"}
-              </button>
-            </>
+            <button
+              type="button"
+              className="friend-action-mute"
+              onClick={() => handleToggleFriendMute(profile.uid)}
+              title={mutedFriendUids.includes(profile.uid) ? "ミュート解除" : "通知をミュート"}
+            >
+              {mutedFriendUids.includes(profile.uid) ? "ミュート解除" : "ミュート"}
+            </button>
           ) : null}
           {liveGithubUrl ? (
-            <a href={liveGithubUrl} target="_blank" rel="noreferrer">
+            <a className="friend-action-ghost" href={liveGithubUrl} target="_blank" rel="noreferrer">
               GitHub →
             </a>
+          ) : null}
+          {/* ブロック等の破壊的・低頻度操作は主要動線から隠し ⋯ メニューへ。
+              本人のカードでは出さない。 */}
+          {profile.uid !== currentUserUid ? (
+            <div className="friend-more">
+              <button
+                type="button"
+                className="friend-more-toggle"
+                aria-haspopup="true"
+                aria-expanded={profileActionsMenuOpen}
+                aria-label="その他の操作"
+                onClick={() => setProfileActionsMenuOpen((open) => !open)}
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+                  <circle cx="5" cy="12" r="1.6" fill="currentColor" />
+                  <circle cx="12" cy="12" r="1.6" fill="currentColor" />
+                  <circle cx="19" cy="12" r="1.6" fill="currentColor" />
+                </svg>
+              </button>
+              {profileActionsMenuOpen ? (
+                <div className="friend-more-menu" role="menu">
+                  {isFriend ? (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setProfileActionsMenuOpen(false);
+                        const friend = friends.find((item) => item.uid === profile.uid);
+                        if (!friend) return;
+                        const ok = window.confirm(
+                          `${profile.displayName || friend.name} をフレンドから外しますか？`,
+                        );
+                        if (ok) void handleFriendRemove(friend);
+                      }}
+                    >
+                      フレンド解除
+                    </button>
+                  ) : null}
+                  {blockedFriendUids.includes(profile.uid) ? (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setProfileActionsMenuOpen(false);
+                        handleUnblockUser(profile.uid);
+                      }}
+                    >
+                      ブロックを解除する
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="is-danger"
+                      onClick={() => {
+                        setProfileActionsMenuOpen(false);
+                        const ok = window.confirm(
+                          `${profile.displayName || "このユーザー"} をブロックしますか？\nフレンド関係は解除され、申請も届かなくなります。`,
+                        );
+                        if (ok) void handleBlockUser({ uid: profile.uid, name: profile.displayName || "ユーザー" });
+                      }}
+                    >
+                      このユーザーをブロック
+                    </button>
+                  )}
+                </div>
+              ) : null}
+            </div>
           ) : null}
         </div>
 
         {friendMessage ? <p className="friend-message">{friendMessage}</p> : null}
-        {profileWeekChartFromProfile(liveProfile)}
-
-        {/* ブロックは破壊的なので主要アクション列から外し、カード最下部に
-            目立たない控えめなテキストリンクとして置く (要望対応)。 */}
-        {profile.uid !== currentUserUid ? (
-          <div className="profile-block-row">
-            {blockedFriendUids.includes(profile.uid) ? (
-              <button
-                type="button"
-                className="profile-block-link"
-                onClick={() => handleUnblockUser(profile.uid)}
-              >
-                ブロックを解除する
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="profile-block-link"
-                onClick={() => {
-                  const ok = window.confirm(
-                    `${profile.displayName || "このユーザー"} をブロックしますか？\nフレンド関係は解除され、申請も届かなくなります。`,
-                  );
-                  if (ok) void handleBlockUser({ uid: profile.uid, name: profile.displayName || "ユーザー" });
-                }}
-              >
-                このユーザーをブロック
-              </button>
-            )}
-          </div>
-        ) : null}
       </article>
     );
   };
