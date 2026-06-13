@@ -36837,6 +36837,47 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   color: var(--accent-warm);
 }
 
+/* ===============================================================
+   ホームフィードの種別セグメント (.feed-kind-segment)
+   範囲タブ (Following/All, 下線型) と差別化するため pill 型に。
+   学習記録を別軸へ分離してフィードのごちゃつきを解消する UI。
+   nondo 語彙: ink hairline pill、active は ink 反転。
+   =============================================================== */
+.feed-kind-segment {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 12px;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: var(--surface);
+  align-self: flex-start;
+}
+.feed-kind-tab {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.005em;
+  padding: 6px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+.feed-kind-tab:hover {
+  color: var(--ink);
+}
+.feed-kind-tab.is-active {
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+}
+.feed-kind-tab:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
 /* === Phase 5: keyframes / dark を分離 === */
 @import "./styles/animations.css";
 @import "./styles/dark.css";
