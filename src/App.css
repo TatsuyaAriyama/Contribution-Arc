@@ -36709,3 +36709,34 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
 /* === Phase 5: keyframes / dark を分離 === */
 @import "./styles/animations.css";
 @import "./styles/dark.css";
+
+/* ===============================================================
+   Pull-to-refresh インジケータ (ホーム / feed view 専用)
+   v2 で追加 — 引っ張り中だけ JS が body 直下に生成する pill。
+   nondo 語彙: ink hairline + 白地 + 小さめ 800 weight。
+   armed (閾値超え) で ink 反転して「離して更新」を強調。
+   =============================================================== */
+.ptr-indicator {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 7px 16px;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: -0.005em;
+  pointer-events: none;
+  opacity: 0;
+  transition: background 0.12s ease, color 0.12s ease;
+  white-space: nowrap;
+}
+.ptr-indicator[data-armed="true"] {
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+  border-color: var(--cta-bg);
+}

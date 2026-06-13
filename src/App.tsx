@@ -3937,30 +3937,85 @@ function App() {
   // 初期表示も「ホーム」と書かれた画面 = feed view にする。
   const [currentView, setCurrentViewRaw] = useState<AppView>("feed");
   /* Pull-to-refresh：ホーム (= feed view) のみで有効。
-     - 画面最上部 (scrollY === 0) で touchstart した時の Y を控え
-     - touchmove で Y が 100px 以上下に動いたら window.location.reload()
-     - 他 view では発火させない (currentView がガード) */
+     v2 (2026-06-13) — 「過敏すぎる」報告への対応で全面作り直し:
+     - 閾値 100 → 180px (ネイティブ PTR 相当)
+     - 縦方向優位ガード: |ΔY| が |ΔX| の 1.5 倍を超えない限り無効
+       (横スワイプ中の誤発火を遮断)
+     - touchmove 即 reload → touchend 判定に変更
+       (引っ張ったまま指を戻せばキャンセルできる)
+     - 引っ張り中はインジケータ pill を表示 (「↓ 引っ張って更新」/
+       「離して更新」)。視覚なしの突然リロードを廃止
+     - 発火直前にもう一度 scrollY === 0 を確認 (iOS バウンス対策) */
   useEffect(() => {
     if (currentView !== "feed") return;
     if (typeof window === "undefined") return;
+    const PULL_THRESHOLD = 180;
     let startY: number | null = null;
+    let startX = 0;
+    let armed = false; // 縦引っ張りとして成立しているか
+    let indicator: HTMLDivElement | null = null;
+
+    const ensureIndicator = () => {
+      if (indicator) return indicator;
+      indicator = document.createElement("div");
+      indicator.className = "ptr-indicator";
+      indicator.setAttribute("aria-hidden", "true");
+      document.body.appendChild(indicator);
+      return indicator;
+    };
+    const removeIndicator = () => {
+      if (indicator?.parentNode) indicator.parentNode.removeChild(indicator);
+      indicator = null;
+    };
+
     const onStart = (event: TouchEvent) => {
       if (window.scrollY <= 0) {
         startY = event.touches[0]?.clientY ?? null;
+        startX = event.touches[0]?.clientX ?? 0;
+        armed = false;
       } else {
         startY = null;
       }
     };
     const onMove = (event: TouchEvent) => {
       if (startY === null) return;
-      const currentY = event.touches[0]?.clientY ?? startY;
-      if (currentY - startY > 100) {
+      const t = event.touches[0];
+      if (!t) return;
+      const deltaY = t.clientY - startY;
+      const deltaX = Math.abs(t.clientX - startX);
+      // 縦方向優位でなければ即解除 — 横スワイプ・斜めドラッグを除外。
+      if (deltaY < 0 || (deltaY > 24 && deltaY < deltaX * 1.5)) {
         startY = null;
-        window.location.reload();
+        armed = false;
+        removeIndicator();
+        return;
+      }
+      // スクロールが発生していたら PTR ではない。
+      if (window.scrollY > 0) {
+        startY = null;
+        armed = false;
+        removeIndicator();
+        return;
+      }
+      if (deltaY > 48) {
+        armed = deltaY >= PULL_THRESHOLD;
+        const el = ensureIndicator();
+        el.textContent = armed ? "離して更新" : "↓ 引っ張って更新";
+        el.dataset.armed = armed ? "true" : "false";
+        // 抵抗カーブ: 実距離の平方根近似で「ぐっと重くなる」感触。
+        const visual = Math.min(64, Math.sqrt(deltaY) * 4);
+        el.style.transform = `translateX(-50%) translateY(${visual}px)`;
+        el.style.opacity = String(Math.min(1, deltaY / 120));
       }
     };
     const onEnd = () => {
+      const shouldReload = armed && startY !== null && window.scrollY <= 0;
       startY = null;
+      armed = false;
+      removeIndicator();
+      if (shouldReload) {
+        window.location.reload();
+      }
     };
     window.addEventListener("touchstart", onStart, { passive: true });
     window.addEventListener("touchmove", onMove, { passive: true });
@@ -3971,6 +4026,7 @@ function App() {
       window.removeEventListener("touchmove", onMove);
       window.removeEventListener("touchend", onEnd);
       window.removeEventListener("touchcancel", onEnd);
+      removeIndicator();
     };
   }, [currentView]);
 
