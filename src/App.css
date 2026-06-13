@@ -36804,6 +36804,13 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   font-weight: 600;
   color: var(--muted);
 }
+.profile-week-chart-note {
+  margin: 2px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  opacity: 0.8;
+}
 
 /* ブロックは破壊的なので最下部に控えめなテキストリンクで。 */
 .profile-block-row {
