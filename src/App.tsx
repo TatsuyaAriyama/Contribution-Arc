@@ -12408,17 +12408,39 @@ function App() {
     const isCurrentWeek = profile.weekKey === getCurrentWeekKey();
     const data =
       isCurrentWeek && profile.weekdayMinutes?.length === 7 ? profile.weekdayMinutes : null;
-    if (!data || data.every((m) => m === 0)) {
+    // 曜日別内訳があればフルの棒グラフ。
+    if (data && data.some((m) => m > 0)) {
+      return profileWeekChart(data, todayIndex);
+    }
+    /* フォールバック: weekdayMinutes は今回追加した新フィールドなので、
+       まだ新コードで記録していないユーザーは未保存。だが週合計 weekMinutes
+       は以前から保存されているので、内訳が無くても「今週の合計」は出せる。
+       これで「みんな記録しているのに空」を避ける。weekKey が今週でない
+       (= 今週まだ未記録) ときだけ本当の空状態にする。 */
+    const weekTotal =
+      isCurrentWeek && typeof profile.weekMinutes === "number" ? profile.weekMinutes : 0;
+    if (weekTotal > 0) {
       return (
-        <section className="profile-week-chart is-empty" aria-label="今週の学習時間">
+        <section className="profile-week-chart is-summary" aria-label="今週の学習時間">
           <div className="profile-week-chart-head">
             <p className="card-kicker">This Week</p>
+            <div className="profile-week-chart-summary">
+              <strong>{formatStudyTimeJa(weekTotal)}</strong>
+              <span>今週の学習</span>
+            </div>
           </div>
-          <p className="profile-week-chart-empty">今週はまだ記録がありません。</p>
+          <p className="profile-week-chart-note">曜日別の内訳はまもなく表示されます。</p>
         </section>
       );
     }
-    return profileWeekChart(data, todayIndex);
+    return (
+      <section className="profile-week-chart is-empty" aria-label="今週の学習時間">
+        <div className="profile-week-chart-head">
+          <p className="card-kicker">This Week</p>
+        </div>
+        <p className="profile-week-chart-empty">今週はまだ記録がありません。</p>
+      </section>
+    );
   };
 
   const memberProfileCard = (member: WorkspaceMember) => {
