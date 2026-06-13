@@ -13291,10 +13291,10 @@ function App() {
     );
 
     return (
-      <section className="home-feed-section" aria-label="フィード">
+      <section className="home-feed-section" aria-label="投稿">
         <header className="home-feed-head">
           <div>
-            <p className="card-kicker">Feed</p>
+            <p className="card-kicker">投稿</p>
             <h2>みんなと学びを共有・作業仲間を募集</h2>
           </div>
           <span>{sorted.length.toLocaleString()} 件</span>
@@ -14110,7 +14110,7 @@ function App() {
                     <rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
                     <rect x="14" y="4" width="7" height="16" rx="2" fill={isFeedOpen ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.6" />
                   </svg>
-                  <span>{isFeedOpen ? t("フィードを閉じる") : t("フィードを開く")}</span>
+                  <span>{isFeedOpen ? t("投稿を閉じる") : t("投稿を開く")}</span>
                 </button>
 
                 <div className="user-menu-separator" aria-hidden="true" />
@@ -19452,12 +19452,12 @@ function App() {
                 </span>
               </div>
               <p className="shop-feed-bonus-copy">
-                FEEDを 1 日 1 回投稿すると +50 Arc。累計 500 Arc までもらえます。
+                1 日 1 回投稿すると +50 Arc。累計 500 Arc までもらえます。
                 {feedRewardArcEarned >= 500
                   ? "上限に到達しました。ありがとうございます！"
                   : lastFeedRewardDate === todayDateKey
                     ? "今日の分は受け取り済み。明日また投稿してみてください。"
-                    : "今日はまだ受け取っていません。FEEDを投稿してみてください。"}
+                    : "今日はまだ受け取っていません。投稿してみてください。"}
               </p>
               <div
                 className="shop-feed-bonus-bar"
@@ -20054,13 +20054,52 @@ function App() {
           On every other view the right pane respects the user's
           isFeedOpen preference (default true, persisted to localStorage). */}
       {currentView !== "workspace" && currentView !== "feed" && isFeedOpen ? (
-        <aside className="two-pane-right" aria-label="フィード">
+        <aside className="two-pane-right" aria-label="投稿">
+          {/* ペイン上部に常駐する折りたたみハンドル。スクロールしても
+              sticky で右肩に留まるので、いつでもワンクリックで畳める。 */}
+          <button
+            type="button"
+            className="feed-collapse-btn"
+            onClick={() => setIsFeedOpen(false)}
+            aria-label={t("投稿を閉じる")}
+            data-tooltip={t("投稿を閉じる")}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path
+                d="M9 6l6 6-6 6"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
           {feedSection}
         </aside>
       ) : null}
 
       </div>
       </div>
+
+      {/* 投稿ペインを畳んでいるときに、画面右端へ常駐する開き直しタブ。
+          スクロール位置やビューに関係なく、いつでも投稿を呼び戻せる。
+          2 カラムになる ≥1081px でのみ意味を持つので、それ未満は CSS で
+          非表示（狭い幅では投稿はホーム下部や bottom-nav から辿れる）。 */}
+      {currentView !== "workspace" && currentView !== "feed" && !isFeedOpen ? (
+        <button
+          type="button"
+          className="feed-reopen-tab"
+          onClick={() => setIsFeedOpen(true)}
+          aria-label={t("投稿を開く")}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+            <rect x="14" y="4" width="7" height="16" rx="2" fill="currentColor" stroke="currentColor" strokeWidth="1.6" />
+          </svg>
+          <span>{t("投稿")}</span>
+        </button>
+      ) : null}
 
       {/* Mobile-only bottom navigation. Visible at ≤720px (CSS-gated).
           5 primary destinations match the desktop topbar-nav so the
