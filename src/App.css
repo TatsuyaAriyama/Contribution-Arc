@@ -11419,24 +11419,20 @@
   min-height: 480px;
   height: clamp(480px, 58vh, 660px);
   overflow: hidden;
-  border: 1px solid rgba(var(--ink-rgb), 0.12);
-  border-radius: 20px;
-  background:
-    linear-gradient(90deg, rgba(var(--surface-rgb), 0.04) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(var(--surface-rgb), 0.035) 1px, transparent 1px),
-    linear-gradient(180deg, #0c1613, #07100d 54%, #05090b);
-  background-size: 36px 36px, 36px 36px, 100% 100%;
-  box-shadow:
-    inset 0 0 0 1px rgba(var(--surface-rgb), 0.04),
-    inset 0 40px 90px rgba(var(--surface-rgb), 0.035);
+  /* ライトモードへの全面移行 + nondo の紙トーンに合わせ、stage 独自の
+     dark gradient / 二重 border / inset shadow を撤去。stage はカード
+     内の単なる「床」として、上位カードの白さに溶け込ませる。 */
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  box-shadow: none;
 }
 
 .workspace-floor-grid {
-  position: absolute;
-  inset: 18px;
-  border: 1px solid rgba(var(--tint-soft-rgb), 0.08);
-  border-radius: 18px;
-  pointer-events: none;
+  /* 内側に走っていた hairline 枠も撤去。床のグリッドは
+     world-view の "場所" として残すなら別途 background image で
+     再現するが、現状は何も描いていないので素直に外す。 */
+  display: none;
 }
 
 .workspace-light {
