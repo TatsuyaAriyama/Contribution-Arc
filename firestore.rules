@@ -168,6 +168,24 @@ service cloud.firestore {
       // the creator may delete.
       allow delete: if signedIn()
         && (resource.data.createdBy == request.auth.uid || isDeveloper());
+
+      // ルームチャット (atelier 「みんな」タブ下の自由発言)。
+      // - 誰でもサインインしていれば read 可
+      // - 自分の uid・空でない 280 字以内テキスト・createdAt 付きで
+      //   ある場合に限り create 可
+      // - 更新不可、削除は本人または developer (モデレーション) のみ
+      match /chat/{messageId} {
+        allow read: if signedIn();
+        allow create: if signedIn()
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 280
+          && request.resource.data.createdAt is string;
+        allow update: if false;
+        allow delete: if signedIn()
+          && (resource.data.userId == request.auth.uid || isDeveloper());
+      }
     }
 
     match /studyLogs/{logId} {

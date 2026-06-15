@@ -1,13 +1,15 @@
 /**
  * アトリエ (ルーム) 内チャット — Firestore 経由のシンプルなメッセージ機構。
  *
- * 構造: workspaceRooms/{roomId}/chat/{messageId}
- *  - 最新 50 件を購読 (orderBy createdAt desc, limit 50)
- *  - クライアントから NG ワードを含むメッセージは弾く (containsBlockedWord)
- *  - "気配だけ共有" の哲学を残しつつ、軽い会話だけ受ける窓口
+ * 構造: rooms/{roomId}/chat/{messageId}
+ *  ↑ App.tsx の workspaceRoomsCollectionName ("rooms") と一致。
+ *  最初実装で workspaceRooms/{roomId}/chat に書こうとしてしまい、
+ *  permission-denied で「送信に失敗しました」になっていた経緯あり。
+ *  最新 50 件を購読 (orderBy createdAt desc, limit 50)
+ *  クライアントから NG ワードを含むメッセージは弾く (containsBlockedWord)
  *
- * セキュリティルール側 (Firestore rules) でも create は本人 uid のみ
- * 許可する想定。ここはクライアント実装のみ。
+ * Firestore rules: rooms/{roomId}/chat/{messageId} の create は本人 uid
+ *  のみ、read は signedIn。 (firestore.rules で設定)
  */
 
 import {
@@ -22,6 +24,9 @@ import {
   type Firestore,
   type Unsubscribe,
 } from "firebase/firestore";
+
+/** App.tsx の workspaceRoomsCollectionName と一致させる。 */
+const ROOMS_COLLECTION = "rooms";
 
 export type RoomChatMessage = {
   id: string;
@@ -43,7 +48,7 @@ export function subscribeRoomChat(
   onError?: (err: unknown) => void,
 ): Unsubscribe {
   const q = query(
-    collection(db, "workspaceRooms", roomId, "chat"),
+    collection(db, ROOMS_COLLECTION, roomId, "chat"),
     orderBy("createdAt", "desc"),
     limit(MESSAGES_LIMIT),
   );
@@ -78,7 +83,7 @@ export async function sendRoomChatMessage(
   message: Omit<RoomChatMessage, "id" | "createdAt"> & { id?: string },
 ): Promise<void> {
   const id = message.id ?? (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `m-${Date.now()}`);
-  const ref = doc(db, "workspaceRooms", message.roomId, "chat", id);
+  const ref = doc(db, ROOMS_COLLECTION, message.roomId, "chat", id);
   await setDoc(
     ref,
     {
