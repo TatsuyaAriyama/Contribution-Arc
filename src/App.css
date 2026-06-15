@@ -37150,6 +37150,58 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   }
 }
 
+/* ===============================================================
+   モバイルアトリエ — キャラを必ず画面内に収める
+   ステージ高さを画面幅基準のアスペクト比に固定し、actor サイズと
+   配置位置の上下限を vw / clamp で再計算する。完全な SVG viewBox
+   化は actor の DOM が深く現実的でないため、それと等価な視覚効果
+   (画面に常に fit + キャラがはみ出ない) を CSS で実現する。
+   =============================================================== */
+@media (max-width: 720px) {
+  .workspace-stage {
+    /* 高さを 480-660px の固定値 → 画面幅基準のアスペクト比に切替。
+       縦長スマホでもステージ全体が viewport の上 ~ 55-65% に収まる。 */
+    height: auto;
+    aspect-ratio: 1 / 1.05;
+    min-height: 0;
+    max-height: 70vh;
+  }
+  /* actor を画面幅追従にする。translate(-50%, -50%) と合わせると
+     どの座標でも sprite が枠を超えにくくなる。 */
+  .workspace-actor {
+    width: clamp(56px, 18vw, 88px);
+    min-height: auto;
+  }
+  /* 端ぎりぎりに歩いても半身がはみ出ないよう、left/top の上下限を
+     clamp で締める。--actor-x/--actor-y は %、translate(-50%) と
+     合わせて 7-93% 範囲なら sprite 全体がステージ内に収まる。 */
+  .workspace-actor {
+    left: max(7%, min(93%, var(--actor-x)));
+    top: max(10%, min(90%, var(--actor-y)));
+  }
+  /* sprite 自体も小さくして、名前ラベル含めて 1 体の占有幅を抑える。 */
+  .workspace-actor .actor-sprite {
+    width: clamp(44px, 13vw, 68px);
+    height: clamp(44px, 13vw, 68px);
+  }
+  /* 名前・タスクの文字も縮める。stage が縮んでも overflow しないように。 */
+  .workspace-actor .actor-name {
+    font-size: 10.5px;
+    max-width: clamp(72px, 22vw, 110px);
+  }
+  .workspace-actor .actor-task strong {
+    font-size: 11px;
+  }
+  .workspace-actor .actor-task small {
+    font-size: 10px;
+  }
+  /* タップ歩行マーカーも画面サイズに合わせる。 */
+  .tap-walk-marker {
+    width: clamp(28px, 7vw, 40px);
+    height: clamp(28px, 7vw, 40px);
+  }
+}
+
 /* === Phase 5: keyframes 分離。dark.css はテーマ廃止に伴い無効化 === */
 @import "./styles/animations.css";
 /* @import "./styles/dark.css"; — ライトモード固定のため未使用 */
