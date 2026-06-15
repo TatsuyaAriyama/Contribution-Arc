@@ -37165,20 +37165,50 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
 }
 
 /* ===============================================================
-   モバイルアトリエ — キャラを必ず画面内に収める
-   ステージ高さを画面幅基準のアスペクト比に固定し、actor サイズと
-   配置位置の上下限を vw / clamp で再計算する。完全な SVG viewBox
-   化は actor の DOM が深く現実的でないため、それと等価な視覚効果
-   (画面に常に fit + キャラがはみ出ない) を CSS で実現する。
+   モバイルアトリエ — 画面全体をひとつの空間にする (要望対応)
+   "仕切りひとつも要らない" = stage を viewport いっぱいに広げ、
+   ルーム名やタブ・ボタン類を浮かせる。カード枠 / 区切り / inner
+   padding を全廃。stage は bottom-nav の手前まで伸びる。
    =============================================================== */
 @media (max-width: 720px) {
+  /* screen 全体の padding / gap を撤去 (= 余白の仕切りも要らない) */
+  .workspace-screen {
+    padding: 0;
+    gap: 0;
+  }
+  /* workspace 中の全ての card / panel chrome を透明化 */
+  .workspace-screen .workspace-2d-card,
+  .workspace-screen .workspace-2d-shell,
+  .workspace-screen .workspace-2d-main,
+  .workspace-screen .workspace-mobile-panel,
+  .workspace-screen .workspace-mobile-tabs,
+  .workspace-screen .workspace-room-strip,
+  .workspace-screen .silent-workspace {
+    padding: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  /* タブ (ルーム/みんな/自分) はステージに浮かせる: 画面上端に
+     sticky で固定し、背景は無し。 */
+  .workspace-screen .workspace-mobile-tabs {
+    position: sticky;
+    top: env(safe-area-inset-top, 0);
+    z-index: 5;
+    background: transparent;
+    padding: 8px 14px 4px;
+  }
+  /* stage 自身を viewport の残りスペースほぼ全部に拡張。
+     - bottom-nav 高 (~ 64px + safe-area) を引いて 100dvh - 64 + safe
+     - aspect-ratio は撤去 (高さを直接決める) */
   .workspace-stage {
-    /* 高さを 480-660px の固定値 → 画面幅基準のアスペクト比に切替。
-       縦長スマホでもステージ全体が viewport の上 ~ 55-65% に収まる。 */
-    height: auto;
-    aspect-ratio: 1 / 1.05;
-    min-height: 0;
-    max-height: 70vh;
+    height: calc(100dvh - 72px - env(safe-area-inset-bottom, 0));
+    min-height: 480px;
+    max-height: none;
+    aspect-ratio: auto;
+    border-radius: 0;
   }
   /* actor を画面幅追従にする。translate(-50%, -50%) と合わせると
      どの座標でも sprite が枠を超えにくくなる。 */
