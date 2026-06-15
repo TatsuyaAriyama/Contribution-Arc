@@ -3789,11 +3789,9 @@ function App() {
   const [cloudOnboardingCompletedAt, setCloudOnboardingCompletedAt] = useState<string>("");
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [theme, setTheme] = useState<"dark" | "light">(() => {
-    if (typeof window === "undefined") return "light";
-    const stored = window.localStorage.getItem("contribution-arc-theme");
-    return stored === "dark" ? "dark" : "light";
-  });
+  /* 「テーマ (ダーク/ライト)」は廃止。基本はライトモードのみ。
+     互換のため localStorage の "contribution-arc-theme" は触らない
+     (将来再導入する余地)。data-theme は mount 時に light 固定する。 */
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("idle");
   // Final onboarding step ("firstPost"): the user must write a greeting
   // AND their 決意 (resolution) before any other operation is possible.
@@ -5349,13 +5347,15 @@ function App() {
   }, []);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    window.localStorage.setItem("contribution-arc-theme", theme);
+    // ライトモード固定。古い localStorage の "dark" が残っていても、
+    // 起動時にここで上書きされて常に light が適用される。
+    document.documentElement.dataset.theme = "light";
+    window.localStorage.setItem("contribution-arc-theme", "light");
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) {
-      meta.setAttribute("content", theme === "dark" ? "#0f0f10" : "#fafaf8");
+      meta.setAttribute("content", "#fafaf8");
     }
-  }, [theme]);
+  }, []);
 
   // Cursor spotlight — Linear / Stripe style two-layer cursor light.
   //
@@ -16679,109 +16679,33 @@ function App() {
             </div>
 
             <form className="settings-form" onSubmit={handleSettingsSubmit}>
-              {/* 写真アップロード UI は削除。アイコンは選択しているキャラ
-                  + カラーに統一する設計に揃えた (写真とキャラの二重表示が
-                  崩れていた報告への対応)。 */}
+              {/* 順序 (要望対応): ユーザーネーム → ユーザーID → 言語 →
+                  表示サイズ → 分身キャラクター → 通知・組織・削除 …
+                  「テーマ (dark/light)」は廃止しライトモードのみ。 */}
 
-              <div className="settings-character-color-panel" id="settings-character-panel">
-                <div className="settings-character-color-head">
-                  <span>{t("分身キャラクター")}</span>
-                  <ProfileCharacterPreview
-                    color={playerCharacterColor}
+              <label>
+                <span>{t("ユーザーネーム")}</span>
+                <input
+                  value={draftUserName}
+                  onChange={(event) => setDraftUserName(event.target.value)}
+                  placeholder={t("表示したい名前")}
+                  maxLength={24}
+                  autoFocus
+                />
+              </label>
 
-                    shape={playerCharacterShape}
-                  />
-                </div>
+              <label>
+                <span>{t("ユーザーID")}</span>
+                <input
+                  value={draftUserId}
+                  onChange={(event) => setDraftUserId(event.target.value.toLowerCase())}
+                  placeholder="ari.dev"
+                  maxLength={30}
+                  required
+                />
+                {isOnboardingSettings ? <small>{t("小文字の半角英数字、_、. が使えます。")}</small> : null}
+              </label>
 
-                {(() => {
-                  const active = characterShapeOptions.find((o) => o.value === playerCharacterShape);
-                  if (!active) return null;
-                  return (
-                    <p className="character-active-intro">
-                      <strong>
-                        {active.name} <span>{active.romaji}</span>
-                      </strong>
-                      {active.intro}
-                    </p>
-                  );
-                })()}
-
-                <div className="character-customize-section compact">
-                  <p className="character-customize-section-label">{t("シルエット")}</p>
-                  <div className="character-shape-grid compact" aria-label={t("キャラクターの形")}>
-                    {characterShapeOptions.map((option) => {
-                      const isLocked = !ownedCharacterShapes.includes(option.value);
-                      const isActive = playerCharacterShape === option.value;
-                      return (
-                        <button
-                          type="button"
-                          key={option.value}
-                          className={`shape-tile ${isActive ? "active " : ""}${
-                            isLocked ? "is-locked" : ""
-                          }`}
-                          onClick={() => {
-                            if (isLocked) {
-                              setIsSettingsOpen(false);
-                              setCurrentView("shop");
-                            } else {
-                              chooseCharacterShape(option.value);
-                            }
-                          }}
-                          title={isLocked ? `${option.name} ${option.romaji}（ショップで購入）` : `${option.name} ${option.romaji}`}
-                          aria-label={
-                            isLocked
-                              ? `${option.name} ${option.romaji}はショップで購入できます`
-                              : `${option.name} ${option.romaji}を選択`
-                          }
-                          aria-pressed={isActive}
-                        >
-                          <span className="shape-tile-stage" aria-hidden="true">
-                            <ProfileCharacterPreview
-                              color={playerCharacterColor}
-                              shape={option.value}
-                            />
-                          </span>
-                          <span className="shape-tile-text">
-                            <strong className="shape-tile-name">
-                              {option.name}
-                              <span className="shape-tile-romaji">{option.romaji}</span>
-                            </strong>
-                            <small className="shape-tile-tag">{option.tagline}</small>
-                          </span>
-                          {isLocked ? (
-                            <span className="shape-tile-badge is-lock" aria-hidden="true">
-                              🔒
-                            </span>
-                          ) : isActive ? (
-                            <span className="shape-tile-badge is-check" aria-hidden="true">
-                              ✓
-                            </span>
-                          ) : null}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="character-customize-section compact">
-                  <p className="character-customize-section-label">{t("カラー")}</p>
-                  <div className="character-color-grid compact" aria-label={t("分身カラー")}>
-                    {characterColorOptions.map((color) => (
-                      <button
-                        type="button"
-                        key={color.value}
-                        className={playerCharacterColor === color.value ? "active" : ""}
-                        onClick={() => chooseCharacterColor(color.value)}
-                        title={color.name}
-                        aria-label={`${color.name}を選択`}
-                      >
-                        <span style={{ background: color.value }} />
-                        <small>{color.name}</small>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
 
               {/* Organization (tenant) management. New in the B2B
                   pivot — gives users a way to create or leave an
@@ -16926,28 +16850,6 @@ function App() {
                 </div>
               </div>
 
-              <div className="settings-theme-panel" role="group" aria-label={t("テーマ")}>
-                <span className="settings-theme-label">{t("テーマ")}</span>
-                <div className="settings-theme-toggle">
-                  <button
-                    type="button"
-                    className={theme === "dark" ? "active" : ""}
-                    onClick={() => setTheme("dark")}
-                    aria-pressed={theme === "dark"}
-                  >
-                    {t("ダーク")}
-                  </button>
-                  <button
-                    type="button"
-                    className={theme === "light" ? "active" : ""}
-                    onClick={() => setTheme("light")}
-                    aria-pressed={theme === "light"}
-                  >
-                    {t("ライト")}
-                  </button>
-                </div>
-              </div>
-
               <div className="settings-zoom-panel" role="group" aria-label={t("表示サイズ")}>
                 <div className="settings-zoom-head">
                   <span className="settings-theme-label">{t("表示サイズ")}</span>
@@ -16995,28 +16897,105 @@ function App() {
                 </div>
               </div>
 
-              <label>
-                <span>{t("ユーザーネーム")}</span>
-                <input
-                  value={draftUserName}
-                  onChange={(event) => setDraftUserName(event.target.value)}
-                  placeholder={t("表示したい名前")}
-                  maxLength={24}
-                  autoFocus
-                />
-              </label>
+              <div className="settings-character-color-panel" id="settings-character-panel">
+                <div className="settings-character-color-head">
+                  <span>{t("分身キャラクター")}</span>
+                  <ProfileCharacterPreview
+                    color={playerCharacterColor}
 
-              <label>
-                <span>{t("ユーザーID")}</span>
-                <input
-                  value={draftUserId}
-                  onChange={(event) => setDraftUserId(event.target.value.toLowerCase())}
-                  placeholder="ari.dev"
-                  maxLength={30}
-                  required
-                />
-                {isOnboardingSettings ? <small>{t("小文字の半角英数字、_、. が使えます。")}</small> : null}
-              </label>
+                    shape={playerCharacterShape}
+                  />
+                </div>
+
+                {(() => {
+                  const active = characterShapeOptions.find((o) => o.value === playerCharacterShape);
+                  if (!active) return null;
+                  return (
+                    <p className="character-active-intro">
+                      <strong>
+                        {active.name} <span>{active.romaji}</span>
+                      </strong>
+                      {active.intro}
+                    </p>
+                  );
+                })()}
+
+                <div className="character-customize-section compact">
+                  <p className="character-customize-section-label">{t("シルエット")}</p>
+                  <div className="character-shape-grid compact" aria-label={t("キャラクターの形")}>
+                    {characterShapeOptions.map((option) => {
+                      const isLocked = !ownedCharacterShapes.includes(option.value);
+                      const isActive = playerCharacterShape === option.value;
+                      return (
+                        <button
+                          type="button"
+                          key={option.value}
+                          className={`shape-tile ${isActive ? "active " : ""}${
+                            isLocked ? "is-locked" : ""
+                          }`}
+                          onClick={() => {
+                            if (isLocked) {
+                              setIsSettingsOpen(false);
+                              setCurrentView("shop");
+                            } else {
+                              chooseCharacterShape(option.value);
+                            }
+                          }}
+                          title={isLocked ? `${option.name} ${option.romaji}（ショップで購入）` : `${option.name} ${option.romaji}`}
+                          aria-label={
+                            isLocked
+                              ? `${option.name} ${option.romaji}はショップで購入できます`
+                              : `${option.name} ${option.romaji}を選択`
+                          }
+                          aria-pressed={isActive}
+                        >
+                          <span className="shape-tile-stage" aria-hidden="true">
+                            <ProfileCharacterPreview
+                              color={playerCharacterColor}
+                              shape={option.value}
+                            />
+                          </span>
+                          <span className="shape-tile-text">
+                            <strong className="shape-tile-name">
+                              {option.name}
+                              <span className="shape-tile-romaji">{option.romaji}</span>
+                            </strong>
+                            <small className="shape-tile-tag">{option.tagline}</small>
+                          </span>
+                          {isLocked ? (
+                            <span className="shape-tile-badge is-lock" aria-hidden="true">
+                              🔒
+                            </span>
+                          ) : isActive ? (
+                            <span className="shape-tile-badge is-check" aria-hidden="true">
+                              ✓
+                            </span>
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="character-customize-section compact">
+                  <p className="character-customize-section-label">{t("カラー")}</p>
+                  <div className="character-color-grid compact" aria-label={t("分身カラー")}>
+                    {characterColorOptions.map((color) => (
+                      <button
+                        type="button"
+                        key={color.value}
+                        className={playerCharacterColor === color.value ? "active" : ""}
+                        onClick={() => chooseCharacterColor(color.value)}
+                        title={color.name}
+                        aria-label={`${color.name}を選択`}
+                      >
+                        <span style={{ background: color.value }} />
+                        <small>{color.name}</small>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
 
               {!isOnboardingSettings ? (
                 <fieldset className="desktop-notification-settings">

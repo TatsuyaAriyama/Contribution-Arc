@@ -37063,9 +37063,9 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   }
 }
 
-/* === Phase 5: keyframes / dark を分離 === */
+/* === Phase 5: keyframes 分離。dark.css はテーマ廃止に伴い無効化 === */
 @import "./styles/animations.css";
-@import "./styles/dark.css";
+/* @import "./styles/dark.css"; — ライトモード固定のため未使用 */
 
 /* ===============================================================
    Pull-to-refresh インジケータ (ホーム / feed view 専用)

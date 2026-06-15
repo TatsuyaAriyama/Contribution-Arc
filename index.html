@@ -31,18 +31,13 @@
     <title>Contribution Arc | Learning & Contribution Records</title>
     <script>
       (function () {
+        // テーマは廃止しライトモード固定。
         try {
-          var stored = window.localStorage.getItem("contribution-arc-theme");
-          var theme = stored === "light" ? "light" : "dark";
-          document.documentElement.dataset.theme = theme;
-          // Force the active theme-color meta to match the stored
-          // preference immediately, regardless of system color scheme,
-          // so the iOS status bar tint doesn't flicker between system
-          // and stored on first paint.
+          document.documentElement.dataset.theme = "light";
           var dark = document.querySelector('meta[name="theme-color"][media*="dark"]');
           var light = document.querySelector('meta[name="theme-color"][media*="light"]');
-          if (dark) dark.setAttribute("content", theme === "dark" ? "#0f0f10" : "#fafaf8");
-          if (light) light.setAttribute("content", theme === "dark" ? "#0f0f10" : "#fafaf8");
+          if (dark) dark.setAttribute("content", "#fafaf8");
+          if (light) light.setAttribute("content", "#fafaf8");
         } catch (e) {}
       })();
     </script>
