@@ -37171,6 +37171,23 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
    padding を全廃。stage は bottom-nav の手前まで伸びる。
    =============================================================== */
 @media (max-width: 720px) {
+  /* 床線・台形・ライト・vignette など旧 stage 装飾を完全撤去。
+     ライト/紙トーンの世界観に対して "場所" を演出していた旧 dark
+     stage の遺物が浮いていた。 */
+  .workspace-screen .workspace-stage::before,
+  .workspace-screen .workspace-stage::after,
+  .workspace-screen .workspace-light,
+  .workspace-screen .workspace-floor-grid {
+    display: none !important;
+  }
+  /* ヘッダー (v.x.x.x ルーム名 / 経過時間 / 定型文・置き手紙・着替え)
+     も独立カードでなく stage に溶け込ませる。背景・枠を取り、左右の
+     padding だけ残してコンテンツを置く。 */
+  .workspace-screen .workspace-2d-card > * {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
   /* screen 全体の padding / gap を撤去 (= 余白の仕切りも要らない) */
   .workspace-screen {
     padding: 0;
@@ -37191,14 +37208,28 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
     background: transparent;
     box-shadow: none;
   }
-  /* タブ (ルーム/みんな/自分) はステージに浮かせる: 画面上端に
-     sticky で固定し、背景は無し。 */
+  /* タブ (ルーム/みんな/自分) はステージに浮かせる。
+     上端が切れないよう safe-area + 12px の余白を確保。 */
   .workspace-screen .workspace-mobile-tabs {
     position: sticky;
-    top: env(safe-area-inset-top, 0);
+    top: 0;
     z-index: 5;
     background: transparent;
-    padding: 8px 14px 4px;
+    padding: calc(env(safe-area-inset-top, 0) + 12px) 14px 8px;
+  }
+  /* actor ラベルを白の半透明 pill 化して床に置いても読めるように。 */
+  .workspace-screen .workspace-actor .actor-name {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(var(--surface-rgb), 0.92);
+    box-shadow: 0 1px 2px rgba(var(--ink-rgb), 0.06);
+    color: var(--ink);
+  }
+  .workspace-screen .workspace-actor .actor-task {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(var(--green), 0.12);
+    color: var(--green);
   }
   /* stage 自身を viewport の残りスペースほぼ全部に拡張。
      - bottom-nav 高 (~ 64px + safe-area) を引いて 100dvh - 64 + safe
