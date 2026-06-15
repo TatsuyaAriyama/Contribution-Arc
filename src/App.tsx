@@ -4311,6 +4311,11 @@ function App() {
      初回マウントの自動 fetch は廃止し、ボタン押下時に limit(100) で
      一括取得する。 */
   const [isSharedDailyLoaded, setIsSharedDailyLoaded] = useState(false);
+  /* みんなの日報の表示件数。デフォルト 12 → 「もっと見る」で +12 ずつ。
+     fetch は別途 limit(100) 取得しているので、ここはあくまで描画件数。
+     画面切替などでスクロール位置が大きく初期化されないよう state で保持。 */
+  const SHARED_DAILY_PAGE_SIZE = 12;
+  const [sharedDailyDisplayLimit, setSharedDailyDisplayLimit] = useState(SHARED_DAILY_PAGE_SIZE);
   const [isLoadingSharedDaily, setIsLoadingSharedDaily] = useState(false);
   const [sharedDailyLoadError, setSharedDailyLoadError] = useState("");
   const [selectedDailyDate, setSelectedDailyDate] = useState(getLearnerDate());
@@ -7621,15 +7626,18 @@ function App() {
     }
     return (id: string) => map.get(id);
   }, [orgMembers, userId, playerName]);
-  const visibleSharedDailyReports = Array.from(
+  const allVisibleSharedDailyReports = Array.from(
     new Map([...sharedDailyReports, ...dailyReports].map((report) => [report.id, report])).values(),
   )
     // Drafts never reach Firestore, but `dailyReports` (own cache) can
     // hold a local-only draft for today — exclude it from the team
     // feed so the writer's own placeholder doesn't leak in.
     .filter((report) => report.isDraft !== true)
-    .sort((a, b) => b.date.localeCompare(a.date) || new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-    .slice(0, 12);
+    .sort((a, b) => b.date.localeCompare(a.date) || new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  // 旧名は描画 limit 後のリストを指していた。互換のため変数名を維持。
+  const visibleSharedDailyReports = allVisibleSharedDailyReports.slice(0, sharedDailyDisplayLimit);
+  const hasMoreSharedDailyReports =
+    allVisibleSharedDailyReports.length > visibleSharedDailyReports.length;
   const normalizedDailyHistorySearch = dailyHistorySearch.trim().toLowerCase();
   const filteredDailyReports = dailyReports.filter((report) => {
     const matchesDate = !dailyHistoryDateFilter || report.date === dailyHistoryDateFilter;
@@ -8740,6 +8748,8 @@ function App() {
       setSharedDailyReports(syncedCloudReports);
       void putPersistentItems("dailyReports", syncedCloudReports);
       setIsSharedDailyLoaded(true);
+      // 再取得したら表示も先頭ページに戻す。
+      setSharedDailyDisplayLimit(SHARED_DAILY_PAGE_SIZE);
     } catch (error) {
       console.info("Team Daily fetch failed.", error);
       setSharedDailyLoadError("読み込みに失敗しました。もう一度お試しください。");
@@ -17590,7 +17600,9 @@ function App() {
                 onClick={() => setDailyHistoryTab("team")}
               >
                 <span>{t("みんなの日報")}</span>
-                {isSharedDailyLoaded ? <small>{visibleSharedDailyReports.length}</small> : null}
+                {isSharedDailyLoaded ? (
+                  <small>{allVisibleSharedDailyReports.length}</small>
+                ) : null}
               </button>
             </div>
 
@@ -17766,6 +17778,20 @@ function App() {
                       </article>
                     );
                   })}
+                  {hasMoreSharedDailyReports ? (
+                    <button
+                      type="button"
+                      className="daily-shared-loadmore"
+                      onClick={() =>
+                        setSharedDailyDisplayLimit((limit) => limit + SHARED_DAILY_PAGE_SIZE)
+                      }
+                    >
+                      {t("もっと見る")}
+                      <small>
+                        {visibleSharedDailyReports.length} / {allVisibleSharedDailyReports.length}
+                      </small>
+                    </button>
+                  ) : null}
                 </div>
               ) : (
                 <p className="daily-shared-empty">{t("共有された日報はまだありません。")}</p>
