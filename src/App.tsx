@@ -432,7 +432,7 @@ type RoomUserStatus = "working" | "deep-work" | "on-break";
    (round head with ear tufts, big amber eyes, beak; ground-hops
    instead of walks; ambient ~270° head turn). New shapes can be
    added here. */
-type CharacterShape = "default" | "ghost" | "owl" | "frost";
+type CharacterShape = "default" | "ghost" | "owl" | "morph";
 
 type RoomUser = {
   id: string;
@@ -701,11 +701,11 @@ const characterShapeOptions: {
     intro: "夜更けをひとり見守る、静かな番人。",
   },
   {
-    value: "frost",
-    name: "霜",
-    romaji: "Shimo",
-    tagline: "群れぬ白銀",
-    intro: "逆立つ白銀の髪に緋の勾玉。群れずに夜を駆ける、孤高の一匹。",
+    value: "morph",
+    name: "相",
+    romaji: "Sou",
+    tagline: "うつろう輪郭",
+    intro: "立方体の静けさを纏う、形の旅人。気分に合わせて姿を変える、変化の象徴。",
   },
 ];
 
@@ -736,10 +736,10 @@ const shapeShopCatalog: ShapeShopItem[] = [
     price: 500,
   },
   {
-    shape: "frost",
-    name: "霜 Shimo",
-    tagline: "群れぬ白銀",
-    description: "逆立つ白銀の髪に緋色の勾玉の印。群れずに夜を駆ける、孤高の相棒。",
+    shape: "morph",
+    name: "相 Sou",
+    tagline: "うつろう輪郭",
+    description: "立方体の静けさを纏う、形の旅人。金線で縁取られた金属面が、気分に合わせて姿を変える。",
     price: 500,
   },
 ];
@@ -1555,7 +1555,7 @@ function getSafeCharacterColor(color: string | undefined): string {
 /* Allow-list guard for character shape. Anything outside the known
    set (including legacy `undefined` from older profile docs) falls
    back to "default" — the original humanoid silhouette. */
-const CHARACTER_SHAPES: readonly CharacterShape[] = ["default", "ghost", "owl", "frost"];
+const CHARACTER_SHAPES: readonly CharacterShape[] = ["default", "ghost", "owl", "morph"];
 function getSafeCharacterShape(shape: unknown): CharacterShape {
   return typeof shape === "string" && (CHARACTER_SHAPES as readonly string[]).includes(shape)
     ? (shape as CharacterShape)
@@ -2159,6 +2159,94 @@ function getStudyLogPostVerb(subject: string) {
 
 // Shared ghost (朧 / Oboro) artwork. Drawn once as an inline SVG so the
 // dark line-art outline + draped tail-curl stay crisp at any size, and
+// 「相 Sou」(morph) のシルエット — 縁取り金線つきの立方体。
+// HSL ベースで color から top (lighter) / right (darker) を派生させる
+// ので、既存の characterColorOptions (8 色) どれを選んでも同じ視覚言語
+// で立体感が出る。edge は固定の金 (#C7A24E)。
+function shadeHex(hex: string, percent: number): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 0xff;
+  const g = (n >> 8) & 0xff;
+  const b = n & 0xff;
+  const f = (v: number) =>
+    Math.round(percent < 0 ? v * (1 + percent) : v + (255 - v) * percent);
+  const to2 = (v: number) => Math.max(0, Math.min(255, v)).toString(16).padStart(2, "0");
+  return `#${to2(f(r))}${to2(f(g))}${to2(f(b))}`;
+}
+
+function renderMorphCubeSvg(color: string) {
+  const front = color;
+  const top = shadeHex(color, 0.18);
+  const right = shadeHex(color, -0.28);
+  const edge = "#C7A24E";
+  const x0 = 372;
+  const y0 = 424;
+  const S = 288;
+  const OX = 78;
+  const OY = 78;
+  const x1 = x0 + S;
+  const y1 = y0 + S;
+  const edges: [number, number, number, number][] = [
+    [x0, y0, x1, y0],
+    [x1, y0, x1 + OX, y0 - OY],
+    [x0 + OX, y0 - OY, x1 + OX, y0 - OY],
+    [x0, y0, x0 + OX, y0 - OY],
+    [x1, y0, x1, y1],
+    [x1 + OX, y0 - OY, x1 + OX, y1 - OY],
+  ];
+  return (
+    <svg
+      className="morph-svg"
+      viewBox="0 0 1024 1024"
+      aria-hidden="true"
+      focusable="false"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <ellipse cx="516" cy="742" rx="176" ry="22" fill="#000" fillOpacity="0.16" />
+      <g className="morph-float">
+        <polygon
+          points={`${x0},${y0} ${x1},${y0} ${x1 + OX},${y0 - OY} ${x0 + OX},${y0 - OY}`}
+          fill={top}
+        />
+        <polygon
+          points={`${x1},${y0} ${x1 + OX},${y0 - OY} ${x1 + OX},${y1 - OY} ${x1},${y1}`}
+          fill={right}
+        />
+        <rect x={x0} y={y0} width={S} height={S} rx={18} fill={front} />
+        {edges.map(([ax, ay, bx, by], i) => (
+          <line
+            key={i}
+            x1={ax}
+            y1={ay}
+            x2={bx}
+            y2={by}
+            stroke={edge}
+            strokeWidth={3}
+            strokeLinecap="round"
+            className="morph-gild"
+          />
+        ))}
+        <g className="morph-eyes">
+          {[-1, 1].map((s) => (
+            <line
+              key={s}
+              x1={516 + s * 46 - 20}
+              y1={556}
+              x2={516 + s * 46 + 20}
+              y2={556}
+              stroke={edge}
+              strokeWidth={6}
+              strokeLinecap="round"
+            />
+          ))}
+        </g>
+      </g>
+    </svg>
+  );
+}
+
 // reused everywhere the ghost appears (profile preview, shape picker
 // swatches) so they always read as the exact same character.
 const ghostSvgMarkup = (
@@ -2218,13 +2306,13 @@ export const ProfileCharacterPreview = memo(function ProfileCharacterPreview({
 }) {
   const isGhost = shape === "ghost";
   const isOwl = shape === "owl";
-  const isFrost = shape === "frost";
-  const isCustomShape = isGhost || isOwl || isFrost;
+  const isMorph = shape === "morph";
+  const isCustomShape = isGhost || isOwl || isMorph;
   return (
     <div
       className={`profile-character-preview${
         isGhost ? " is-ghost" : ""
-      }${isOwl ? " is-owl" : ""}${isFrost ? " is-frost" : ""}`}
+      }${isOwl ? " is-owl" : ""}${isMorph ? " is-morph" : ""}`}
       style={{ "--actor-color": color || characterColorOptions[0].value } as CSSProperties}
       aria-hidden="true"
     >
@@ -2244,22 +2332,8 @@ export const ProfileCharacterPreview = memo(function ProfileCharacterPreview({
             <span className="sprite-leg sprite-leg-left" />
             <span className="sprite-leg sprite-leg-right" />
           </>
-        ) : isFrost ? (
-          <>
-            <span className="sprite-head">
-              <span className="sprite-hair">
-                <span className="sprite-hair-spike sprite-hair-spike-left" />
-                <span className="sprite-hair-spike sprite-hair-spike-mid" />
-                <span className="sprite-hair-spike sprite-hair-spike-right" />
-              </span>
-              <span className="sprite-mark sprite-mark-left" />
-              <span className="sprite-mark sprite-mark-right" />
-              <span className="sprite-mouth" />
-            </span>
-            <span className="sprite-body" />
-            <span className="sprite-leg sprite-leg-left" />
-            <span className="sprite-leg sprite-leg-right" />
-          </>
+        ) : isMorph ? (
+          renderMorphCubeSvg(color || characterColorOptions[0].value)
         ) : isGhost ? (
           ghostSvgMarkup
         ) : (

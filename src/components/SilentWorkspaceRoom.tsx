@@ -13,7 +13,7 @@ export type RoomActivityItem = {
 
 type RoomActorStatus = "working" | "deep-work" | "on-break";
 
-export type CharacterShape = "default" | "ghost" | "owl" | "frost";
+export type CharacterShape = "default" | "ghost" | "owl" | "morph";
 
 export type PresetLogEntry = {
   id: string;
@@ -1089,20 +1089,11 @@ export function SilentWorkspaceRoom({
                           <span className="sprite-wing sprite-wing-right" />
                         </>
                       ) : null}
-                      {/* Frost-only parts — spiky white hair, crimson
-                          eye-marks and a sullen mouth layered on the face. */}
-                      {member.characterShape === "frost" ? (
-                        <span className="sprite-head">
-                          <span className="sprite-hair">
-                            <span className="sprite-hair-spike sprite-hair-spike-left" />
-                            <span className="sprite-hair-spike sprite-hair-spike-mid" />
-                            <span className="sprite-hair-spike sprite-hair-spike-right" />
-                          </span>
-                          <span className="sprite-mark sprite-mark-left" />
-                          <span className="sprite-mark sprite-mark-right" />
-                          <span className="sprite-mouth" />
-                        </span>
-                      ) : null}
+                      {/* "相 Sou" (morph) は SVG ベースのキャラなので
+                          stage 上では小さすぎて識別困難。stage では基本
+                          ブロック表示にフォールバックし、SVG の morph
+                          見え方は profile / shop / settings preview に
+                          限定する。 */}
                     </>
                   )}
                 </span>
