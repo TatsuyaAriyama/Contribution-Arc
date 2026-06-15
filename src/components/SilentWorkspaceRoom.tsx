@@ -1075,7 +1075,7 @@ export function SilentWorkspaceRoom({
                   ) : member.characterShape === "morph" ? (
                     /* "相 Sou" (morph): cube + 金線 + 目。共有レンダラから
                        同じ SVG を呼ぶことで preview と stage で見た目が一致。 */
-                    renderMorphCubeSvg(member.color || "#7667a8")
+                    renderMorphCubeSvg(member.color || "#7667a8", { showEdges: false })
                   ) : member.characterShape === "owl" ? (
                     <>
                       <span className="sprite-body" />
@@ -1097,7 +1097,7 @@ export function SilentWorkspaceRoom({
                        stage の sprite サイズは @media で clamp(44, 13vw, 68)
                        に拡張済みなので識別可能。 */
                     <>
-                      {renderDefaultCharacterSvg(member.color || "#7667a8")}
+                      {renderDefaultCharacterSvg(member.color || "#7667a8", { showEdges: false })}
                       {/* 残り (旧 span 構造) は dummy で出さない。
                           以下のコメントは将来別 shape を足す時の場所取り。 */}
                       {/* SVG の morph

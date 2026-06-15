@@ -26,7 +26,8 @@ export function shadeHex(hex: string, percent: number): string {
   return `#${to2(f(r))}${to2(f(g))}${to2(f(b))}`;
 }
 
-export function renderMorphCubeSvg(color: string) {
+export function renderMorphCubeSvg(color: string, options?: { showEdges?: boolean }) {
+  const showEdges = options?.showEdges !== false; // 既定で表示 (preview)
   const front = color;
   const top = shadeHex(color, 0.18);
   const right = shadeHex(color, -0.28);
@@ -65,19 +66,21 @@ export function renderMorphCubeSvg(color: string) {
           fill={right}
         />
         <rect x={x0} y={y0} width={S} height={S} rx={18} fill={front} />
-        {edges.map(([ax, ay, bx, by], i) => (
-          <line
-            key={i}
-            x1={ax}
-            y1={ay}
-            x2={bx}
-            y2={by}
-            stroke={edge}
-            strokeWidth={3}
-            strokeLinecap="round"
-            className="morph-gild"
-          />
-        ))}
+        {showEdges
+          ? edges.map(([ax, ay, bx, by], i) => (
+              <line
+                key={i}
+                x1={ax}
+                y1={ay}
+                x2={bx}
+                y2={by}
+                stroke={edge}
+                strokeWidth={3}
+                strokeLinecap="round"
+                className="morph-gild"
+              />
+            ))
+          : null}
         <g className="morph-eyes">
           {[-1, 1].map((s) => (
             <line
@@ -86,7 +89,7 @@ export function renderMorphCubeSvg(color: string) {
               y1={556}
               x2={516 + s * 46 + 20}
               y2={556}
-              stroke={edge}
+              stroke={showEdges ? edge : shadeHex(color, -0.5)}
               strokeWidth={6}
               strokeLinecap="round"
             />
@@ -97,7 +100,8 @@ export function renderMorphCubeSvg(color: string) {
   );
 }
 
-export function renderDefaultCharacterSvg(color: string) {
+export function renderDefaultCharacterSvg(color: string, options?: { showEdges?: boolean }) {
+  const showEdges = options?.showEdges !== false; // 既定で表示 (preview)
   const front = color;
   const top = shadeHex(color, 0.18);
   const right = shadeHex(color, -0.28);
@@ -153,19 +157,21 @@ export function renderDefaultCharacterSvg(color: string) {
           fill={right}
         />
         <rect x={x0} y={y0} width={S} height={S} rx={22} fill={front} />
-        {edges.map(([ax, ay, bx, by], i) => (
-          <line
-            key={i}
-            x1={ax}
-            y1={ay}
-            x2={bx}
-            y2={by}
-            stroke={edge}
-            strokeWidth={2.5}
-            strokeLinecap="round"
-            strokeOpacity={0.85}
-          />
-        ))}
+        {showEdges
+          ? edges.map(([ax, ay, bx, by], i) => (
+              <line
+                key={i}
+                x1={ax}
+                y1={ay}
+                x2={bx}
+                y2={by}
+                stroke={edge}
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeOpacity={0.85}
+              />
+            ))
+          : null}
         <rect
           x={fpX}
           y={fpY}
@@ -173,7 +179,7 @@ export function renderDefaultCharacterSvg(color: string) {
           height={fpSize}
           rx={24}
           fill={face}
-          stroke={edge}
+          stroke={showEdges ? edge : "none"}
           strokeWidth={1.8}
           strokeOpacity={0.85}
         />
