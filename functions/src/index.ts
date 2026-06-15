@@ -4,3 +4,4 @@ admin.initializeApp();
 
 export { verifyApplePurchase } from "./verifyApplePurchase";
 export { createCheckoutSession, createPortalSession, stripeWebhook } from "./stripeBilling";
+export { notifyFeedbackToSlack } from "./feedbackNotify";
