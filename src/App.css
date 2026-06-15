@@ -37197,10 +37197,23 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
     padding: 0;
   }
 
-  /* 在室メンバーカードリスト (モバイル + ルームタブ専用)
-     2D stage の代わりに「みんなと作業してる感」を作る縦リストカード。
-     各行: アクセント dot + 名前 + タスク + 滞在時間。
-     色付き dot が静かに脈動して "今そこに居る" 感じを出す。 */
+  /* みんなタブの avatar 内に置く SVG をフル fill にし、文字 fallback と
+     同じサイズ感に揃える。 */
+  .workspace-screen .workspace-people-avatar > svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .workspace-screen .workspace-people-avatar:has(> svg) {
+    background: transparent !important;
+    color: transparent;
+    border: 0;
+    overflow: visible;
+  }
+
+  /* (旧) 在室メンバーカードリスト — ルームタブ廃止により未使用。
+     CSS は将来また使う可能性に備えて残置するが、DOM が無いので
+     何も描画されない。 */
   .workspace-screen .atelier-mobile-presence {
     list-style: none;
     margin: 0;

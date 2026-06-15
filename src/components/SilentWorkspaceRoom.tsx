@@ -209,28 +209,6 @@ function getActorStayLabel(member: RoomActor) {
   return restMinutes > 0 ? `${hours}h ${restMinutes}m` : `${hours}h`;
 }
 
-/* ポケ森風の "箱庭" レイアウト：スマホのルームでは、各メンバーが
-   自由移動で持っている保存座標 (member.x/y) を無視し、地面エリアに
-   キャラを大きく等間隔で並べ直す。俯瞰マップを縮小すると小さくて
-   何も分からない問題への対処。最大 3 列、人数で行を増やし、奥(上)→
-   手前(下)の行でざっくり奥行きを出す。x/y だけ差し替えて他のフィー
-   ルドは保持するので、吹き出し・フォーカスリング等はそのまま動く。 */
-function arrangeBoxGardenActors(list: RoomActor[]): RoomActor[] {
-  const n = list.length;
-  if (n === 0) return list;
-  const perRow = n <= 3 ? n : 3;
-  const rows = Math.ceil(n / perRow);
-  return list.map((member, i) => {
-    const row = Math.floor(i / perRow);
-    const colCount = Math.min(perRow, n - row * perRow);
-    const col = i % perRow;
-    const x = ((col + 1) / (colCount + 1)) * 100;
-    // 1 行なら床の中ほど、複数行なら 52%〜82% に散らして奥行きを出す。
-    const y = rows === 1 ? 72 : 52 + (row / (rows - 1)) * 30;
-    return { ...member, x, y };
-  });
-}
-
 /* Focus-ring state for an actor. The ring fills clockwise over a single
    12-hour session: it starts empty (no color) when the actor joins and
    reaches a full revolution after 12 hours of active focus, then holds at
@@ -306,7 +284,9 @@ export function SilentWorkspaceRoom({
      自分(操作)」の 3 タブに分割するための選択状態。小画面で四方に
      散らばっていた情報を 3 つの目的に整理する。PC ではタブ UI を
      CSS で隠し、この値は "room" 固定のまま従来の 2D ステージを使う。 */
-  const [mobileTab, setMobileTab] = useState<"room" | "people" | "me">("room");
+  /* "room" タブは廃止。モバイルは「みんな (people)」「自分 (me)」の
+     2 タブ構成で、デフォルトは people (= 在室者一覧)。 */
+  const [mobileTab, setMobileTab] = useState<"people" | "me">("people");
   /* スマホ幅かどうか。ルームタブの「ポケ森風 箱庭レイアウト」を出す
      判定に使う。PC では false のまま従来の俯瞰 2D を使う。 */
   const [isPhone, setIsPhone] = useState(() => {
@@ -621,10 +601,10 @@ export function SilentWorkspaceRoom({
   const showGhostHint =
     trimmedTask.length > 0 && !matchedLearningItem && Boolean(onLearningItemRegister);
 
-  /* スマホのルームタブのときだけ、ポケ森風に整列した座標でアクターを
-     描画する。それ以外（PC / みんな・自分タブ）は保存座標のまま。 */
-  const isMobileRoomLayout = isPhone && mobileTab === "room";
-  const displayMembers = isMobileRoomLayout ? arrangeBoxGardenActors(members) : members;
+  /* ルームタブ廃止に伴い、整列ロジックも撤去。PC は保存座標のまま、
+     モバイルでは stage 自体が CSS で非表示。 */
+  const isMobileRoomLayout = false;
+  const displayMembers = members;
 
   return (
     <div
@@ -633,15 +613,6 @@ export function SilentWorkspaceRoom({
     >
       {/* モバイル専用のタブバー。PC では CSS で display:none。 */}
       <nav className="workspace-mobile-tabs" role="tablist" aria-label="アトリエの表示">
-        <button
-          type="button"
-          role="tab"
-          className={`workspace-mobile-tab${mobileTab === "room" ? " is-active" : ""}`}
-          aria-selected={mobileTab === "room"}
-          onClick={() => setMobileTab("room")}
-        >
-          ルーム
-        </button>
         <button
           type="button"
           role="tab"
@@ -663,51 +634,6 @@ export function SilentWorkspaceRoom({
         </button>
       </nav>
       <div className="workspace-2d-main">
-        {/* モバイル + ルームタブ専用の "在室メンバーカードリスト"。
-            2D stage を諦めた代わりに、「誰が今このルームで作業中か」を
-            シンプルな縦リストカードで見せる。アバターは出さず、
-            ・色付き dot (作業中 / 休憩中)、 ・名前、 ・今やってること、
-            ・滞在時間 で「みんなと作業してる感」を作る。 */}
-        {isMobileRoomLayout ? (
-          <ul className="atelier-mobile-presence" aria-label="今ルームに居るメンバー">
-            {displayMembers.length === 0 ? (
-              <li className="atelier-mobile-presence-empty">
-                まだ誰もこのルームに居ません。
-                <small>入室すると最初の住人になります。</small>
-              </li>
-            ) : (
-              displayMembers.map((member) => {
-                const isCurrentUser = member.userId === currentUserId;
-                const stayLabel = getActorStayLabel(member);
-                const taskLabel = member.currentTask || member.building || "—";
-                const isOnBreak = member.status === "on-break";
-                return (
-                  <li
-                    key={member.userId}
-                    className={`atelier-mobile-presence-item${
-                      isCurrentUser ? " is-self" : ""
-                    }${isOnBreak ? " is-break" : " is-active"}`}
-                  >
-                    <span
-                      className="atelier-mobile-presence-dot"
-                      style={{ background: member.color || "var(--green)" }}
-                      aria-hidden="true"
-                    />
-                    <div className="atelier-mobile-presence-body">
-                      <strong>
-                        {member.name}
-                        {isCurrentUser ? <em>YOU</em> : null}
-                      </strong>
-                      <small>{taskLabel}</small>
-                    </div>
-                    <span className="atelier-mobile-presence-time">{stayLabel}</span>
-                  </li>
-                );
-              })
-            )}
-          </ul>
-        ) : null}
-
         <div
           className="workspace-stage"
           aria-label="Silent workspace"
@@ -1378,11 +1304,26 @@ export function SilentWorkspaceRoom({
                       onClick={() => onMemberOpen(member)}
                     >
                       <span
-                        className="workspace-people-avatar"
+                        className={`workspace-people-avatar shape-${member.characterShape || "default"}`}
                         style={{ "--people-color": member.characterColor || member.color } as CSSProperties}
                         aria-hidden="true"
                       >
-                        {member.name.slice(0, 1)}
+                        {/* 投稿カード avatar と統一: キャラ shape + カラーで描画。
+                            default / morph は共有 SVG renderer (金縁なし版)、
+                            その他は文字 initial に fallback。 */}
+                        {member.characterShape === "default" ? (
+                          renderDefaultCharacterSvg(member.characterColor || member.color, {
+                            showEdges: false,
+                          })
+                        ) : member.characterShape === "morph" ? (
+                          renderMorphCubeSvg(member.characterColor || member.color, {
+                            showEdges: false,
+                          })
+                        ) : (
+                          <span className="workspace-people-avatar-initial">
+                            {member.name.slice(0, 1)}
+                          </span>
+                        )}
                       </span>
                       <span className="workspace-people-text">
                         <span className="workspace-people-name">
@@ -1524,9 +1465,10 @@ export function SilentWorkspaceRoom({
                   "hud-fab",
                   isHudOpen ? "is-hud-open" : "",
                   isPresetTrayOpen ? "is-open" : "",
-                  // モバイルで「みんな/自分」タブ表示中は FAB を隠す
-                  // （操作は「自分」タブに集約）。PC は room 固定なので影響なし。
-                  mobileTab !== "room" ? "is-hidden-by-tab" : "",
+                  // モバイルで「みんな/自分」タブは常に FAB を隠す
+                  // (操作は「自分」タブに集約)。PC では mobileTab は
+                  // どのみち使わないので no-op。
+                  isPhone ? "is-hidden-by-tab" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
