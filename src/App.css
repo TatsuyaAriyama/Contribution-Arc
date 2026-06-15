@@ -37063,6 +37063,45 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   }
 }
 
+/* ===============================================================
+   他人プロフィール (.profile-close-button)
+   右上に絶対配置のバツマーク。← ホームと併用で「戻れない」を防ぐ。
+   nondo 語彙: ink hairline 円 + 純白背景 + tap target 40px。
+   safe-area-inset-top に追従して iOS のノッチを避ける。
+   =============================================================== */
+.profile-close-button {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 14px);
+  right: calc(env(safe-area-inset-right, 0px) + 14px);
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(var(--ink-rgb), 0.06);
+  transition: transform 0.12s ease, background 0.14s ease;
+}
+.profile-close-button:hover {
+  background: rgba(var(--ink-rgb), 0.05);
+}
+.profile-close-button:active {
+  transform: scale(0.94);
+}
+@media (max-width: 720px) {
+  .profile-close-button {
+    /* モバイルの bottom-nav 上端は触れないが、上は status bar 直下が
+       自然。位置は safe-area で十分対応できているので変更なし。 */
+    width: 38px;
+    height: 38px;
+  }
+}
+
 /* === Phase 5: keyframes 分離。dark.css はテーマ廃止に伴い無効化 === */
 @import "./styles/animations.css";
 /* @import "./styles/dark.css"; — ライトモード固定のため未使用 */

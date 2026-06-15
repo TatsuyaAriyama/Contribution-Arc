@@ -18607,6 +18607,33 @@ function App() {
             </button>
           </div>
 
+          {/* 他人のプロフィール (member / user) を見ているときは、
+              右上にバツマークの "閉じる" を絶対配置。
+              「← ホーム」を見落とした場合の保険として常に手の届く
+              位置に出して、戻れずに困らないようにする。 */}
+          {profileMember || profileUser ? (
+            <button
+              type="button"
+              className="profile-close-button"
+              onClick={handleProfileBack}
+              aria-label={t("プロフィールを閉じる")}
+              title={t("プロフィールを閉じる")}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                aria-hidden="true"
+              >
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            </button>
+          ) : null}
+
           <div className="profile-layout">
             {profileMember ? (
               memberProfileCard(profileMember)
