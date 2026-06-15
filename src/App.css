@@ -37147,6 +37147,37 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   outline-offset: 2px;
 }
 
+/* みんなの日報「もっと見る」ボタン */
+.daily-shared-loadmore {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  align-self: center;
+  margin-top: 8px;
+  padding: 10px 22px;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  transition: background 0.16s ease, transform 0.12s ease;
+}
+.daily-shared-loadmore:hover {
+  background: rgba(var(--ink-rgb), 0.05);
+}
+.daily-shared-loadmore:active {
+  transform: scale(0.98);
+}
+.daily-shared-loadmore small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
 /* === Phase 5: keyframes / dark を分離 === */
 @import "./styles/animations.css";
 @import "./styles/dark.css";
