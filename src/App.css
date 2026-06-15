@@ -7344,6 +7344,10 @@
   border-radius: 16px;
   background: transparent;
   overflow: visible;
+  /* 親 .player-avatar の base が place-items: center を効かせるので、
+     ここでも明示しておけば SVG が中央配置で安定する。 */
+  display: grid;
+  place-items: center;
 }
 
 .player-avatar-character .profile-character-preview {
@@ -13698,12 +13702,16 @@
     height: 42px;
     border-radius: 14px;
   }
-  /* キャラ silhouette 用の専用 avatar も小さく揃える。 */
+  /* キャラ silhouette 用の専用 avatar も小さく揃える。
+     base 側 (.player-avatar-character) の二重枠撤去を上書きしないよう、
+     background / border / padding は 0 にして preview をそのまま見せる。 */
   .player-avatar-character {
     width: 52px;
     height: 52px;
-    padding: 3px;
-    border-radius: 14px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    border-radius: 16px;
   }
 
   .status-metrics {
