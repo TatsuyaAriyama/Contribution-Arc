@@ -2254,7 +2254,105 @@ function renderMorphCubeSvg(color: string) {
   );
 }
 
-// reused everywhere the ghost appears (profile preview, shape picker
+// 初期キャラ「default」の preview。提供画像に合わせて、緑のキューブ
+// ボディ + 中央の窓 (face panel) + 2 つの丸い足 + 影 + 金線縁取り。
+// 色はユーザー選択 (characterColor) を front とし、top/right/face/legs
+// を shadeHex で派生させる。atelier stage では従来通り span ベースの
+// blocky 表示のままにし、preview だけ SVG に切替 (sprite サイズが
+// 小さすぎて SVG が潰れるのを避けるため)。
+function renderDefaultCharacterSvg(color: string) {
+  const front = color;
+  const top = shadeHex(color, 0.18);
+  const right = shadeHex(color, -0.28);
+  const face = shadeHex(color, 0.5);
+  const legs = shadeHex(color, -0.42);
+  const edge = "#C7A24E";
+  const x0 = 372;
+  const y0 = 440;
+  const S = 288;
+  const OX = 78;
+  const OY = 78;
+  const x1 = x0 + S;
+  const y1 = y0 + S;
+  const edges: [number, number, number, number][] = [
+    [x0, y0, x1, y0],
+    [x1, y0, x1 + OX, y0 - OY],
+    [x0 + OX, y0 - OY, x1 + OX, y0 - OY],
+    [x0, y0, x0 + OX, y0 - OY],
+    [x1, y0, x1, y1],
+    [x1 + OX, y0 - OY, x1 + OX, y1 - OY],
+  ];
+  const fpSize = 132;
+  const fpX = 516 - fpSize / 2;
+  const fpY = y0 + (S - fpSize) / 2 + 8;
+  const legR = 30;
+  const legY = y1 + legR + 6;
+  const legGap = 42;
+  return (
+    <svg
+      className="default-char-svg"
+      viewBox="0 0 1024 1024"
+      preserveAspectRatio="xMidYMid meet"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <ellipse
+        cx="516"
+        cy={legY + legR + 18}
+        rx="170"
+        ry="16"
+        fill="#000"
+        fillOpacity="0.16"
+      />
+      <g className="default-char-float">
+        <circle cx={516 - legGap} cy={legY} r={legR} fill={legs} />
+        <circle cx={516 + legGap} cy={legY} r={legR} fill={legs} />
+        <polygon
+          points={`${x0},${y0} ${x1},${y0} ${x1 + OX},${y0 - OY} ${x0 + OX},${y0 - OY}`}
+          fill={top}
+        />
+        <polygon
+          points={`${x1},${y0} ${x1 + OX},${y0 - OY} ${x1 + OX},${y1 - OY} ${x1},${y1}`}
+          fill={right}
+        />
+        <rect x={x0} y={y0} width={S} height={S} rx={22} fill={front} />
+        {edges.map(([ax, ay, bx, by], i) => (
+          <line
+            key={i}
+            x1={ax}
+            y1={ay}
+            x2={bx}
+            y2={by}
+            stroke={edge}
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeOpacity={0.85}
+          />
+        ))}
+        <rect
+          x={fpX}
+          y={fpY}
+          width={fpSize}
+          height={fpSize}
+          rx={24}
+          fill={face}
+          stroke={edge}
+          strokeWidth={1.8}
+          strokeOpacity={0.85}
+        />
+        <ellipse
+          cx={fpX + fpSize * 0.38}
+          cy={fpY + fpSize * 0.32}
+          rx={fpSize * 0.32}
+          ry={fpSize * 0.16}
+          fill="#fff"
+          fillOpacity={0.4}
+        />
+      </g>
+    </svg>
+  );
+}
+
 // swatches) so they always read as the exact same character.
 const ghostSvgMarkup = (
   <svg
@@ -2314,12 +2412,15 @@ export const ProfileCharacterPreview = memo(function ProfileCharacterPreview({
   const isGhost = shape === "ghost";
   const isOwl = shape === "owl";
   const isMorph = shape === "morph";
-  const isCustomShape = isGhost || isOwl || isMorph;
+  const isDefault = shape === "default";
+  const isCustomShape = isGhost || isOwl || isMorph || isDefault;
   return (
     <div
       className={`profile-character-preview${
         isGhost ? " is-ghost" : ""
-      }${isOwl ? " is-owl" : ""}${isMorph ? " is-morph" : ""}`}
+      }${isOwl ? " is-owl" : ""}${isMorph ? " is-morph" : ""}${
+        isDefault ? " is-default-char" : ""
+      }`}
       style={{ "--actor-color": color || characterColorOptions[0].value } as CSSProperties}
       aria-hidden="true"
     >
@@ -2343,6 +2444,8 @@ export const ProfileCharacterPreview = memo(function ProfileCharacterPreview({
           renderMorphCubeSvg(color || characterColorOptions[0].value)
         ) : isGhost ? (
           ghostSvgMarkup
+        ) : isDefault ? (
+          renderDefaultCharacterSvg(color || characterColorOptions[0].value)
         ) : (
           <>
             <span className="sprite-body" />

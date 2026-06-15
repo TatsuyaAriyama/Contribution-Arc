@@ -37064,6 +37064,44 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
 }
 
 /* ===============================================================
+   初期キャラクター "default" の preview (SVG)
+   緑キューブボディ + 中央 face panel + 2 つの足。提供画像準拠。
+   atelier stage では sprite-body/leg の span ベースで blocky 表示
+   のまま (40px だと SVG が潰れるため). preview だけ SVG 表示。
+   =============================================================== */
+.actor-sprite.shape-default {
+  /* SVG を中央に表示するため、デフォルトの blocky 背景 / shadow を
+     preview コンテキストでは消す。is-default-char クラスを親
+     (.profile-character-preview) に置いているのでスコープされる。 */
+}
+.profile-character-preview.is-default-char .actor-sprite.shape-default {
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.default-char-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.14));
+}
+.default-char-float {
+  transform-box: view-box;
+  transform-origin: 516px 600px;
+  animation: default-char-bob 3.6s ease-in-out infinite;
+}
+@keyframes default-char-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .default-char-float { animation: none; }
+}
+
+/* ===============================================================
    他人プロフィール (.profile-close-button)
    右上に絶対配置のバツマーク。← ホームと併用で「戻れない」を防ぐ。
    nondo 語彙: ink hairline 円 + 純白背景 + tap target 40px。
