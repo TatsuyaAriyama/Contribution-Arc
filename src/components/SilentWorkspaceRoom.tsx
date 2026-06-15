@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState, type CSSProperties, type ChangeEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import {
+  renderDefaultCharacterSvg,
+  renderMorphCubeSvg,
+} from "./CharacterShapeSvg";
 
 export type RoomActivityItem = {
   id: string;
@@ -1068,30 +1072,35 @@ export function SilentWorkspaceRoom({
                         <rect className="ghost-hat-band" x="88" y="33" width="20" height="4" />
                       </g>
                     </svg>
-                  ) : (
+                  ) : member.characterShape === "morph" ? (
+                    /* "相 Sou" (morph): cube + 金線 + 目。共有レンダラから
+                       同じ SVG を呼ぶことで preview と stage で見た目が一致。 */
+                    renderMorphCubeSvg(member.color || "#7667a8")
+                  ) : member.characterShape === "owl" ? (
                     <>
                       <span className="sprite-body" />
                       <span className="sprite-leg sprite-leg-left" />
                       <span className="sprite-leg sprite-leg-right" />
-                      {/* Owl-only parts. Rendered only when the owl shape
-                          is active so the head-turn animation has a target
-                          to drive without affecting other silhouettes. */}
-                      {member.characterShape === "owl" ? (
-                        <>
-                          <span className="sprite-head">
-                            <span className="sprite-tuft sprite-tuft-left" />
-                            <span className="sprite-tuft sprite-tuft-right" />
-                            <span className="sprite-owl-eye sprite-owl-eye-left" />
-                            <span className="sprite-owl-eye sprite-owl-eye-right" />
-                            <span className="sprite-beak" />
-                          </span>
-                          <span className="sprite-wing sprite-wing-left" />
-                          <span className="sprite-wing sprite-wing-right" />
-                        </>
-                      ) : null}
-                      {/* "相 Sou" (morph) は SVG ベースのキャラなので
-                          stage 上では小さすぎて識別困難。stage では基本
-                          ブロック表示にフォールバックし、SVG の morph
+                      <span className="sprite-head">
+                        <span className="sprite-tuft sprite-tuft-left" />
+                        <span className="sprite-tuft sprite-tuft-right" />
+                        <span className="sprite-owl-eye sprite-owl-eye-left" />
+                        <span className="sprite-owl-eye sprite-owl-eye-right" />
+                        <span className="sprite-beak" />
+                      </span>
+                      <span className="sprite-wing sprite-wing-left" />
+                      <span className="sprite-wing sprite-wing-right" />
+                    </>
+                  ) : (
+                    /* "default" (相 / 緑キューブ + face panel + 足):
+                       preview と同じ共有 SVG を出して見た目を統一する。
+                       stage の sprite サイズは @media で clamp(44, 13vw, 68)
+                       に拡張済みなので識別可能。 */
+                    <>
+                      {renderDefaultCharacterSvg(member.color || "#7667a8")}
+                      {/* 残り (旧 span 構造) は dummy で出さない。
+                          以下のコメントは将来別 shape を足す時の場所取り。 */}
+                      {/* SVG の morph
                           見え方は profile / shop / settings preview に
                           限定する。 */}
                     </>

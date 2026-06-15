@@ -37151,6 +37151,24 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
 }
 
 /* ===============================================================
+   アトリエ stage 内で SVG キャラ (.default-char-svg / .morph-svg) を
+   actor-sprite の枠いっぱいに描く。preview と同じ見た目を stage 上
+   でも出すため。 */
+.workspace-actor .actor-sprite > svg.default-char-svg,
+.workspace-actor .actor-sprite > svg.morph-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.workspace-actor .actor-sprite:has(> svg.default-char-svg),
+.workspace-actor .actor-sprite:has(> svg.morph-svg) {
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+  border: 0;
+}
+
+/* ===============================================================
    モバイルアトリエ — キャラを必ず画面内に収める
    ステージ高さを画面幅基準のアスペクト比に固定し、actor サイズと
    配置位置の上下限を vw / clamp で再計算する。完全な SVG viewBox
