@@ -2203,10 +2203,12 @@ function renderMorphCubeSvg(color: string) {
     [x1, y0, x1, y1],
     [x1 + OX, y0 - OY, x1 + OX, y1 - OY],
   ];
+  /* viewBox はコンテンツに密着させる (default キャラと同じ理由)。
+     キューブ + 影 + 目が占める領域に余白を少し足した範囲だけを描画。 */
   return (
     <svg
       className="morph-svg"
-      viewBox="0 0 1024 1024"
+      viewBox="320 320 480 460"
       aria-hidden="true"
       focusable="false"
       preserveAspectRatio="xMidYMid meet"
@@ -2288,10 +2290,17 @@ function renderDefaultCharacterSvg(color: string) {
   const legR = 30;
   const legY = y1 + legR + 6;
   const legGap = 42;
+  /* viewBox はコンテンツに密着させる:
+     - x 範囲: x0(372) 〜 x1+OX(738) → 余白少し含めて 320 〜 800
+     - y 範囲: top edge (y0-OY=362) 〜 影下 (legY+legR+34 ≈ 834)
+       → 余白少し含めて 320 〜 860
+     これで親枠 (.profile-character-preview ~80-100px) 内でキャラが
+     大きく表示される。元の 1024×1024 だと枠の半分を周囲の透明が
+     占めていた。 */
   return (
     <svg
       className="default-char-svg"
-      viewBox="0 0 1024 1024"
+      viewBox="320 320 480 540"
       preserveAspectRatio="xMidYMid meet"
       aria-hidden="true"
       focusable="false"
