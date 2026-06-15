@@ -16712,127 +16712,12 @@ function App() {
                   organization and generate an invite link. Solo
                   users see only the "組織を作成" form; org members
                   see the org name + role + invite button + leave. */}
-              {!isOnboardingSettings ? (
-                <div className="settings-org-panel" role="group" aria-label={t("組織")}>
-                  <div className="settings-org-head">
-                    <span>{t("組織")}</span>
-                    {currentOrganization ? (
-                      <span className="settings-org-role">
-                        {currentOrganization.ownerUid === currentUser?.uid ? t("オーナー") : t("メンバー")}
-                      </span>
-                    ) : null}
-                  </div>
-                  {currentOrganization ? (
-                    <div className="settings-org-current">
-                      <strong>{currentOrganization.name}</strong>
-                      <p className="settings-org-copy">
-                        {t("組織限定のルームを作って、社内・チーム内だけで一緒に作業できます。")}
-                      </p>
-                      <div className="settings-org-actions">
-                        <button
-                          type="button"
-                          className="settings-org-invite"
-                          onClick={handleCreateOrgInvite}
-                          disabled={isOrgWorking}
-                        >
-                          {t("招待リンクをコピー")}
-                        </button>
-                        {currentOrganization.ownerUid === currentUser?.uid ? (
-                          <button
-                            type="button"
-                            className="settings-org-admin"
-                            onClick={handleOpenOrgAdmin}
-                          >
-                            {t("メンバー一覧 / Admin")}
-                          </button>
-                        ) : null}
-                        {currentOrganization.ownerUid !== currentUser?.uid ? (
-                          <button
-                            type="button"
-                            className="settings-org-leave"
-                            onClick={handleLeaveOrganization}
-                            disabled={isOrgWorking}
-                          >
-                            {t("退出")}
-                          </button>
-                        ) : null}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="settings-org-create">
-                      <p className="settings-org-copy">
-                        {t("会社やチームで使う場合は、組織を作って招待リンクで仲間を招きます。組織限定のルームで他社や他チームから見えない作業空間が作れます。")}
-                      </p>
-                      <div className="settings-org-create-row">
-                        <input
-                          value={newOrgName}
-                          onChange={(event) => {
-                            setNewOrgName(event.target.value);
-                            if (orgError) setOrgError("");
-                          }}
-                          placeholder={t("例: Acme Inc.")}
-                          maxLength={64}
-                          aria-label={t("組織名")}
-                        />
-                        <button
-                          type="button"
-                          onClick={handleCreateOrganization}
-                          disabled={isOrgWorking}
-                        >
-                          {t("作成")}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  {orgError ? <p className="settings-org-error">{t(orgError)}</p> : null}
-                </div>
-              ) : null}
-
               {/* Personal data management — Phase 8. Export covers
                   個人情報保護法 / GDPR data-subject access rights;
                   account deletion covers the right to be forgotten.
                   Hidden during onboarding because we don't want to
                   show a delete button to a user who hasn't even
                   finished setting up their profile yet. */}
-              {!isOnboardingSettings ? (
-                <div className="settings-data-panel" role="group" aria-label="個人データ管理">
-                  <div className="settings-data-head">
-                    <span>個人データ管理</span>
-                  </div>
-                  <p className="settings-org-copy">
-                    あなたの学習ログ・投稿・組織メンバーシップなどを JSON で
-                    一括ダウンロードできます。アカウント削除は元に戻せません。
-                  </p>
-                  <div className="settings-data-actions">
-                    <button
-                      type="button"
-                      className="settings-data-export"
-                      onClick={handleExportPersonalData}
-                      disabled={isExportingData}
-                    >
-                      {isExportingData ? "エクスポート中…" : "データをエクスポート"}
-                    </button>
-                    <button
-                      type="button"
-                      className="settings-data-delete"
-                      onClick={() => {
-                        if (currentOrganization?.ownerUid === currentUser?.uid) {
-                          window.alert(
-                            "オーナーは削除できません。Admin ダッシュボードからオーナーを譲渡してから削除してください。",
-                          );
-                          return;
-                        }
-                        setIsDeleteConfirmOpen(true);
-                        setDeleteConfirmText("");
-                        setDeleteError("");
-                      }}
-                    >
-                      アカウントを削除
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-
               <div className="settings-theme-panel" role="group" aria-label={t("言語")}>
                 <span className="settings-theme-label">{t("言語")}</span>
                 <div className="settings-theme-toggle settings-language-toggle">
@@ -17136,6 +17021,121 @@ function App() {
                     </div>
                   </dl>
                 </details>
+              ) : null}
+
+              {!isOnboardingSettings ? (
+                <div className="settings-org-panel" role="group" aria-label={t("組織")}>
+                  <div className="settings-org-head">
+                    <span>{t("組織")}</span>
+                    {currentOrganization ? (
+                      <span className="settings-org-role">
+                        {currentOrganization.ownerUid === currentUser?.uid ? t("オーナー") : t("メンバー")}
+                      </span>
+                    ) : null}
+                  </div>
+                  {currentOrganization ? (
+                    <div className="settings-org-current">
+                      <strong>{currentOrganization.name}</strong>
+                      <p className="settings-org-copy">
+                        {t("組織限定のルームを作って、社内・チーム内だけで一緒に作業できます。")}
+                      </p>
+                      <div className="settings-org-actions">
+                        <button
+                          type="button"
+                          className="settings-org-invite"
+                          onClick={handleCreateOrgInvite}
+                          disabled={isOrgWorking}
+                        >
+                          {t("招待リンクをコピー")}
+                        </button>
+                        {currentOrganization.ownerUid === currentUser?.uid ? (
+                          <button
+                            type="button"
+                            className="settings-org-admin"
+                            onClick={handleOpenOrgAdmin}
+                          >
+                            {t("メンバー一覧 / Admin")}
+                          </button>
+                        ) : null}
+                        {currentOrganization.ownerUid !== currentUser?.uid ? (
+                          <button
+                            type="button"
+                            className="settings-org-leave"
+                            onClick={handleLeaveOrganization}
+                            disabled={isOrgWorking}
+                          >
+                            {t("退出")}
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="settings-org-create">
+                      <p className="settings-org-copy">
+                        {t("会社やチームで使う場合は、組織を作って招待リンクで仲間を招きます。組織限定のルームで他社や他チームから見えない作業空間が作れます。")}
+                      </p>
+                      <div className="settings-org-create-row">
+                        <input
+                          value={newOrgName}
+                          onChange={(event) => {
+                            setNewOrgName(event.target.value);
+                            if (orgError) setOrgError("");
+                          }}
+                          placeholder={t("例: Acme Inc.")}
+                          maxLength={64}
+                          aria-label={t("組織名")}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleCreateOrganization}
+                          disabled={isOrgWorking}
+                        >
+                          {t("作成")}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {orgError ? <p className="settings-org-error">{t(orgError)}</p> : null}
+                </div>
+              ) : null}
+
+              {!isOnboardingSettings ? (
+                <div className="settings-data-panel" role="group" aria-label="個人データ管理">
+                  <div className="settings-data-head">
+                    <span>個人データ管理</span>
+                  </div>
+                  <p className="settings-org-copy">
+                    あなたの学習ログ・投稿・組織メンバーシップなどを JSON で
+                    一括ダウンロードできます。アカウント削除は元に戻せません。
+                  </p>
+                  <div className="settings-data-actions">
+                    <button
+                      type="button"
+                      className="settings-data-export"
+                      onClick={handleExportPersonalData}
+                      disabled={isExportingData}
+                    >
+                      {isExportingData ? "エクスポート中…" : "データをエクスポート"}
+                    </button>
+                    <button
+                      type="button"
+                      className="settings-data-delete"
+                      onClick={() => {
+                        if (currentOrganization?.ownerUid === currentUser?.uid) {
+                          window.alert(
+                            "オーナーは削除できません。Admin ダッシュボードからオーナーを譲渡してから削除してください。",
+                          );
+                          return;
+                        }
+                        setIsDeleteConfirmOpen(true);
+                        setDeleteConfirmText("");
+                        setDeleteError("");
+                      }}
+                    >
+                      アカウントを削除
+                    </button>
+                  </div>
+                </div>
               ) : null}
 
               {settingsError ? <p className="settings-error">{t(settingsError)}</p> : null}
