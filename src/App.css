@@ -37165,117 +37165,39 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
 }
 
 /* ===============================================================
-   モバイルアトリエ — 画面全体をひとつの空間にする (要望対応)
-   "仕切りひとつも要らない" = stage を viewport いっぱいに広げ、
-   ルーム名やタブ・ボタン類を浮かせる。カード枠 / 区切り / inner
-   padding を全廃。stage は bottom-nav の手前まで伸びる。
+   モバイルアトリエ — 2D キャラ表示は廃止 (要望対応)
+   "もうキャラ表示は諦めよう"。stage を完全に非表示にし、ルーム文脈
+   (現在のルーム名 / 在室人数 / 定型文・置き手紙・着替えボタン /
+   "みんな" タブの参加者リスト) だけで機能を成立させる。stage の
+   DOM は残るが視覚的にゼロ。
    =============================================================== */
 @media (max-width: 720px) {
-  /* 床線・台形・ライト・vignette など旧 stage 装飾を完全撤去。
-     ライト/紙トーンの世界観に対して "場所" を演出していた旧 dark
-     stage の遺物が浮いていた。 */
-  .workspace-screen .workspace-stage::before,
-  .workspace-screen .workspace-stage::after,
-  .workspace-screen .workspace-light,
-  .workspace-screen .workspace-floor-grid {
+  .workspace-screen .workspace-stage {
     display: none !important;
   }
-  /* ヘッダー (v.x.x.x ルーム名 / 経過時間 / 定型文・置き手紙・着替え)
-     も独立カードでなく stage に溶け込ませる。背景・枠を取り、左右の
-     padding だけ残してコンテンツを置く。 */
-  .workspace-screen .workspace-2d-card > * {
-    background: transparent;
-    border: 0;
-    box-shadow: none;
-  }
-  /* screen 全体の padding / gap を撤去 (= 余白の仕切りも要らない) */
+  /* stage 廃止に伴い、screen 全体の padding は控えめに戻して、
+     ヘッダー + タブ + リストが読みやすい縦並びカードになる。 */
   .workspace-screen {
-    padding: 0;
-    gap: 0;
+    padding: 12px 14px 24px;
+    gap: 14px;
   }
-  /* workspace 中の全ての card / panel chrome を透明化 */
-  .workspace-screen .workspace-2d-card,
-  .workspace-screen .workspace-2d-shell,
-  .workspace-screen .workspace-2d-main,
-  .workspace-screen .workspace-mobile-panel,
-  .workspace-screen .workspace-mobile-tabs,
-  .workspace-screen .workspace-room-strip,
-  .workspace-screen .silent-workspace {
-    padding: 0;
-    margin: 0;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
+  /* ヘッダーカードは透明撤回 — シンプルな白カードとして再表示。 */
+  .workspace-screen .workspace-2d-card > * {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: 0 1px 0 rgba(var(--ink-rgb), 0.03);
   }
-  /* タブ (ルーム/みんな/自分) はステージに浮かせる。
-     上端が切れないよう safe-area + 12px の余白を確保。 */
+  .workspace-screen .workspace-2d-card > * + * {
+    margin-top: 12px;
+  }
+  /* タブは sticky を解除し、通常のセグメントとして上部に静置。 */
   .workspace-screen .workspace-mobile-tabs {
-    position: sticky;
-    top: 0;
-    z-index: 5;
-    background: transparent;
-    padding: calc(env(safe-area-inset-top, 0) + 12px) 14px 8px;
-  }
-  /* actor ラベルを白の半透明 pill 化して床に置いても読めるように。 */
-  .workspace-screen .workspace-actor .actor-name {
-    padding: 2px 8px;
-    border-radius: 999px;
-    background: rgba(var(--surface-rgb), 0.92);
-    box-shadow: 0 1px 2px rgba(var(--ink-rgb), 0.06);
-    color: var(--ink);
-  }
-  .workspace-screen .workspace-actor .actor-task {
-    padding: 2px 8px;
-    border-radius: 999px;
-    background: rgba(var(--green), 0.12);
-    color: var(--green);
-  }
-  /* stage 自身を viewport の残りスペースほぼ全部に拡張。
-     - bottom-nav 高 (~ 64px + safe-area) を引いて 100dvh - 64 + safe
-     - aspect-ratio は撤去 (高さを直接決める) */
-  .workspace-stage {
-    height: calc(100dvh - 72px - env(safe-area-inset-bottom, 0));
-    min-height: 480px;
-    max-height: none;
-    aspect-ratio: auto;
-    border-radius: 0;
-  }
-  /* actor を画面幅追従にする。translate(-50%, -50%) と合わせると
-     どの座標でも sprite が枠を超えにくくなる。 */
-  .workspace-actor {
-    width: clamp(56px, 18vw, 88px);
-    min-height: auto;
-  }
-  /* 端ぎりぎりに歩いても半身がはみ出ないよう、left/top の上下限を
-     clamp で締める。--actor-x/--actor-y は %、translate(-50%) と
-     合わせて 7-93% 範囲なら sprite 全体がステージ内に収まる。 */
-  .workspace-actor {
-    left: max(7%, min(93%, var(--actor-x)));
-    top: max(10%, min(90%, var(--actor-y)));
-  }
-  /* sprite 自体も小さくして、名前ラベル含めて 1 体の占有幅を抑える。 */
-  .workspace-actor .actor-sprite {
-    width: clamp(44px, 13vw, 68px);
-    height: clamp(44px, 13vw, 68px);
-  }
-  /* 名前・タスクの文字も縮める。stage が縮んでも overflow しないように。 */
-  .workspace-actor .actor-name {
-    font-size: 10.5px;
-    max-width: clamp(72px, 22vw, 110px);
-  }
-  .workspace-actor .actor-task strong {
-    font-size: 11px;
-  }
-  .workspace-actor .actor-task small {
-    font-size: 10px;
-  }
-  /* タップ歩行マーカーも画面サイズに合わせる。 */
-  .tap-walk-marker {
-    width: clamp(28px, 7vw, 40px);
-    height: clamp(28px, 7vw, 40px);
+    position: static;
+    padding: 0;
   }
 }
+
 
 /* === Phase 5: keyframes 分離。dark.css はテーマ廃止に伴い無効化 === */
 @import "./styles/animations.css";
