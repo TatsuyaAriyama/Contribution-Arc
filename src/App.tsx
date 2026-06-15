@@ -16896,6 +16896,72 @@ function App() {
                   </button>
                 </div>
               </div>
+              {!isOnboardingSettings ? (
+                <fieldset className="desktop-notification-settings">
+                  <legend>{t("通知")}</legend>
+                  {([
+                    ["dailyLog", "日報通知"],
+                    ["post", "投稿通知"],
+                    ["friendRequest", "フレンド申請通知"],
+                  ] as const).map(([key, label]) => (
+                    <label key={key}>
+                      <span>{t(label)}</span>
+                      <input
+                        type="checkbox"
+                        checked={desktopNotificationSettings[key]}
+                        onChange={(event) =>
+                          setDesktopNotificationSettings((settings) => ({
+                            ...settings,
+                            [key]: event.target.checked,
+                          }))
+                        }
+                      />
+                    </label>
+                  ))}
+                  <label>
+                    <span>{t("通知音")}</span>
+                    <input
+                      type="checkbox"
+                      checked={desktopNotificationSettings.sound}
+                      onChange={(event) =>
+                        setDesktopNotificationSettings((settings) => ({
+                          ...settings,
+                          sound: event.target.checked,
+                        }))
+                      }
+                    />
+                  </label>
+                  <div className="notification-sound-control">
+                    <div>
+                      <span>{t("通知音量")}</span>
+                      <small>{Math.round(desktopNotificationSettings.soundVolume * 100)}%</small>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={desktopNotificationSettings.soundVolume}
+                      disabled={!desktopNotificationSettings.sound}
+                      onChange={(event) =>
+                        setDesktopNotificationSettings((settings) => ({
+                          ...settings,
+                          soundVolume: Number(event.target.value),
+                        }))
+                      }
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="notification-sound-test"
+                    disabled={!desktopNotificationSettings.sound || desktopNotificationSettings.soundVolume <= 0}
+                    onClick={handleNotificationSoundTest}
+                  >
+                    {t("通知音をテスト")}
+                  </button>
+                </fieldset>
+              ) : null}
+
 
               <div className="settings-character-color-panel" id="settings-character-panel">
                 <div className="settings-character-color-head">
@@ -16996,72 +17062,6 @@ function App() {
                   </div>
                 </div>
               </div>
-
-              {!isOnboardingSettings ? (
-                <fieldset className="desktop-notification-settings">
-                  <legend>{t("Mac通知")}</legend>
-                  {([
-                    ["dailyLog", "日報通知"],
-                    ["post", "投稿通知"],
-                    ["friendRequest", "フレンド申請通知"],
-                  ] as const).map(([key, label]) => (
-                    <label key={key}>
-                      <span>{t(label)}</span>
-                      <input
-                        type="checkbox"
-                        checked={desktopNotificationSettings[key]}
-                        onChange={(event) =>
-                          setDesktopNotificationSettings((settings) => ({
-                            ...settings,
-                            [key]: event.target.checked,
-                          }))
-                        }
-                      />
-                    </label>
-                  ))}
-                  <label>
-                    <span>{t("通知音")}</span>
-                    <input
-                      type="checkbox"
-                      checked={desktopNotificationSettings.sound}
-                      onChange={(event) =>
-                        setDesktopNotificationSettings((settings) => ({
-                          ...settings,
-                          sound: event.target.checked,
-                        }))
-                      }
-                    />
-                  </label>
-                  <div className="notification-sound-control">
-                    <div>
-                      <span>{t("通知音量")}</span>
-                      <small>{Math.round(desktopNotificationSettings.soundVolume * 100)}%</small>
-                    </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.05"
-                      value={desktopNotificationSettings.soundVolume}
-                      disabled={!desktopNotificationSettings.sound}
-                      onChange={(event) =>
-                        setDesktopNotificationSettings((settings) => ({
-                          ...settings,
-                          soundVolume: Number(event.target.value),
-                        }))
-                      }
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    className="notification-sound-test"
-                    disabled={!desktopNotificationSettings.sound || desktopNotificationSettings.soundVolume <= 0}
-                    onClick={handleNotificationSoundTest}
-                  >
-                    {t("通知音をテスト")}
-                  </button>
-                </fieldset>
-              ) : null}
 
               {!isOnboardingSettings ? (
                 <fieldset className="desktop-notification-settings auto-post-settings">
