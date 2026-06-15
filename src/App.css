@@ -37197,6 +37197,14 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
     padding: 0;
   }
 
+  /* 在室者リストは 4 人分まで見せ、それ以降は内部スクロールに。
+     1 カード ~ 80px + 6px gap × 3 = ~ 344px に少し余裕を持たせる。 */
+  .workspace-screen .workspace-people-list {
+    max-height: clamp(280px, 50vh, 360px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
   /* みんなタブの avatar 内に置く SVG をフル fill にし、文字 fallback と
      同じサイズ感に揃える。 */
   .workspace-screen .workspace-people-avatar > svg {
@@ -37326,6 +37334,137 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   }
 }
 
+
+/* ===============================================================
+   アトリエ「みんな」タブの ルームチャット panel
+   nondo 語彙: ink hairline カード + 内側スクロール + シンプル入力。
+   不適切ワードは親 (App.tsx) の handler で送信前に弾く。
+   =============================================================== */
+.atelier-chat-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.atelier-chat-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.atelier-chat-title {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.atelier-chat-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.atelier-chat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.atelier-chat-empty {
+  padding: 14px 4px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+.atelier-chat-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(var(--ink-rgb), 0.04);
+}
+.atelier-chat-msg.is-self {
+  background: rgba(var(--green-rgb, 31, 111, 74), 0.10);
+}
+.atelier-chat-msg-author {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.atelier-chat-msg-author em {
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--surface);
+}
+.atelier-chat-msg-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.45;
+}
+.atelier-chat-form {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+.atelier-chat-form textarea {
+  flex: 1;
+  min-height: 40px;
+  max-height: 120px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  resize: none;
+  outline: none;
+}
+.atelier-chat-form textarea:focus {
+  border-color: rgba(31, 111, 74, 0.4);
+}
+.atelier-chat-form button {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.atelier-chat-form button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.atelier-chat-error {
+  margin: 0;
+  color: var(--accent-warm);
+  font-size: 12px;
+  font-weight: 700;
+}
 
 /* === Phase 5: keyframes 分離。dark.css はテーマ廃止に伴い無効化 === */
 @import "./styles/animations.css";

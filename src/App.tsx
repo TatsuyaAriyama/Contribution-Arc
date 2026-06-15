@@ -160,6 +160,12 @@ import {
   deleteFloorNote,
   type FloorNoteRecord,
 } from "./services/floorNotes";
+import {
+  subscribeRoomChat,
+  sendRoomChatMessage,
+  containsBlockedWord,
+  type RoomChatMessage,
+} from "./services/roomChat";
 import { ArcPurchasePanel } from "./components/ArcPurchasePanel";
 import { ManagerDashboard } from "./components/ManagerDashboard";
 import { ShareToXModal } from "./components/ShareToXModal";
@@ -4090,6 +4096,10 @@ function App() {
   // above so the room context stays visible behind the card.
   const [roomMemberPanel, setRoomMemberPanel] = useState<WorkspaceMember | null>(null);
   const [roomMemberPanelUser, setRoomMemberPanelUser] = useState<UserProfile | null>(null);
+  /* ルームチャット (atelier の「みんな」タブ下に表示)。selectedRoomId が
+     変わるたびに購読を張り替える。最大 50 件を表示。 */
+  const [roomChatMessages, setRoomChatMessages] = useState<RoomChatMessage[]>([]);
+  const [roomChatError, setRoomChatError] = useState("");
   // Floor notes (置き手紙) + monuments (記念碑) popover state.
   const [floorNotes, setFloorNotes] = useState<FloorNoteRecord[]>([]);
   /* 置き手紙の既読 ID 集合。以前は uid scope の無い "ca:read-floor-notes"
@@ -7468,6 +7478,52 @@ function App() {
     );
     return () => unsubscribe();
   }, [currentUser, selectedRoomNotesId]);
+
+  /* ルームチャットの購読。selectedRoom が変わるたびに張り替え。
+     PC は workspace view を開いている時のみ、モバイルは atelier view
+     開いている時のみ (currentView === "workspace"). */
+  useEffect(() => {
+    if (!currentUser || !selectedRoomNotesId || currentView !== "workspace") {
+      setRoomChatMessages([]);
+      return;
+    }
+    const unsubscribe = subscribeRoomChat(
+      db,
+      selectedRoomNotesId,
+      (messages) => setRoomChatMessages(messages),
+      (error) => console.info("Room chat sync skipped.", error),
+    );
+    return () => unsubscribe();
+  }, [currentUser, selectedRoomNotesId, currentView]);
+
+  const handleRoomChatSend = async (rawText: string): Promise<boolean> => {
+    if (!currentUser || !selectedRoom) {
+      setRoomChatError("送信できません。ルームを選択してください。");
+      return false;
+    }
+    const text = rawText.trim().slice(0, 280);
+    if (!text) return false;
+    if (containsBlockedWord(text)) {
+      setRoomChatError("不適切な言葉が含まれているため送信できません。");
+      return false;
+    }
+    setRoomChatError("");
+    try {
+      await sendRoomChatMessage(db, {
+        roomId: selectedRoom.id,
+        userId: currentUser.uid,
+        userName: playerName || "Developer",
+        characterColor: playerCharacterColor,
+        characterShape: playerCharacterShape,
+        text,
+      });
+      return true;
+    } catch (error) {
+      console.info("Room chat send failed.", error);
+      setRoomChatError("送信に失敗しました。時間をおいて再度お試しください。");
+      return false;
+    }
+  };
 
   const floorNoteMarkers: FloorNoteMarker[] = floorNotes.map((note) => ({
     id: note.id,
@@ -19392,6 +19448,9 @@ function App() {
                           </article>
                         ) : null
                       }
+                      chatMessages={roomChatMessages}
+                      chatError={roomChatError}
+                      onChatSend={handleRoomChatSend}
                       floorNotes={floorNoteMarkers}
                       onFloorNoteOpen={handleFloorNoteOpen}
                       onComposeFloorNote={handleComposeFloorNote}

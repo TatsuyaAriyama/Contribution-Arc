@@ -130,6 +130,20 @@ type SilentWorkspaceRoomProps = {
      `onMemberPanelClose` dismisses it; the backdrop calls it too. */
   selectedMemberId?: string | null;
   memberPanel?: ReactNode;
+  /* ルームチャット: 「みんな」タブの下に表示。最大 50 件の最新を流す。
+     送信は親 (App.tsx) の handler で NG word チェックを通してから
+     Firestore へ書き込む。返り値が false なら入力欄に残す。 */
+  chatMessages?: Array<{
+    id: string;
+    userId: string;
+    userName: string;
+    text: string;
+    createdAt: string;
+    characterColor?: string;
+    characterShape?: string;
+  }>;
+  chatError?: string;
+  onChatSend?: (text: string) => Promise<boolean>;
   /* Floor notes ("置き手紙"): non-sync drops left on the room floor.
      Tapping one opens it; the parent owns the open/compose state. */
   floorNotes?: FloorNoteMarker[];
@@ -221,6 +235,96 @@ function getActorFocusRing(member: RoomActor) {
   return { progress };
 }
 
+/* ルームチャット小型 panel。最大 50 件の messages を表示 + 入力欄。
+   - 親 (App.tsx) で NG word チェック + Firestore 書き込み
+   - 送信成功 (resolve true) で入力欄をクリア、失敗時は残す */
+function RoomChatPanel({
+  messages,
+  error,
+  onSend,
+  currentUserId,
+}: {
+  messages: Array<{
+    id: string;
+    userId: string;
+    userName: string;
+    text: string;
+    createdAt: string;
+  }>;
+  error: string;
+  onSend: (text: string) => Promise<boolean>;
+  currentUserId: string;
+}) {
+  const [draft, setDraft] = useState("");
+  const [isSending, setIsSending] = useState(false);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!draft.trim() || isSending) return;
+    setIsSending(true);
+    try {
+      const ok = await onSend(draft);
+      if (ok) setDraft("");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  return (
+    <section className="atelier-chat-panel" aria-label="ルームチャット">
+      <header className="atelier-chat-head">
+        <span className="atelier-chat-title">チャット</span>
+        <span className="atelier-chat-count">{messages.length}</span>
+      </header>
+      <ol className="atelier-chat-list">
+        {messages.length === 0 ? (
+          <li className="atelier-chat-empty">まだメッセージはありません。最初の一言を。</li>
+        ) : (
+          messages.map((m) => {
+            const isSelf = m.userId === currentUserId;
+            return (
+              <li
+                key={m.id}
+                className={`atelier-chat-msg${isSelf ? " is-self" : ""}`}
+              >
+                <span className="atelier-chat-msg-author">
+                  {m.userName}
+                  {isSelf ? <em>YOU</em> : null}
+                </span>
+                <span className="atelier-chat-msg-text">{m.text}</span>
+              </li>
+            );
+          })
+        )}
+      </ol>
+      <form className="atelier-chat-form" onSubmit={handleSubmit}>
+        <textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder="一言だけ。"
+          maxLength={280}
+          rows={1}
+          aria-label="チャットメッセージを書く"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault();
+              if (draft.trim() && !isSending) {
+                void onSend(draft).then((ok) => {
+                  if (ok) setDraft("");
+                });
+              }
+            }
+          }}
+        />
+        <button type="submit" disabled={!draft.trim() || isSending}>
+          {isSending ? "送信…" : "送る"}
+        </button>
+      </form>
+      {error ? <p className="atelier-chat-error" role="alert">{error}</p> : null}
+    </section>
+  );
+}
+
 export function SilentWorkspaceRoom({
   presentation = "full",
   roomName,
@@ -245,6 +349,9 @@ export function SilentWorkspaceRoom({
   onMemberOpen,
   selectedMemberId = null,
   memberPanel,
+  chatMessages = [],
+  chatError = "",
+  onChatSend,
   floorNotes = [],
   onFloorNoteOpen,
   onComposeFloorNote,
@@ -1344,6 +1451,17 @@ export function SilentWorkspaceRoom({
               })
             )}
           </ul>
+
+          {/* 「みんな」タブのリスト直下にルームチャット。
+              不適切ワードは送信前に親側でブロック。 */}
+          {onChatSend ? (
+            <RoomChatPanel
+              messages={chatMessages}
+              error={chatError}
+              onSend={onChatSend}
+              currentUserId={currentUserId}
+            />
+          ) : null}
         </div>
 
         {/* モバイル「自分」タブ：操作をここに一元化。状態切替・今やって
