@@ -663,6 +663,51 @@ export function SilentWorkspaceRoom({
         </button>
       </nav>
       <div className="workspace-2d-main">
+        {/* モバイル + ルームタブ専用の "在室メンバーカードリスト"。
+            2D stage を諦めた代わりに、「誰が今このルームで作業中か」を
+            シンプルな縦リストカードで見せる。アバターは出さず、
+            ・色付き dot (作業中 / 休憩中)、 ・名前、 ・今やってること、
+            ・滞在時間 で「みんなと作業してる感」を作る。 */}
+        {isMobileRoomLayout ? (
+          <ul className="atelier-mobile-presence" aria-label="今ルームに居るメンバー">
+            {displayMembers.length === 0 ? (
+              <li className="atelier-mobile-presence-empty">
+                まだ誰もこのルームに居ません。
+                <small>入室すると最初の住人になります。</small>
+              </li>
+            ) : (
+              displayMembers.map((member) => {
+                const isCurrentUser = member.userId === currentUserId;
+                const stayLabel = getActorStayLabel(member);
+                const taskLabel = member.currentTask || member.building || "—";
+                const isOnBreak = member.status === "on-break";
+                return (
+                  <li
+                    key={member.userId}
+                    className={`atelier-mobile-presence-item${
+                      isCurrentUser ? " is-self" : ""
+                    }${isOnBreak ? " is-break" : " is-active"}`}
+                  >
+                    <span
+                      className="atelier-mobile-presence-dot"
+                      style={{ background: member.color || "var(--green)" }}
+                      aria-hidden="true"
+                    />
+                    <div className="atelier-mobile-presence-body">
+                      <strong>
+                        {member.name}
+                        {isCurrentUser ? <em>YOU</em> : null}
+                      </strong>
+                      <small>{taskLabel}</small>
+                    </div>
+                    <span className="atelier-mobile-presence-time">{stayLabel}</span>
+                  </li>
+                );
+              })
+            )}
+          </ul>
+        ) : null}
+
         <div
           className="workspace-stage"
           aria-label="Silent workspace"
