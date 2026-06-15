@@ -4202,14 +4202,35 @@ function App() {
   // user selects, the load no longer overwrites it. Reset at the top of the
   // load effect so a genuine account switch still hydrates from the cloud.
   const characterChoiceLockedRef = useRef(false);
+  /* リロードでセッション lock が失われた後の hydrate 競合対策。
+     ユーザーが shape/color を選択した時刻を localStorage に書き、
+     hydrate 時に「localStorage の時刻 > cloud の lastSyncedAt」なら
+     ローカル選択を優先する。これでデバウンス (writeDebounceMs=1500ms)
+     未完了のままリロードしても、書きかけの選択が cloud の古い値で
+     上書きされない。別端末で変えた場合は cloud の方が新しくなるため
+     正しく cloud 値が採用される。 */
+  const writeCharacterChoiceStamp = useCallback(() => {
+    if (!currentUser) return;
+    try {
+      const scope = getAccountStorageScope(currentUser.uid, userId);
+      safeSetLocalStorage(
+        getAccountStorageKey(scope, "character-updated-at"),
+        String(Date.now()),
+      );
+    } catch {
+      /* localStorage 不可なら諦め — cloud デバウンス完了に賭ける */
+    }
+  }, [currentUser, userId]);
   const chooseCharacterColor = useCallback((value: string) => {
     characterChoiceLockedRef.current = true;
     setPlayerCharacterColor(value);
-  }, []);
+    writeCharacterChoiceStamp();
+  }, [writeCharacterChoiceStamp]);
   const chooseCharacterShape = useCallback((shape: CharacterShape) => {
     characterChoiceLockedRef.current = true;
     setPlayerCharacterShape(shape);
-  }, []);
+    writeCharacterChoiceStamp();
+  }, [writeCharacterChoiceStamp]);
   const [coins, setCoins] = useState<number>(0);
   /* Daily feed-post Arc reward bookkeeping. Both fields are mirrored
      to the user profile doc so a second device sees the same gate.
@@ -4985,8 +5006,23 @@ function App() {
         setDetermination(profile.determination || savedDetermination || "");
         setDraftDetermination(profile.determination || savedDetermination || "");
         setPlayerAvatar(profile.photoURL || savedAvatar || currentUser.photoURL || "");
+        /* hydrate 競合対策: ローカル選択時刻 > cloud lastSyncedAt なら、
+           cloud デバウンス未完了の最新ローカル選択を優先する。
+           これで「変えて即リロード」しても戻らない。 */
+        const localCharStampRaw = window.localStorage.getItem(
+          getAccountStorageKey(accountScope, "character-updated-at"),
+        );
+        const localCharStamp = localCharStampRaw ? Number(localCharStampRaw) : 0;
+        const cloudCharStamp = profile.lastSyncedAt
+          ? new Date(profile.lastSyncedAt).getTime()
+          : 0;
+        const preferLocalChar =
+          Number.isFinite(localCharStamp) && localCharStamp > cloudCharStamp;
         if (!characterChoiceLockedRef.current) {
-          setPlayerCharacterColor(profile.characterColor || savedCharacterColor || characterColorOptions[0].value);
+          const fallbackColor = profile.characterColor || savedCharacterColor || characterColorOptions[0].value;
+          setPlayerCharacterColor(
+            preferLocalChar && savedCharacterColor ? savedCharacterColor : fallbackColor,
+          );
         }
         // Shape ownership migration. ADMIN_EMAIL gets every silhouette plus
         // a generous coin grant (used to seed test purchases). Everyone
@@ -5046,7 +5082,15 @@ function App() {
           setCurrentOrganization(null);
         }
         if (!characterChoiceLockedRef.current) {
-          setPlayerCharacterShape(safeShape);
+          /* 同じく hydrate 競合対策: ローカル選択が cloud lastSyncedAt
+             より新しければ、保存待ち (デバウンス中) のローカル値を採用。
+             ただし所有していない shape は弾く (safeShape の owned 検査と
+             整合させる)。 */
+          const localShape = preferLocalChar
+            ? getSafeCharacterShape(savedCharacterShape)
+            : safeShape;
+          const finalShape = resolvedOwned.includes(localShape) ? localShape : safeShape;
+          setPlayerCharacterShape(finalShape);
         }
         setOpenedWorkspaceGiftLevels((levels) =>
           Array.from(new Set([...levels, ...(profile.openedWorkspaceGiftLevels || [])])).sort(
