@@ -1468,6 +1468,10 @@ function normalizeUserProfile(uid: string, data: Partial<UserProfile>): UserProf
     characterShape: getSafeCharacterShape(data.characterShape),
     ownedCharacterShapes: Array.isArray(data.ownedCharacterShapes)
       ? (data.ownedCharacterShapes
+          /* 後方互換: 旧シルエット "frost" を所持していたユーザーは
+             "morph" を所持していた扱いに置き換える (霜 → 相 への置換)。
+             これがないと旧 frost ユーザーは無料で morph を着用できず、
+             かつ「変えても戻る」体感の一因にもなる。 */
           .map((shape) => getSafeCharacterShape(shape))
           .filter((shape, index, arr) => arr.indexOf(shape) === index) as CharacterShape[])
       : ["default"],
@@ -1557,7 +1561,10 @@ function getSafeCharacterColor(color: string | undefined): string {
    back to "default" — the original humanoid silhouette. */
 const CHARACTER_SHAPES: readonly CharacterShape[] = ["default", "ghost", "owl", "morph"];
 function getSafeCharacterShape(shape: unknown): CharacterShape {
-  return typeof shape === "string" && (CHARACTER_SHAPES as readonly string[]).includes(shape)
+  if (typeof shape !== "string") return "default";
+  // 後方互換: 旧シルエット "frost" は新シルエット "morph" にマップ。
+  if (shape === "frost") return "morph";
+  return (CHARACTER_SHAPES as readonly string[]).includes(shape)
     ? (shape as CharacterShape)
     : "default";
 }
@@ -5089,7 +5096,14 @@ function App() {
       .finally(() => {
         setIsProfileHydrated(true);
       });
-  }, [currentUser, setLanguage]);
+    /* 依存は currentUser.uid と setLanguage に固定。currentUser の参照は
+       auth token refresh / linkWithPopup 等で別オブジェクトに差し替わる
+       ことがあり、参照変化のたびにこの effect が再走 →
+       characterChoiceLockedRef=false → cloud hydrate でユーザーの選択が
+       保存後でも勝手に元の値に戻る (キャラを変えても毎回戻される) 不具合
+       の根本原因だったので、uid (本当のアカウント切替) でのみ走らせる。 */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.uid, setLanguage]);
 
   useEffect(() => {
     if (!currentUser || onboardingStep !== "welcome") {
