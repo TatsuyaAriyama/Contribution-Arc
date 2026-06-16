@@ -18538,7 +18538,16 @@ function App() {
                 role="tab"
                 aria-selected={dailyHistoryTab === "team"}
                 className={`daily-history-tab${dailyHistoryTab === "team" ? " is-active" : ""}`}
-                onClick={() => setDailyHistoryTab("team")}
+                onClick={() => {
+                  setDailyHistoryTab("team");
+                  /* 「みんなの日報」を初めて押した瞬間に自動 fetch する。
+                     以前は中の "Team Daily を読み込む" ボタンをもう一度
+                     押す 2 step UI で「タップしたのに何も出ない」と感じる
+                     原因になっていた。既に読込済み or in-flight ならスキップ。 */
+                  if (!isSharedDailyLoaded && !isLoadingSharedDaily) {
+                    void handleLoadSharedDailyReports();
+                  }
+                }}
               >
                 <span>{t("みんなの日報")}</span>
                 {isSharedDailyLoaded ? (
@@ -18616,27 +18625,36 @@ function App() {
             </div>
             ) : (
             <div className="daily-shared-feed" role="tabpanel" aria-label={t("みんなの日報")}>
-              {/* Team Daily は明示的に "読み込む" を押すまでネットワーク fetch
-                  しない。100 件まで一括取得 → onSnapshot ではないので再読込
-                  したい場合は再度ボタンを押す。 */}
+              {/* タブをタップした瞬間に自動 fetch する (onClick 経由)。
+                  読み込み中はシンプルな loading 表示、エラー時は再試行
+                  ボタン、未着手 (= 自動 fetch がまだ走ってない初期描画
+                  などのエッジ) は手動ボタンにフォールバック。 */}
               {!isSharedDailyLoaded ? (
                 <div className="daily-shared-loader">
-                  <p>
-                    {t("みんなの過去の日報を最大100件まで読み込みます。")}
-                  </p>
-                  <button
-                    type="button"
-                    className="daily-shared-load-button"
-                    onClick={() => void handleLoadSharedDailyReports()}
-                    disabled={isLoadingSharedDaily}
-                  >
-                    {isLoadingSharedDaily ? t("読み込み中…") : t("Team Daily を読み込む")}
-                  </button>
-                  {sharedDailyLoadError ? (
-                    <p className="daily-shared-load-error" role="alert">
-                      {sharedDailyLoadError}
-                    </p>
-                  ) : null}
+                  {isLoadingSharedDaily ? (
+                    <p>{t("読み込み中…")}</p>
+                  ) : sharedDailyLoadError ? (
+                    <>
+                      <p className="daily-shared-load-error" role="alert">
+                        {sharedDailyLoadError}
+                      </p>
+                      <button
+                        type="button"
+                        className="daily-shared-load-button"
+                        onClick={() => void handleLoadSharedDailyReports()}
+                      >
+                        {t("再試行")}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="daily-shared-load-button"
+                      onClick={() => void handleLoadSharedDailyReports()}
+                    >
+                      {t("Team Daily を読み込む")}
+                    </button>
+                  )}
                 </div>
               ) : visibleSharedDailyReports.length > 0 ? (
                 <div className="daily-shared-list">
