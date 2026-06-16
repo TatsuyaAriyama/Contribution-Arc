@@ -83,7 +83,7 @@ export function subscribeIncomingWorkspaceInvites(
             fromName: readString(data.fromName, "Developer"),
             toUid: readString(data.toUid),
             roomId: readString(data.roomId),
-            roomName: readString(data.roomName, "アトリエ"),
+            roomName: readString(data.roomName, "作業部屋"),
             message: readString(data.message),
             status: readStatus(data.status),
             createdAt: readCreatedAt(data.createdAt),
