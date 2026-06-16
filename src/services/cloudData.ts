@@ -1126,6 +1126,70 @@ export async function listOrganizationMembers(
   });
 }
 
+/* 目標 (志望校 / 資格) が同じユーザーを一覧する。プロフィールの
+   目標 chip からの「同じ目標の人を探す」モーダルで使う。
+   - goalId 指定: catalog 一致の正規目標。Firestore 単一フィールド
+     equality query なので自動 index でカバー。
+   - goalCustomName 指定: ユーザー自由入力。完全一致のみ拾う。
+     軽い tag-search 用途で、表記揺れは別途 client 側で fuzzy 化する
+     余地は残す (現状は exact match)。 */
+export type GoalMatchUser = {
+  uid: string;
+  userId: string;
+  displayName: string;
+  avatarUrl: string;
+  level: number;
+  streak: number;
+  goalId: string;
+  goalCustomName: string;
+  characterColor?: string;
+  characterShape?: string;
+  determination?: string;
+  lastSyncedAt: string;
+};
+
+export async function listUsersByGoal(
+  db: Firestore,
+  goal: { goalId?: string; goalCustomName?: string },
+  limitCount = 40,
+): Promise<GoalMatchUser[]> {
+  const goalId = (goal.goalId || "").trim();
+  const goalCustomName = (goal.goalCustomName || "").trim();
+  if (!goalId && !goalCustomName) return [];
+
+  const constraint = goalId
+    ? where("goalId", "==", goalId)
+    : where("goalCustomName", "==", goalCustomName);
+  const snapshot = await getDocs(query(collection(db, "users"), constraint));
+  /* limit() を query 側でかけても良いが、blockedUids 等のフィルタを
+     client 側で重ねたいケースに備え、ここでは取り敢えず全件読みで
+     limitCount を超えたら切る (Firestore コストは uid 数で線形)。 */
+  const users: GoalMatchUser[] = [];
+  for (const doc of snapshot.docs) {
+    if (users.length >= limitCount) break;
+    const data = doc.data() as Record<string, unknown>;
+    /* 自由入力 (custom) で query した場合、catalog 一致した別ユーザー
+       (goalId 経由) を取り損ねる。逆も同様。 query 段階で取り損ねた
+       ものは client では出ない ― 目標は片方しか保存されない設計
+       (catalog 選択時は goalCustomName が空) なので問題なし。 */
+    users.push({
+      uid: doc.id,
+      userId: typeof data.userId === "string" ? data.userId : "",
+      displayName: typeof data.displayName === "string" ? data.displayName : "Developer",
+      avatarUrl: typeof data.avatarUrl === "string" ? data.avatarUrl : "",
+      level: typeof data.level === "number" ? data.level : 1,
+      streak: typeof data.streak === "number" ? data.streak : 0,
+      goalId: typeof data.goalId === "string" ? data.goalId : "",
+      goalCustomName: typeof data.goalCustomName === "string" ? data.goalCustomName : "",
+      characterColor: typeof data.characterColor === "string" ? data.characterColor : undefined,
+      characterShape: typeof data.characterShape === "string" ? data.characterShape : undefined,
+      determination: typeof data.determination === "string" ? data.determination : undefined,
+      lastSyncedAt: typeof data.lastSyncedAt === "string" ? data.lastSyncedAt : "",
+    });
+  }
+  return users;
+}
+
 /* Phase 9: org owner sets / clears a member's team label. Only the
    `teamName` field changes; the Firestore rule's diff() check
    enforces that the owner cannot piggy-back any other field edit on

@@ -38073,13 +38073,20 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
    nondo 語彙: ink hairline + 角丸カード + kicker 小 + 太字本体。 */
 .profile-goal-chip {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-top: 12px;
   padding: 12px 16px;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--surface);
+}
+.profile-goal-chip-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 .profile-goal-chip-kicker {
   font-size: 10.5px;
@@ -38094,6 +38101,149 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   letter-spacing: -0.005em;
   color: var(--ink);
   line-height: 1.3;
+}
+.profile-goal-chip-find {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+.profile-goal-chip-find:hover {
+  background: var(--ink);
+  color: var(--surface);
+}
+.profile-goal-chip-find span {
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* 同じ目標モーダル */
+.goal-match-modal {
+  max-width: 480px;
+  width: calc(100% - 32px);
+  padding: 18px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 80vh;
+}
+.goal-match-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.goal-match-modal-head h2 {
+  margin: 4px 0 0;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.goal-match-modal-close {
+  border: 1px solid var(--hairline, #e6e3df);
+  background: transparent;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.goal-match-modal-close:hover {
+  background: rgba(var(--ink-rgb), 0.06);
+  color: var(--ink);
+}
+.goal-match-modal-loading,
+.goal-match-modal-empty,
+.goal-match-modal-error {
+  margin: 8px 0;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 16px 8px;
+}
+.goal-match-modal-error {
+  color: #b91c1c;
+}
+.goal-match-modal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.goal-match-modal-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--hairline, #e6e3df);
+  border-radius: 12px;
+  background: var(--surface);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.goal-match-modal-row:hover {
+  background: rgba(var(--ink-rgb), 0.03);
+  border-color: rgba(var(--ink-rgb), 0.18);
+}
+.goal-match-modal-row .profile-character-preview {
+  width: 40px;
+  height: 40px;
+}
+.goal-match-modal-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.goal-match-modal-row-text strong {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.goal-match-modal-row-text small {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.goal-match-modal-row-det {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  opacity: 0.7;
+  font-style: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+.goal-match-modal-row-arrow {
+  font-size: 18px;
+  color: var(--muted);
 }
 
 /* 設定モーダル右上の閉じるバツ。プロフィール close と同じ語彙: ink

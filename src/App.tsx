@@ -54,6 +54,8 @@ import {
   listAuditLogs,
   listMemberStudyLogs,
   listOrganizationMembers,
+  listUsersByGoal,
+  type GoalMatchUser,
   loadOrganization,
   migrateStudyLogsToCloud,
   recordAuditLog,
@@ -3609,6 +3611,16 @@ function App() {
      その日に記録した学習項目・時間を編集できる詳細パネルを開く。
      null = 閉じている、0..6 = Mon..Sun。 */
   const [profileWeekDayIndex, setProfileWeekDayIndex] = useState<number | null>(null);
+  /* 同じ目標のユーザー一覧モーダル。null = 閉じている。
+     開くと指定 goal で Firestore を query して結果を表示する。 */
+  const [goalMatchModal, setGoalMatchModal] = useState<{
+    goalId?: string;
+    goalCustomName?: string;
+    goalLabel: string;
+    users: GoalMatchUser[];
+    loading: boolean;
+    error: string;
+  } | null>(null);
   const [profileWeekLogEditMinutes, setProfileWeekLogEditMinutes] = useState<Record<string, string>>({});
   /* 詳細パネル下部の「+ Add log」フォーム state。Subject は learningItems
      から選び、minutes は分単位で入力する。日付は選択されている曜日の
@@ -10105,6 +10117,57 @@ function App() {
     }
   };
 
+  /* 同じ目標のユーザー一覧を開く。catalog 一致 (goalId) と自由入力
+     (goalCustomName) は排他的なので、片方が入っていればそれで query。
+     自分自身は結果から除外する。 */
+  const handleOpenGoalMatch = async (goal: {
+    goalId?: string;
+    goalCustomName?: string;
+    goalLabel: string;
+  }) => {
+    setGoalMatchModal({
+      goalId: goal.goalId,
+      goalCustomName: goal.goalCustomName,
+      goalLabel: goal.goalLabel,
+      users: [],
+      loading: true,
+      error: "",
+    });
+    try {
+      const results = await listUsersByGoal(db, {
+        goalId: goal.goalId,
+        goalCustomName: goal.goalCustomName,
+      });
+      const filtered = results.filter((user) => user.uid !== currentUser?.uid);
+      setGoalMatchModal((current) =>
+        current
+          ? { ...current, users: filtered, loading: false }
+          : current,
+      );
+    } catch (error) {
+      console.info("listUsersByGoal failed.", error);
+      setGoalMatchModal((current) =>
+        current
+          ? { ...current, loading: false, error: t("読み込みに失敗しました。もう一度お試しください。") }
+          : current,
+      );
+    }
+  };
+
+  /* 目標一覧の行から該当ユーザーのプロフィールを開く。 */
+  const handleOpenUserFromGoalMatch = async (user: GoalMatchUser) => {
+    setGoalMatchModal(null);
+    try {
+      const snap = await getDoc(doc(db, "users", user.uid));
+      if (snap.exists()) {
+        const profile = normalizeUserProfile(user.uid, snap.data() as Partial<UserProfile>);
+        handleUserProfileOpen(profile);
+      }
+    } catch (error) {
+      console.info("Open user from goal match skipped.", error);
+    }
+  };
+
   const handleUserProfileOpen = (profile: UserProfile) => {
     setProfileMember(null);
     setProfileUser(profile);
@@ -13225,15 +13288,36 @@ function App() {
     if (!goalName) return null;
     const kindLabel = catalogHit
       ? catalogHit.kind === "highschool"
-        ? "高校受験"
+        ? t("高校受験")
         : catalogHit.kind === "university"
-          ? "大学受験"
-          : "資格"
-      : "目標";
+          ? t("大学受験")
+          : t("資格")
+      : t("目標");
     return (
       <section className="profile-goal-chip" aria-label={t("目標")}>
-        <span className="profile-goal-chip-kicker">{kindLabel}</span>
-        <strong className="profile-goal-chip-name">🎯 {goalName}</strong>
+        <div className="profile-goal-chip-main">
+          <span className="profile-goal-chip-kicker">{kindLabel}</span>
+          <strong className="profile-goal-chip-name">🎯 {goalName}</strong>
+        </div>
+        {/* 同じ目標のユーザーを探す。ログイン中だけ出す (Firestore
+            query にサインインが要るため)。catalog hit / custom どちらの
+            分岐でも有効。 */}
+        {currentUser ? (
+          <button
+            type="button"
+            className="profile-goal-chip-find"
+            onClick={() =>
+              void handleOpenGoalMatch({
+                goalId: catalogHit ? goalIdValue : undefined,
+                goalCustomName: catalogHit ? undefined : goalCustom,
+                goalLabel: goalName,
+              })
+            }
+          >
+            {t("同じ目標の人を探す")}
+            <span aria-hidden="true">→</span>
+          </button>
+        ) : null}
       </section>
     );
   };
@@ -17827,6 +17911,86 @@ function App() {
         />
       ) : null}
 
+      {/* 同じ目標のユーザー一覧モーダル。chip 上の「同じ目標の人を探す」
+          から開かれる。read-only な list + プロフィール行で構成。 */}
+      {goalMatchModal ? (
+        <div
+          className="settings-modal-backdrop"
+          role="presentation"
+          onClick={() => setGoalMatchModal(null)}
+        >
+          <section
+            className="settings-modal goal-match-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="goal-match-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="goal-match-modal-head">
+              <div>
+                <p className="card-kicker">{t("同じ目標")}</p>
+                <h2 id="goal-match-modal-title">🎯 {goalMatchModal.goalLabel}</h2>
+              </div>
+              <button
+                type="button"
+                className="goal-match-modal-close"
+                onClick={() => setGoalMatchModal(null)}
+                aria-label={t("閉じる")}
+              >
+                ×
+              </button>
+            </header>
+            {goalMatchModal.loading ? (
+              <p className="goal-match-modal-loading">{t("読み込み中…")}</p>
+            ) : goalMatchModal.error ? (
+              <p className="goal-match-modal-error">{goalMatchModal.error}</p>
+            ) : goalMatchModal.users.length === 0 ? (
+              <p className="goal-match-modal-empty">
+                {t("同じ目標のユーザーはまだ見つかりません。")}
+              </p>
+            ) : (
+              <ul className="goal-match-modal-list">
+                {goalMatchModal.users.map((user) => {
+                  const look = resolveAuthorAppearance(
+                    user.uid,
+                    user.characterColor,
+                    user.characterShape,
+                  );
+                  return (
+                    <li key={user.uid}>
+                      <button
+                        type="button"
+                        className="goal-match-modal-row"
+                        onClick={() => void handleOpenUserFromGoalMatch(user)}
+                      >
+                        <ProfileCharacterPreview color={look.color} shape={look.shape} />
+                        <span className="goal-match-modal-row-text">
+                          <strong>{user.displayName || "Developer"}</strong>
+                          <small>
+                            {user.userId ? `@${user.userId}` : ""}
+                            {user.userId && user.level ? " · " : ""}
+                            {user.level ? `Lv.${user.level}` : ""}
+                            {user.streak > 0 ? ` · 🔥${user.streak}` : ""}
+                          </small>
+                          {user.determination ? (
+                            <em className="goal-match-modal-row-det">
+                              {user.determination}
+                            </em>
+                          ) : null}
+                        </span>
+                        <span aria-hidden="true" className="goal-match-modal-row-arrow">
+                          ›
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+        </div>
+      ) : null}
+
       {/* お知らせ一覧モーダル。ホームには pinned + 最新 1 件だけ出して
           いるので、過去のお知らせを全部見たい時はここで一覧表示する。 */}
       {isAnnouncementsModalOpen ? (
@@ -19409,6 +19573,10 @@ function App() {
                     {userId ? `@${userId}` : "—"}
                   </p>
                 </header>
+
+                {/* 自分の目標 chip — 設定済みなら表示。chip 上の
+                    「同じ目標の人を探す」ボタンから仲間を探せる。 */}
+                {profileGoalChip({ goalId, goalCustomName })}
 
                 {/* Player Status はプロフィールの主役なので最上部に固定。 */}
                 {playerStatusCard(false)}

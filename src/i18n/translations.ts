@@ -357,6 +357,10 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "大学受験":                   "University",
   "資格":                       "Qualification",
   "目標を選ぶ":                 "Choose a goal",
+  "同じ目標":                   "Same goal",
+  "同じ目標の人を探す":         "Find people with the same goal",
+  "同じ目標のユーザーはまだ見つかりません。":
+                                "No users with this goal yet.",
   "目標を変更":                 "Change goal",
   "目標をクリア":               "Clear goal",
 
