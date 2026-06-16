@@ -3558,7 +3558,32 @@ function App() {
   const [learningSearchQuery, setLearningSearchQuery] = useState("");
   // Library sort order. "recent" (default) keeps the active-work-first
   // behaviour; the others let the user reorder without touching data.
-  const [learningSortMode, setLearningSortMode] = useState<"recent" | "total" | "name" | "custom">("recent");
+  // localStorage に永続化するので、ユーザーが「自分の順」(custom) を
+  // 選んで並べ替えた結果が reload しても保持される (以前は毎回 "recent"
+  // にリセットされ、せっかく振った order が見えず「反映されない」ように
+  // 感じていた)。
+  const [learningSortMode, setLearningSortMode] = useState<"recent" | "total" | "name" | "custom">(() => {
+    if (typeof window === "undefined") return "recent";
+    try {
+      const raw = window.localStorage.getItem("contribution-arc-learning-sort-mode");
+      if (raw === "recent" || raw === "total" || raw === "name" || raw === "custom") {
+        return raw;
+      }
+    } catch {
+      /* localStorage 不可 — default */
+    }
+    return "recent";
+  });
+  /* sort mode 変更を localStorage にミラー。setLearningSortMode の呼び出し
+     箇所全てを書き換える代わりに effect で集約する。 */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem("contribution-arc-learning-sort-mode", learningSortMode);
+    } catch {
+      /* ignore — best-effort */
+    }
+  }, [learningSortMode]);
   /* 並べ替えモード: on の間、各カードに↑↓ボタンを表示し、ユーザーが
      好きな順に並べ替えられる。モバイル前提だが PC でも有効。
      並べ替え結果は item.order に保存され、sort mode は自動で "custom"
