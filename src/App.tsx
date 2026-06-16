@@ -8802,7 +8802,7 @@ function App() {
       // The new post appears in the feed below, but on a long list it's
       // easy to miss the visual update. The toast confirms the send so
       // the user doesn't second-guess whether their tap landed.
-      showToast("投稿しました", { kind: "success" });
+      showToast(t("投稿しました"), { kind: "success" });
 
       // Phase 9: mirror the post to Slack if the org opted in.
       if (
@@ -8986,7 +8986,7 @@ function App() {
       });
       setFeedbackDraft("");
       setIsFeedbackModalOpen(false);
-      showToast("ご要望を送信しました。ありがとうございます。", { kind: "success" });
+      showToast(t("ご要望を送信しました。ありがとうございます。"), { kind: "success" });
     } catch (error) {
       console.info("Feedback submit failed.", error);
       setFeedbackError("送信に失敗しました。時間をおいて再度お試しください。");
@@ -9211,7 +9211,7 @@ function App() {
     setCloudOnboardingCompletedAt(new Date().toISOString());
     setOnboardingStep("idle");
     setOnboardingFirstPlanDraft("");
-    showToast("今日やることを記録しました。1日を始めましょう。", { kind: "success" });
+    showToast(t("今日やることを記録しました。1日を始めましょう。"), { kind: "success" });
   };
 
   const handleDailyDateChange = (date: string) => {
@@ -10010,7 +10010,7 @@ function App() {
         // Onboarding has its own celebratory flow ("first post" banner),
         // so only toast for regular saves — otherwise the user sees both
         // and the banner gets stepped on.
-        showToast("プロフィールを保存しました", { kind: "success" });
+        showToast(t("プロフィールを保存しました"), { kind: "success" });
       }
       setIsSettingsOpen(false);
     } finally {
@@ -10151,7 +10151,7 @@ function App() {
       showToast(`${profile.displayName} にフレンド申請を送りました`, { kind: "success" });
     } catch (error) {
       console.info("Friend request cloud send skipped.", error);
-      showToast("フレンド申請をローカルに保存しました。再接続後に同期します。", { kind: "info" });
+      showToast(t("フレンド申請をローカルに保存しました。再接続後に同期します。"), { kind: "info" });
     }
 
     setFriendMessage("フレンド申請を送信しました。承認されるとFriendsに表示されます。");
@@ -10254,7 +10254,7 @@ function App() {
     } catch (error) {
       console.info("Friend request reject cloud sync skipped.", error);
     }
-    showToast("申請を拒否しました", { kind: "info" });
+    showToast(t("申請を拒否しました"), { kind: "info" });
   };
 
   const handleNotificationFriendReject = (
@@ -10321,7 +10321,7 @@ function App() {
 
   const handleUnblockUser = (uid: string) => {
     setBlockedFriendUids((ids) => ids.filter((id) => id !== uid));
-    showToast("ブロックを解除しました", { kind: "success" });
+    showToast(t("ブロックを解除しました"), { kind: "success" });
   };
 
   // 応援 (👏)。1 日 1 回まで。doc ID で二重防止 → ローカル即時 disable。
@@ -10329,7 +10329,7 @@ function App() {
     if (!currentUser) return;
     if (recipient.uid === currentUser.uid) return;
     if (encouragementsSent.has(recipient.uid)) {
-      showToast("今日はもう応援を送りました", { kind: "info" });
+      showToast(t("今日はもう応援を送りました"), { kind: "info" });
       return;
     }
     const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
@@ -10362,7 +10362,7 @@ function App() {
   const handleSendWorkspaceInvite = async (friend: FriendPreview) => {
     if (!currentUser) return;
     if (!selectedRoom) {
-      showToast("先に作業部屋を選んでください", { kind: "info" });
+      showToast(t("先に作業部屋を選んでください"), { kind: "info" });
       return;
     }
 
@@ -10394,7 +10394,7 @@ function App() {
         next.delete(friend.uid);
         return next;
       });
-      showToast("招待を送れませんでした。時間をおいて再度お試しください", { kind: "error" });
+      showToast(t("招待を送れませんでした。時間をおいて再度お試しください"), { kind: "error" });
     }
   };
 
@@ -10402,7 +10402,7 @@ function App() {
   const handleBatchInvite = async (targetUids: string[]) => {
     if (!currentUser) return;
     if (!selectedRoom) {
-      showToast("先に作業部屋を選んでください", { kind: "info" });
+      showToast(t("先に作業部屋を選んでください"), { kind: "info" });
       return;
     }
     if (targetUids.length === 0) return;
@@ -11356,7 +11356,7 @@ function App() {
       const url = `${baseUrl}/?join-org=${token}`;
       try {
         await navigator.clipboard.writeText(url);
-        showToast("招待リンクをコピーしました（14日有効）", { kind: "success" });
+        showToast(t("招待リンクをコピーしました（14日有効）"), { kind: "success" });
       } catch {
         // Clipboard may be blocked on some Safari versions; surface
         // the URL so the user can copy it manually.
@@ -11389,7 +11389,7 @@ function App() {
         orgName: currentOrganization.name,
       });
       setCurrentOrganization(null);
-      showToast("組織から退出しました", { kind: "success" });
+      showToast(t("組織から退出しました"), { kind: "success" });
     } catch (error) {
       console.warn("Leave org failed", error);
       setOrgError("退出に失敗しました。再度お試しください。");
@@ -11415,7 +11415,7 @@ function App() {
       window.location.assign(url);
     } catch (error) {
       console.warn("Checkout failed", error);
-      showToast("決済ページを開けませんでした。時間をおいて再度お試しください。", {
+      showToast(t("決済ページを開けませんでした。時間をおいて再度お試しください。"), {
         kind: "error",
       });
     } finally {
@@ -11433,7 +11433,7 @@ function App() {
       window.location.assign(url);
     } catch (error) {
       console.warn("Portal failed", error);
-      showToast("請求ポータルを開けませんでした。", { kind: "error" });
+      showToast(t("請求ポータルを開けませんでした。"), { kind: "error" });
     } finally {
       setBillingBusy(false);
     }
@@ -11632,10 +11632,10 @@ function App() {
       anchor.click();
       document.body.removeChild(anchor);
       URL.revokeObjectURL(url);
-      showToast("個人データをダウンロードしました", { kind: "success" });
+      showToast(t("個人データをダウンロードしました"), { kind: "success" });
     } catch (error) {
       console.warn("Export user data failed", error);
-      showToast("エクスポートに失敗しました", { kind: "error" });
+      showToast(t("エクスポートに失敗しました"), { kind: "error" });
     } finally {
       setIsExportingData(false);
     }
@@ -11695,7 +11695,7 @@ function App() {
       }
       setIsDeleteConfirmOpen(false);
       setDeleteConfirmText("");
-      showToast("アカウントを削除しました", { kind: "success" });
+      showToast(t("アカウントを削除しました"), { kind: "success" });
     } catch (error) {
       console.warn("Delete account failed", error);
       setDeleteError("削除に失敗しました。ネットワークまたは権限を確認のうえ、再度お試しください。");
@@ -11828,7 +11828,7 @@ function App() {
       );
       setSlackSaveState("saved");
       setSlackSaveMessage(trimmedUrl ? "保存しました。" : "Slack連携を解除しました。");
-      showToast("Slack設定を保存しました", { kind: "success" });
+      showToast(t("Slack設定を保存しました"), { kind: "success" });
     } catch (error) {
       console.warn("Save slack settings failed", error);
       setSlackSaveState("error");
@@ -11897,7 +11897,7 @@ function App() {
     if (result.ok) {
       setSlackSaveState("saved");
       setSlackSaveMessage("日次サマリーを送信しました。");
-      showToast("日次サマリーをSlackに送信", { kind: "success" });
+      showToast(t("日次サマリーをSlackに送信"), { kind: "success" });
     } else {
       setSlackSaveState("error");
       setSlackSaveMessage(`送信に失敗しました (${result.error || "unknown"}).`);
@@ -11976,7 +11976,7 @@ function App() {
     anchor.click();
     document.body.removeChild(anchor);
     URL.revokeObjectURL(url);
-    showToast("CSVをダウンロードしました", { kind: "success" });
+    showToast(t("CSVをダウンロードしました"), { kind: "success" });
   };
 
   const handleRoomCreate = () => {
@@ -12179,7 +12179,7 @@ function App() {
     if (!currentUser) return;
     const trimmed = nextSubject.trim().slice(0, 60);
     if (!trimmed) {
-      showToast("名前を入力してください", { kind: "info" });
+      showToast(t("名前を入力してください"), { kind: "info" });
       return;
     }
     if (oldSubject === trimmed) return;
@@ -12208,7 +12208,7 @@ function App() {
         setStudyLogs((logs) =>
           logs.map((log) => (affectedIds.has(log.id) ? { ...log, subject: oldSubject } : log)),
         );
-        showToast("名前を変更できませんでした", { kind: "error" });
+        showToast(t("名前を変更できませんでした"), { kind: "error" });
       });
   };
 
@@ -14923,7 +14923,7 @@ function App() {
                               );
                             })
                             .catch(() => {
-                              showToast("画像を読み込めませんでした", { kind: "error" });
+                              showToast(t("画像を読み込めませんでした"), { kind: "error" });
                             });
                         }}
                       />
@@ -18929,7 +18929,7 @@ function App() {
                         const url = `${baseUrl}?u=${encodeURIComponent(userId)}`;
                         try {
                           void navigator.clipboard.writeText(url);
-                          showToast("プロフィールリンクをコピーしました", { kind: "success" });
+                          showToast(t("プロフィールリンクをコピーしました"), { kind: "success" });
                         } catch {
                           window.prompt("プロフィールリンク（コピーしてください）", url);
                         }

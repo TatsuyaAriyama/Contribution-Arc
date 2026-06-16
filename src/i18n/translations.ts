@@ -813,4 +813,27 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "{count}人": "{count} people",
 
 
+
+  // === 追加: setToast / showToast / promptUI 残り ===
+  "CSVをダウンロードしました": "CSV downloaded",
+  "Slack設定を保存しました": "Slack settings saved",
+  "アカウントを削除しました": "Account deleted",
+  "エクスポートに失敗しました": "Export failed",
+  "フレンド申請をローカルに保存しました。再接続後に同期します。": "Friend request saved locally. Will sync when you reconnect.",
+  "ブロックを解除しました": "Unblocked",
+  "プロフィールリンク（コピーしてください）": "Profile link (copy this)",
+  "今日はもう応援を送りました": "You've already sent support today",
+  "今日やることを記録しました。1日を始めましょう。": "Today's plan saved. Let's start the day.",
+  "個人データをダウンロードしました": "Your data has been downloaded",
+  "名前を入力してください": "Please enter a name",
+  "名前を変更できませんでした": "Couldn't rename",
+  "投稿しました": "Posted",
+  "招待を送れませんでした。時間をおいて再度お試しください": "Couldn't send invite. Please try again in a moment.",
+  "招待リンクをコピーしました（14日有効）": "Invite link copied (valid for 14 days)",
+  "日次サマリーをSlackに送信": "Send daily summary to Slack",
+  "決済ページを開けませんでした。時間をおいて再度お試しください。": "Couldn't open the checkout page. Please try again in a moment.",
+  "申請を拒否しました": "Request declined",
+  "画像を読み込めませんでした": "Couldn't load the image",
+  "組織から退出しました": "Left the organization",
+  "請求ポータルを開けませんでした。": "Couldn't open the billing portal.",
 };
