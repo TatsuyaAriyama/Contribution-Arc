@@ -18920,7 +18920,7 @@ function App() {
                     </svg>
                   </span>
                   <span className="profile-nondo-section-label profile-nondo-marker">Menu</span>
-                  <span className="profile-nondo-section-count">{currentOrganization?.ownerUid === currentUser.uid ? 8 : 7}</span>
+                  <span className="profile-nondo-section-count">{currentOrganization?.ownerUid === currentUser.uid ? 6 : 5}</span>
                   <span className="profile-nondo-section-arrow" aria-hidden="true">›</span>
                 </div>
                 <nav className="profile-menu" aria-label="メニュー">
@@ -18981,34 +18981,10 @@ function App() {
                     <span className="profile-menu-label">フレンド・検索</span>
                     <span className="profile-menu-arrow" aria-hidden="true">›</span>
                   </button>
-                  <button
-                    type="button"
-                    className="profile-menu-item"
-                    onClick={() => setIsNotificationsOpen(true)}
-                  >
-                    <span className="profile-menu-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M6 16V10a6 6 0 1 1 12 0v6l1.5 2H4.5z" />
-                        <path d="M10 20a2 2 0 0 0 4 0" />
-                      </svg>
-                    </span>
-                    <span className="profile-menu-label">通知</span>
-                    <span className="profile-menu-arrow" aria-hidden="true">›</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="profile-menu-item"
-                    onClick={() => setCurrentView("workspace")}
-                  >
-                    <span className="profile-menu-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="4" y="6" width="16" height="13" rx="2" />
-                        <path d="M4 10h16M9 6V4M15 6V4" />
-                      </svg>
-                    </span>
-                    <span className="profile-menu-label">アトリエ</span>
-                    <span className="profile-menu-arrow" aria-hidden="true">›</span>
-                  </button>
+                  {/* 「通知」「アトリエ」エントリは要望により撤去。
+                      通知は専用パネル / 自動通知に依存、アトリエは
+                      bottom-nav 中央タブから直接アクセスできるため
+                      プロフィール Menu からは外す。 */}
                   <button
                     type="button"
                     className="profile-menu-item"
