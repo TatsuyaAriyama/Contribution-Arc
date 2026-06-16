@@ -21258,9 +21258,17 @@ function App() {
             aria-pressed={currentView === "workspace"}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              {/* 作業部屋の入口を思わせるアーチ。Contribution "Arc" の弧にも掛かる。 */}
-              <path d="M5 20v-8a7 7 0 0 1 14 0v8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M3.5 20h17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              {/* 作業部屋の CTA はサービスの brand mark (Contribution Arc の
+                  8 ブロック昇順アーク) をそのまま縮約。中央 CTA の黒丸
+                  背景にちょうど映え、ブランド = 居場所 を示す。 */}
+              <rect x="2"    y="16.35" width="2.4" height="2.4" rx="0.6" fill="currentColor" />
+              <rect x="4.7"  y="15.75" width="2.4" height="2.4" rx="0.6" fill="currentColor" />
+              <rect x="7.4"  y="14.7"  width="2.4" height="2.4" rx="0.6" fill="currentColor" />
+              <rect x="10.1" y="13.2"  width="2.4" height="2.4" rx="0.6" fill="currentColor" />
+              <rect x="12.8" y="11.4"  width="2.4" height="2.4" rx="0.6" fill="currentColor" />
+              <rect x="15.5" y="9.45"  width="2.4" height="2.4" rx="0.6" fill="currentColor" />
+              <rect x="18.2" y="7.65"  width="2.4" height="2.4" rx="0.6" fill="currentColor" />
+              <rect x="20.9" y="6.3"   width="2.4" height="2.4" rx="0.6" fill="currentColor" />
             </svg>
             {activeMembers.length > 0 ? (
               <span className="mobile-cta-presence" aria-hidden="true">{activeMembers.length}</span>
