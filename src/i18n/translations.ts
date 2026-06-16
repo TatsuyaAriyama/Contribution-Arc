@@ -112,6 +112,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "このユーザーIDはすでに使われています。": "That user ID is already taken.",
 
   // ─── Top navigation ─────────────────────────────────────────
+  "メインナビゲーション": "Main navigation",
   "ホーム":              "Home",
   "作業部屋":            "Atelier",
   "記録する":            "Log",

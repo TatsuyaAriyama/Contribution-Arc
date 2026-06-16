@@ -20859,7 +20859,7 @@ function App() {
           mobile user never has to dig through a menu to switch views.
           Hidden on desktop and during onboarding. */}
       {currentView && onboardingStep !== "welcome" ? (
-        <nav className="mobile-bottom-nav" aria-label="メインナビゲーション">
+        <nav className="mobile-bottom-nav" aria-label={t("メインナビゲーション")}>
           {/* ホーム / 学習記録 はラベルと中身の swap：
               - 「ホーム」を押すと FEED (旧投稿) view が表示される
               - 「学習記録」を押すと 旧ホーム (お知らせ等) view が表示される
@@ -20882,13 +20882,13 @@ function App() {
             type="button"
             className={currentView === "daily" ? "is-active" : ""}
             onClick={() => setCurrentView("daily")}
-            aria-label="日報"
+            aria-label={t("日報")}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <rect x="4" y="5" width="16" height="15" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
               <path d="M4 10h16M9 3v4M15 3v4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
             </svg>
-            <span>日報</span>
+            <span>{t("日報")}</span>
           </button>
           {/* 中央タブはクイック記録 CTA から「作業部屋」(作業部屋) への
               入口に変更。記録はライブラリ側の +1m/+10m… で完結するため、
@@ -20937,7 +20937,7 @@ function App() {
             type="button"
             className={currentView === "profile" ? "is-active" : ""}
             onClick={() => setCurrentView("profile")}
-            aria-label="プロフィール"
+            aria-label={t("プロフィール")}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <circle cx="12" cy="8.5" r="3.6" fill="none" stroke="currentColor" strokeWidth="1.6" />
@@ -20949,7 +20949,7 @@ function App() {
                 strokeLinecap="round"
               />
             </svg>
-            <span>プロフィール</span>
+            <span>{t("プロフィール")}</span>
           </button>
         </nav>
       ) : null}
