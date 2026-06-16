@@ -30,6 +30,9 @@ export type LearningItemRecord = {
   photo?: string;
   status: LearningStatus;
   archived: boolean;
+  /** ユーザーが手動で並べ替えた順序 (custom sort)。小さいほど上に来る。
+   *  未設定 (古いユーザー) は createdAt fallback で並ぶ。 */
+  order?: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -85,6 +88,7 @@ function mapLearningItemDocs(snapshot: QuerySnapshot, userId: string): LearningI
         ...(photo ? { photo } : {}),
         status: readStatus(data.status),
         archived: Boolean(data.archived),
+        ...(typeof data.order === "number" && Number.isFinite(data.order) ? { order: data.order } : {}),
         createdAt: readCreatedAt(data.createdAt),
         updatedAt: readCreatedAt(data.updatedAt),
       } satisfies LearningItemRecord;
@@ -136,6 +140,9 @@ export async function saveLearningItemToCloud(db: Firestore, item: LearningItemR
   // 落とす (Firestore doc 1MB 制限のガード)。
   payload.photo =
     typeof item.photo === "string" && item.photo.length <= 200_000 ? item.photo : "";
+  if (typeof item.order === "number" && Number.isFinite(item.order)) {
+    payload.order = item.order;
+  }
   await setDoc(doc(db, "learningItems", item.id), payload, { merge: true });
 }
 

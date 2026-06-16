@@ -22234,6 +22234,72 @@
   border-color: var(--ink);
 }
 
+/* 並べ替えモード toggle。普段は控えめ、active は ink 反転 pill。 */
+.learning-reorder-toggle {
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  transition: background 0.14s ease, transform 0.12s ease;
+}
+.learning-reorder-toggle:hover {
+  background: rgba(var(--ink-rgb), 0.05);
+}
+.learning-reorder-toggle.is-active {
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+}
+
+/* 並べ替えモード中の各カード: 右上に↑↓ボタンを overlay。
+   trigger ボタン自体は disabled なので、↑↓だけが押せる。 */
+.learning-card.is-reordering {
+  position: relative;
+}
+.learning-card-reorder {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 5;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.learning-card-reorder button {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--ink);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(var(--ink-rgb), 0.08);
+  transition: transform 0.12s ease, background 0.14s ease;
+}
+.learning-card-reorder button:hover:not(:disabled) {
+  background: rgba(var(--ink-rgb), 0.05);
+}
+.learning-card-reorder button:active:not(:disabled) {
+  transform: scale(0.94);
+}
+.learning-card-reorder button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.learning-card.is-reordering .learning-card-trigger {
+  pointer-events: none;
+  opacity: 0.85;
+}
+
 .learning-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));

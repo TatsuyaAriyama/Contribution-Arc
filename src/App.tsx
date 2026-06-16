@@ -296,6 +296,8 @@ type LearningItem = {
   photo?: string;
   status: LearningStatus;
   archived: boolean;
+  /** 手動並べ替え順 (小さいほど上)。未設定なら createdAt fallback。 */
+  order?: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -3548,7 +3550,12 @@ function App() {
   const [learningSearchQuery, setLearningSearchQuery] = useState("");
   // Library sort order. "recent" (default) keeps the active-work-first
   // behaviour; the others let the user reorder without touching data.
-  const [learningSortMode, setLearningSortMode] = useState<"recent" | "total" | "name">("recent");
+  const [learningSortMode, setLearningSortMode] = useState<"recent" | "total" | "name" | "custom">("recent");
+  /* 並べ替えモード: on の間、各カードに↑↓ボタンを表示し、ユーザーが
+     好きな順に並べ替えられる。モバイル前提だが PC でも有効。
+     並べ替え結果は item.order に保存され、sort mode は自動で "custom"
+     に切り替わる (= 反映されたことが視覚的に分かる)。 */
+  const [isReorderingLibrary, setIsReorderingLibrary] = useState(false);
   const [isLearningDeleteConfirming, setIsLearningDeleteConfirming] = useState(false);
   // Item detail view (B-4): the learning item whose history/stats panel
   // is open. null = closed. Read-only over existing studyLogs (no new reads).
@@ -8305,6 +8312,54 @@ function App() {
   const closeLearningEditor = () => {
     setIsLearningDeleteConfirming(false);
     setLearningEditorState(null);
+  };
+
+  /* ライブラリの手動並べ替え。並べ替えモード on の時、各カードの↑↓
+     ボタンから呼ばれる。
+     - 現在表示中の sorted list を再現するため、現在のソート結果配列を
+       一度作って、その配列上で対象アイテムを上下に動かし、配列順を
+       order 値として全アイテムに振り直す
+     - sort mode が "custom" でない場合は自動で "custom" に切替
+     - cloud sync: 影響したアイテムだけ save (差分のみ書く) */
+  const handleMoveLearningItem = (itemId: string, direction: "up" | "down") => {
+    if (!currentUser) return;
+    const live = learningItems.filter((item) => !item.archived);
+    /* sort 順を model 用に統一: 現在の sort mode に従って並べたら、
+       表示順 = 配列 index になるので index 操作で良い。 */
+    const baseSort = (a: LearningItem, b: LearningItem) => {
+      const ao = typeof a.order === "number" ? a.order : Number.MAX_SAFE_INTEGER;
+      const bo = typeof b.order === "number" ? b.order : Number.MAX_SAFE_INTEGER;
+      if (ao !== bo) return ao - bo;
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    };
+    const ordered = live.slice().sort(baseSort);
+    const index = ordered.findIndex((item) => item.id === itemId);
+    if (index < 0) return;
+    const swapWith = direction === "up" ? index - 1 : index + 1;
+    if (swapWith < 0 || swapWith >= ordered.length) return;
+    const next = ordered.slice();
+    [next[index], next[swapWith]] = [next[swapWith], next[index]];
+    const nowIso = new Date().toISOString();
+    /* order を 1, 2, 3, ... で全件再付与 (ギャップを残すと将来また
+       中央挿入したい時に困らないよう 10, 20, 30 ... にしてもよいが、
+       連番でも実害なし)。 */
+    const updates = new Map<string, LearningItem>();
+    next.forEach((item, i) => {
+      if (item.order !== i + 1) {
+        updates.set(item.id, { ...item, order: i + 1, updatedAt: nowIso });
+      }
+    });
+    setLearningItems((items) =>
+      items.map((item) => updates.get(item.id) ?? item),
+    );
+    if (learningSortMode !== "custom") {
+      setLearningSortMode("custom");
+    }
+    updates.forEach((item) => {
+      void saveLearningItemToCloud(db, item).catch((error) => {
+        console.info("Learning item reorder cloud sync skipped.", error);
+      });
+    });
   };
 
   const handleLearningEditorSave = () => {
@@ -17973,14 +18028,27 @@ function App() {
               className="learning-sort"
               value={learningSortMode}
               onChange={(event) =>
-                setLearningSortMode(event.target.value as "recent" | "total" | "name")
+                setLearningSortMode(event.target.value as "recent" | "total" | "name" | "custom")
               }
               aria-label={t("並び替え")}
             >
               <option value="recent">{t("最近の記録順")}</option>
               <option value="total">{t("累計時間順")}</option>
               <option value="name">{t("名前順")}</option>
+              <option value="custom">{t("自分の順")}</option>
             </select>
+            {/* 並べ替えモード toggle。モバイルで主に使う想定だが、PC からも
+                同じボタンで切替できる。on の間、各カードに↑↓矢印が出る。 */}
+            <button
+              type="button"
+              className={`learning-reorder-toggle${isReorderingLibrary ? " is-active" : ""}`}
+              onClick={() => setIsReorderingLibrary((v) => !v)}
+              aria-pressed={isReorderingLibrary}
+              aria-label={isReorderingLibrary ? t("並べ替えを終える") : t("並べ替え")}
+              title={isReorderingLibrary ? t("並べ替えを終える") : t("並べ替え")}
+            >
+              {isReorderingLibrary ? t("完了") : t("並べ替え")}
+            </button>
           </div>
 
           {(() => {
@@ -18056,6 +18124,15 @@ function App() {
             //   - "name": locale-aware A→Z (Japanese collation included).
             // All modes fall back to createdAt desc to keep ties stable.
             const sorted = filtered.slice().sort((a, b) => {
+              if (learningSortMode === "custom") {
+                /* 手動並べ替え: item.order の昇順。未設定はとても大きな
+                   値として末尾に配置 (古いアイテムは並べ替え結果の下に
+                   流れる)。同値時は createdAt 古い順。 */
+                const ao = typeof a.order === "number" ? a.order : Number.MAX_SAFE_INTEGER;
+                const bo = typeof b.order === "number" ? b.order : Number.MAX_SAFE_INTEGER;
+                if (ao !== bo) return ao - bo;
+                return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+              }
               if (learningSortMode === "name") {
                 const byName = a.name.localeCompare(b.name, "ja");
                 if (byName !== 0) return byName;
@@ -18108,7 +18185,7 @@ function App() {
 
             return (
               <div className="learning-grid">
-                {sorted.map((item) => {
+                {sorted.map((item, sortedIndex) => {
                   const minutes = totalsByItem.get(item.id) || 0;
                   const totalLabel = formatStudyTimeJa(minutes);
                   const isBook = item.category === "book";
@@ -18161,12 +18238,37 @@ function App() {
                   return (
                     <article
                       key={item.id}
-                      className="learning-card"
+                      className={`learning-card${isReorderingLibrary ? " is-reordering" : ""}`}
                       style={{ "--learning-card-color": item.color } as CSSProperties}
                     >
+                      {isReorderingLibrary ? (
+                        <div className="learning-card-reorder" role="group" aria-label={t("並べ替え")}>
+                          <button
+                            type="button"
+                            className="learning-card-reorder-up"
+                            onClick={() => handleMoveLearningItem(item.id, "up")}
+                            disabled={sortedIndex === 0}
+                            aria-label={t("一つ上へ")}
+                            title={t("一つ上へ")}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            className="learning-card-reorder-down"
+                            onClick={() => handleMoveLearningItem(item.id, "down")}
+                            disabled={sortedIndex === sorted.length - 1}
+                            aria-label={t("一つ下へ")}
+                            title={t("一つ下へ")}
+                          >
+                            ↓
+                          </button>
+                        </div>
+                      ) : null}
                       <button
                         type="button"
                         className="learning-card-trigger"
+                        disabled={isReorderingLibrary}
                         onClick={() => setLearningDetailId(item.id)}
                         aria-label={t("{name}の詳細", { name: item.name })}
                       >
