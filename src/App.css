@@ -36798,6 +36798,175 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   opacity: 0.8;
 }
 
+/* === This Week 編集モード: 曜日カラムを button 化 + 詳細パネル ===
+   ユーザー指示で「曜日をタップして学習項目を編集」できるように、
+   .is-editable のカラムは button + ring focus / hover で反応する。
+   .is-selected は black ring + ink track ハイライト。 */
+.profile-week-chart-col.is-editable {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: transform 0.18s ease, background-color 0.18s ease;
+}
+.profile-week-chart-col.is-editable:hover .profile-week-chart-track {
+  background: rgba(var(--ink-rgb), 0.085);
+}
+.profile-week-chart-col.is-editable:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 4px;
+}
+.profile-week-chart-col.is-editable.is-selected .profile-week-chart-track {
+  background: rgba(var(--ink-rgb), 0.14);
+  outline: 1.5px solid var(--ink);
+  outline-offset: 1px;
+}
+.profile-week-chart-col.is-editable.is-selected .profile-week-chart-day,
+.profile-week-chart-col.is-editable.is-selected .profile-week-chart-value {
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.profile-week-day-detail {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--hairline, #e6e3df);
+  border-radius: 12px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.profile-week-day-detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.profile-week-day-detail-head strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.profile-week-day-detail-head small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.profile-week-day-detail-close {
+  border: 1px solid var(--hairline, #e6e3df);
+  background: transparent;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.profile-week-day-detail-close:hover {
+  background: rgba(var(--ink-rgb), 0.06);
+  color: var(--ink);
+}
+.profile-week-day-detail-empty {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.profile-week-day-detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.profile-week-day-detail-row {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--hairline, #e6e3df);
+  border-radius: 10px;
+  background: rgba(var(--ink-rgb), 0.02);
+}
+.profile-week-day-detail-color {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.profile-week-day-detail-subject {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.profile-week-day-detail-minutes {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.profile-week-day-detail-minutes input {
+  width: 64px;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid var(--hairline, #e6e3df);
+  border-radius: 8px;
+  text-align: right;
+  background: var(--surface);
+  color: var(--ink);
+}
+.profile-week-day-detail-minutes small {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.profile-week-day-detail-save {
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--surface);
+  cursor: pointer;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+.profile-week-day-detail-save:disabled {
+  background: transparent;
+  color: var(--muted);
+  border-color: var(--hairline, #e6e3df);
+  cursor: not-allowed;
+}
+.profile-week-day-detail-delete {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--hairline, #e6e3df);
+  background: transparent;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.profile-week-day-detail-delete:hover {
+  background: rgba(220, 38, 38, 0.08);
+  color: #b91c1c;
+}
+
 /* ===============================================================
    Other-user profile card (friend-profile-card) — redesign
    学習記録(This Week)を視覚的中心に据えたミニマル版。単一の緑

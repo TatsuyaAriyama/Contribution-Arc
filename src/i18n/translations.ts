@@ -217,6 +217,18 @@ export const EN_TRANSLATIONS: Record<string, string> = {
 
   // ─── Workspace & Rooms ──────────────────────────────────────
   "Silent Workspace":            "Silent Workspace",
+  // === Profile week chart ===
+  "{active}日 / 7日":             "{active} / 7 days",
+  "今週の合計 {duration}":         "Week total {duration}",
+  "{day} の学習を編集":            "Edit {day}'s learning",
+  "選択した曜日の詳細":            "Selected day details",
+  "「{subject}」({minutes}分) を削除しますか？":
+                                  "Delete \"{subject}\" ({minutes} min)?",
+  "学習時間 (分)":                 "Study minutes",
+  "学習時間を更新できませんでした": "Couldn't update study time",
+  "学習記録を削除できませんでした": "Couldn't delete the study log",
+  "分":                            "min",
+
   "新しい場所を作る":            "Create a new room",
   "募集":                        "Recruit",
   "休憩":                        "Break",
