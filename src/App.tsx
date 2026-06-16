@@ -202,7 +202,7 @@ import {
 } from "./daily/shareCard";
 import { resetAllTutorials } from "./services/tutorial";
 import { showToast } from "./services/toast";
-import { useTranslation } from "./i18n/LanguageContext";
+import { useTranslation, hasExplicitStoredLanguage } from "./i18n/LanguageContext";
 import { CharCountRing } from "./components/CharCountRing";
 import { ContributionArcLogo } from "./components/ContributionArcLogo";
 import { GoalPickerModal } from "./components/GoalPickerModal";
@@ -4925,10 +4925,13 @@ function App() {
         }
 
         const profile = normalizeUserProfile(currentUser.uid, snapshot.data() as Partial<UserProfile>);
-        // Adopt the stored language preference. Existing accounts
-        // without a `language` field fall back to "ja" via
-        // getSafeLanguage in the normalizer.
-        if (profile.language) {
+        /* Adopt the cloud language preference ONLY when this device has
+           no explicit choice yet. Otherwise, a debounced profile-sync
+           write that hasn't landed could overwrite the user's just-saved
+           choice on reload — the bug "英語で保存したのに日本語に戻される"
+           is precisely this race. The local choice still propagates to
+           cloud via the periodic sync, so other devices catch up. */
+        if (profile.language && !hasExplicitStoredLanguage()) {
           setLanguage(profile.language);
         }
         /* cross-device 同期：cloud profile に pin/mute/block の uid 配列

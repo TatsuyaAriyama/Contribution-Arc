@@ -66,6 +66,22 @@ function readStoredLanguage(): Language {
   return detectDeviceLanguage();
 }
 
+/**
+ * Returns true when the user has an explicit language preference saved
+ * on this device. Cross-device sync from the cloud profile should NOT
+ * override this — otherwise a debounced cloud write that hasn't landed
+ * yet will silently revert the user's just-saved choice on reload.
+ */
+export function hasExplicitStoredLanguage(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const raw = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    return !!(raw && (SUPPORTED_LANGUAGES as string[]).includes(raw));
+  } catch {
+    return false;
+  }
+}
+
 function applyInterpolations(template: string, vars?: Interpolations): string {
   if (!vars) return template;
   return template.replace(/\{(\w+)\}/g, (match, name: string) =>
