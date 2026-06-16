@@ -12252,19 +12252,20 @@ function App() {
            code が無いケース (= 非 FirebaseError) も name / 先頭の
            message で診断できる。 */
         if (code === "permission-denied") {
-          /* 一時診断: 自分のメール / 作成者 uid を toast に出して何が
-             ズレているか即座に判別する。 ari.initx@gmail.com で
-             ログイン中のはずなのに permission-denied = token の email
-             不一致 (大小文字 / プロバイダ差異) が最有力。 */
+          /* 別アカウントが作成した部屋の delete は Firestore ルール
+             側で deny される。リポジトリの rules ファイルには
+             `isDeveloper()` 経由で本人 (ari.initx@gmail.com) が任意の
+             部屋を解体できる定義が入っているが、CI の rules-deploy
+             ワークフローが FIREBASE_SERVICE_ACCOUNT secret 不在で
+             失敗し続けている → 本番ルールに反映されていない。
+             対処: ローカルで `npx firebase deploy --only firestore`
+             を 1 回実行するか、GitHub secret を再設定して
+             Deploy Firestore Rules workflow を回す。 */
+          const isOtherCreator = room.createdBy !== currentUser.uid;
           showToast(
-            t(
-              "解体不可 (permission-denied) | login={email} / createdBy={creator} / uid={uid}",
-              {
-                email: currentUser.email || "(none)",
-                creator: room.createdBy || "(none)",
-                uid: currentUser.uid.slice(0, 8),
-              },
-            ),
+            isOtherCreator
+              ? t("この部屋は別アカウントで作成されたため、本番ルール側で削除を拒否されました (rules 未デプロイ)。")
+              : t("削除権限がありません (permission-denied)。"),
             { kind: "error" },
           );
         } else if (code) {

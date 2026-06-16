@@ -580,6 +580,10 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "解体できませんでした ({code})":"Couldn't disband ({code})",
   "解体不可 (permission-denied) | login={email} / createdBy={creator} / uid={uid}":
                                 "Disband denied (permission-denied) | login={email} / createdBy={creator} / uid={uid}",
+  "この部屋は別アカウントで作成されたため、本番ルール側で削除を拒否されました (rules 未デプロイ)。":
+                                "This room was created by another account. Firestore rules currently reject the delete — please redeploy the rules.",
+  "削除権限がありません (permission-denied)。":
+                                "You don't have permission to delete this room (permission-denied).",
   "作業部屋 — 同じ時間に手を動かす場所":
                                 "Workroom — share quiet focus time",
   "通話なしで、気配だけを共有しながら集中作業ができる空間です。":
