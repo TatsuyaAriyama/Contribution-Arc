@@ -2,7 +2,9 @@ import { useEffect, useRef, useState, type CSSProperties, type ChangeEvent, type
 import { createPortal } from "react-dom";
 import {
   renderDefaultCharacterSvg,
+  renderGhostSvg,
   renderMorphCubeSvg,
+  renderOwlSvg,
 } from "./CharacterShapeSvg";
 import { useTranslation } from "../i18n/LanguageContext";
 
@@ -636,20 +638,40 @@ export function SilentWorkspaceRoom({
           <div className="room-preview-members" aria-label={t("作業中のメンバー")}>
             {previewMembers.length > 0 ? (
               <div className="room-preview-avatar-stack">
-                {previewMembers.map((member) => (
-                  <span
-                    key={member.userId}
-                    className="room-preview-avatar"
-                    style={{ "--actor-color": member.characterColor || member.color } as CSSProperties}
-                    title={member.name}
-                  >
-                    {member.avatar ? (
-                      <img src={member.avatar} alt="" />
-                    ) : (
+                {previewMembers.map((member) => {
+                  const fillColor = member.characterColor || member.color || "#7667a8";
+                  const shape = member.characterShape || "default";
+                  /* 投稿カード avatar と統一: キャラ shape + カラーで
+                      描画。avatar URL があるユーザーは写真優先、
+                      それ以外は shape に応じた SVG。default / morph /
+                      ghost / owl の 4 種をサポート。 */
+                  let content: ReactNode;
+                  if (member.avatar) {
+                    content = <img src={member.avatar} alt="" />;
+                  } else if (shape === "default") {
+                    content = renderDefaultCharacterSvg(fillColor, { showEdges: false });
+                  } else if (shape === "morph") {
+                    content = renderMorphCubeSvg(fillColor, { showEdges: false });
+                  } else if (shape === "ghost") {
+                    content = renderGhostSvg(fillColor);
+                  } else if (shape === "owl") {
+                    content = renderOwlSvg(fillColor);
+                  } else {
+                    content = (
                       <span>{(member.name?.charAt(0) || "?").toUpperCase()}</span>
-                    )}
-                  </span>
-                ))}
+                    );
+                  }
+                  return (
+                    <span
+                      key={member.userId}
+                      className={`room-preview-avatar room-preview-avatar-shape-${shape}`}
+                      style={{ "--actor-color": fillColor } as CSSProperties}
+                      title={member.name}
+                    >
+                      {content}
+                    </span>
+                  );
+                })}
                 {extraMembers > 0 ? (
                   <span className="room-preview-avatar room-preview-avatar-more">
                     +{extraMembers}
@@ -1419,8 +1441,9 @@ export function SilentWorkspaceRoom({
                         aria-hidden="true"
                       >
                         {/* 投稿カード avatar と統一: キャラ shape + カラーで描画。
-                            default / morph は共有 SVG renderer (金縁なし版)、
-                            その他は文字 initial に fallback。 */}
+                            default / morph / ghost / owl すべて共有 SVG
+                            renderer で出すので、文字 initial への fallback は
+                            shape が予期外の値だった時の最終手段としてだけ残す。 */}
                         {member.characterShape === "default" ? (
                           renderDefaultCharacterSvg(member.characterColor || member.color, {
                             showEdges: false,
@@ -1429,6 +1452,10 @@ export function SilentWorkspaceRoom({
                           renderMorphCubeSvg(member.characterColor || member.color, {
                             showEdges: false,
                           })
+                        ) : member.characterShape === "ghost" ? (
+                          renderGhostSvg(member.characterColor || member.color)
+                        ) : member.characterShape === "owl" ? (
+                          renderOwlSvg(member.characterColor || member.color)
                         ) : (
                           <span className="workspace-people-avatar-initial">
                             {member.name.slice(0, 1)}

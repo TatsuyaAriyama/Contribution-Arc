@@ -10856,9 +10856,36 @@
   object-fit: cover;
 }
 
+/* SVG キャラを内蔵した avatar (default / morph / ghost / owl) は
+   SVG が円の中で自然に収まるよう調整。 */
+.room-preview-avatar svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+/* ghost / owl の avatar は背景の単色塗りが SVG の四隅で見えてしまう
+   ので、薄い off-white に倒して白いキャラの輪郭が読みやすいようにする。
+   default / morph は SVG が cube/箱で背景色と一体化するため従来通り。 */
+.room-preview-avatar-shape-ghost,
+.room-preview-avatar-shape-owl {
+  background: rgba(var(--ink-rgb), 0.05);
+}
+
 .room-preview-avatar-more {
   background: rgba(var(--ink-rgb), 0.08);
   color: var(--ink);
+}
+
+/* workspace-people-avatar (画面下の自分以外を確認できるリスト) も
+   同じ取り扱い。ghost / owl は SVG が白系なので bg を薄くする。 */
+.workspace-people-avatar svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.workspace-people-avatar.shape-ghost,
+.workspace-people-avatar.shape-owl {
+  background: rgba(var(--ink-rgb), 0.05);
 }
 
 .room-preview-count {
