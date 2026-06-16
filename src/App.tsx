@@ -12680,6 +12680,32 @@ function App() {
     );
   };
 
+  /* 他人のプロフィールから目標 chip を描く。設定済みのときだけ表示し、
+     未設定のユーザーには何も出さない (要望対応)。
+     - profile.goalId が catalog にヒットすれば公式名 + 種別ラベル
+     - 一覧にない自由記述 (goalCustomName) もそのまま表示
+     - どちらも空なら null を返してセクションごと消える */
+  const profileGoalChip = (profile: { goalId?: string; goalCustomName?: string }) => {
+    const goalIdValue = (profile.goalId || "").trim();
+    const goalCustom = (profile.goalCustomName || "").trim();
+    const catalogHit = goalIdValue ? findGoalById(goalIdValue) : null;
+    const goalName = catalogHit?.name || goalCustom;
+    if (!goalName) return null;
+    const kindLabel = catalogHit
+      ? catalogHit.kind === "highschool"
+        ? "高校受験"
+        : catalogHit.kind === "university"
+          ? "大学受験"
+          : "資格"
+      : "目標";
+    return (
+      <section className="profile-goal-chip" aria-label="目標">
+        <span className="profile-goal-chip-kicker">{kindLabel}</span>
+        <strong className="profile-goal-chip-name">🎯 {goalName}</strong>
+      </section>
+    );
+  };
+
   /* 他人のプロフィール (UserProfile) から週グラフを描く。週キーが
      今週と一致するときだけ weekdayMinutes を信頼し、stale / 未保存は
      静かな空状態を返す。 */
@@ -12856,6 +12882,7 @@ function App() {
         </div>
 
         {friendMessage ? <p className="friend-message">{friendMessage}</p> : null}
+        {profileGoalChip(memberLive || memberProfile)}
         {profileWeekChartFromProfile(memberLive || memberProfile)}
       </article>
     );
@@ -13186,6 +13213,8 @@ function App() {
             </section>
           );
         })()}
+
+        {profileGoalChip(profile)}
 
         <div className="friend-profile-actions">
           <button
