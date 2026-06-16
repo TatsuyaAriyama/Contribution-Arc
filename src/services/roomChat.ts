@@ -1,5 +1,5 @@
 /**
- * アトリエ (ルーム) 内チャット — Firestore 経由のシンプルなメッセージ機構。
+ * 作業部屋 (ルーム) 内チャット — Firestore 経由のシンプルなメッセージ機構。
  *
  * 構造: rooms/{roomId}/chat/{messageId}
  *  ↑ App.tsx の workspaceRoomsCollectionName ("rooms") と一致。

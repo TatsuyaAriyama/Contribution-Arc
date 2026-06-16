@@ -111,7 +111,7 @@ export function PremiumSidebar({
           onClick={() => handleNavigate(() => onViewChange("workspace"))}
         >
           <span />
-          アトリエ
+          作業部屋
         </button>
       </nav>
 

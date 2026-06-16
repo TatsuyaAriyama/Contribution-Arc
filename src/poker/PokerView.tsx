@@ -226,7 +226,7 @@ export default function PokerView({
     <div className="poker-root">
       <div className="poker-topbar">
         <button type="button" onClick={onBack} className="poker-back">
-          ← アトリエに戻る
+          ← 作業部屋に戻る
         </button>
         <div className="poker-title">
           <p className="poker-kicker">Video Poker · Jacks or Better (6/5)</p>
@@ -421,7 +421,7 @@ export default function PokerView({
               disabled={phase === "dealt" || focusChips === 0}
               title={
                 focusChips === 0
-                  ? "アトリエに25分滞在で Focus Chip を獲得（1日8枚まで）"
+                  ? "作業部屋に25分滞在で Focus Chip を獲得（1日8枚まで）"
                   : "配当 ×1.5"
               }
             >

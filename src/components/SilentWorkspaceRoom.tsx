@@ -387,7 +387,7 @@ export function SilentWorkspaceRoom({
   // overlay starts collapsed to a single-line pill (room name + meta)
   // and expands to show the task input + actions when ⋯ is tapped.
   const [isOverlayExpanded, setIsOverlayExpanded] = useState(false);
-  /* モバイル専用：アトリエを「ルーム(眺める) / みんな(在室一覧) /
+  /* モバイル専用：作業部屋を「ルーム(眺める) / みんな(在室一覧) /
      自分(操作)」の 3 タブに分割するための選択状態。小画面で四方に
      散らばっていた情報を 3 つの目的に整理する。PC ではタブ UI を
      CSS で隠し、この値は "room" 固定のまま従来の 2D ステージを使う。 */
@@ -626,7 +626,7 @@ export function SilentWorkspaceRoom({
       <div className="workspace-2d-shell is-preview">
         <article className="workspace-room-preview">
           <header className="room-preview-header">
-            <p className="room-preview-kicker">アトリエ</p>
+            <p className="room-preview-kicker">作業部屋</p>
             <h3 className="room-preview-title">{roomName}</h3>
           </header>
 
@@ -719,7 +719,7 @@ export function SilentWorkspaceRoom({
       data-mobile-tab={mobileTab}
     >
       {/* モバイル専用のタブバー。PC では CSS で display:none。 */}
-      <nav className="workspace-mobile-tabs" role="tablist" aria-label="アトリエの表示">
+      <nav className="workspace-mobile-tabs" role="tablist" aria-label="作業部屋の表示">
         <button
           type="button"
           role="tab"
