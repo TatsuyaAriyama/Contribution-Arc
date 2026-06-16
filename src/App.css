@@ -36888,14 +36888,26 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   list-style: none;
 }
 .profile-week-day-detail-row {
-  display: grid;
-  grid-template-columns: 14px minmax(0, 1fr) auto auto auto;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
   border: 1px solid var(--hairline, #e6e3df);
   border-radius: 10px;
   background: rgba(var(--ink-rgb), 0.02);
+}
+.profile-week-day-detail-row-main {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+}
+.profile-week-day-detail-row-edit {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
 }
 .profile-week-day-detail-color {
   width: 10px;
@@ -36911,13 +36923,43 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.profile-week-day-detail-time {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.profile-week-day-detail-adjust {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.profile-week-day-detail-adjust button {
+  min-width: 40px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  border: 1px solid var(--hairline, #e6e3df);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  font-variant-numeric: tabular-nums;
+}
+.profile-week-day-detail-adjust button:hover {
+  background: rgba(var(--ink-rgb), 0.05);
+  color: var(--ink);
+  border-color: rgba(var(--ink-rgb), 0.18);
+}
 .profile-week-day-detail-minutes {
   display: inline-flex;
   align-items: center;
   gap: 4px;
 }
 .profile-week-day-detail-minutes input {
-  width: 64px;
+  width: 68px;
   padding: 6px 8px;
   font-size: 13px;
   font-weight: 700;
@@ -36926,6 +36968,7 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   text-align: right;
   background: var(--surface);
   color: var(--ink);
+  font-variant-numeric: tabular-nums;
 }
 .profile-week-day-detail-minutes small {
   font-size: 11px;
@@ -36933,7 +36976,7 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   color: var(--muted);
 }
 .profile-week-day-detail-save {
-  padding: 6px 10px;
+  padding: 6px 12px;
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.02em;
@@ -36965,6 +37008,122 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
 .profile-week-day-detail-delete:hover {
   background: rgba(220, 38, 38, 0.08);
   color: #b91c1c;
+}
+
+/* + Add log inline form */
+.profile-week-day-detail-add {
+  margin-top: 4px;
+  padding: 12px;
+  border: 1px dashed var(--hairline, #d6d3cd);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(var(--ink-rgb), 0.015);
+}
+.profile-week-day-detail-add-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.profile-week-day-detail-add-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.profile-week-day-detail-add-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.profile-week-day-detail-add-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+.profile-week-day-detail-add-row select {
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid var(--hairline, #e6e3df);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  min-width: 0;
+}
+.profile-week-day-detail-add-minutes {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.profile-week-day-detail-add-minutes input {
+  width: 64px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid var(--hairline, #e6e3df);
+  border-radius: 8px;
+  text-align: right;
+  background: var(--surface);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.profile-week-day-detail-add-minutes small {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.profile-week-day-detail-add-quick {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.profile-week-day-detail-add-quick button {
+  flex: 0 0 auto;
+  min-width: 48px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  border: 1px solid var(--hairline, #e6e3df);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  font-variant-numeric: tabular-nums;
+}
+.profile-week-day-detail-add-quick button:hover {
+  background: rgba(var(--ink-rgb), 0.05);
+  color: var(--ink);
+  border-color: rgba(var(--ink-rgb), 0.18);
+}
+.profile-week-day-detail-add-quick button.is-active {
+  background: var(--ink);
+  color: var(--surface);
+  border-color: var(--ink);
+}
+.profile-week-day-detail-add-submit {
+  align-self: flex-end;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--surface);
+  cursor: pointer;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+.profile-week-day-detail-add-submit:disabled {
+  background: transparent;
+  color: var(--muted);
+  border-color: var(--hairline, #e6e3df);
+  cursor: not-allowed;
 }
 
 /* ===============================================================

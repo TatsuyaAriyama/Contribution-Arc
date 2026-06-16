@@ -316,6 +316,9 @@ type WeeklyStudyDay = {
   hours: number;
   totalMinutes: number;
   dateLabel: string;
+  /** その日の正午 (Local) を ISO 化したもの。詳細パネルから新規ログを
+   *  追加する際にこのタイムスタンプを使うと、その日の枠内に確実に入る。 */
+  dateIso: string;
   isToday: boolean;
   logs: StudyLog[];
 };
@@ -1141,12 +1144,17 @@ function getWeeklyStudyHours(logs: StudyLog[]): WeeklyStudyDay[] {
       return createdAt >= date && createdAt < new Date(date.getTime() + 24 * 60 * 60 * 1000);
     });
     const totalMinutes = dayLogs.reduce((sum, log) => sum + log.minutes, 0);
+    /* 正午 ISO: 新規ログ追加時にこのタイムスタンプを使うと、ローカル
+       タイムゾーンの境界 (00:00 / 23:59) で誤って前後の日に飛ばない。 */
+    const noon = new Date(date);
+    noon.setHours(12, 0, 0, 0);
 
     return {
       day,
       hours: totalMinutes / 60,
       totalMinutes,
       dateLabel: `${date.getMonth() + 1}/${date.getDate()}`,
+      dateIso: noon.toISOString(),
       isToday: getTodayKey(date) === todayKey,
       logs: dayLogs,
     };
@@ -3602,6 +3610,11 @@ function App() {
      null = 閉じている、0..6 = Mon..Sun。 */
   const [profileWeekDayIndex, setProfileWeekDayIndex] = useState<number | null>(null);
   const [profileWeekLogEditMinutes, setProfileWeekLogEditMinutes] = useState<Record<string, string>>({});
+  /* 詳細パネル下部の「+ Add log」フォーム state。Subject は learningItems
+     から選び、minutes は分単位で入力する。日付は選択されている曜日の
+     dateIso を流用 (= その日に追加される)。 */
+  const [profileWeekAddSubjectId, setProfileWeekAddSubjectId] = useState("");
+  const [profileWeekAddMinutes, setProfileWeekAddMinutes] = useState("");
   const [isLearningDeleteConfirming, setIsLearningDeleteConfirming] = useState(false);
   // Item detail view (B-4): the learning item whose history/stats panel
   // is open. null = closed. Read-only over existing studyLogs (no new reads).
@@ -12235,6 +12248,34 @@ function App() {
     });
   };
 
+  /* 選択中の曜日に学習ログを新規追加する。createdAt はその日の正午
+     (dateIso) を使うので、何時に追加してもその日の集計に確実に入る。 */
+  const handleProfileWeekLogAdd = (dateIso: string, learningItemId: string, minutes: number) => {
+    if (!currentUser) return;
+    const safeMinutes = Math.max(0, Math.round(minutes));
+    if (!Number.isFinite(safeMinutes) || safeMinutes <= 0) return;
+    const item = learningItems.find((entry) => entry.id === learningItemId);
+    if (!item) return;
+    const nextLog: StudyLog = {
+      id: crypto.randomUUID(),
+      subject: item.name,
+      minutes: safeMinutes,
+      createdAt: dateIso,
+      color: item.color,
+      learningItemId: item.id,
+    };
+    setStudyLogs((logs) => [...logs, nextLog]);
+    void saveStudyLogToCloud(db, currentUser.uid, nextLog, {
+      earnedExp: Math.round(safeMinutes * 1.25),
+      source: "profile-week-add",
+      organizationId: currentOrganization?.id,
+    }).catch((error) => {
+      console.info("Profile week log add sync skipped.", error);
+      setStudyLogs((logs) => logs.filter((entry) => entry.id !== nextLog.id));
+      showToast(t("学習記録を追加できませんでした"), { kind: "error" });
+    });
+  };
+
   const handleProfileWeekLogDelete = (log: StudyLog) => {
     if (!currentUser) return;
     const confirmed = window.confirm(
@@ -12783,6 +12824,13 @@ function App() {
     const activeDays = minutesByDay.filter((m) => m > 0).length;
     const selectedIndex = editable ? profileWeekDayIndex : null;
     const selectedDay = selectedIndex !== null ? weekData?.[selectedIndex] : null;
+    /* 曜日ラベルは t() で localize する (en: Mon/Tue/.../Sun)。
+       辞書側に "月":"Mon" 等を持たせる。 */
+    const dayShortLabel = (index: number) => t(dayLabels[index]);
+    /* 詳細パネルの subject picker 用に active な learning items を抽出 */
+    const activeLearningItems = learningItems
+      .filter((entry) => !entry.archived && (entry.status ?? "active") !== "done")
+      .sort((a, b) => a.name.localeCompare(b.name, "ja"));
     return (
       <section className="profile-week-chart" aria-label={t("今週の学習時間")}>
         <div className="profile-week-chart-head">
@@ -12811,7 +12859,7 @@ function App() {
                 <div className="profile-week-chart-track">
                   <span className="profile-week-chart-bar" style={{ height: `${heightPct}%` }} />
                 </div>
-                <span className="profile-week-chart-day">{dayLabels[index]}</span>
+                <span className="profile-week-chart-day">{dayShortLabel(index)}</span>
               </>
             );
             if (editable) {
@@ -12822,10 +12870,13 @@ function App() {
                   role="tab"
                   aria-selected={isSelected}
                   className={colClass}
-                  onClick={() =>
-                    setProfileWeekDayIndex((curr) => (curr === index ? null : index))
-                  }
-                  aria-label={t("{day} の学習を編集", { day: dayLabels[index] })}
+                  onClick={() => {
+                    setProfileWeekDayIndex((curr) => (curr === index ? null : index));
+                    /* 別の曜日に切り替えたら add フォーム入力をクリア */
+                    setProfileWeekAddSubjectId("");
+                    setProfileWeekAddMinutes("");
+                  }}
+                  aria-label={t("{day} の学習を編集", { day: dayShortLabel(index) })}
                 >
                   {inner}
                 </button>
@@ -12844,7 +12895,7 @@ function App() {
             <div className="profile-week-day-detail-head">
               <div>
                 <strong>
-                  {dayLabels[selectedIndex!]} · {selectedDay.dateLabel}
+                  {dayShortLabel(selectedIndex!)} · {selectedDay.dateLabel}
                 </strong>
                 <small>{formatStudyTimeJa(selectedDay.totalMinutes, language)}</small>
               </div>
@@ -12859,7 +12910,7 @@ function App() {
             </div>
             {selectedDay.logs.length === 0 ? (
               <p className="profile-week-day-detail-empty">
-                {t("この日の学習ログはありません。")}
+                {t("この日の学習ログはまだありません。下のフォームから追加できます。")}
               </p>
             ) : (
               <ul className="profile-week-day-detail-list">
@@ -12873,61 +12924,162 @@ function App() {
                     const parsed = Number(inputValue);
                     const isValid = Number.isFinite(parsed) && parsed >= 0;
                     const isDirty = isValid && Math.round(parsed) !== log.minutes;
+                    const createdAtDate = new Date(log.createdAt);
+                    const timeLabel = Number.isFinite(createdAtDate.getTime())
+                      ? `${String(createdAtDate.getHours()).padStart(2, "0")}:${String(
+                          createdAtDate.getMinutes(),
+                        ).padStart(2, "0")}`
+                      : "—";
+                    /* +/- chip で 5 / 15 分単位の細かい調整を即座に。
+                       入力中の値があればそれを基準に、なければ現在値を基準に増減。 */
+                    const adjustBy = (delta: number) => {
+                      const base = isValid ? Math.round(parsed) : log.minutes;
+                      const next = Math.max(0, base + delta);
+                      setProfileWeekLogEditMinutes((prev) => ({
+                        ...prev,
+                        [log.id]: String(next),
+                      }));
+                    };
                     return (
                       <li key={log.id} className="profile-week-day-detail-row">
-                        <span
-                          className="profile-week-day-detail-color"
-                          style={{ background: log.color || "rgba(31,111,74,0.5)" }}
-                          aria-hidden="true"
-                        />
-                        <span className="profile-week-day-detail-subject">{log.subject}</span>
-                        <span className="profile-week-day-detail-minutes">
-                          <input
-                            type="number"
-                            inputMode="numeric"
-                            min={0}
-                            step={1}
-                            value={inputValue}
-                            onChange={(event) =>
-                              setProfileWeekLogEditMinutes((prev) => ({
-                                ...prev,
-                                [log.id]: event.target.value,
-                              }))
-                            }
-                            aria-label={t("学習時間 (分)")}
+                        <span className="profile-week-day-detail-row-main">
+                          <span
+                            className="profile-week-day-detail-color"
+                            style={{ background: log.color || "rgba(31,111,74,0.5)" }}
+                            aria-hidden="true"
                           />
-                          <small>{t("分")}</small>
+                          <span className="profile-week-day-detail-subject">{log.subject}</span>
+                          <span className="profile-week-day-detail-time" aria-hidden="true">
+                            {timeLabel}
+                          </span>
+                          <button
+                            type="button"
+                            className="profile-week-day-detail-delete"
+                            onClick={() => handleProfileWeekLogDelete(log)}
+                            aria-label={t("削除")}
+                            title={t("削除")}
+                          >
+                            ×
+                          </button>
                         </span>
-                        <button
-                          type="button"
-                          className="profile-week-day-detail-save"
-                          disabled={!isDirty}
-                          onClick={() => {
-                            if (!isValid) return;
-                            handleProfileWeekLogUpdate(log, Math.round(parsed));
-                            setProfileWeekLogEditMinutes((prev) => {
-                              const next = { ...prev };
-                              delete next[log.id];
-                              return next;
-                            });
-                          }}
-                        >
-                          {t("更新")}
-                        </button>
-                        <button
-                          type="button"
-                          className="profile-week-day-detail-delete"
-                          onClick={() => handleProfileWeekLogDelete(log)}
-                          aria-label={t("削除")}
-                          title={t("削除")}
-                        >
-                          ×
-                        </button>
+                        <span className="profile-week-day-detail-row-edit">
+                          <span className="profile-week-day-detail-adjust" role="group" aria-label={t("時間を調整")}>
+                            <button type="button" onClick={() => adjustBy(-15)} aria-label="-15">−15</button>
+                            <button type="button" onClick={() => adjustBy(-5)} aria-label="-5">−5</button>
+                            <button type="button" onClick={() => adjustBy(5)} aria-label="+5">+5</button>
+                            <button type="button" onClick={() => adjustBy(15)} aria-label="+15">+15</button>
+                          </span>
+                          <span className="profile-week-day-detail-minutes">
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              min={0}
+                              step={1}
+                              value={inputValue}
+                              onChange={(event) =>
+                                setProfileWeekLogEditMinutes((prev) => ({
+                                  ...prev,
+                                  [log.id]: event.target.value,
+                                }))
+                              }
+                              aria-label={t("学習時間 (分)")}
+                            />
+                            <small>{t("分")}</small>
+                          </span>
+                          <button
+                            type="button"
+                            className="profile-week-day-detail-save"
+                            disabled={!isDirty}
+                            onClick={() => {
+                              if (!isValid) return;
+                              handleProfileWeekLogUpdate(log, Math.round(parsed));
+                              setProfileWeekLogEditMinutes((prev) => {
+                                const next = { ...prev };
+                                delete next[log.id];
+                                return next;
+                              });
+                            }}
+                          >
+                            {t("更新")}
+                          </button>
+                        </span>
                       </li>
                     );
                   })}
               </ul>
             )}
+
+            {/* 新規ログ追加フォーム。Subject (Library のアクティブ項目) を選び、
+                分を入力 → クイックチップ or 自由入力 → +追加。 */}
+            <div className="profile-week-day-detail-add">
+              <div className="profile-week-day-detail-add-head">
+                <span className="profile-week-day-detail-add-label">{t("この日に追加")}</span>
+              </div>
+              {activeLearningItems.length === 0 ? (
+                <p className="profile-week-day-detail-add-empty">
+                  {t("ライブラリに学習対象がありません。先に追加してください。")}
+                </p>
+              ) : (
+                <>
+                  <div className="profile-week-day-detail-add-row">
+                    <select
+                      value={profileWeekAddSubjectId}
+                      onChange={(event) => setProfileWeekAddSubjectId(event.target.value)}
+                      aria-label={t("学習対象")}
+                    >
+                      <option value="">{t("学習対象を選ぶ")}</option>
+                      {activeLearningItems.map((entry) => (
+                        <option key={entry.id} value={entry.id}>
+                          {entry.name}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="profile-week-day-detail-add-minutes">
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={1}
+                        step={1}
+                        placeholder="30"
+                        value={profileWeekAddMinutes}
+                        onChange={(event) => setProfileWeekAddMinutes(event.target.value)}
+                        aria-label={t("学習時間 (分)")}
+                      />
+                      <small>{t("分")}</small>
+                    </span>
+                  </div>
+                  <div className="profile-week-day-detail-add-quick" role="group" aria-label={t("クイック入力")}>
+                    {[15, 30, 60, 90].map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setProfileWeekAddMinutes(String(m))}
+                        className={profileWeekAddMinutes === String(m) ? "is-active" : ""}
+                      >
+                        {m}m
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    className="profile-week-day-detail-add-submit"
+                    disabled={
+                      !profileWeekAddSubjectId ||
+                      !(Number(profileWeekAddMinutes) > 0)
+                    }
+                    onClick={() => {
+                      const minutes = Math.round(Number(profileWeekAddMinutes));
+                      if (!profileWeekAddSubjectId || !(minutes > 0)) return;
+                      handleProfileWeekLogAdd(selectedDay.dateIso, profileWeekAddSubjectId, minutes);
+                      setProfileWeekAddSubjectId("");
+                      setProfileWeekAddMinutes("");
+                    }}
+                  >
+                    + {t("追加")}
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         ) : null}
       </section>

@@ -227,7 +227,26 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "学習時間 (分)":                 "Study minutes",
   "学習時間を更新できませんでした": "Couldn't update study time",
   "学習記録を削除できませんでした": "Couldn't delete the study log",
+  "学習記録を追加できませんでした": "Couldn't add the study log",
   "分":                            "min",
+  // 曜日ラベル (Mon-Sun)
+  "月": "Mon",
+  "火": "Tue",
+  "水": "Wed",
+  "木": "Thu",
+  "金": "Fri",
+  "土": "Sat",
+  "日": "Sun",
+  // 詳細パネル: 行操作 / 追加フォーム
+  "この日の学習ログはまだありません。下のフォームから追加できます。":
+                                  "No study logs for this day yet. Add one with the form below.",
+  "時間を調整":                    "Adjust minutes",
+  "この日に追加":                  "Add to this day",
+  "ライブラリに学習対象がありません。先に追加してください。":
+                                  "No learning items in your library. Add one first.",
+  "学習対象を選ぶ":                "Pick a learning item",
+  "クイック入力":                  "Quick input",
+  "追加":                          "Add",
 
   "新しい場所を作る":            "Create a new room",
   "募集":                        "Recruit",
