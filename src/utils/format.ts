@@ -69,26 +69,30 @@ export function getTodayKey(date: Date = new Date()) {
 
 // ===== 表示用 =====
 
-/** "X日 (短曜日)" の和文表記。invalid なら元文字列を返す。 */
-export function formatDailyDate(date: string) {
+/** "X日 (短曜日)" の和文表記。invalid なら元文字列を返す。
+ *  language === "en" の場合は en-US ロケールで "Jun 16 (Tue)" 形式に切り替える。
+ */
+export function formatDailyDate(date: string, language: "ja" | "en" = "ja") {
   const parsedDate = new Date(`${date}T00:00:00`);
   if (Number.isNaN(parsedDate.getTime())) {
     return date;
   }
-  return parsedDate.toLocaleDateString("ja-JP", {
-    month: "long",
+  const locale = language === "en" ? "en-US" : "ja-JP";
+  return parsedDate.toLocaleDateString(locale, {
+    month: language === "en" ? "short" : "long",
     day: "numeric",
     weekday: "short",
   });
 }
 
-/** 60 分未満は "N分"、それ以上は小数 1 桁の "N.N時間"。 */
-export function formatStudyTimeJa(minutes: number) {
+/** 60 分未満は "N分"、それ以上は小数 1 桁の "N.N時間"。
+ *  language === "en" のとき "30 min" / "1.5 h" に切替える。 */
+export function formatStudyTimeJa(minutes: number, language: "ja" | "en" = "ja") {
   if (minutes < 60) {
-    return `${minutes}分`;
+    return language === "en" ? `${minutes} min` : `${minutes}分`;
   }
   const hours = Math.round((minutes / 60) * 10) / 10;
-  return `${hours}時間`;
+  return language === "en" ? `${hours} h` : `${hours}時間`;
 }
 
 /** 60 分未満は "N分"、それ以上は "H時間" or "H時間M分"。 */

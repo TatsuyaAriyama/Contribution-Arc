@@ -281,12 +281,18 @@ type PlanChecklistPreviewProps = {
   /** Cap rendered rows in cramped feed cards. Detail modal passes Infinity. */
   maxRows?: number;
   emptyText?: string;
+  /** Caller-provided label for the "+N hidden" footer (i18n). */
+  moreLabel?: (count: number) => string;
+  /** Caller-provided placeholder for items with empty text (i18n). */
+  emptyItemText?: string;
 };
 
 export function PlanChecklistPreview({
   items,
   maxRows = Infinity,
   emptyText,
+  moreLabel,
+  emptyItemText,
 }: PlanChecklistPreviewProps) {
   if (items.length === 0) {
     return emptyText ? <span className="plan-checklist-preview-empty">{emptyText}</span> : null;
@@ -308,13 +314,15 @@ export function PlanChecklistPreview({
             {item.done ? "✓" : "・"}
           </span>
           <span className="plan-checklist-preview-text">
-            {item.text || "(空)"}
+            {item.text || emptyItemText || "(空)"}
             {item.comment ? <small> — {item.comment}</small> : null}
           </span>
         </div>
       ))}
       {hidden > 0 ? (
-        <div className="plan-checklist-preview-more">+{hidden}件</div>
+        <div className="plan-checklist-preview-more">
+          {moreLabel ? moreLabel(hidden) : `+${hidden}件`}
+        </div>
       ) : null}
     </div>
   );

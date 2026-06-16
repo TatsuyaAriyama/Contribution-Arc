@@ -13,6 +13,18 @@
 
 export type DailyShareItem = { text: string; done: boolean };
 
+/** 画像カード内のラベル群。i18n のために呼び出し側から差し替え可能にする。
+ *  未指定なら日本語のデフォルト値を使う (後方互換)。 */
+export type DailyShareLabels = {
+  kicker?: string;
+  planTitle?: string;
+  reflectionTitle?: string;
+  emptyPlaceholder?: string;
+  streakSuffix?: (days: number) => string;
+  shareTitle?: (dateLabel: string) => string;
+  untitled?: string;
+};
+
 export type DailyShareData = {
   /** "6月11日(水)" のような表示用日付。 */
   dateLabel: string;
@@ -21,6 +33,7 @@ export type DailyShareData = {
   streakDays?: number;
   planItems: DailyShareItem[];
   reflection: string;
+  labels?: DailyShareLabels;
 };
 
 export type ShareResult = "shared" | "downloaded" | "cancelled";
@@ -129,13 +142,21 @@ export async function createDailyReportImageBlob(data: DailyShareData): Promise<
   const mctx = measureCanvas.getContext("2d");
   if (!mctx) throw new Error("canvas-unsupported");
 
+  const labels = data.labels ?? {};
+  const planTitleText = labels.planTitle ?? "今日やること";
+  const reflectionTitleText = labels.reflectionTitle ?? "振り返り";
+  const emptyText = labels.emptyPlaceholder ?? "（まだありません）";
+  const untitledText = labels.untitled ?? "（無題）";
+  const kickerText = labels.kicker ?? "DAILY REPORT";
+  const streakSuffix = labels.streakSuffix ?? ((days: number) => `${days}日連続`);
+
   const planItems = data.planItems.slice(0, MAX_PLAN_ITEMS);
   const planTextW = CONTENT_W - (CHECK_R * 2 + CHECK_GAP);
 
   // --- レイアウト（行の折返しを先に確定し、総高さを算出） ---
   const planWrapped: string[][] = planItems.map((item) => {
     mctx.font = `500 14px ${FONT}`;
-    return wrapText(mctx, item.text.trim() || "（無題）", planTextW);
+    return wrapText(mctx, item.text.trim() || untitledText, planTextW);
   });
 
   mctx.font = `400 15px ${FONT}`;
@@ -214,7 +235,7 @@ export async function createDailyReportImageBlob(data: DailyShareData): Promise<
   // kicker
   ctx.font = `700 11px ${FONT}`;
   ctx.fillStyle = COLOR.sub;
-  ctx.fillText("DAILY REPORT", x, y);
+  ctx.fillText(kickerText, x, y);
   y += 14 + 8;
 
   // 日付（左） + ストリーク（右）
@@ -222,7 +243,7 @@ export async function createDailyReportImageBlob(data: DailyShareData): Promise<
   ctx.fillStyle = COLOR.ink;
   ctx.fillText(data.dateLabel, x, y);
   if (data.streakDays && data.streakDays > 0) {
-    const label = `🔥 ${data.streakDays}日連続`;
+    const label = `🔥 ${streakSuffix(data.streakDays)}`;
     ctx.font = `700 13px ${FONT}`;
     const tw = ctx.measureText(label).width;
     const pillW = tw + 22;
@@ -249,7 +270,7 @@ export async function createDailyReportImageBlob(data: DailyShareData): Promise<
   // セクション: 今日やること
   ctx.font = `800 15px ${FONT}`;
   ctx.fillStyle = COLOR.ink;
-  ctx.fillText("今日やること", x, y);
+  ctx.fillText(planTitleText, x, y);
   y += 22 + 10;
 
   if (planItems.length > 0) {
@@ -281,7 +302,7 @@ export async function createDailyReportImageBlob(data: DailyShareData): Promise<
   } else {
     ctx.font = `400 13px ${FONT}`;
     ctx.fillStyle = COLOR.sub;
-    ctx.fillText("（まだありません）", x, y);
+    ctx.fillText(emptyText, x, y);
     y += 24;
   }
 
@@ -290,7 +311,7 @@ export async function createDailyReportImageBlob(data: DailyShareData): Promise<
   // セクション: 振り返り
   ctx.font = `800 15px ${FONT}`;
   ctx.fillStyle = COLOR.ink;
-  ctx.fillText("振り返り", x, y);
+  ctx.fillText(reflectionTitleText, x, y);
   y += 22 + 10;
 
   if (reflectionLines.length > 0) {
@@ -308,7 +329,7 @@ export async function createDailyReportImageBlob(data: DailyShareData): Promise<
   } else {
     ctx.font = `400 13px ${FONT}`;
     ctx.fillStyle = COLOR.sub;
-    ctx.fillText("（まだありません）", x, y);
+    ctx.fillText(emptyText, x, y);
     y += 24;
   }
 
@@ -360,7 +381,10 @@ export async function shareDailyReportImage(data: DailyShareData): Promise<Share
   };
   if (nav.share && nav.canShare && nav.canShare({ files: [file] })) {
     try {
-      await nav.share({ files: [file], title: `${data.dateLabel}の日報` });
+      const shareTitle = data.labels?.shareTitle
+        ? data.labels.shareTitle(data.dateLabel)
+        : `${data.dateLabel}の日報`;
+      await nav.share({ files: [file], title: shareTitle });
       return "shared";
     } catch (err) {
       // ユーザーがキャンセルした場合はそこで終わり。それ以外は保存に倒す。

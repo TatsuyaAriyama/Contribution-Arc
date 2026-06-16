@@ -360,6 +360,142 @@ export const EN_TRANSLATIONS: Record<string, string> = {
                                 "One line per task. Check it when done; add a short note if needed.",
   "{name}の{date}の日報を開く": "Open {name}'s report from {date}",
 
+  // 日報: ヘッダ / ストリーク / 進捗
+  "{count}日連続で日報を書いています":
+                                "You've written a daily report for {count} days in a row",
+  "{count}日連続":               "{count}-day streak",
+  "{done}/{total} 完了":         "{done}/{total} done",
+  "{text} (完了)":               "{text} (done)",
+  "日報を画像で共有":            "Share as image",
+  "画像で共有":                  "Share as image",
+  "日報の共有画像":              "Daily report share image",
+  "画像を保存":                  "Save image",
+  "画像を保存して SNS に投稿したり、写真ウィジェットに置けます。":
+                                "Save the image to share on social media or place in your photo widget.",
+
+  // 日報: チュートリアル
+  "日報 — 1日のはじまりと締めくくり":
+                                "Daily — Open and close out the day",
+  "その日の計画と振り返りを残すと、明日の自分への布石になります。":
+                                "Recording the day's plan and reflection lays the groundwork for tomorrow.",
+  "「計画」欄に朝の予定を、「振り返り」欄に夜の感想を書きます":
+                                "Use \"plan\" for the morning's intent and \"reflection\" for the evening's notes",
+  "保存は自動。書きかけのまま画面を離れても消えません":
+                                "Saves automatically — your draft stays even if you leave the screen",
+  "編集できるのは当日と前日まで(過去の自分に向き合うため)":
+                                "You can only edit today and yesterday (to keep facing the past you)",
+
+  // 日報: 報酬バナー
+  "+50 Arc 獲得済み":             "+50 Arc earned",
+  "明日も「今日やること」と「振り返り」の両方共有で Arc を狙えます。":
+                                "Earn Arc again tomorrow by sharing both today's plan and reflection.",
+  "両方を共有すると +50 Arc / 日":
+                                "Share both to earn +50 Arc / day",
+  "今日の達成状況":              "Today's progress",
+  "今日やることの進捗":          "Plan progress",
+  "+50 Arc 獲得 ✦ 今日やること & 振り返り を両方完了しました":
+                                "+50 Arc earned ✦ You completed both today's plan and reflection",
+
+  // 日報: クイックアクション
+  "過去の計画から引き継ぎ":      "Carry over from previous plans",
+  "未完了を持ち越し":            "Carry over unfinished",
+  "過去の未完了タスクを今日に持ち越す":
+                                "Carry forward unfinished tasks to today",
+  "前日の計画をコピー":          "Copy yesterday's plan",
+  "前日の計画をすべて今日にコピー":
+                                "Copy all of yesterday's plan into today",
+  "持ち越せる未完了タスクはありません":
+                                "No unfinished tasks to carry over",
+  "未完了タスクはすでに含まれています":
+                                "Unfinished tasks are already included",
+  "{count}件の未完了タスクを追加しました":
+                                "Added {count} unfinished tasks",
+  "前日の計画が見つかりません":  "No plan from yesterday",
+  "前日の計画が空です":          "Yesterday's plan is empty",
+  "前日の計画はすでに含まれています":
+                                "Yesterday's plan is already included",
+  "{count}件を前日からコピーしました":
+                                "Copied {count} tasks from yesterday",
+
+  // 日報: チェックリスト ラベル
+  "項目を追加":                  "Add item",
+  "やることを1行で":             "Write a task in one line",
+  "完了メモ(任意) — 何をやったか / 何で詰まったか":
+                                "Completion note (optional) — what you did / what got you stuck",
+  "完了メモ":                    "Completion note",
+  "←前日から":                   "← carried from",
+
+  // 日報: 保存ボタン / 状態
+  "保存中":                      "Saving",
+  "下書きで保存":                "Save as draft",
+  "今日やることを更新":          "Update today's plan",
+  "今日やることを送信":          "Submit today's plan",
+  "振り返りを更新":              "Update reflection",
+  "振り返りを送信":              "Submit reflection",
+  "できたこと、詰まったこと、明日に回すことなど":
+                                "What you did, what got stuck, what to defer to tomorrow…",
+  "{section}を入力してください。":
+                                "Please enter {section}.",
+  "{section}を下書き保存しました。共有はされていません。":
+                                "Saved {section} as a draft. It hasn't been shared.",
+  "{section}を保存しました。":   "Saved {section}.",
+  "{section}をローカルに保存しました。クラウドへ再同期します。":
+                                "Saved {section} locally. Will resync to the cloud.",
+  "{section}をクラウド保存する権限がまだ有効ではありません。ローカルには保存されています。":
+                                "Cloud save permission isn't enabled yet for {section}. It is saved locally.",
+
+  // 日報: 履歴 (mine / team)
+  "日報の記録":                  "Daily report history",
+  "自分の記録":                  "My history",
+  "過去の日報を絞り込む":        "Filter past reports",
+  "本文・日付から探す":          "Search text or date",
+  "クリア":                      "Clear",
+  "今日やることは未入力":        "No plan written",
+  "振り返り済み":                "Reflection done",
+  "振り返り未入力":              "No reflection",
+  "一致する日報はありません。":  "No matching reports.",
+  "まだ日報はありません。":      "No reports yet.",
+  "みんなの過去の日報を最大100件まで読み込みます。":
+                                "Load up to 100 past reports from everyone.",
+  "読み込みに失敗しました。もう一度お試しください。":
+                                "Failed to load. Please try again.",
+
+  // 日報: 削除確認 / メッセージ
+  "{date}の日報を削除しますか？":"Delete the report for {date}?",
+  "{date}の日報":                "{date} daily report",
+  "日報を削除しました。":        "Report deleted.",
+  "日報を削除できませんでした。":"Couldn't delete the report.",
+
+  // 日報: 共有 / 画像
+  "共有できる内容がまだありません。":
+                                "Nothing to share yet.",
+  "画像の作成に失敗しました。":  "Failed to create the image.",
+  "画像を保存しました。ホーム画面の写真ウィジェットに置けます。":
+                                "Image saved — drop it into your home-screen photo widget.",
+  "この環境ではコピーに非対応です。保存をご利用ください。":
+                                "Clipboard isn't supported here. Please save instead.",
+  "画像をクリップボードにコピーしました。":
+                                "Image copied to clipboard.",
+  "コピーに失敗しました。保存をご利用ください。":
+                                "Copy failed. Please save instead.",
+  "（まだありません）":          "(nothing yet)",
+  "（無題）":                    "(untitled)",
+
+  // 日報: チェックリストプレビュー
+  "+{count}件":                  "+{count} more",
+  "(空)":                        "(empty)",
+
+  // 日報: 詳細モーダル
+  "本文はまだ書かれていません。":"Nothing written yet.",
+  "この日のデータ":              "This day's data",
+  "学習時間":                    "Study time",
+  "commit":                      "commits",
+  "記録":                        "Logs",
+  "この日の学習ログはありません。":
+                                "No study logs for this day.",
+  "他のメンバーの学習データはここでは表示されません。":
+                                "Other members' study data isn't shown here.",
+
   // === プロフィール ===
   "決意":                       "Resolve",
   "決意入力":                   "Edit resolve",

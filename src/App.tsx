@@ -7632,17 +7632,26 @@ function App() {
       .filter((item) => item.text.trim());
     const reflection = (dailyReflectionDraft || selectedDailyReport?.reflection || "").trim();
     if (planItems.length === 0 && !reflection) {
-      setDailyMessage("共有できる内容がまだありません。");
+      setDailyMessage(t("共有できる内容がまだありません。"));
       return;
     }
     try {
-      const dateLabel = formatDailyDate(selectedDailyDate);
+      const dateLabel = formatDailyDate(selectedDailyDate, language);
       const blob = await createDailyReportImageBlob({
         dateLabel,
         authorName: selectedDailyReport?.userName || playerName || "Developer",
         streakDays: dailyReportStreak,
         planItems,
         reflection,
+        labels: {
+          kicker: "DAILY REPORT",
+          planTitle: t("今日やること"),
+          reflectionTitle: t("振り返り"),
+          emptyPlaceholder: t("（まだありません）"),
+          untitled: t("（無題）"),
+          streakSuffix: (days) => t("{count}日連続", { count: days }),
+          shareTitle: (label) => t("{date}の日報", { date: label }),
+        },
       });
       const filename = dailyShareFilename(dateLabel);
       const file = new File([blob], filename, { type: "image/png" });
@@ -7652,7 +7661,7 @@ function App() {
       // モバイル等 (ファイル共有対応) は従来どおりネイティブ共有シート。
       if (nav.share && nav.canShare && nav.canShare({ files: [file] })) {
         try {
-          await nav.share({ files: [file], title: `${dateLabel}の日報` });
+          await nav.share({ files: [file], title: t("{date}の日報", { date: dateLabel }) });
           setDailyMessage("");
           return;
         } catch (err) {
@@ -7664,7 +7673,7 @@ function App() {
       setDailySharePreview({ url: URL.createObjectURL(blob), blob, filename });
       setDailyMessage("");
     } catch {
-      setDailyMessage("画像の作成に失敗しました。");
+      setDailyMessage(t("画像の作成に失敗しました。"));
     }
   };
 
@@ -7683,7 +7692,7 @@ function App() {
     document.body.appendChild(a);
     a.click();
     a.remove();
-    setDailyMessage("画像を保存しました。ホーム画面の写真ウィジェットに置けます。");
+    setDailyMessage(t("画像を保存しました。ホーム画面の写真ウィジェットに置けます。"));
   };
 
   const handleCopyDailyShareImage = async () => {
@@ -7692,16 +7701,16 @@ function App() {
       clipboard?: { write?: (items: ClipboardItem[]) => Promise<void> };
     };
     if (typeof ClipboardItem === "undefined" || !clip.clipboard?.write) {
-      setDailyMessage("この環境ではコピーに非対応です。保存をご利用ください。");
+      setDailyMessage(t("この環境ではコピーに非対応です。保存をご利用ください。"));
       return;
     }
     try {
       await clip.clipboard.write([
         new ClipboardItem({ "image/png": dailySharePreview.blob }),
       ]);
-      setDailyMessage("画像をクリップボードにコピーしました。");
+      setDailyMessage(t("画像をクリップボードにコピーしました。"));
     } catch {
-      setDailyMessage("コピーに失敗しました。保存をご利用ください。");
+      setDailyMessage(t("コピーに失敗しました。保存をご利用ください。"));
     }
   };
   // Plan items の完了率 (進捗バー用)
@@ -7781,7 +7790,8 @@ function App() {
     const matchesDate = !dailyHistoryDateFilter || report.date === dailyHistoryDateFilter;
     const searchableText = [
       report.date,
-      formatDailyDate(report.date),
+      formatDailyDate(report.date, "ja"),
+      formatDailyDate(report.date, "en"),
       report.plan,
       report.reflection,
       report.userName || "",
@@ -8938,7 +8948,7 @@ function App() {
       setSharedDailyDisplayLimit(SHARED_DAILY_PAGE_SIZE);
     } catch (error) {
       console.info("Team Daily fetch failed.", error);
-      setSharedDailyLoadError("読み込みに失敗しました。もう一度お試しください。");
+      setSharedDailyLoadError(t("読み込みに失敗しました。もう一度お試しください。"));
     } finally {
       setIsLoadingSharedDaily(false);
     }
@@ -8949,7 +8959,9 @@ function App() {
       return;
     }
 
-    const isConfirmed = window.confirm(`${formatDailyDate(report.date)}の日報を削除しますか？`);
+    const isConfirmed = window.confirm(
+      t("{date}の日報を削除しますか？", { date: formatDailyDate(report.date, language) }),
+    );
     if (!isConfirmed) {
       return;
     }
@@ -8963,12 +8975,12 @@ function App() {
     if (selectedDailyDate === report.date) {
       setDailyPlanItemsDraft([]);
       setDailyReflectionDraft("");
-      setDailyMessage("日報を削除しました。");
+      setDailyMessage(t("日報を削除しました。"));
     }
 
     void deleteDoc(doc(db, "dailyReports", report.id)).catch((error) => {
       console.info("Daily report delete skipped.", error);
-      setDailyMessage("日報を削除できませんでした。");
+      setDailyMessage(t("日報を削除できませんでした。"));
     });
   };
 
@@ -9164,7 +9176,7 @@ function App() {
   const handleCarryOverUnfinished = () => {
     const candidates = getCarriedOverItems(dailyReports, selectedDailyDate);
     if (candidates.length === 0) {
-      showToast("持ち越せる未完了タスクはありません", { kind: "info" });
+      showToast(t("持ち越せる未完了タスクはありません"), { kind: "info" });
       return;
     }
     const existingTexts = new Set(
@@ -9174,11 +9186,11 @@ function App() {
       (item) => !existingTexts.has(item.text.trim()),
     );
     if (newItems.length === 0) {
-      showToast("未完了タスクはすでに含まれています", { kind: "info" });
+      showToast(t("未完了タスクはすでに含まれています"), { kind: "info" });
       return;
     }
     setDailyPlanItemsDraft((prev) => [...prev, ...newItems]);
-    showToast(`${newItems.length}件の未完了タスクを追加しました`, { kind: "success" });
+    showToast(t("{count}件の未完了タスクを追加しました", { count: newItems.length }), { kind: "success" });
   };
 
   /* 昨日 (= 選択日の前日) の plan items 全部を today に複製。
@@ -9189,7 +9201,7 @@ function App() {
       .filter((report) => report.date && report.date < selectedDailyDate)
       .sort((a, b) => b.date.localeCompare(a.date))[0];
     if (!prior) {
-      showToast("前日の計画が見つかりません", { kind: "info" });
+      showToast(t("前日の計画が見つかりません"), { kind: "info" });
       return;
     }
     const sourceItems =
@@ -9197,7 +9209,7 @@ function App() {
         ? prior.planItems
         : planItemsFromLegacyText(prior.plan || "");
     if (sourceItems.length === 0) {
-      showToast("前日の計画が空です", { kind: "info" });
+      showToast(t("前日の計画が空です"), { kind: "info" });
       return;
     }
     const existingTexts = new Set(
@@ -9208,11 +9220,11 @@ function App() {
       .filter((item) => !existingTexts.has(item.text.trim()))
       .map((item) => makePlanItem({ text: item.text, done: false }));
     if (newItems.length === 0) {
-      showToast("前日の計画はすでに含まれています", { kind: "info" });
+      showToast(t("前日の計画はすでに含まれています"), { kind: "info" });
       return;
     }
     setDailyPlanItemsDraft((prev) => [...prev, ...newItems]);
-    showToast(`${newItems.length}件を前日からコピーしました`, { kind: "success" });
+    showToast(t("{count}件を前日からコピーしました", { count: newItems.length }), { kind: "success" });
   };
 
   const handleDailyReportSectionSave = async (section: "plan" | "reflection") => {
@@ -9221,7 +9233,7 @@ function App() {
     }
 
     if (!canEditDailyReportDate(selectedDailyDate)) {
-      setDailyMessage("日報の編集は当日または1日前までです。");
+      setDailyMessage(t("日報の編集は当日または1日前までです。"));
       return;
     }
 
@@ -9239,14 +9251,14 @@ function App() {
       .filter((item) => item.text.length > 0);
     const planTextFromItems = derivePlanText(trimmedPlanItems);
     const reflectionText = dailyReflectionDraft.trim();
-    const sectionLabel = section === "plan" ? "今日やること" : "振り返り";
+    const sectionLabel = section === "plan" ? t("今日やること") : t("振り返り");
 
     if (section === "plan" && trimmedPlanItems.length === 0) {
-      setDailyMessage(`${sectionLabel}を入力してください。`);
+      setDailyMessage(t("{section}を入力してください。", { section: sectionLabel }));
       return;
     }
     if (section === "reflection" && !reflectionText) {
-      setDailyMessage(`${sectionLabel}を入力してください。`);
+      setDailyMessage(t("{section}を入力してください。", { section: sectionLabel }));
       return;
     }
 
@@ -9313,7 +9325,7 @@ function App() {
         persistDailyReports(currentUser.uid, userId, nextReports);
         return nextReports;
       });
-      setDailyMessage(`${sectionLabel}を下書き保存しました。共有はされていません。`);
+      setDailyMessage(t("{section}を下書き保存しました。共有はされていません。", { section: sectionLabel }));
       setIsSavingDailyReport(false);
       return;
     }
@@ -9338,7 +9350,7 @@ function App() {
         persistDailyReports(currentUser.uid, userId, nextReports);
         return nextReports;
       });
-      setDailyMessage(`${sectionLabel}を保存しました。`);
+      setDailyMessage(t("{section}を保存しました。", { section: sectionLabel }));
 
       // 日報報酬：当日の「今日やること」と「振り返り」を両方書き終えたら 50 Arc。
       // 1日1回・端末間で二重受領しないよう lastDailyReportRewardDate で gate する。
@@ -9358,7 +9370,7 @@ function App() {
       ) {
         setCoins((value) => value + 50);
         setLastDailyReportRewardDate(todayLocalKey);
-        showToast("+50 Arc 獲得 ✦ 今日やること & 振り返り を両方完了しました", {
+        showToast(t("+50 Arc 獲得 ✦ 今日やること & 振り返り を両方完了しました"), {
           kind: "success",
         });
       }
@@ -9376,8 +9388,8 @@ function App() {
       setDailyMessage(
         getFirestoreErrorMessage(
           error,
-          `${sectionLabel}をローカルに保存しました。クラウドへ再同期します。`,
-          `${sectionLabel}をクラウド保存する権限がまだ有効ではありません。ローカルには保存されています。`,
+          t("{section}をローカルに保存しました。クラウドへ再同期します。", { section: sectionLabel }),
+          t("{section}をクラウド保存する権限がまだ有効ではありません。ローカルには保存されています。", { section: sectionLabel }),
         ),
       );
     } finally {
@@ -15291,13 +15303,13 @@ function App() {
                 <div>
                   <p className="card-kicker">Daily Report</p>
                   <h2 id="daily-detail-modal-title">{displayName}</h2>
-                  <small>{formatDailyDate(report.date)}</small>
+                  <small>{formatDailyDate(report.date, language)}</small>
                 </div>
                 <button
                   type="button"
                   className="daily-detail-modal-close"
                   onClick={() => setExpandedDailyReport(null)}
-                  aria-label="閉じる"
+                  aria-label={t("閉じる")}
                 >
                   ×
                 </button>
@@ -15305,42 +15317,46 @@ function App() {
 
               {report.planItems && report.planItems.length > 0 ? (
                 <section className="daily-detail-modal-section">
-                  <h3>今日やること</h3>
-                  <PlanChecklistPreview items={report.planItems} />
+                  <h3>{t("今日やること")}</h3>
+                  <PlanChecklistPreview
+                    items={report.planItems}
+                    moreLabel={(count) => t("+{count}件", { count })}
+                    emptyItemText={t("(空)")}
+                  />
                 </section>
               ) : report.plan ? (
                 <section className="daily-detail-modal-section">
-                  <h3>今日やること</h3>
+                  <h3>{t("今日やること")}</h3>
                   <p>{renderTextWithMentions(report.plan, { lookup: dailyMentionLookup, keyPrefix: `plan-${report.id}` })}</p>
                 </section>
               ) : null}
 
               {report.reflection ? (
                 <section className="daily-detail-modal-section">
-                  <h3>振り返り</h3>
+                  <h3>{t("振り返り")}</h3>
                   <p>{renderTextWithMentions(report.reflection, { lookup: dailyMentionLookup, keyPrefix: `refl-${report.id}` })}</p>
                 </section>
               ) : null}
 
               {!report.plan && !report.reflection && !(report.planItems && report.planItems.length > 0) ? (
-                <p className="daily-detail-modal-empty">本文はまだ書かれていません。</p>
+                <p className="daily-detail-modal-empty">{t("本文はまだ書かれていません。")}</p>
               ) : null}
 
               {isMine ? (
                 <section className="daily-detail-modal-section">
-                  <h3>この日のデータ</h3>
+                  <h3>{t("この日のデータ")}</h3>
                   <div className="daily-detail-modal-metrics">
                     <div>
-                      <small>学習時間</small>
-                      <strong>{totalMinutes > 0 ? formatStudyTimeJa(totalMinutes) : "—"}</strong>
+                      <small>{t("学習時間")}</small>
+                      <strong>{totalMinutes > 0 ? formatStudyTimeJa(totalMinutes, language) : "—"}</strong>
                     </div>
                     <div>
-                      <small>commit</small>
+                      <small>{t("commit")}</small>
                       <strong>{commitCount > 0 ? commitCount : "—"}</strong>
                     </div>
                     <div>
-                      <small>記録</small>
-                      <strong>{logsForDay.length > 0 ? `${logsForDay.length}件` : "—"}</strong>
+                      <small>{t("記録")}</small>
+                      <strong>{logsForDay.length > 0 ? t("{count}件", { count: logsForDay.length }) : "—"}</strong>
                     </div>
                   </div>
                   {logsForDay.length > 0 ? (
@@ -15354,12 +15370,12 @@ function App() {
                       ))}
                     </ul>
                   ) : (
-                    <p className="daily-detail-modal-empty">この日の学習ログはありません。</p>
+                    <p className="daily-detail-modal-empty">{t("この日の学習ログはありません。")}</p>
                   )}
                 </section>
               ) : (
                 <p className="daily-detail-modal-empty">
-                  他のメンバーの学習データはここでは表示されません。
+                  {t("他のメンバーの学習データはここでは表示されません。")}
                 </p>
               )}
             </section>
@@ -17549,12 +17565,12 @@ function App() {
             <div className="daily-editor-head">
               <div>
                 <p className="card-kicker">Daily Report</p>
-                <h1 className="daily-editor-title">日報</h1>
+                <h1 className="daily-editor-title">{t("日報")}</h1>
                 {/* 連続記録ストリーク。1日以上連続なら表示。0日なら出さない
                     (新規ユーザーへのプレッシャーを抑制)。 */}
                 {dailyReportStreak > 0 ? (
-                  <p className="daily-streak-badge" aria-label={`${dailyReportStreak}日連続で日報を書いています`}>
-                    🔥 {dailyReportStreak}日連続
+                  <p className="daily-streak-badge" aria-label={t("{count}日連続で日報を書いています", { count: dailyReportStreak })}>
+                    🔥 {t("{count}日連続", { count: dailyReportStreak })}
                   </p>
                 ) : null}
               </div>
@@ -17697,7 +17713,7 @@ function App() {
                   >
                     <div className="daily-plan-progress-meta">
                       <span>
-                        {planProgress.done}/{planProgress.total} 完了
+                        {t("{done}/{total} 完了", { done: planProgress.done, total: planProgress.total })}
                       </span>
                       <strong>{Math.round(planProgress.ratio * 100)}%</strong>
                     </div>
@@ -17778,7 +17794,7 @@ function App() {
                             onClick={() => toggleRecap(item.id)}
                             disabled={!canEditSelectedDailyReport}
                             aria-pressed={item.done}
-                            aria-label={`${item.text}${item.done ? " (完了)" : ""}`}
+                            aria-label={item.done ? t("{text} (完了)", { text: item.text }) : item.text}
                           >
                             <span
                               className={`reflection-recap-box${item.done ? " is-checked" : ""}`}
@@ -17888,7 +17904,7 @@ function App() {
                   >
                     <button type="button" onClick={() => handleDailyDateChange(report.date)}>
                       <strong>
-                        {formatDailyDate(report.date)}
+                        {formatDailyDate(report.date, language)}
                         {report.isDraft ? (
                           <span className="daily-history-badge" aria-label={t("下書き")}>
                             {t("下書き")}
@@ -17953,7 +17969,7 @@ function App() {
                           type="button"
                           className="daily-shared-card-trigger"
                           onClick={() => setExpandedDailyReport(report)}
-                          aria-label={t("{name}の{date}の日報を開く", { name: displayName, date: formatDailyDate(report.date) })}
+                          aria-label={t("{name}の{date}の日報を開く", { name: displayName, date: formatDailyDate(report.date, language) })}
                         >
                           <div>
                             {(() => {
@@ -17971,7 +17987,7 @@ function App() {
                             })()}
                             <span>
                               <strong>{displayName}</strong>
-                              <small>{formatDailyDate(report.date)}</small>
+                              <small>{formatDailyDate(report.date, language)}</small>
                             </span>
                           </div>
                           {report.planItems && report.planItems.length > 0 ? (
@@ -17981,6 +17997,8 @@ function App() {
                                 <PlanChecklistPreview
                                   items={report.planItems}
                                   maxRows={4}
+                                  moreLabel={(count) => t("+{count}件", { count })}
+                                  emptyItemText={t("(空)")}
                                 />
                               </span>
                             </p>
