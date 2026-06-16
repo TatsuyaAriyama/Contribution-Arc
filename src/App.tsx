@@ -10377,12 +10377,15 @@ function App() {
   };
 
 
-  const handleDeterminationSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const nextDetermination = draftDetermination.trim();
+  /* 「決意」の自動保存。保存ボタンを廃止し、入力欄から focus が外れた
+     タイミング (onBlur) で呼ぶ。値が既存と同じなら no-op。 */
+  const handleDeterminationSave = (rawText?: string) => {
+    const sourceText = typeof rawText === "string" ? rawText : draftDetermination;
+    const nextDetermination = sourceText.trim();
+    if (nextDetermination === determination.trim()) return;
     const accountScope = getAccountStorageScope(currentUser.uid, userId);
     setDetermination(nextDetermination);
+    setDraftDetermination(nextDetermination);
     safeSetLocalStorage(getAccountStorageKey(accountScope, "determination"), nextDetermination);
     if (userId) {
       void setDoc(
@@ -12244,17 +12247,24 @@ function App() {
           )
         ) : (
           // プロフィール画面では決意をその場で編集できるようにする。
-          // 単体の決意カードは廃止し、ステータスカード内に集約。
-          <form className="determination-form" onSubmit={handleDeterminationSubmit}>
-            <textarea
-              value={draftDetermination}
-              onChange={(event) => setDraftDetermination(event.target.value)}
-              rows={3}
-              placeholder="今の決意を一行で書いておこう"
-              aria-label="決意入力"
-            />
-            <button type="submit">保存</button>
-          </form>
+          // コンパクト 1 行 input + onBlur / Enter での自動保存。
+          // 保存ボタンは廃止 (フォーカスが外れた瞬間に確定)。
+          <input
+            type="text"
+            className="determination-inline"
+            value={draftDetermination}
+            onChange={(event) => setDraftDetermination(event.target.value)}
+            onBlur={() => handleDeterminationSave()}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                event.currentTarget.blur(); // blur が走り handleDeterminationSave が呼ばれる
+              }
+            }}
+            placeholder="今の決意を一行で書いておこう"
+            aria-label="決意入力"
+            maxLength={140}
+          />
         )}
       </div>
     </article>
