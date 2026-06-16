@@ -37532,6 +37532,184 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   font-weight: 700;
 }
 
+/* ===============================================================
+   GoalPickerModal — 目標 (志望校 / 資格) 選択モーダル
+   nondo 語彙: ink hairline カード + 3 タブ pill + 検索 input + 一覧
+   モバイル前提だが PC でも動くサイズに clamp する。
+   =============================================================== */
+.goal-picker-modal {
+  width: min(560px, 96vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+}
+.goal-picker-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.goal-picker-head h2 {
+  margin: 4px 0 0;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+.goal-picker-close {
+  width: 34px;
+  height: 34px;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.goal-picker-tabs {
+  display: inline-flex;
+  align-self: flex-start;
+  gap: 4px;
+  padding: 4px;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: var(--surface);
+}
+.goal-picker-tab {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: -0.005em;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.goal-picker-tab.is-active {
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+}
+.goal-picker-search {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  outline: none;
+}
+.goal-picker-search:focus {
+  border-color: var(--ink);
+}
+.goal-picker-meta {
+  margin: -4px 0 -4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.goal-picker-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 200px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.goal-picker-empty {
+  padding: 20px 14px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+.goal-picker-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.goal-picker-item:hover {
+  border-color: var(--ink);
+}
+.goal-picker-item.is-active {
+  border-color: var(--ink);
+  background: rgba(var(--ink-rgb), 0.04);
+}
+.goal-picker-item-name {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.005em;
+}
+.goal-picker-item-aliases {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.goal-picker-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-top: 4px;
+}
+.goal-picker-clear {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  padding: 6px 0;
+}
+.goal-picker-clear:hover {
+  color: var(--accent-warm);
+}
+.goal-picker-done {
+  min-height: 38px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+/* プロフィールメニュー: 目標エントリのサブテキスト (選択中の目標名) */
+.profile-menu-sub {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-top: 2px;
+  letter-spacing: 0;
+}
+
 /* === Phase 5: keyframes 分離。dark.css はテーマ廃止に伴い無効化 === */
 @import "./styles/animations.css";
 /* @import "./styles/dark.css"; — ライトモード固定のため未使用 */

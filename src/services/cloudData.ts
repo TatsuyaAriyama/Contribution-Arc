@@ -77,6 +77,8 @@ export type UserProgressRecord = {
   focusStayMinutesSnapshot?: number;
   streak: number;
   determination: string;
+  goalId?: string;
+  goalCustomName?: string;
   following: string[];
   followers?: string[];
   unlockedCharacters: string[];
@@ -476,6 +478,9 @@ export async function saveUserProgressToCloud(db: Firestore, profile: UserProgre
       : {}),
     streak: profile.streak,
     determination: profile.determination,
+    // 目標 (空文字は cloud 側の既存値を消すため、未指定 = 空文字を書く)
+    goalId: typeof profile.goalId === "string" ? profile.goalId : "",
+    goalCustomName: typeof profile.goalCustomName === "string" ? profile.goalCustomName : "",
     following: profile.following,
     ...(profile.followers && profile.followers.length > 0 ? { followers: profile.followers } : {}),
     unlockedCharacters: profile.unlockedCharacters,

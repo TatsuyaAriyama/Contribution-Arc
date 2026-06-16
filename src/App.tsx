@@ -205,6 +205,8 @@ import { showToast } from "./services/toast";
 import { useTranslation } from "./i18n/LanguageContext";
 import { CharCountRing } from "./components/CharCountRing";
 import { ContributionArcLogo } from "./components/ContributionArcLogo";
+import { GoalPickerModal } from "./components/GoalPickerModal";
+import { findGoalById } from "./data/goalCatalog";
 import {
   renderDefaultCharacterSvg,
   renderMorphCubeSvg,
@@ -335,6 +337,10 @@ type UserProfile = {
   following: string[];
   followers: string[];
   determination?: string;
+  /** 目標 (志望校 or 資格)。data/goalCatalog の id を保存。 */
+  goalId?: string;
+  /** 互換用: 一覧に無い自由記述目標を保存する場合に使う。 */
+  goalCustomName?: string;
   characterColor?: string;
   /* Visual silhouette of the user's actor sprite. Optional for
      backward compatibility — undefined means the original
@@ -1476,6 +1482,8 @@ function normalizeUserProfile(uid: string, data: Partial<UserProfile>): UserProf
     following: Array.isArray(data.following) ? data.following : [],
     followers: Array.isArray(data.followers) ? data.followers : [],
     determination: data.determination || "",
+    goalId: typeof data.goalId === "string" ? data.goalId : "",
+    goalCustomName: typeof data.goalCustomName === "string" ? data.goalCustomName : "",
     characterColor: getSafeCharacterColor(data.characterColor),
     characterShape: getSafeCharacterShape(data.characterShape),
     ownedCharacterShapes: Array.isArray(data.ownedCharacterShapes)
@@ -4122,6 +4130,11 @@ function App() {
   const [openMonumentId, setOpenMonumentId] = useState<string | null>(null);
   const [determination, setDetermination] = useState("");
   const [draftDetermination, setDraftDetermination] = useState("");
+  /* 目標 (志望校 or 資格)。決意とは別軸で「ゴール」を 1 つだけ持つ。
+     goalId は data/goalCatalog の id。自由記述派には goalCustomName。 */
+  const [goalId, setGoalId] = useState("");
+  const [goalCustomName, setGoalCustomName] = useState("");
+  const [isGoalPickerOpen, setIsGoalPickerOpen] = useState(false);
   // Flips true only once the account-load `getDoc` has settled (any
   // outcome). The periodic profile-sync effect gates its cloud write on
   // this so the *pre-hydration* profile state — which, on a returning
@@ -4948,6 +4961,8 @@ function App() {
         setFollowing(profile.following);
         setDetermination(profile.determination || savedDetermination || "");
         setDraftDetermination(profile.determination || savedDetermination || "");
+        setGoalId(profile.goalId || "");
+        setGoalCustomName(profile.goalCustomName || "");
         setPlayerAvatar(profile.photoURL || savedAvatar || currentUser.photoURL || "");
         /* hydrate 競合対策: ローカル選択時刻 > cloud lastSyncedAt なら、
            cloud デバウンス未完了の最新ローカル選択を優先する。
@@ -9519,6 +9534,8 @@ function App() {
       focusStayMinutesSnapshot,
       streak: studyStreak,
       determination,
+      goalId,
+      goalCustomName,
       following: [...following].sort(),
       followers: [] as string[],
       unlockedCharacters: [characterOptions[0].id],
@@ -17200,6 +17217,24 @@ function App() {
           という報告があったため。コードはコミット履歴に残るので
           ここでは復活させない。 */}
 
+      {/* 目標 (志望校 / 資格) 選択モーダル。プロフィールメニューから開く。 */}
+      {isGoalPickerOpen ? (
+        <GoalPickerModal
+          currentGoalId={goalId}
+          onSelect={(id) => {
+            setGoalId(id);
+            setGoalCustomName("");
+            setIsGoalPickerOpen(false);
+          }}
+          onClear={() => {
+            setGoalId("");
+            setGoalCustomName("");
+            setIsGoalPickerOpen(false);
+          }}
+          onClose={() => setIsGoalPickerOpen(false)}
+        />
+      ) : null}
+
       {/* お知らせ一覧モーダル。ホームには pinned + 最新 1 件だけ出して
           いるので、過去のお知らせを全部見たい時はここで一覧表示する。 */}
       {isAnnouncementsModalOpen ? (
@@ -18894,6 +18929,27 @@ function App() {
                       </svg>
                     </span>
                     <span className="profile-menu-label">お知らせ</span>
+                    <span className="profile-menu-arrow" aria-hidden="true">›</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="profile-menu-item"
+                    onClick={() => setIsGoalPickerOpen(true)}
+                  >
+                    <span className="profile-menu-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="9" />
+                        <circle cx="12" cy="12" r="5" />
+                        <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+                      </svg>
+                    </span>
+                    <span className="profile-menu-label">
+                      目標
+                      {(() => {
+                        const g = findGoalById(goalId);
+                        return g ? <small className="profile-menu-sub">{g.name}</small> : null;
+                      })()}
+                    </span>
                     <span className="profile-menu-arrow" aria-hidden="true">›</span>
                   </button>
                   <button
