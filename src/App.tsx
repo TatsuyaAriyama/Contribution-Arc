@@ -18964,9 +18964,12 @@ function App() {
                     onClick={() => setIsAnnouncementsModalOpen(true)}
                   >
                     <span className="profile-menu-icon" aria-hidden="true">
+                      {/* お知らせ = ベル。旧アイコンは「家」に見える
+                          shape だったので、誰でも一目で分かるベル形に
+                          差し替え。 */}
                       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M3 11.5 17 4v16L3 12.5z" />
-                        <path d="M7 12.5v4l3 1.5v-4" />
+                        <path d="M6 16V10a6 6 0 1 1 12 0v6l1.5 2H4.5z" />
+                        <path d="M10 20a2 2 0 0 0 4 0" />
                       </svg>
                     </span>
                     <span className="profile-menu-label">お知らせ</span>
@@ -18999,10 +19002,14 @@ function App() {
                     onClick={() => setIsSearchOpen(true)}
                   >
                     <span className="profile-menu-icon" aria-hidden="true">
+                      {/* フレンド = 2 人並びのシルエット。旧アイコンは
+                          「太陽 + 虫眼鏡」風で何のメニューか伝わって
+                          いなかったので、誰でも分かる二人組に差し替え。 */}
                       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="10" cy="13" r="3.4" />
-                        <path d="M10 9V6.5M7 9.6 5.3 8.5M13 9.6l1.7-1.1M7 16.4l-1.7 1.1M13 16.4l1.7 1.1" />
-                        <path d="M20 21l-3-3" />
+                        <circle cx="9" cy="8" r="3" />
+                        <circle cx="17" cy="9" r="2.4" />
+                        <path d="M3 19c0-3 2.7-5 6-5s6 2 6 5" />
+                        <path d="M14.6 15c0.8-0.7 1.7-1 2.9-1c2.3 0 3.7 1.5 3.7 3.4" />
                       </svg>
                     </span>
                     <span className="profile-menu-label">フレンド・検索</span>
