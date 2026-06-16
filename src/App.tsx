@@ -18904,44 +18904,10 @@ function App() {
                   (new Date().getDay() + 6) % 7,
                 )}
 
-                {/* Quick actions row — profile-screen specific. Lets
-                    the user jump straight to common follow-ups
-                    (edit settings, copy profile share link, shop)
-                    without scrolling the whole modal stack. */}
-                <div className="profile-quick-actions" role="group" aria-label="クイックアクション">
-                  <button
-                    type="button"
-                    className="profile-quick-action"
-                    onClick={handleSettingsOpen}
-                  >
-                    プロフィールを編集
-                  </button>
-                  <button
-                    type="button"
-                    className="profile-quick-action"
-                    onClick={() => setCurrentView("shop")}
-                  >
-                    ショップ
-                  </button>
-                  {userId ? (
-                    <button
-                      type="button"
-                      className="profile-quick-action"
-                      onClick={() => {
-                        const baseUrl = `${window.location.origin}${window.location.pathname}`;
-                        const url = `${baseUrl}?u=${encodeURIComponent(userId)}`;
-                        try {
-                          void navigator.clipboard.writeText(url);
-                          showToast("プロフィールリンクをコピーしました", { kind: "success" });
-                        } catch {
-                          window.prompt("プロフィールリンク（コピーしてください）", url);
-                        }
-                      }}
-                    >
-                      プロフィールリンクをコピー
-                    </button>
-                  ) : null}
-                </div>
+                {/* クイックアクション (プロフィールを編集 / ショップ /
+                    プロフィールリンクをコピー) は要望により撤去。
+                    同等の導線は下の Menu と右上のリンクコピー
+                    (profile-nondo-corner-btn) から確保している。 */}
 
                 {/* シンプルな投稿 + 日報アプリへの方向転換に伴い、トップバーの
                     管理 / アトリエ / ショップ / フレンド / 検索 / 通知 / 設定
