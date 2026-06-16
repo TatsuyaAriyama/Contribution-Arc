@@ -37710,6 +37710,34 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   letter-spacing: 0;
 }
 
+/* 決意 1 行入力。textarea → input + onBlur 自動保存に変更したので
+   高さを 1 行に抑え、保存ボタンが消えた分の余白も削る。 */
+.determination-inline {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  outline: none;
+  transition: border-color 0.14s ease, background 0.14s ease;
+}
+.determination-inline:hover {
+  border-color: var(--line-strong);
+}
+.determination-inline:focus {
+  border-color: var(--ink);
+  background: var(--surface);
+}
+.determination-inline::placeholder {
+  color: var(--muted);
+  font-weight: 600;
+}
+
 /* === Phase 5: keyframes 分離。dark.css はテーマ廃止に伴い無効化 === */
 @import "./styles/animations.css";
 /* @import "./styles/dark.css"; — ライトモード固定のため未使用 */
