@@ -12221,14 +12221,20 @@ function App() {
           error && typeof error === "object" && "message" in error
             ? String((error as { message?: unknown }).message || "")
             : "";
+        const name =
+          error && typeof error === "object" && "name" in error
+            ? String((error as { name?: unknown }).name || "")
+            : "";
         /* デバッグ用に room 情報も詳細出力 — permission-denied の場合に
            createdBy / 自分の uid / dev 判定がズレていないか確認できる。 */
-        console.warn("Workspace room delete failed.", {
+        console.error("Workspace room delete failed.", {
           code,
+          name,
           message,
           roomId,
           createdBy: room.createdBy,
           currentUid: currentUser.uid,
+          currentEmail: currentUser.email,
           isDeveloperAccount: isDevTokenFallbackTryable,
         });
         deletedWorkspaceRoomIdsRef.current.delete(roomId);
@@ -12242,7 +12248,9 @@ function App() {
         } catch {
           /* ignore */
         }
-        /* code が分かるなら toast 内に出す (ユーザーが共有しやすい)。 */
+        /* 全ての分岐で root cause を toast に出して切り分けやすくする。
+           code が無いケース (= 非 FirebaseError) も name / 先頭の
+           message で診断できる。 */
         if (code === "permission-denied") {
           showToast(
             t("解体できませんでした (permission-denied)。この部屋は別アカウントで作成された可能性があります。"),
@@ -12251,9 +12259,8 @@ function App() {
         } else if (code) {
           showToast(t("解体できませんでした ({code})", { code }), { kind: "error" });
         } else {
-          showToast(t("作業部屋を解体できませんでした。時間をおいて再度お試しください。"), {
-            kind: "error",
-          });
+          const detail = (name || message || "unknown").slice(0, 60);
+          showToast(t("解体できませんでした ({code})", { code: detail }), { kind: "error" });
         }
       }
     })();
