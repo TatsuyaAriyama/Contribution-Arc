@@ -12252,8 +12252,19 @@ function App() {
            code が無いケース (= 非 FirebaseError) も name / 先頭の
            message で診断できる。 */
         if (code === "permission-denied") {
+          /* 一時診断: 自分のメール / 作成者 uid を toast に出して何が
+             ズレているか即座に判別する。 ari.initx@gmail.com で
+             ログイン中のはずなのに permission-denied = token の email
+             不一致 (大小文字 / プロバイダ差異) が最有力。 */
           showToast(
-            t("解体できませんでした (permission-denied)。この部屋は別アカウントで作成された可能性があります。"),
+            t(
+              "解体不可 (permission-denied) | login={email} / createdBy={creator} / uid={uid}",
+              {
+                email: currentUser.email || "(none)",
+                creator: room.createdBy || "(none)",
+                uid: currentUser.uid.slice(0, 8),
+              },
+            ),
             { kind: "error" },
           );
         } else if (code) {
