@@ -12198,8 +12198,12 @@ function App() {
        から外し、ローカル state も復元する (情報を失わない)。これまでは
        deleteDoc が rules や network で失敗しても無言で握りつぶしていた
        ため、リロード後に Firestore から復活して「何度解体しても残る」
-       症状を生んでいた。 */
+       症状を生んでいた。
+       error code を toast に含めて、permission-denied / unavailable など
+       根本原因を即座に切り分けられるようにする (旧コードでは console
+       にしか出していなかった)。 */
     void (async () => {
+      const isDevTokenFallbackTryable = isDeveloperAccount;
       try {
         await deleteDoc(doc(db, workspaceRoomsCollectionName, roomId));
         /* 旧コレクション (workspaceRooms) にも残骸があれば消す。
@@ -12209,8 +12213,24 @@ function App() {
         });
         showToast(t("作業部屋を解体しました"), { kind: "success" });
       } catch (error) {
-        console.warn("Workspace room delete failed.", error);
-        /* 解体できなかった ─ blocklist から外して state を元に戻す。 */
+        const code =
+          error && typeof error === "object" && "code" in error
+            ? String((error as { code?: unknown }).code || "")
+            : "";
+        const message =
+          error && typeof error === "object" && "message" in error
+            ? String((error as { message?: unknown }).message || "")
+            : "";
+        /* デバッグ用に room 情報も詳細出力 — permission-denied の場合に
+           createdBy / 自分の uid / dev 判定がズレていないか確認できる。 */
+        console.warn("Workspace room delete failed.", {
+          code,
+          message,
+          roomId,
+          createdBy: room.createdBy,
+          currentUid: currentUser.uid,
+          isDeveloperAccount: isDevTokenFallbackTryable,
+        });
         deletedWorkspaceRoomIdsRef.current.delete(roomId);
         setCustomRooms((current) =>
           current.some((item) => item.id === roomId) ? current : [...current, room],
@@ -12222,9 +12242,19 @@ function App() {
         } catch {
           /* ignore */
         }
-        showToast(t("作業部屋を解体できませんでした。時間をおいて再度お試しください。"), {
-          kind: "error",
-        });
+        /* code が分かるなら toast 内に出す (ユーザーが共有しやすい)。 */
+        if (code === "permission-denied") {
+          showToast(
+            t("解体できませんでした (permission-denied)。この部屋は別アカウントで作成された可能性があります。"),
+            { kind: "error" },
+          );
+        } else if (code) {
+          showToast(t("解体できませんでした ({code})", { code }), { kind: "error" });
+        } else {
+          showToast(t("作業部屋を解体できませんでした。時間をおいて再度お試しください。"), {
+            kind: "error",
+          });
+        }
       }
     })();
   };

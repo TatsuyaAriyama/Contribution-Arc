@@ -575,6 +575,9 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "解体 (Dev)":                  "Disband (Dev)",
   "作業部屋を解体できませんでした。時間をおいて再度お試しください。":
                                 "Couldn't disband the workroom. Please try again in a moment.",
+  "解体できませんでした (permission-denied)。この部屋は別アカウントで作成された可能性があります。":
+                                "Couldn't disband (permission-denied). This room may have been created by another account.",
+  "解体できませんでした ({code})":"Couldn't disband ({code})",
   "作業部屋 — 同じ時間に手を動かす場所":
                                 "Workroom — share quiet focus time",
   "通話なしで、気配だけを共有しながら集中作業ができる空間です。":
