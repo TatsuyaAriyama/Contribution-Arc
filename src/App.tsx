@@ -19623,7 +19623,7 @@ function App() {
                         <path d="M10 20a2 2 0 0 0 4 0" />
                       </svg>
                     </span>
-                    <span className="profile-menu-label">お知らせ</span>
+                    <span className="profile-menu-label">{t("お知らせ")}</span>
                     <span className="profile-menu-arrow" aria-hidden="true">›</span>
                   </button>
                   <button
@@ -19639,7 +19639,7 @@ function App() {
                       </svg>
                     </span>
                     <span className="profile-menu-label">
-                      目標
+                      {t("目標")}
                       {(() => {
                         const g = findGoalById(goalId);
                         return g ? <small className="profile-menu-sub">{g.name}</small> : null;
@@ -19663,7 +19663,7 @@ function App() {
                         <path d="M14.6 15c0.8-0.7 1.7-1 2.9-1c2.3 0 3.7 1.5 3.7 3.4" />
                       </svg>
                     </span>
-                    <span className="profile-menu-label">フレンド・検索</span>
+                    <span className="profile-menu-label">{t("フレンド・検索")}</span>
                     <span className="profile-menu-arrow" aria-hidden="true">›</span>
                   </button>
                   {/* 「通知」「作業部屋」エントリは要望により撤去。
@@ -19681,7 +19681,7 @@ function App() {
                         <path d="M9 9V6a3 3 0 0 1 6 0v3" />
                       </svg>
                     </span>
-                    <span className="profile-menu-label">ショップ</span>
+                    <span className="profile-menu-label">{t("ショップ")}</span>
                     <span className="profile-menu-arrow" aria-hidden="true">›</span>
                   </button>
                   {currentOrganization?.ownerUid === currentUser.uid ? (
@@ -19698,7 +19698,7 @@ function App() {
                           <rect x="13" y="13" width="7" height="7" rx="1.5" />
                         </svg>
                       </span>
-                      <span className="profile-menu-label">管理ダッシュボード</span>
+                      <span className="profile-menu-label">{t("管理ダッシュボード")}</span>
                       <span className="profile-menu-arrow" aria-hidden="true">›</span>
                     </button>
                   ) : null}
@@ -19724,7 +19724,7 @@ function App() {
                         shape={playerCharacterShape}
                       />
                     </span>
-                    <span className="profile-menu-label">分身キャラクター</span>
+                    <span className="profile-menu-label">{t("分身キャラクター")}</span>
                     <span className="profile-menu-arrow" aria-hidden="true">›</span>
                   </button>
                   <button
@@ -19738,7 +19738,7 @@ function App() {
                         <path d="M19 12a7 7 0 0 0-.1-1.3l2-1.5-2-3.4-2.4.9a7 7 0 0 0-2.2-1.3L13.7 3h-3.4l-.6 2.4a7 7 0 0 0-2.2 1.3l-2.4-.9-2 3.4 2 1.5A7 7 0 0 0 5 12a7 7 0 0 0 .1 1.3l-2 1.5 2 3.4 2.4-.9a7 7 0 0 0 2.2 1.3l.6 2.4h3.4l.6-2.4a7 7 0 0 0 2.2-1.3l2.4.9 2-3.4-2-1.5A7 7 0 0 0 19 12z" />
                       </svg>
                     </span>
-                    <span className="profile-menu-label">設定</span>
+                    <span className="profile-menu-label">{t("設定")}</span>
                     <span className="profile-menu-arrow" aria-hidden="true">›</span>
                   </button>
                 </nav>
