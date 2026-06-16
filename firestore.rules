@@ -161,9 +161,20 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.name is string;
+      // Update rules split by role:
+      //  - Creator (or developer) can change anything except createdBy.
+      //  - Anyone else who is signed in can write the doc (needed for
+      //    presence/heartbeat: activeMembers / totalMinutes / history
+      //    are bumped by every member as they join, leave, walk, etc.),
+      //    but ONLY if the room name stays untouched. This means a
+      //    non-creator cannot rename someone else's room.
       allow update: if signedIn()
         && request.resource.data.createdBy == resource.data.createdBy
-        && request.resource.data.name is string;
+        && request.resource.data.name is string
+        && (
+          (resource.data.createdBy == request.auth.uid || isDeveloper())
+          || request.resource.data.name == resource.data.name
+        );
       // Developer can dismantle any room (moderation); otherwise only
       // the creator may delete.
       allow delete: if signedIn()

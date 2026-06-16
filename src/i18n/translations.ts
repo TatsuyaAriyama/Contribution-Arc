@@ -561,6 +561,14 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "作業部屋への招待":           "Workroom invite",
   "作業部屋を自動退室しました": "Auto-left your workroom",
   "作業部屋を解体しました":      "Workroom disbanded",
+  "Room名を入力してください。": "Please enter a room name.",
+  "作業部屋は 1 人につき 1 つまでです。既存の部屋 「{name}」 を解体してから作成してください。":
+                                "You can only create one workroom per person. Disband \"{name}\" first to create another.",
+  "1 人 1 部屋":                 "1 per user",
+  "1 人 1 部屋まで。既存の部屋を解体すると新しく作れます。":
+                                "Only one room per user. Disband the existing one to create another.",
+  "名前を変更できるのは作成者だけです。":
+                                "Only the room creator can rename it.",
   "入室中":                      "Inside",
   "開く":                        "Open",
   "ルーム一覧":                  "Rooms",

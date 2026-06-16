@@ -12022,7 +12022,22 @@ function App() {
     const roomName = newRoomName.trim();
     if (!roomName) {
       setRoomCreateState("offline");
-      setRoomCreateMessage("Room名を入力してください。");
+      setRoomCreateMessage(t("Room名を入力してください。"));
+      return;
+    }
+
+    /* 1 人 1 部屋ルール: 既に自分が作成した部屋がある場合は新規作成を拒否。
+       開発者は moderation 目的で複数所有可。 */
+    const myExistingRoom = allWorkspaceRooms.find(
+      (r) => r.createdBy === currentUser.uid,
+    );
+    if (myExistingRoom && !isDeveloperAccount) {
+      setRoomCreateState("offline");
+      setRoomCreateMessage(
+        t("作業部屋は 1 人につき 1 つまでです。既存の部屋 「{name}」 を解体してから作成してください。", {
+          name: myExistingRoom.name,
+        }),
+      );
       return;
     }
 
@@ -12082,6 +12097,13 @@ function App() {
   };
 
   const startRoomTitleEdit = (room: WorkspaceRoom) => {
+    /* 名前変更は作成者本人 (+ developer moderation) のみに制限。
+       UI 上でもボタン自体を隠しているが、念の為ハンドラ側でも防御。 */
+    if (!currentUser) return;
+    if (room.createdBy !== currentUser.uid && !isDeveloperAccount) {
+      showToast(t("名前を変更できるのは作成者だけです。"), { kind: "error" });
+      return;
+    }
     setEditingRoomId(room.id);
     setEditingRoomName(room.name);
   };
@@ -12100,6 +12122,11 @@ function App() {
 
     const target = customRooms.find((room) => room.id === targetId);
     if (!target || target.name === nextName) {
+      return;
+    }
+    /* save 経路でも作成者チェックを通す (UI を経由しない直接呼び出しの保険)。 */
+    if (currentUser && target.createdBy !== currentUser.uid && !isDeveloperAccount) {
+      showToast(t("名前を変更できるのは作成者だけです。"), { kind: "error" });
       return;
     }
 
@@ -19635,17 +19662,34 @@ function App() {
               <div className="workspace-room-strip" aria-label={t("作業部屋")}>
                 {/* モバイル専用ヘッダー：タイトル + "+ 部屋を作る"
                     トグル。PC 版では CSS で非表示。 */}
-                <div className="workspace-room-strip-header" aria-hidden="false">
-                  <h2 className="workspace-room-strip-title">{t("作業部屋")}</h2>
-                  <button
-                    type="button"
-                    className={`workspace-room-create-toggle${isRoomCreatorOpen ? " is-open" : ""}`}
-                    aria-expanded={isRoomCreatorOpen}
-                    onClick={() => setIsRoomCreatorOpen((open) => !open)}
-                  >
-                    {isRoomCreatorOpen ? t("閉じる") : `+ ${t("部屋を作る")}`}
-                  </button>
-                </div>
+                {(() => {
+                  const myOwnedRoom = allWorkspaceRooms.find(
+                    (r) => r.createdBy === currentUser.uid,
+                  );
+                  const canCreate = !myOwnedRoom || isDeveloperAccount;
+                  return (
+                    <div className="workspace-room-strip-header" aria-hidden="false">
+                      <h2 className="workspace-room-strip-title">{t("作業部屋")}</h2>
+                      {canCreate ? (
+                        <button
+                          type="button"
+                          className={`workspace-room-create-toggle${isRoomCreatorOpen ? " is-open" : ""}`}
+                          aria-expanded={isRoomCreatorOpen}
+                          onClick={() => setIsRoomCreatorOpen((open) => !open)}
+                        >
+                          {isRoomCreatorOpen ? t("閉じる") : `+ ${t("部屋を作る")}`}
+                        </button>
+                      ) : (
+                        <span
+                          className="workspace-room-create-locked"
+                          title={t("1 人 1 部屋まで。既存の部屋を解体すると新しく作れます。")}
+                        >
+                          {t("1 人 1 部屋")}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
                 <form
                   className={`workspace-room-create${isRoomCreatorOpen ? " is-open" : ""}`}
                   onSubmit={(event) => {
@@ -19888,13 +19932,18 @@ function App() {
                             </form>
                           ) : (
                             <>
-                              <button
-                                type="button"
-                                className="workspace-room-canvas-action"
-                                onClick={() => startRoomTitleEdit(selectedRoom)}
-                              >
-                                {t("名前変更")}
-                              </button>
+                              {/* 名前変更は作成者本人 (+ dev moderation) のみに
+                                  限定。他人が作った部屋を勝手にリネームできて
+                                  しまう問題を塞ぐ。 */}
+                              {isOwnRoom || isDeveloperAccount ? (
+                                <button
+                                  type="button"
+                                  className="workspace-room-canvas-action"
+                                  onClick={() => startRoomTitleEdit(selectedRoom)}
+                                >
+                                  {t("名前変更")}
+                                </button>
+                              ) : null}
                               {isOwnRoom || isDeveloperAccount ? (
                                 <button
                                   type="button"
@@ -19940,7 +19989,11 @@ function App() {
                       onPresetMessage={handleWorkspacePresetMessage}
                       bubbleMessage={workspaceBubble}
                       presetLog={presetLog}
-                      onRoomRename={() => startRoomTitleEdit(selectedRoom)}
+                      onRoomRename={
+                        selectedRoom.createdBy === currentUser.uid || isDeveloperAccount
+                          ? () => startRoomTitleEdit(selectedRoom)
+                          : undefined
+                      }
                       onRoomDelete={() => handleRoomDelete(selectedRoom.id)}
                       canDeleteRoom={selectedRoom.createdBy === currentUser.uid || isDeveloperAccount}
                       isPlayerWalking={isPlayerWalking}
