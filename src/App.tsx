@@ -8344,23 +8344,65 @@ function App() {
 
   /* ライブラリの手動並べ替え。並べ替えモード on の時、各カードの↑↓
      ボタンから呼ばれる。
-     - 現在表示中の sorted list を再現するため、現在のソート結果配列を
-       一度作って、その配列上で対象アイテムを上下に動かし、配列順を
-       order 値として全アイテムに振り直す
-     - sort mode が "custom" でない場合は自動で "custom" に切替
+     - 「視覚的に1つ上/下に動く」が期待値なので、現在画面に出ている
+       sort 順 (recent / total / name / custom) で並べてから index 操作する
+     - swap した結果の表示順を 1..N で order に再付与し、sort mode を
+       "custom" に切替 (= 今後はこの順序で固定)
      - cloud sync: 影響したアイテムだけ save (差分のみ書く) */
   const handleMoveLearningItem = (itemId: string, direction: "up" | "down") => {
     if (!currentUser) return;
     const live = learningItems.filter((item) => !item.archived);
-    /* sort 順を model 用に統一: 現在の sort mode に従って並べたら、
-       表示順 = 配列 index になるので index 操作で良い。 */
-    const baseSort = (a: LearningItem, b: LearningItem) => {
-      const ao = typeof a.order === "number" ? a.order : Number.MAX_SAFE_INTEGER;
-      const bo = typeof b.order === "number" ? b.order : Number.MAX_SAFE_INTEGER;
-      if (ao !== bo) return ao - bo;
-      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    /* 現在の表示と同じソート順を再構築する。並べ替え前から custom 以外で
+       見ていた場合、↑↓ は「画面上の隣」と入れ替わるのが直感的。 */
+    const totalsByItem = new Map<string, number>();
+    const lastLoggedByItem = new Map<string, number>();
+    const knownIds = new Set(live.map((item) => item.id));
+    const itemIdByLowerName = new Map<string, string>();
+    live.forEach((item) => {
+      const key = item.name.trim().toLowerCase();
+      if (key && !itemIdByLowerName.has(key)) itemIdByLowerName.set(key, item.id);
+    });
+    studyLogs.forEach((log) => {
+      const targetId =
+        log.learningItemId && knownIds.has(log.learningItemId)
+          ? log.learningItemId
+          : itemIdByLowerName.get((log.subject || "").trim().toLowerCase());
+      if (!targetId) return;
+      totalsByItem.set(targetId, (totalsByItem.get(targetId) || 0) + log.minutes);
+      const ts = new Date(log.createdAt).getTime();
+      if (Number.isFinite(ts)) {
+        const prevLast = lastLoggedByItem.get(targetId) || 0;
+        if (ts > prevLast) lastLoggedByItem.set(targetId, ts);
+      }
+    });
+    const compareForCurrentMode = (a: LearningItem, b: LearningItem) => {
+      if (learningSortMode === "custom") {
+        const ao = typeof a.order === "number" ? a.order : Number.MAX_SAFE_INTEGER;
+        const bo = typeof b.order === "number" ? b.order : Number.MAX_SAFE_INTEGER;
+        if (ao !== bo) return ao - bo;
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      }
+      if (learningSortMode === "name") {
+        const byName = a.name.localeCompare(b.name, "ja");
+        if (byName !== 0) return byName;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      if (learningSortMode === "total") {
+        const aMin = totalsByItem.get(a.id) || 0;
+        const bMin = totalsByItem.get(b.id) || 0;
+        if (aMin !== bMin) return bMin - aMin;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      // "recent" (default)
+      const aLast = lastLoggedByItem.get(a.id) || 0;
+      const bLast = lastLoggedByItem.get(b.id) || 0;
+      if (aLast !== bLast) return bLast - aLast;
+      const aMin = totalsByItem.get(a.id) || 0;
+      const bMin = totalsByItem.get(b.id) || 0;
+      if (aMin !== bMin) return bMin - aMin;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     };
-    const ordered = live.slice().sort(baseSort);
+    const ordered = live.slice().sort(compareForCurrentMode);
     const index = ordered.findIndex((item) => item.id === itemId);
     if (index < 0) return;
     const swapWith = direction === "up" ? index - 1 : index + 1;
@@ -8368,15 +8410,16 @@ function App() {
     const next = ordered.slice();
     [next[index], next[swapWith]] = [next[swapWith], next[index]];
     const nowIso = new Date().toISOString();
-    /* order を 1, 2, 3, ... で全件再付与 (ギャップを残すと将来また
-       中央挿入したい時に困らないよう 10, 20, 30 ... にしてもよいが、
-       連番でも実害なし)。 */
+    /* order を 1, 2, 3, ... で全件再付与 (現在の表示順をスナップショット
+       してから swap を適用した結果)。 */
     const updates = new Map<string, LearningItem>();
     next.forEach((item, i) => {
-      if (item.order !== i + 1) {
-        updates.set(item.id, { ...item, order: i + 1, updatedAt: nowIso });
+      const desired = i + 1;
+      if (item.order !== desired) {
+        updates.set(item.id, { ...item, order: desired, updatedAt: nowIso });
       }
     });
+    if (updates.size === 0) return;
     setLearningItems((items) =>
       items.map((item) => updates.get(item.id) ?? item),
     );
