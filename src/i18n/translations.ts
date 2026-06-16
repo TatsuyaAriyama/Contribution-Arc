@@ -114,7 +114,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   // ─── Top navigation ─────────────────────────────────────────
   "メインナビゲーション": "Main navigation",
   "ホーム":              "Home",
-  "作業部屋":            "Atelier",
+  "作業部屋":            "Workroom",
   "記録する":            "Log",
   "ライブラリ":          "Library",
   "日報":                "Daily",

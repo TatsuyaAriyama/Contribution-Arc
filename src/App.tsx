@@ -13949,10 +13949,10 @@ function App() {
       <section className="home-feed-section" aria-label={t("投稿")}>
         <header className="home-feed-head">
           <div>
-            <p className="card-kicker">投稿</p>
-            <h2>みんなと学びを共有・作業仲間を募集</h2>
+            <p className="card-kicker">{t("投稿")}</p>
+            <h2>{t("みんなと学びを共有・作業仲間を募集")}</h2>
           </div>
-          <span>{sorted.length.toLocaleString()} 件</span>
+          <span>{t("{count} 件", { count: sorted.length.toLocaleString() })}</span>
         </header>
 
         <section
@@ -13968,22 +13968,22 @@ function App() {
                   setPostDraft(event.target.value);
                   setPostError("");
                 }}
-                placeholder="What are you building tonight?"
+                placeholder={t("What are you building tonight?")}
                 maxLength={280}
                 rows={1}
               />
               <div className="log-composer-footer">
                 <div className="log-compose-shortcuts">
                   <button type="button" onClick={useRoomPresenceAsPost}>
-                    Roomから作成
+                    {t("Roomから作成")}
                   </button>
                   <button type="button" onClick={useLatestStudyLogAsPost}>
-                    学習ログから作成
+                    {t("学習ログから作成")}
                   </button>
                 </div>
                 <CharCountRing value={postDraft.length} max={280} />
                 <button type="submit" disabled={isPosting || !postDraft.trim()}>
-                  {isPosting ? "Posting" : "投稿"}
+                  {isPosting ? t("Posting") : t("投稿")}
                 </button>
               </div>
               {postError ? <p className="log-post-error">{postError}</p> : null}
@@ -14001,7 +14001,7 @@ function App() {
             className={`feed-kind-tab${feedKindFilter === "posts" ? " is-active" : ""}`}
             onClick={() => setFeedKindFilter("posts")}
           >
-            投稿
+            {t("投稿")}
           </button>
           <button
             type="button"
@@ -14010,7 +14010,7 @@ function App() {
             className={`feed-kind-tab${feedKindFilter === "study" ? " is-active" : ""}`}
             onClick={() => setFeedKindFilter("study")}
           >
-            学習の記録
+            {t("学習の記録")}
           </button>
         </div>
 
