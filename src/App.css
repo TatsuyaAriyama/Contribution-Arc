@@ -37796,6 +37796,30 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   position: relative;
 }
 
+/* =========================================================
+   Library (.learning-screen) と Profile (.profile-screen) にも
+   Daily / Home と同じ warm paper canvas を敷く。
+   背景色 + 紙繊維のヘアラインノイズ + 上からの暖光、ライト専用。
+   各画面のカード/コンポーネント自身は既存スタイル (var(--surface))
+   をそのまま使うので、地と要素のコントラストは保たれる。
+   ========================================================= */
+html:not([data-theme="dark"]) .learning-screen,
+html:not([data-theme="dark"]) .profile-screen {
+  background-color: #fbf9f2;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(26, 24, 23, 0.014) 0 1px,
+      transparent 1px 4px
+    ),
+    radial-gradient(
+      130% 90% at 50% -12%,
+      rgba(255, 252, 244, 0.7),
+      rgba(251, 249, 242, 0) 55%
+    );
+  min-height: 100vh;
+}
+
 /* === Phase 5: keyframes 分離。dark.css はテーマ廃止に伴い無効化 === */
 @import "./styles/animations.css";
 /* @import "./styles/dark.css"; — ライトモード固定のため未使用 */
