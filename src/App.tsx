@@ -18959,47 +18959,6 @@ function App() {
                   <p className="profile-nondo-handle">
                     {userId ? `@${userId}` : "—"}
                   </p>
-                  <div className="profile-nondo-section">
-                    <span className="profile-nondo-section-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M4 12 L12 5 L20 12 V19 a1 1 0 0 1 -1 1 H5 a1 1 0 0 1 -1 -1 z" />
-                      </svg>
-                    </span>
-                    <span className="profile-nondo-section-label">Profile</span>
-                    <span className="profile-nondo-section-count">Lv.{levelState.level}</span>
-                    <span className="profile-nondo-section-arrow" aria-hidden="true">›</span>
-                  </div>
-                  <div className="profile-nondo-metrics" role="group" aria-label="サマリー">
-                    <div className="profile-nondo-metric">
-                      <span className="profile-nondo-metric-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M12 3v18M5 12h14" />
-                          <circle cx="12" cy="12" r="9" />
-                        </svg>
-                      </span>
-                      <span className="profile-nondo-metric-value">{levelState.level}</span>
-                      <span className="profile-nondo-metric-label">Lv</span>
-                    </div>
-                    <div className="profile-nondo-metric">
-                      <span className="profile-nondo-metric-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M12 3c1 4 4 5 4 9a4 4 0 0 1-8 0c0-2 1-3 1-5 2 1 3 0 3-4z" />
-                        </svg>
-                      </span>
-                      <span className="profile-nondo-metric-value">{studyStreak}</span>
-                      <span className="profile-nondo-metric-label">連続</span>
-                    </div>
-                    <div className="profile-nondo-metric">
-                      <span className="profile-nondo-metric-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                          <circle cx="12" cy="12" r="8" />
-                          <path d="M12 8v4l2.5 1.5" />
-                        </svg>
-                      </span>
-                      <span className="profile-nondo-metric-value">{Math.round(todayStudyMinutes)}</span>
-                      <span className="profile-nondo-metric-label">今日(分)</span>
-                    </div>
-                  </div>
                 </header>
 
                 {/* Player Status はプロフィールの主役なので最上部に固定。 */}
