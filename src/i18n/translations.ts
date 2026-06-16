@@ -560,6 +560,9 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "先に作業部屋を選んでください":"Pick a workroom first",
   "作業部屋への招待":           "Workroom invite",
   "作業部屋を自動退室しました": "Auto-left your workroom",
+  "作業部屋を解体しました":      "Workroom disbanded",
+  "作業部屋を解体できませんでした。時間をおいて再度お試しください。":
+                                "Couldn't disband the workroom. Please try again in a moment.",
   "作業部屋 — 同じ時間に手を動かす場所":
                                 "Workroom — share quiet focus time",
   "通話なしで、気配だけを共有しながら集中作業ができる空間です。":

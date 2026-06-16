@@ -4537,6 +4537,12 @@ function App() {
   const lastSyncedGithubActivityRef = useRef("");
   const pendingWorkspaceRoomsRef = useRef<Map<string, WorkspaceRoom>>(new Map());
   const cleanedLegacyWorkspaceRoomsRef = useRef<Set<string>>(new Set());
+  /* 解体ボタンを押した room id を残し、applyRemoteRooms など全ての
+     再ハイドレーション経路で必ず無視する。delete の cloud 反映が
+     遅延中に lobby fetch / onSnapshot で「亡霊部屋」が復活する
+     経路 (報告: 何度解体しても残る) を完全に塞ぐ。session 中のみ
+     有効で、リロードでクリア (= 真に Firestore から消えれば消える)。 */
+  const deletedWorkspaceRoomIdsRef = useRef<Set<string>>(new Set());
   const remoteWorkspaceRoomsRef = useRef<{ rooms: WorkspaceRoom[]; legacyRooms: WorkspaceRoom[] }>({
     rooms: [],
     legacyRooms: [],
@@ -6347,9 +6353,11 @@ function App() {
     const remoteRoomMap = new Map<string, WorkspaceRoom>();
 
     remoteWorkspaceRoomsRef.current.legacyRooms.forEach((room) => {
+      if (deletedWorkspaceRoomIdsRef.current.has(room.id)) return;
       remoteRoomMap.set(room.id, room);
     });
     remoteWorkspaceRoomsRef.current.rooms.forEach((room) => {
+      if (deletedWorkspaceRoomIdsRef.current.has(room.id)) return;
       remoteRoomMap.set(room.id, room);
     });
 
@@ -6442,6 +6450,7 @@ function App() {
       // と判断できる。pending write 中 (未同期の新規 room) だけは保護し、
       // それ以外は捨てる ─ これで「解体 → reload で復活」の経路を絶つ。
       currentRooms.forEach((room) => {
+        if (deletedWorkspaceRoomIdsRef.current.has(room.id)) return; // skip ghosts
         if (!finalRoomMap.has(room.id) && !remoteRoomIds.has(room.id)) {
           if (scope === "lobby" && !pendingWorkspaceRoomsRef.current.has(room.id)) {
             return; // skip — remote が "存在しない" と確定したので cache 復活させない
@@ -6547,6 +6556,12 @@ function App() {
       doc(db, workspaceRoomsCollectionName, selectedRoomId),
       (snap) => {
         if (!snap.exists()) {
+          return;
+        }
+        /* 解体済み id は無視。delete の cloud 反映までに別端末の
+           書き込みでこの onSnapshot が走ると、亡霊部屋として復活
+           してしまう経路を塞ぐ。 */
+        if (deletedWorkspaceRoomIdsRef.current.has(snap.id)) {
           return;
         }
         const liveRoom = normalizeWorkspaceRoom({
@@ -12132,6 +12147,13 @@ function App() {
       return;
     }
 
+    /* 解体 id を blocklist に登録。以降の applyRemoteRooms / onSnapshot /
+       lobby fetch 全てがこの id を弾くので、cloud delete の反映遅延中に
+       他端末の書き込みや snapshot 通知で「亡霊部屋」が復活する経路を
+       完全に塞ぐ。リロードで Set はクリアされるので、cloud 側の delete
+       がちゃんと走っていれば次回起動時には自然に消える。 */
+    deletedWorkspaceRoomIdsRef.current.add(roomId);
+
     pendingWorkspaceRoomsRef.current.delete(roomId);
     // Purge the in-memory remote caches too. Without this the next
     // applyRemoteRooms() run (e.g. the active-room onSnapshot firing after we
@@ -12158,12 +12180,6 @@ function App() {
     } catch {
       /* localStorage が落ちていても cloud delete は試みる */
     }
-    void deleteDoc(doc(db, workspaceRoomsCollectionName, roomId)).catch((error) => {
-      console.info("Workspace room delete cloud sync skipped.", error);
-    });
-    void deleteDoc(doc(db, legacyWorkspaceRoomsCollectionName, roomId)).catch((error) => {
-      console.info("Legacy workspace room delete cloud sync skipped.", error);
-    });
 
     if (selectedRoomId === roomId) {
       setSelectedRoomId(nextRooms[0]?.id || "");
@@ -12177,6 +12193,40 @@ function App() {
       setEditingRoomName("");
     }
     setLastRoomSession(null);
+
+    /* cloud delete は await して成否をユーザーに通知。失敗時は blocklist
+       から外し、ローカル state も復元する (情報を失わない)。これまでは
+       deleteDoc が rules や network で失敗しても無言で握りつぶしていた
+       ため、リロード後に Firestore から復活して「何度解体しても残る」
+       症状を生んでいた。 */
+    void (async () => {
+      try {
+        await deleteDoc(doc(db, workspaceRoomsCollectionName, roomId));
+        /* 旧コレクション (workspaceRooms) にも残骸があれば消す。
+           ここは存在しなくても catch すれば良い - エラーは無視。 */
+        await deleteDoc(doc(db, legacyWorkspaceRoomsCollectionName, roomId)).catch(() => {
+          /* legacy doc は無いことの方が多いので noisy にしない */
+        });
+        showToast(t("作業部屋を解体しました"), { kind: "success" });
+      } catch (error) {
+        console.warn("Workspace room delete failed.", error);
+        /* 解体できなかった ─ blocklist から外して state を元に戻す。 */
+        deletedWorkspaceRoomIdsRef.current.delete(roomId);
+        setCustomRooms((current) =>
+          current.some((item) => item.id === roomId) ? current : [...current, room],
+        );
+        try {
+          const serialized = JSON.stringify(serializeWorkspaceRooms([...nextRooms, room]));
+          safeSetLocalStorage(sharedWorkspaceRoomsStorageKey, serialized);
+          lastSyncedWorkspaceRoomsRef.current = serialized;
+        } catch {
+          /* ignore */
+        }
+        showToast(t("作業部屋を解体できませんでした。時間をおいて再度お試しください。"), {
+          kind: "error",
+        });
+      }
+    })();
   };
 
 
