@@ -3208,6 +3208,7 @@ function getAuthErrorDetail(error: unknown): AuthErrorDetail {
 }
 
 function LoginScreen() {
+  const { t } = useTranslation();
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -3405,7 +3406,7 @@ function LoginScreen() {
 
         {isEmailFormOpen ? (
           <div className="login-showcase-email">
-            <div className="auth-mode-tabs" aria-label="認証モード">
+            <div className="auth-mode-tabs" aria-label={t("認証モード")}>
               <button
                 type="button"
                 className={authMode === "login" ? "active" : ""}
@@ -12351,7 +12352,7 @@ function App() {
               }
             }}
             placeholder="今の決意を一行で書いておこう"
-            aria-label="決意入力"
+            aria-label={t("決意入力")}
             maxLength={140}
           />
         )}
@@ -12505,11 +12506,11 @@ function App() {
             <strong>
               {post.username}
               {post.postType === "auto-workspace" ? (
-                <span className="log-post-auto-badge" data-kind="workspace" aria-label="作業部屋での積み上げ">
+                <span className="log-post-auto-badge" data-kind="workspace" aria-label={t("作業部屋での積み上げ")}>
                   ✦ 作業ログ
                 </span>
               ) : post.postType === "auto-study" ? (
-                <span className="log-post-auto-badge" data-kind="study" aria-label="学習記録から自動投稿">
+                <span className="log-post-auto-badge" data-kind="study" aria-label={t("学習記録から自動投稿")}>
                   📘 学習ログ
                 </span>
               ) : null}
@@ -12631,7 +12632,7 @@ function App() {
               type="button"
               className="log-delete-button"
               onClick={() => handlePostDelete(post)}
-              aria-label="投稿を削除"
+              aria-label={t("投稿を削除")}
               data-tooltip="削除"
             >
               <span className="log-delete-icon" aria-hidden="true">
@@ -12736,7 +12737,7 @@ function App() {
     const total = minutesByDay.reduce((sum, m) => sum + m, 0);
     const activeDays = minutesByDay.filter((m) => m > 0).length;
     return (
-      <section className="profile-week-chart" aria-label="今週の学習時間">
+      <section className="profile-week-chart" aria-label={t("今週の学習時間")}>
         <div className="profile-week-chart-head">
           <p className="card-kicker">This Week</p>
           <div className="profile-week-chart-summary">
@@ -12788,7 +12789,7 @@ function App() {
           : "資格"
       : "目標";
     return (
-      <section className="profile-goal-chip" aria-label="目標">
+      <section className="profile-goal-chip" aria-label={t("目標")}>
         <span className="profile-goal-chip-kicker">{kindLabel}</span>
         <strong className="profile-goal-chip-name">🎯 {goalName}</strong>
       </section>
@@ -12816,7 +12817,7 @@ function App() {
       isCurrentWeek && typeof profile.weekMinutes === "number" ? profile.weekMinutes : 0;
     if (weekTotal > 0) {
       return (
-        <section className="profile-week-chart is-summary" aria-label="今週の学習時間">
+        <section className="profile-week-chart is-summary" aria-label={t("今週の学習時間")}>
           <div className="profile-week-chart-head">
             <p className="card-kicker">This Week</p>
             <div className="profile-week-chart-summary">
@@ -12829,7 +12830,7 @@ function App() {
       );
     }
     return (
-      <section className="profile-week-chart is-empty" aria-label="今週の学習時間">
+      <section className="profile-week-chart is-empty" aria-label={t("今週の学習時間")}>
         <div className="profile-week-chart-head">
           <p className="card-kicker">This Week</p>
         </div>
@@ -12934,7 +12935,7 @@ function App() {
           <p>{profileResolveText(memberProfile)}</p>
         </div>
 
-        <section className="member-profile-now" aria-label="いまの活動">
+        <section className="member-profile-now" aria-label={t("いまの活動")}>
           <div className="member-profile-now-main">
             <span className="member-profile-now-label">いま</span>
             <div className="member-profile-now-body">
@@ -12949,7 +12950,7 @@ function App() {
               </small>
             </div>
           </div>
-          <div className="member-profile-now-exp" aria-label="今日獲得したEXP">
+          <div className="member-profile-now-exp" aria-label={t("今日獲得したEXP")}>
             <span className="member-profile-now-exp-label">今日</span>
             <strong>+{getRoomSessionExp(elapsedMinutes)} EXP</strong>
           </div>
@@ -13043,7 +13044,7 @@ function App() {
           type="button"
           className="room-member-card-close"
           onClick={handleCloseRoomPanels}
-          aria-label="閉じる"
+          aria-label={t("閉じる")}
         >
           ×
         </button>
@@ -13266,7 +13267,7 @@ function App() {
         {(() => {
           const week = friendWeekStripData(liveProfile);
           return (
-            <section className="friend-week" aria-label="今週の学習記録">
+            <section className="friend-week" aria-label={t("今週の学習記録")}>
               <div className="friend-week-head">
                 <p className="card-kicker">This Week</p>
                 {!week.isEmpty ? (
@@ -13352,7 +13353,7 @@ function App() {
                 className="friend-more-toggle"
                 aria-haspopup="true"
                 aria-expanded={profileActionsMenuOpen}
-                aria-label="その他の操作"
+                aria-label={t("その他の操作")}
                 onClick={() => setProfileActionsMenuOpen((open) => !open)}
               >
                 <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
@@ -13428,7 +13429,7 @@ function App() {
                 type="button"
                 className="contribution-arc-showcase-link"
                 onClick={() => setCurrentView("showcase")}
-                aria-label="世界観を見る"
+                aria-label={t("世界観を見る")}
                 title="世界観を見る"
               >
                 <span aria-hidden="true">✦</span>
@@ -13768,7 +13769,7 @@ function App() {
                   type="button"
                   className="contribution-arc-donut-reset"
                   onClick={() => setSelectedArcDayKey(null)}
-                  aria-label="13週合計に戻す"
+                  aria-label={t("13週合計に戻す")}
                 >
                   13週合計に戻す
                 </button>
@@ -13806,7 +13807,7 @@ function App() {
                 type="button"
                 className="contribution-arc-donut-reset"
                 onClick={() => setSelectedArcDayKey(null)}
-                aria-label="13週合計に戻す"
+                aria-label={t("13週合計に戻す")}
               >
                 13週合計に戻す
               </button>
@@ -13826,7 +13827,7 @@ function App() {
         </AnimatePresence>
         </div>
         {selectedArcDay ? (
-          <div className="contribution-arc-detail" role="region" aria-label="選択日の学習詳細">
+          <div className="contribution-arc-detail" role="region" aria-label={t("選択日の学習詳細")}>
             <div className="contribution-arc-detail-head">
               <div>
                 <strong>
@@ -13843,7 +13844,7 @@ function App() {
                 type="button"
                 className="contribution-arc-detail-close"
                 onClick={() => setSelectedArcDayKey(null)}
-                aria-label="閉じる"
+                aria-label={t("閉じる")}
               >
                 ×
               </button>
@@ -13945,7 +13946,7 @@ function App() {
     );
 
     return (
-      <section className="home-feed-section" aria-label="投稿">
+      <section className="home-feed-section" aria-label={t("投稿")}>
         <header className="home-feed-head">
           <div>
             <p className="card-kicker">投稿</p>
@@ -13956,7 +13957,7 @@ function App() {
 
         <section
           className="home-feed-composer is-living"
-          aria-label="投稿を作成"
+          aria-label={t("投稿を作成")}
         >
           <form className="log-composer" onSubmit={(event) => void handlePostSubmit(event)}>
             <ProfileCharacterPreview color={playerCharacterColor} />
@@ -13992,7 +13993,7 @@ function App() {
 
         {/* 種別セグメント: 投稿 (人の声 + 募集) / 学習の記録。
             学習記録を別軸に分離してフィードのごちゃつきを解消する。 */}
-        <div className="feed-kind-segment" role="tablist" aria-label="フィードの種類">
+        <div className="feed-kind-segment" role="tablist" aria-label={t("フィードの種類")}>
           <button
             type="button"
             role="tab"
@@ -14013,7 +14014,7 @@ function App() {
           </button>
         </div>
 
-        <div className="timeline-filter-tabs" role="tablist" aria-label="フィードの表示範囲">
+        <div className="timeline-filter-tabs" role="tablist" aria-label={t("フィードの表示範囲")}>
           <button
             type="button"
             role="tab"
@@ -14451,7 +14452,7 @@ function App() {
                     placeholder="ari.dev"
                     maxLength={30}
                     autoFocus
-                    aria-label="ユーザーID"
+                    aria-label={t("ユーザーID")}
                   />
                   <button type="submit" disabled={isSearching}>
                     {isSearching ? "…" : "検索"}
@@ -14512,7 +14513,7 @@ function App() {
               項目から handleNotificationsToggle で開く（未読は同項目にバッジ）。 */}
           <div className="notification-wrap notification-wrap-headless" ref={notificationsWrapRef}>
             {isNotificationsOpen ? (
-              <section className="notification-panel" aria-label="お知らせ">
+              <section className="notification-panel" aria-label={t("お知らせ")}>
                 <div className="notification-head">
                   <p className="card-kicker">Notifications</p>
                   <strong>お知らせ</strong>
@@ -14587,7 +14588,7 @@ function App() {
                               type="button"
                               className="notification-decline"
                               onClick={(event) => handleNotificationFriendReject(event, friendRequest)}
-                              aria-label="フレンド申請を拒否"
+                              aria-label={t("フレンド申請を拒否")}
                             >
                               拒否
                             </button>
@@ -14965,7 +14966,7 @@ function App() {
 
               <div className="learning-color-panel">
                 <span>カラー</span>
-                <div className="character-color-grid compact" aria-label="カラー">
+                <div className="character-color-grid compact" aria-label={t("カラー")}>
                   {studyColorOptions.map((color) => (
                     <button
                       type="button"
@@ -15076,7 +15077,7 @@ function App() {
             </form>
 
             {learningEditorState.mode === "edit" ? (
-              <div className="learning-danger-zone" role="group" aria-label="危険な操作">
+              <div className="learning-danger-zone" role="group" aria-label={t("危険な操作")}>
                 <div className="learning-danger-zone-info">
                   <strong>削除</strong>
                   <small>この学習対象の登録を完全に削除します。学習ログ自体は残ります。</small>
@@ -15568,7 +15569,7 @@ function App() {
                   }}
                   placeholder="例: Acme Inc."
                   maxLength={64}
-                  aria-label="組織名"
+                  aria-label={t("組織名")}
                 />
               </label>
               {orgError ? <p className="settings-error">{orgError}</p> : null}
@@ -15760,7 +15761,7 @@ function App() {
                 <button
                   type="button"
                   className="friends-modal-close"
-                  aria-label="閉じる"
+                  aria-label={t("閉じる")}
                   onClick={() => setIsFriendsModalOpen(false)}
                 >
                   ×
@@ -15779,7 +15780,7 @@ function App() {
 
               {/* 今週のランキング。自分 + フレンドを今週の学習時間で並べる。 */}
               {weeklyLeaderboard.length > 1 ? (
-                <section className="friends-leaderboard" aria-label="今週のランキング">
+                <section className="friends-leaderboard" aria-label={t("今週のランキング")}>
                   <header className="friends-leaderboard-head">
                     <div>
                       <p className="card-kicker">This week</p>
@@ -15836,7 +15837,7 @@ function App() {
                     placeholder="名前・@ID で検索"
                     value={friendsModalQuery}
                     onChange={(event) => setFriendsModalQuery(event.target.value)}
-                    aria-label="フレンドを検索"
+                    aria-label={t("フレンドを検索")}
                   />
                   <select
                     className="friends-modal-sort"
@@ -15844,7 +15845,7 @@ function App() {
                     onChange={(event) =>
                       setFriendsModalSort(event.target.value as typeof friendsModalSort)
                     }
-                    aria-label="並べ替え"
+                    aria-label={t("並べ替え")}
                   >
                     <option value="online">オンライン順</option>
                     <option value="name">名前順</option>
@@ -16163,7 +16164,7 @@ function App() {
             </div>
 
             <form className="settings-form recruitment-form" onSubmit={handleCreateRecruitmentSubmit}>
-              <div className="recruitment-mode-toggle" role="tablist" aria-label="開始タイミング">
+              <div className="recruitment-mode-toggle" role="tablist" aria-label={t("開始タイミング")}>
                 <button
                   type="button"
                   role="tab"
@@ -16333,7 +16334,7 @@ function App() {
                 type="button"
                 className="org-admin-close"
                 onClick={() => setIsOrgAdminOpen(false)}
-                aria-label="閉じる"
+                aria-label={t("閉じる")}
               >
                 ×
               </button>
@@ -16366,7 +16367,7 @@ function App() {
                 : "—";
 
               return (
-                <div className="org-admin-metrics" role="group" aria-label="集計">
+                <div className="org-admin-metrics" role="group" aria-label={t("集計")}>
                   <div className="org-admin-metric">
                     <span>メンバー</span>
                     <strong>{totalMembers.toLocaleString()}人</strong>
@@ -16395,7 +16396,7 @@ function App() {
               );
             })()}
 
-            <div className="org-admin-tabs" role="tablist" aria-label="ビュー切替">
+            <div className="org-admin-tabs" role="tablist" aria-label={t("ビュー切替")}>
               <button
                 type="button"
                 role="tab"
@@ -16456,7 +16457,7 @@ function App() {
                     <th>Output</th>
                     <th>ストリーク</th>
                     <th>最終アクティブ</th>
-                    {currentOrganization?.ownerUid === currentUser?.uid ? <th aria-label="操作" /> : null}
+                    {currentOrganization?.ownerUid === currentUser?.uid ? <th aria-label={t("操作")} /> : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -16643,7 +16644,7 @@ function App() {
               </div>
             )}
 
-            <section className="org-admin-slack" aria-label="Slack連携">
+            <section className="org-admin-slack" aria-label={t("Slack連携")}>
               <header className="org-admin-slack-head">
                 <div>
                   <p className="card-kicker">Integrations</p>
@@ -16681,7 +16682,7 @@ function App() {
                 />
               </label>
 
-              <div className="org-admin-slack-toggles" role="group" aria-label="通知イベント">
+              <div className="org-admin-slack-toggles" role="group" aria-label={t("通知イベント")}>
                 <label className={`org-admin-slack-toggle ${slackDraftRoomJoins ? "is-on" : ""}`}>
                   <input
                     type="checkbox"
@@ -16793,7 +16794,7 @@ function App() {
                 one or more email domains; users with matching emails
                 see a one-tap join CTA on home. Stored on the org
                 doc; queried by signed-in users via array-contains. */}
-            <section className="org-admin-slack" aria-label="ドメイン自動参加">
+            <section className="org-admin-slack" aria-label={t("ドメイン自動参加")}>
               <header className="org-admin-slack-head">
                 <div>
                   <p className="card-kicker">Domain auto-join</p>
@@ -17305,7 +17306,7 @@ function App() {
               ) : null}
 
               {!isOnboardingSettings ? (
-                <div className="settings-data-panel" role="group" aria-label="個人データ管理">
+                <div className="settings-data-panel" role="group" aria-label={t("個人データ管理")}>
                   <div className="settings-data-head">
                     <span>個人データ管理</span>
                   </div>
@@ -18721,7 +18722,7 @@ function App() {
             />
           ) : null}
 
-          <section className="today-strip" aria-label="今日の足場">
+          <section className="today-strip" aria-label={t("今日の足場")}>
             <div className="today-strip-stat">
               <span className="today-strip-label">今日</span>
               <span className="today-strip-value">{formatStudyTimeJa(todayStudyMinutes)}</span>
@@ -18745,7 +18746,7 @@ function App() {
                 type="button"
                 className="today-strip-share"
                 onClick={() => setIsShareToXOpen(true)}
-                aria-label="今日の作業時間をXでシェア"
+                aria-label={t("今日の作業時間をXでシェア")}
               >
                 Xでシェア
               </button>
@@ -18795,8 +18796,8 @@ function App() {
           </section>
 
           <div className="logs-layout">
-            <section className="log-timeline" aria-label="開発ログタイムライン">
-              <div className="timeline-filter-tabs" role="tablist" aria-label="タイムラインの表示範囲">
+            <section className="log-timeline" aria-label={t("開発ログタイムライン")}>
+              <div className="timeline-filter-tabs" role="tablist" aria-label={t("タイムラインの表示範囲")}>
                 <button
                   type="button"
                   role="tab"
@@ -18918,7 +18919,7 @@ function App() {
                     3 メトリックピル + 紫マーカーの手書き下線付き
                     セクション見出しで「シンプル投稿アプリ」っぽい
                     手触りを最上段に。Player Status カードは下に残す。 */}
-                <header className="profile-nondo-hero" aria-label="プロフィールヘッダー">
+                <header className="profile-nondo-hero" aria-label={t("プロフィールヘッダー")}>
                   <div className="profile-nondo-corner" aria-hidden="false">
                     <button
                       type="button"
@@ -18934,7 +18935,7 @@ function App() {
                           window.prompt("プロフィールリンク（コピーしてください）", url);
                         }
                       }}
-                      aria-label="プロフィールリンクをコピー"
+                      aria-label={t("プロフィールリンクをコピー")}
                       title="プロフィールリンクをコピー"
                     >
                       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -18946,7 +18947,7 @@ function App() {
                       type="button"
                       className="profile-nondo-corner-btn"
                       onClick={handleSettingsOpen}
-                      aria-label="設定を開く"
+                      aria-label={t("設定を開く")}
                       title="設定"
                     >
                       {/* 旧アイコンは曲線連続の塊で「設定」と分かりにくかった
@@ -18996,7 +18997,7 @@ function App() {
                   <span className="profile-nondo-section-count">{currentOrganization?.ownerUid === currentUser.uid ? 6 : 5}</span>
                   <span className="profile-nondo-section-arrow" aria-hidden="true">›</span>
                 </div>
-                <nav className="profile-menu" aria-label="メニュー">
+                <nav className="profile-menu" aria-label={t("メニュー")}>
                   <button
                     type="button"
                     className="profile-menu-item"
@@ -19424,7 +19425,7 @@ function App() {
                                 value={editingRoomName}
                                 onChange={(event) => setEditingRoomName(event.target.value)}
                                 maxLength={32}
-                                aria-label="Roomタイトル"
+                                aria-label={t("Roomタイトル")}
                               />
                               <button type="submit">保存</button>
                               <button
@@ -19534,7 +19535,7 @@ function App() {
                               type="button"
                               className="room-member-card-close"
                               onClick={handleCloseRoomPanels}
-                              aria-label="閉じる"
+                              aria-label={t("閉じる")}
                             >
                               ×
                             </button>
@@ -19563,7 +19564,7 @@ function App() {
                               <p className="character-customize-section-label">シルエット</p>
                               <div
                                 className="character-shape-grid compact"
-                                aria-label="キャラクターの形"
+                                aria-label={t("キャラクターの形")}
                               >
                                 {characterShapeOptions.map((option) => {
                                   const isLocked = !ownedCharacterShapes.includes(option.value);
@@ -19639,7 +19640,7 @@ function App() {
                             </div>
                             <div className="character-customize-section compact">
                               <p className="character-customize-section-label">カラー</p>
-                              <div className="character-color-grid compact" aria-label="分身カラー">
+                              <div className="character-color-grid compact" aria-label={t("分身カラー")}>
                                 {characterColorOptions.map((color) => (
                                   <button
                                     type="button"
@@ -19684,7 +19685,7 @@ function App() {
                                 type="button"
                                 className="room-member-card-close"
                                 onClick={handleCloseRoomPanels}
-                                aria-label="閉じる"
+                                aria-label={t("閉じる")}
                               >
                                 ×
                               </button>
@@ -19733,7 +19734,7 @@ function App() {
                                 type="button"
                                 className="room-member-card-close"
                                 onClick={handleCloseRoomPanels}
-                                aria-label="閉じる"
+                                aria-label={t("閉じる")}
                               >
                                 ×
                               </button>
@@ -19777,7 +19778,7 @@ function App() {
                               type="button"
                               className="room-member-card-close"
                               onClick={handleCloseRoomPanels}
-                              aria-label="閉じる"
+                              aria-label={t("閉じる")}
                             >
                               ×
                             </button>
@@ -19895,7 +19896,7 @@ function App() {
             <p className="teams-hero-fineprint">
               クレジットカード不要・β 期間中は全機能無料
             </p>
-            <ul className="teams-trustbar" aria-label="主な機能">
+            <ul className="teams-trustbar" aria-label={t("主な機能")}>
               <li>通知ゼロ設計</li>
               <li>Slack 連携</li>
               <li>GitHub 連携</li>
@@ -19904,7 +19905,7 @@ function App() {
             </ul>
           </header>
 
-          <section className="teams-preview" aria-label="ダッシュボードのイメージ">
+          <section className="teams-preview" aria-label={t("ダッシュボードのイメージ")}>
             <div className="teams-preview-frame">
               <div className="teams-preview-bar" aria-hidden="true">
                 <span />
@@ -19947,7 +19948,7 @@ function App() {
           </section>
 
           {currentOrganization && currentOrganization.ownerUid === currentUser?.uid ? (
-            <section className="teams-plan-manage" aria-label="現在のプラン">
+            <section className="teams-plan-manage" aria-label={t("現在のプラン")}>
               <div className="teams-plan-manage-head">
                 <p className="card-kicker">{currentOrganization.name} の現在のプラン</p>
                 <h2>{getPlan(currentOrganization.planTier ?? "free").name}</h2>
@@ -19999,7 +20000,7 @@ function App() {
             </section>
           ) : null}
 
-          <section className="teams-values" aria-label="価値提案">
+          <section className="teams-values" aria-label={t("価値提案")}>
             <article>
               <h3>組織限定の作業部屋</h3>
               <p>
@@ -20023,7 +20024,7 @@ function App() {
             </article>
           </section>
 
-          <section className="teams-steps" aria-label="導入の流れ">
+          <section className="teams-steps" aria-label={t("導入の流れ")}>
             <header>
               <p className="card-kicker">How it works</p>
               <h2>最短 30 秒で、チームの可視化を始められる</h2>
@@ -20047,7 +20048,7 @@ function App() {
             </ol>
           </section>
 
-          <section className="teams-privacy" aria-label="プライバシー方針">
+          <section className="teams-privacy" aria-label={t("プライバシー方針")}>
             <div>
               <p className="card-kicker">Privacy by design</p>
               <h2>監視ではなく、投資の可視化に振り切る</h2>
@@ -20065,7 +20066,7 @@ function App() {
             </ul>
           </section>
 
-          <section className="teams-pricing" aria-label="プラン">
+          <section className="teams-pricing" aria-label={t("プラン")}>
             <header>
               <h2>プラン（β 期間中は全機能無料）</h2>
               <p>正式版リリース時に以下の構成で提供予定です。</p>
@@ -20099,7 +20100,7 @@ function App() {
             </p>
           </section>
 
-          <section className="teams-faq" aria-label="よくある質問">
+          <section className="teams-faq" aria-label={t("よくある質問")}>
             <header>
               <p className="card-kicker">FAQ</p>
               <h2>導入前の、よくある質問</h2>
@@ -20141,7 +20142,7 @@ function App() {
             </div>
           </section>
 
-          <section className="teams-cta-band" aria-label="始める">
+          <section className="teams-cta-band" aria-label={t("始める")}>
             <h2>チームの学びを、今日から可視化する。</h2>
             <p>β 期間中は全機能無料。まずは組織を作って、作業部屋を開いてみてください。</p>
             <div className="teams-hero-cta">
@@ -20203,7 +20204,7 @@ function App() {
       ) : currentView === "shop" ? (
         <motion.section
           className="shop-screen"
-          aria-label="ショップ"
+          aria-label={t("ショップ")}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={SPRING_SNAPPY}
@@ -20214,7 +20215,7 @@ function App() {
             </button>
           </div>
 
-          <section className="card shop-card" aria-label="ショップヘッダー">
+          <section className="card shop-card" aria-label={t("ショップヘッダー")}>
             <div className="shop-card-head">
               <div>
                 <p className="card-kicker">Shop</p>
@@ -20223,7 +20224,7 @@ function App() {
                   シルエットや姿を変えて、自分だけの分身に。所持している Arc で購入できます。
                 </p>
               </div>
-              <div className="shop-balance" aria-label="所持 Arc">
+              <div className="shop-balance" aria-label={t("所持 Arc")}>
                 <span className="shop-balance-label">所持 Arc</span>
                 <strong className="shop-balance-value">
                   <span className="shop-coin-icon" aria-hidden="true">◆</span>
@@ -20237,7 +20238,7 @@ function App() {
                 — without this, users have no idea where the coins
                 come from. Progress bar fills as the user accrues
                 toward the 500 lifetime cap. */}
-            <div className="shop-feed-bonus" role="group" aria-label="投稿で Arc を貯める">
+            <div className="shop-feed-bonus" role="group" aria-label={t("投稿で Arc を貯める")}>
               <div className="shop-feed-bonus-head">
                 <strong>投稿で Arc を貯める</strong>
                 <span className="shop-feed-bonus-amount">
@@ -20271,7 +20272,7 @@ function App() {
             onPurchaseGranted={(amount) => setCoins((prev) => prev + amount)}
           />
 
-          <section className="shop-section" aria-label="シルエット">
+          <section className="shop-section" aria-label={t("シルエット")}>
             <header className="shop-section-head">
               <h3>シルエット</h3>
               <span>分身の姿を変える</span>
@@ -20721,11 +20722,11 @@ function App() {
           既存のホーム/プロフィール/作業部屋等とは完全に別レイヤーで、
           ボタンから入って戻るボタンで抜けるだけ。データへの副作用なし。 */}
       {currentView === "showcase" ? (
-        <article className="app-view-showcase" aria-label="Contribution Arc の世界">
+        <article className="app-view-showcase" aria-label={t("Contribution Arc の世界")}>
           <button
             type="button"
             className="app-view-showcase-close"
-            aria-label="閉じる"
+            aria-label={t("閉じる")}
             onClick={() => setCurrentView("home")}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -20847,7 +20848,7 @@ function App() {
           On every other view the right pane respects the user's
           isFeedOpen preference (default true, persisted to localStorage). */}
       {currentView !== "workspace" && currentView !== "feed" && isFeedOpen ? (
-        <aside className="two-pane-right" aria-label="投稿">
+        <aside className="two-pane-right" aria-label={t("投稿")}>
           {feedSection}
         </aside>
       ) : null}
