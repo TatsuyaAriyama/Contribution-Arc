@@ -19549,7 +19549,7 @@ function App() {
           ) : null}
           <div className="profile-topbar">
             <button type="button" onClick={() => setCurrentView("home")}>
-              ← Home
+              ← {t("ホーム")}
             </button>
             <button
               type="button"
@@ -19557,11 +19557,11 @@ function App() {
               onClick={() => setCurrentView("poker")}
               title={
                 focusChips > 0
-                  ? `Focus Chip ${focusChips}枚 — ポーカーで Arc を稼げます`
-                  : "25分集中で Focus Chip を獲得（ポーカーで配当 ×1.5）"
+                  ? t("Focus Chip {count}枚 — ポーカーで Arc を稼げます", { count: focusChips })
+                  : t("25分集中で Focus Chip を獲得（ポーカーで配当 ×1.5）")
               }
             >
-              ♠ ポーカー
+              ♠ {t("ポーカー")}
               {focusChips > 0 ? (
                 <span className="workspace-poker-entry-focus">🔥 {focusChips}</span>
               ) : null}
@@ -19712,7 +19712,24 @@ function App() {
                         ]
                           .filter(Boolean)
                           .join(" ")}
-                        onClick={() => setSelectedRoomId(room.id)}
+                        onClick={() => {
+                          setSelectedRoomId(room.id);
+                          /* モバイル: 行をタップしたら入室カードを自然にスクロール表示。
+                             以前は同じ画面の下にある preview を見つけるために手動
+                             スクロールが必要で「入室する を押しても何も起きない」
+                             と誤解される要因になっていた。 */
+                          if (typeof window !== "undefined") {
+                            window.requestAnimationFrame(() => {
+                              const canvas = document.querySelector(".workspace-room-canvas");
+                              if (canvas && "scrollIntoView" in canvas) {
+                                (canvas as HTMLElement).scrollIntoView({
+                                  behavior: "smooth",
+                                  block: "start",
+                                });
+                              }
+                            });
+                          }
+                        }}
                       >
                         <span className="workspace-room-pill-name">
                           {room.name}
@@ -19727,8 +19744,17 @@ function App() {
                           ) : null}
                         </span>
                         <span className="workspace-room-pill-meta">
-                          {roomMembers.length}{t("人")} · {Math.round(room.totalMinutes / 60)}h
-                          {isJoinedRoom ? <em>{t("入室中")}</em> : null}
+                          {t("{count}人", { count: roomMembers.length })} · {Math.round(room.totalMinutes / 60)}h
+                        </span>
+                        {/* 右側ステータスバッジを React 要素として描画。
+                            以前は CSS ::after に "入室する" 文字をハードコード
+                            していたため i18n 不可・タップしても join せず
+                            select だけ → ユーザー混乱の原因だった。 */}
+                        <span
+                          className={`workspace-room-pill-status${isJoinedRoom ? " is-joined" : ""}`}
+                          aria-hidden="true"
+                        >
+                          {isJoinedRoom ? `🟢 ${t("入室中")}` : t("開く")}
                         </span>
                       </button>
                     );
@@ -19752,12 +19778,18 @@ function App() {
                       ) : null}
                       {otherRooms.length > 0 ? (
                         <>
-                          <p
-                            className="workspace-room-section-title"
-                            aria-hidden="true"
-                          >
-                            {joinedRooms.length > 0 ? t("ほかのルーム") : t("ルーム一覧")}
-                          </p>
+                          {/* セクションタイトルは joined / other の区切りが必要な
+                              ときだけ出す。Workroom ヘッダの下に「ルーム一覧」が
+                              さらに付くと冗長で画面が窮屈になるため、joined が
+                              無いときは省略する。 */}
+                          {joinedRooms.length > 0 ? (
+                            <p
+                              className="workspace-room-section-title"
+                              aria-hidden="true"
+                            >
+                              {t("ほかのルーム")}
+                            </p>
+                          ) : null}
                           {otherRooms.map(renderRoom)}
                         </>
                       ) : null}
@@ -19794,7 +19826,7 @@ function App() {
                                 maxLength={32}
                                 aria-label={t("Roomタイトル")}
                               />
-                              <button type="submit">保存</button>
+                              <button type="submit">{t("保存")}</button>
                               <button
                                 type="button"
                                 onClick={() => {
@@ -19802,7 +19834,7 @@ function App() {
                                   setEditingRoomName("");
                                 }}
                               >
-                                取消
+                                {t("取消")}
                               </button>
                             </form>
                           ) : (
@@ -19812,7 +19844,7 @@ function App() {
                                 className="workspace-room-canvas-action"
                                 onClick={() => startRoomTitleEdit(selectedRoom)}
                               >
-                                名前変更
+                                {t("名前変更")}
                               </button>
                               {isOwnRoom || isDeveloperAccount ? (
                                 <button
@@ -19821,11 +19853,11 @@ function App() {
                                   onClick={() => handleRoomDelete(selectedRoom.id)}
                                   title={
                                     isOwnRoom
-                                      ? "この部屋を解体"
-                                      : "[Dev] 他ユーザーの部屋を解体"
+                                      ? t("この部屋を解体")
+                                      : t("[Dev] 他ユーザーの部屋を解体")
                                   }
                                 >
-                                  {isOwnRoom ? "解体" : "解体 (Dev)"}
+                                  {isOwnRoom ? t("解体") : t("解体 (Dev)")}
                                 </button>
                               ) : null}
                             </>

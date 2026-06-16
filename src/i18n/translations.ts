@@ -561,6 +561,18 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "作業部屋への招待":           "Workroom invite",
   "作業部屋を自動退室しました": "Auto-left your workroom",
   "作業部屋を解体しました":      "Workroom disbanded",
+  "入室中":                      "Inside",
+  "開く":                        "Open",
+  "ルーム一覧":                  "Rooms",
+  "ほかのルーム":                "Other rooms",
+  "ポーカー":                    "Poker",
+  "Focus Chip {count}枚 — ポーカーで Arc を稼げます":
+                                "Focus Chip ×{count} — earn Arc through poker",
+  "25分集中で Focus Chip を獲得（ポーカーで配当 ×1.5）":
+                                "Earn Focus Chips with 25-min focus blocks (×1.5 payout in poker)",
+  "この部屋を解体":              "Disband this room",
+  "[Dev] 他ユーザーの部屋を解体":"[Dev] Disband another user's room",
+  "解体 (Dev)":                  "Disband (Dev)",
   "作業部屋を解体できませんでした。時間をおいて再度お試しください。":
                                 "Couldn't disband the workroom. Please try again in a moment.",
   "作業部屋 — 同じ時間に手を動かす場所":
