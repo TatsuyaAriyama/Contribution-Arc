@@ -14,7 +14,10 @@ import {
 } from "./translations";
 
 const LANGUAGE_STORAGE_KEY = "contribution-arc-language";
-const DEFAULT_LANGUAGE: Language = "ja";
+/* 初期言語は英語にし、端末の言語設定が日本語なら日本語にフォールバック
+   する (navigator.language 判定)。ユーザーが設定で日本語に変えた場合は
+   localStorage に保存され次回以降そちらが優先される。 */
+const DEFAULT_LANGUAGE: Language = "en";
 
 type Interpolations = Record<string, string | number>;
 
@@ -32,6 +35,22 @@ export interface LanguageContextValue {
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
+/* navigator から端末言語を推定。日本語環境のみ "ja" を返し、それ以外は
+   英語 ("en") に倒す (英語圏 + 他多くの言語ユーザーは英語の方が読める
+   ため)。 */
+function detectDeviceLanguage(): Language {
+  if (typeof navigator === "undefined") return DEFAULT_LANGUAGE;
+  const langs: string[] = [];
+  if (typeof navigator.language === "string") langs.push(navigator.language);
+  if (Array.isArray(navigator.languages)) langs.push(...navigator.languages);
+  for (const lang of langs) {
+    if (!lang) continue;
+    const lower = lang.toLowerCase();
+    if (lower.startsWith("ja")) return "ja";
+  }
+  return "en";
+}
+
 function readStoredLanguage(): Language {
   if (typeof window === "undefined") return DEFAULT_LANGUAGE;
   try {
@@ -42,7 +61,9 @@ function readStoredLanguage(): Language {
   } catch {
     /* localStorage unavailable; fall through */
   }
-  return DEFAULT_LANGUAGE;
+  /* 初回起動 (= localStorage に保存なし) は端末言語を自動採用。
+     ja 環境なら日本語、それ以外は英語。 */
+  return detectDeviceLanguage();
 }
 
 function applyInterpolations(template: string, vars?: Interpolations): string {

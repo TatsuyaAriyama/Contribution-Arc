@@ -293,4 +293,138 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "Connecting...":              "Connecting...",
   "Create account":             "Create account",
   "Login with email":           "Login with email",
+
+  // === 追加: 主要ナビ / メニュー ===
+  "管理ダッシュボード":         "Admin Dashboard",
+  "目標":                       "Goal",
+  "お知らせ":                   "Announcements",
+  "通知":                       "Notifications",
+  "フレンド":                   "Friends",
+  "フレンド・検索":             "Friends & Search",
+  "検索":                       "Search",
+
+  // === 設定モーダル ===
+  "自動投稿":                   "Auto post",
+  "学習・作業の積み上げを自動で投稿する":
+                                "Automatically post your study & workroom progress",
+  "個人データ管理":             "Your data",
+  "データをエクスポート":       "Export your data",
+  "プロフィールリンクをコピー": "Copy profile link",
+  "プロフィールリンクをコピーしました":
+                                "Profile link copied",
+  "プロフィールを編集":         "Edit profile",
+  "プロフィールを閉じる":       "Close profile",
+  "設定を開く":                 "Open settings",
+  "設定を閉じる":               "Close settings",
+  "今の決意を一行で書いておこう":
+                                "Write today's resolve in one line.",
+
+  // === 目標 (志望校 / 資格) ===
+  "目標を設定":                 "Set a goal",
+  "高校受験":                   "High school",
+  "大学受験":                   "University",
+  "資格":                       "Qualification",
+  "目標を選ぶ":                 "Choose a goal",
+  "目標を変更":                 "Change goal",
+  "目標をクリア":               "Clear goal",
+
+  // === ホームフィード ===
+  "学習の記録":                 "Study logs",
+  "みんなと学びを共有・作業仲間を募集":
+                                "Share what you're learning, find work partners",
+  "What are you building tonight?":
+                                "What are you building tonight?",
+  "Roomから作成":               "From your workroom",
+  "学習ログから作成":           "From your latest log",
+  "今日作っているもの、学んだこと、作業部屋の募集が静かに流れます。":
+                                "Today's builds, learnings, and workroom calls quietly flow here.",
+  "気になるエンジニアをフォローすると、ここに学びと作業部屋の募集が流れます。":
+                                "Follow engineers to see their learnings and workroom calls here.",
+  "もっと見る":                 "Load more",
+
+  // === 日報 ===
+  "日付":                       "Date",
+  "今日やること":               "Today's plan",
+  "振り返り":                   "Reflection",
+  "Team Daily を読み込む":      "Load Team Daily",
+  "更新中…":                    "Updating…",
+  "再読み込み":                 "Refresh",
+  "下書きにする":               "Save as draft",
+  "ローカル下書きとして自動保存されます。":
+                                "Auto-saved as a local draft.",
+  "共有された日報はまだありません。":
+                                "No shared daily reports yet.",
+  "日報の編集は当日または1日前までです。":
+                                "You can only edit today's or yesterday's report.",
+  "1行1タスク。完了したらチェックして、必要なら一言メモを残せます。":
+                                "One line per task. Check it when done; add a short note if needed.",
+  "{name}の{date}の日報を開く": "Open {name}'s report from {date}",
+
+  // === プロフィール ===
+  "決意":                       "Resolve",
+  "決意入力":                   "Edit resolve",
+  "今週はまだ記録がありません。":
+                                "Nothing recorded this week yet.",
+  "今週の学習":                 "This week",
+  "曜日別の内訳はまもなく表示されます。":
+                                "A per-day breakdown will appear shortly.",
+
+  // === ライブラリ ===
+  "学習対象を追加して、学習時間を記録しよう。":
+                                "Add a learning item to start recording study time.",
+  "すべて":                     "All",
+  "アーカイブ":                 "Archived",
+  "名前で検索":                 "Search by name",
+  "並べ替え":                   "Reorder",
+  "並べ替えを終える":           "Done reordering",
+  "一つ上へ":                   "Move up",
+  "一つ下へ":                   "Move down",
+  "自分の順":                   "My order",
+  "写真 (任意)":                "Photo (optional)",
+  "写真を追加":                 "Add photo",
+  "写真を変更":                 "Change photo",
+  "教材の表紙などを撮ると、ライブラリでアイコンとして表示されます。":
+                                "Take a photo of the cover and it becomes your library icon.",
+
+  // === 作業部屋 / メンバー ===
+  "作業部屋を選んでください":   "Pick a workroom first",
+  "先に作業部屋を選んでください":"Pick a workroom first",
+  "作業部屋への招待":           "Workroom invite",
+  "作業部屋を自動退室しました": "Auto-left your workroom",
+  "作業部屋 — 同じ時間に手を動かす場所":
+                                "Workroom — share quiet focus time",
+  "通話なしで、気配だけを共有しながら集中作業ができる空間です。":
+                                "A space to share quiet presence without voice or video.",
+  "作業部屋の表示":             "Workroom view",
+  "みんな":                     "Everyone",
+  "自分":                       "You",
+  "集中中":                     "Focused",
+  "休憩中":                     "On break",
+  "今ルームに居るメンバー":     "Members currently in this room",
+  "ルームチャット":             "Room chat",
+  "チャット":                   "Chat",
+  "一言だけ。":                 "Just a quick line.",
+  "送る":                       "Send",
+  "送信…":                      "Sending…",
+  "まだメッセージはありません。最初の一言を。":
+                                "No messages yet. Be the first to say something.",
+  "送信できません。ルームを選択してください。":
+                                "Cannot send — select a workroom first.",
+  "不適切な言葉が含まれているため送信できません。":
+                                "Message blocked: contains inappropriate language.",
+  "送信に失敗しました。時間をおいて再度お試しください。":
+                                "Failed to send. Please try again later.",
+  "チャットメッセージを書く":   "Write a chat message",
+  "メッセージを書く":           "Write a message",
+
+  // === 要望フォーム ===
+  "ご要望・不具合のご報告":     "Send feedback",
+  "送信中…":                    "Sending…",
+  "送信する":                   "Send",
+  "ご要望を送信しました。ありがとうございます。":
+                                "Thanks for the feedback!",
+
+  // === シェア / GitHub ===
+  "GitHubアカウントを連携":     "Link GitHub account",
+  "コピー":                     "Copy",
 };
