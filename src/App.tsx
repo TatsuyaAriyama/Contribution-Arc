@@ -16780,12 +16780,14 @@ function App() {
 
               <label>
                 <span>{t("ユーザーネーム")}</span>
+                {/* autoFocus は撤去: 設定を開くたびにキーボードが出て
+                    「変更前提」の挙動になっていたため、ユーザーが意図的
+                    にタップした時だけ入力に入るよう普通の挙動に戻す。 */}
                 <input
                   value={draftUserName}
                   onChange={(event) => setDraftUserName(event.target.value)}
                   placeholder={t("表示したい名前")}
                   maxLength={24}
-                  autoFocus
                 />
               </label>
 
