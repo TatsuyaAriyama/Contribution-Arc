@@ -37765,6 +37765,37 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   line-height: 1.3;
 }
 
+/* 設定モーダル右上の閉じるバツ。プロフィール close と同じ語彙: ink
+   hairline + 純白 + 40px tap target。safe-area には設定モーダル自体が
+   centered なので追従不要。 */
+.settings-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(var(--ink-rgb), 0.06);
+  transition: transform 0.12s ease, background 0.14s ease;
+}
+.settings-modal-close:hover {
+  background: rgba(var(--ink-rgb), 0.05);
+}
+.settings-modal-close:active {
+  transform: scale(0.94);
+}
+.settings-modal {
+  position: relative;
+}
+
 /* === Phase 5: keyframes 分離。dark.css はテーマ廃止に伴い無効化 === */
 @import "./styles/animations.css";
 /* @import "./styles/dark.css"; — ライトモード固定のため未使用 */

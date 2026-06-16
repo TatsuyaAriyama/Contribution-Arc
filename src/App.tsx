@@ -16763,6 +16763,21 @@ function App() {
             aria-modal="true"
             aria-labelledby="settings-title"
           >
+            {/* 右上の閉じるバツ。onboarding 中は飛ばせない (必須入力) ので
+                出さない。それ以外では誰でも快適に戻れるように常設。 */}
+            {!isOnboardingSettings ? (
+              <button
+                type="button"
+                className="settings-modal-close"
+                onClick={() => setIsSettingsOpen(false)}
+                aria-label={t("設定を閉じる")}
+                title={t("設定を閉じる")}
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              </button>
+            ) : null}
             <div>
               <p className="card-kicker">{isOnboardingSettings ? "Welcome Setup" : "Settings"}</p>
               <h2 id="settings-title">{t("プロフィール設定")}</h2>
