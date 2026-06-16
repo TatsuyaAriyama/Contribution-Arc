@@ -2125,16 +2125,16 @@ function readAppNotifications(scope: string): NotificationItem[] {
   }
 }
 
-function getNotificationSourceText(type: NotificationItem["type"]) {
-  if (type === "dailyLog") return "日報";
-  if (type === "post") return "投稿";
-  if (type === "workspaceInvite") return "作業部屋への招待";
-  if (type === "like") return "いいね";
-  if (type === "reply") return "返信";
-  return "フレンド申請";
+function getNotificationSourceText(type: NotificationItem["type"], t: (k: string) => string) {
+  if (type === "dailyLog") return t("日報");
+  if (type === "post") return t("投稿");
+  if (type === "workspaceInvite") return t("作業部屋への招待");
+  if (type === "like") return t("いいね");
+  if (type === "reply") return t("返信");
+  return t("フレンド申請");
 }
 
-function getStudyLogPostVerb(subject: string) {
+function getStudyLogPostVerb(subject: string, t: (k: string) => string) {
   const normalizedSubject = subject.toLowerCase();
   const workKeywords = [
     "実装",
@@ -2174,14 +2174,14 @@ function getStudyLogPostVerb(subject: string) {
   ];
 
   if (workKeywords.some((keyword) => normalizedSubject.includes(keyword))) {
-    return "作業しました";
+    return t("作業しました");
   }
 
   if (studyKeywords.some((keyword) => normalizedSubject.includes(keyword))) {
-    return "学習しました";
+    return t("学習しました");
   }
 
-  return "学習しました";
+  return t("学習しました");
 }
 
 // Shared ghost (朧 / Oboro) artwork. Drawn once as an inline SVG so the
@@ -2434,9 +2434,15 @@ const MONUMENT_TIERS: { test: (p: UserProfile) => boolean; icon: string; short: 
   { test: (p) => (p.streak ?? 0) >= 7, icon: "📅", short: "7日連続ログイン" },
 ];
 
+// Translation keys for monument tier short labels (used in JSX via t()).
+// Keeping the labels as JA literals above keeps the build side-effect-free —
+// runtime t() call below translates them when rendered.
+
+
 function buildRoomMonuments(
   members: WorkspaceMember[],
   profiles: Record<string, UserProfile>,
+  t: (k: string, vars?: Record<string, string | number>) => string,
 ): RoomMonument[] {
   const found: { id: string; name: string; icon: string; short: string; color: string }[] = [];
   for (const member of members) {
@@ -2448,7 +2454,7 @@ function buildRoomMonuments(
       id: `mon-${member.userId}-${tier.short}`,
       name: member.name,
       icon: tier.icon,
-      short: tier.short,
+      short: t(tier.short),
       color: member.characterColor || member.color,
     });
   }
@@ -2459,7 +2465,7 @@ function buildRoomMonuments(
     icon: monument.icon,
     color: monument.color,
     name: monument.name,
-    label: `${monument.name} さんの記念碑：${monument.short}`,
+    label: t("{name} さんの記念碑：{short}", { name: monument.name, short: monument.short }),
     detail: monument.short,
     // Line the stones up along the upper-middle of the room so they read
     // as dedications rather than obstacles — kept clear of the top-left
@@ -7509,7 +7515,7 @@ function App() {
           ],
         },
   );
-  const roomMonuments = buildRoomMonuments(resolvedVisibleMembers, workspaceProfiles);
+  const roomMonuments = buildRoomMonuments(resolvedVisibleMembers, workspaceProfiles, t);
 
   // Subscribe to the selected room's floor notes while it's open. Cheap:
   // a single onSnapshot over a tiny, capped subcollection, torn down when
@@ -9540,11 +9546,11 @@ function App() {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
 
     if (!latestLog) {
-      setPostDraft("今日の積み上げを静かに記録中。");
+      setPostDraft(t("今日の積み上げを静かに記録中。"));
       return;
     }
 
-    setPostDraft(`${latestLog.subject}を${formatStudyTimeJa(latestLog.minutes)}${getStudyLogPostVerb(latestLog.subject)}。`);
+    setPostDraft(t("{subject}を{duration}{verb}。", { subject: latestLog.subject, duration: formatStudyTimeJa(latestLog.minutes), verb: getStudyLogPostVerb(latestLog.subject, t) }));
   };
 
   const useRoomPresenceAsPost = () => {
@@ -14558,7 +14564,7 @@ function App() {
                             <strong>{item.title}</strong>
                             <small>{item.body}</small>
                             <small>
-                              {getNotificationSourceText(item.type)} ·{" "}
+                              {getNotificationSourceText(item.type, t)} ·{" "}
                               {new Date(item.createdAt).toLocaleString("ja-JP", {
                                 month: "2-digit",
                                 day: "2-digit",

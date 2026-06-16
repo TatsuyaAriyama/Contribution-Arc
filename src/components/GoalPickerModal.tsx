@@ -6,6 +6,7 @@ import {
   type GoalItem,
   type GoalKind,
 } from "../data/goalCatalog";
+import { useTranslation } from "../i18n/LanguageContext";
 
 /**
  * 目標 (志望校 / 資格) を一覧 + インクリメンタル検索で選ぶモーダル。
@@ -27,6 +28,7 @@ type Props = {
 const MAX_RESULTS = 60;
 
 export function GoalPickerModal({ currentGoalId, onSelect, onClear, onClose }: Props) {
+  const { t } = useTranslation();
   const [kind, setKind] = useState<GoalKind>(() => {
     // 現在選択中の goal があればそのカテゴリで開く、なければ大学から
     const current = GOAL_CATALOG.find((g) => g.id === currentGoalId);
@@ -56,19 +58,19 @@ export function GoalPickerModal({ currentGoalId, onSelect, onClear, onClose }: P
         <header className="goal-picker-head">
           <div>
             <p className="card-kicker">Goal</p>
-            <h2 id="goal-picker-title">目標を選ぶ</h2>
+            <h2 id="goal-picker-title">{t("目標を選ぶ")}</h2>
           </div>
           <button
             type="button"
             className="goal-picker-close"
             onClick={onClose}
-            aria-label="閉じる"
+            aria-label={t("閉じる")}
           >
             ×
           </button>
         </header>
 
-        <div className="goal-picker-tabs" role="tablist" aria-label="カテゴリ">
+        <div className="goal-picker-tabs" role="tablist" aria-label={t("カテゴリ")}>
           {(["highschool", "university", "qualification"] as GoalKind[]).map((k) => (
             <button
               key={k}
@@ -78,7 +80,7 @@ export function GoalPickerModal({ currentGoalId, onSelect, onClear, onClose }: P
               className={`goal-picker-tab${kind === k ? " is-active" : ""}`}
               onClick={() => setKind(k)}
             >
-              {GOAL_KIND_LABEL[k]}
+              {t(GOAL_KIND_LABEL[k])}
             </button>
           ))}
         </div>
@@ -86,7 +88,7 @@ export function GoalPickerModal({ currentGoalId, onSelect, onClear, onClose }: P
         <input
           type="search"
           className="goal-picker-search"
-          placeholder="名前・かな・略称で検索 (例: とうだい / AWS)"
+          placeholder={t("名前・かな・略称で検索 (例: とうだい / AWS)")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           autoFocus
@@ -94,14 +96,14 @@ export function GoalPickerModal({ currentGoalId, onSelect, onClear, onClose }: P
 
         <p className="goal-picker-meta">
           {totalCount > MAX_RESULTS
-            ? `${totalCount} 件 (上位 ${MAX_RESULTS} 件を表示)`
-            : `${totalCount} 件`}
+            ? t("{total} 件 (上位 {max} 件を表示)", { total: totalCount, max: MAX_RESULTS })
+            : t("{count} 件", { count: totalCount })}
         </p>
 
         <ul className="goal-picker-list">
           {results.length === 0 ? (
             <li className="goal-picker-empty">
-              該当する目標が見つかりません。検索語を変えてみてください。
+              {t("該当する目標が見つかりません。検索語を変えてみてください。")}
             </li>
           ) : (
             results.map((item) => {
@@ -129,13 +131,13 @@ export function GoalPickerModal({ currentGoalId, onSelect, onClear, onClose }: P
         <footer className="goal-picker-foot">
           {currentGoalId ? (
             <button type="button" className="goal-picker-clear" onClick={onClear}>
-              目標をクリア
+              {t("目標をクリア")}
             </button>
           ) : (
             <span />
           )}
           <button type="button" className="goal-picker-done" onClick={onClose}>
-            閉じる
+            {t("閉じる")}
           </button>
         </footer>
       </section>

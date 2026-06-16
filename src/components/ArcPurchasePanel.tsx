@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "../firebase";
+import { useTranslation } from "../i18n/LanguageContext";
 
 export type ArcPack = {
   productId: string;
@@ -32,6 +33,7 @@ const verifyApplePurchase = httpsCallable<
 >(functions, "verifyApplePurchase");
 
 export function ArcPurchasePanel({ catalog, onPurchaseGranted }: Props) {
+  const { t } = useTranslation();
   const iap = typeof window !== "undefined" ? window.contributionArcDesktop?.iap : undefined;
   const [eligible, setEligible] = useState<boolean | null>(null);
   const [products, setProducts] = useState<Record<string, ProductInfo>>({});
@@ -74,13 +76,13 @@ export function ArcPurchasePanel({ catalog, onPurchaseGranted }: Props) {
       if (payload.kind === "failed") {
         setStatus({
           kind: "error",
-          message: payload.errorMessage ?? "購入に失敗しました",
+          message: payload.errorMessage ?? t("購入に失敗しました"),
         });
         return;
       }
       if (payload.kind !== "completed") return;
       if (!payload.receiptBase64 || !payload.productId) {
-        setStatus({ kind: "error", message: "レシートの読み取りに失敗しました" });
+        setStatus({ kind: "error", message: t("レシートの読み取りに失敗しました") });
         return;
       }
 
@@ -101,16 +103,16 @@ export function ArcPurchasePanel({ catalog, onPurchaseGranted }: Props) {
           // 既処理: 残高は既に反映済み。エラーにはしない。
           setStatus({ kind: "idle" });
         } else {
-          setStatus({ kind: "error", message: "サーバー検証で問題が発生しました" });
+          setStatus({ kind: "error", message: t("サーバー検証で問題が発生しました") });
         }
       } catch (err) {
         const message =
-          err instanceof Error ? err.message : "通信エラーが発生しました";
+          err instanceof Error ? err.message : t("通信エラーが発生しました");
         setStatus({ kind: "error", message });
       }
     });
     return off;
-  }, [iap]);
+  }, [iap, t]);
 
   const handlePurchase = useCallback(
     async (productId: string) => {
@@ -122,13 +124,13 @@ export function ArcPurchasePanel({ catalog, onPurchaseGranted }: Props) {
           kind: "error",
           message:
             result.reason === "cannot-make-payments"
-              ? "この端末では課金できません"
-              : "購入を開始できませんでした",
+              ? t("この端末では課金できません")
+              : t("購入を開始できませんでした"),
         });
       }
       // 成功時は transactions-updated イベントで続きを処理
     },
-    [iap],
+    [iap, t],
   );
 
   if (eligible === null) {
@@ -139,16 +141,16 @@ export function ArcPurchasePanel({ catalog, onPurchaseGranted }: Props) {
   }
 
   return (
-    <section className="shop-section" aria-label="Arc を購入">
+    <section className="shop-section" aria-label={t("Arc を購入")}>
       <header className="shop-section-head">
-        <h3>Arc を購入</h3>
-        <span>シルエット解錠などに使えます</span>
+        <h3>{t("Arc を購入")}</h3>
+        <span>{t("シルエット解錠などに使えます")}</span>
       </header>
       {status.kind === "error" ? (
         <p className="arc-pack-status arc-pack-status-error">{status.message}</p>
       ) : status.kind === "success" ? (
         <p className="arc-pack-status arc-pack-status-success">
-          +{status.arcAmount.toLocaleString()} Arc を付与しました
+          {t("+{amount} Arc を付与しました", { amount: status.arcAmount.toLocaleString() })}
         </p>
       ) : null}
       <div className="shop-product-grid">
@@ -177,8 +179,8 @@ export function ArcPurchasePanel({ catalog, onPurchaseGranted }: Props) {
                 >
                   {busy
                     ? status.kind === "verifying"
-                      ? "確認中…"
-                      : "処理中…"
+                      ? t("確認中…")
+                      : t("処理中…")
                     : price}
                 </button>
               </div>

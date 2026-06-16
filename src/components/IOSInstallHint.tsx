@@ -14,6 +14,7 @@
  *   - User hasn't dismissed within the last 60 days
  */
 import { useEffect, useState } from "react";
+import { useTranslation } from "../i18n/LanguageContext";
 
 const DISMISS_KEY = "contribution-arc-ios-install-dismissed-at";
 const COOLDOWN_MS = 60 * 24 * 60 * 60 * 1000;
@@ -48,6 +49,7 @@ function shouldShowHint(): boolean {
 }
 
 export function IOSInstallHint() {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -71,14 +73,14 @@ export function IOSInstallHint() {
   };
 
   return (
-    <div className="ios-install-hint" role="dialog" aria-label="ホーム画面に追加">
+    <div className="ios-install-hint" role="dialog" aria-label={t("ホーム画面に追加")}>
       <div className="ios-install-hint-body">
-        <strong>ホーム画面に追加</strong>
+        <strong>{t("ホーム画面に追加")}</strong>
         <p>
-          下の <span aria-hidden="true">􀈂</span>共有ボタン → 「ホーム画面に追加」で、ネイティブアプリのように開けます。
+          {t("下の")} <span aria-hidden="true">􀈂</span>{t("共有ボタン → 「ホーム画面に追加」で、ネイティブアプリのように開けます。")}
         </p>
       </div>
-      <button type="button" className="ios-install-hint-dismiss" onClick={dismiss} aria-label="閉じる">
+      <button type="button" className="ios-install-hint-dismiss" onClick={dismiss} aria-label={t("閉じる")}>
         ×
       </button>
     </div>

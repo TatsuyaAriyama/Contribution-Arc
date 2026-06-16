@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "../i18n/LanguageContext";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -42,6 +43,7 @@ export function InstallInstructionsModal({
   open: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const platform = useMemo(detectPlatform, []);
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [busy, setBusy] = useState(false);
@@ -107,41 +109,38 @@ export function InstallInstructionsModal({
         onClick={(event) => event.stopPropagation()}
       >
         <header className="install-instructions-head">
-          <h2 id="install-instructions-title">スマホアプリとしてダウンロード</h2>
+          <h2 id="install-instructions-title">{t("スマホアプリとしてダウンロード")}</h2>
           <button
             type="button"
             className="settings-modal-close"
             onClick={onClose}
-            aria-label="閉じる"
+            aria-label={t("閉じる")}
           >
             ×
           </button>
         </header>
         <p className="install-instructions-intro">
-          ブラウザに登録するだけで、Contribution Arc がスマホアプリのように
-          起動できます。お使いの環境向けの手順を表示しています。
+          {t("ブラウザに登録するだけで、Contribution Arc がスマホアプリのように起動できます。お使いの環境向けの手順を表示しています。")}
         </p>
 
         {standalone ? (
           <p className="install-instructions-status">
-            すでにホーム画面から起動しています。最新のアイコンに更新したい場合は、
-            一度ホーム画面のアイコンを長押しで削除してから、下の手順で再追加して
-            ください。
+            {t("すでにホーム画面から起動しています。最新のアイコンに更新したい場合は、一度ホーム画面のアイコンを長押しで削除してから、下の手順で再追加してください。")}
           </p>
         ) : null}
 
         {platform === "ios-safari" ? (
           <ol className="install-instructions-list">
             <li>
-              画面下の <strong>共有ボタン</strong>
-              <span aria-hidden="true"> 􀈂 </span>をタップ
+              {t("画面下の")} <strong>{t("共有ボタン")}</strong>
+              <span aria-hidden="true"> 􀈂 </span>{t("をタップ")}
             </li>
             <li>
-              メニューを下にスクロールし、
-              <strong>「ホーム画面に追加」</strong> を選ぶ
+              {t("メニューを下にスクロールし、")}
+              <strong>{t("「ホーム画面に追加」")}</strong> {t("を選ぶ")}
             </li>
             <li>
-              右上の <strong>「追加」</strong> をタップして完了
+              {t("右上の")} <strong>{t("「追加」")}</strong> {t("をタップして完了")}
             </li>
           </ol>
         ) : null}
@@ -150,13 +149,13 @@ export function InstallInstructionsModal({
           <>
             <ol className="install-instructions-list">
               <li>
-                ブラウザ右上のメニュー <strong>⋮</strong> を開く
+                {t("ブラウザ右上のメニュー")} <strong>⋮</strong> {t("を開く")}
               </li>
               <li>
-                <strong>「ホーム画面に追加」</strong> または
-                <strong>「アプリをインストール」</strong> を選ぶ
+                <strong>{t("「ホーム画面に追加」")}</strong> {t("または")}
+                <strong>{t("「アプリをインストール」")}</strong> {t("を選ぶ")}
               </li>
-              <li>確認ダイアログで <strong>「追加」</strong> をタップ</li>
+              <li>{t("確認ダイアログで")} <strong>{t("「追加」")}</strong> {t("をタップ")}</li>
             </ol>
             {deferred && !done ? (
               <button
@@ -165,12 +164,12 @@ export function InstallInstructionsModal({
                 onClick={handleInstall}
                 disabled={busy}
               >
-                {busy ? "追加中…" : "今すぐ追加する"}
+                {busy ? t("追加中…") : t("今すぐ追加する")}
               </button>
             ) : null}
             {done ? (
               <p className="install-instructions-status">
-                追加しました。ホーム画面のアイコンから起動できます。
+                {t("追加しました。ホーム画面のアイコンから起動できます。")}
               </p>
             ) : null}
           </>
@@ -178,18 +177,17 @@ export function InstallInstructionsModal({
 
         {platform === "other" ? (
           <ol className="install-instructions-list">
-            <li>ブラウザのメニューを開く</li>
+            <li>{t("ブラウザのメニューを開く")}</li>
             <li>
-              <strong>「ホーム画面に追加」</strong>
-              または <strong>「アプリをインストール」</strong>
-              の項目を選ぶ
+              <strong>{t("「ホーム画面に追加」")}</strong>
+              {t("または")} <strong>{t("「アプリをインストール」")}</strong>
+              {t("の項目を選ぶ")}
             </li>
           </ol>
         ) : null}
 
         <p className="install-instructions-note">
-          すでに古いアイコンを置いている場合は、長押しで一度削除してから
-          再追加すると新しいアイコンに更新されます。
+          {t("すでに古いアイコンを置いている場合は、長押しで一度削除してから再追加すると新しいアイコンに更新されます。")}
         </p>
       </section>
     </div>

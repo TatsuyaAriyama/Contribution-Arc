@@ -4,6 +4,7 @@ import type {
   OrgStudyLogRecord,
   StudyLogRecord,
 } from "../services/cloudData";
+import { useTranslation } from "../i18n/LanguageContext";
 
 export interface ManagerDashboardProps {
   /** All team members in the organization. */
@@ -104,12 +105,6 @@ function downloadCsv(filename: string, csv: string): void {
    rather than ranking people. This is 投資の可視化, not a leaderboard. */
 type ActivityStatus = "active" | "slowing" | "dormant";
 
-const ACTIVITY_META: Record<ActivityStatus, { label: string }> = {
-  active: { label: "アクティブ" },
-  slowing: { label: "停滞ぎみ" },
-  dormant: { label: "休眠" },
-};
-
 const DAY_MS = 86_400_000;
 
 /** Whole days elapsed since an ISO timestamp, or null if missing/invalid. */
@@ -126,20 +121,6 @@ function activityStatusFor(days: number | null): ActivityStatus {
   if (days <= 7) return "active";
   return "slowing";
 }
-
-/** Compact relative label for a member's last sync. */
-function relativeLabel(days: number | null): string {
-  if (days === null) return "未同期";
-  if (days <= 0) return "今日";
-  if (days === 1) return "昨日";
-  if (days < 7) return `${days}日前`;
-  if (days < 30) return `${Math.floor(days / 7)}週間前`;
-  if (days < 365) return `${Math.floor(days / 30)}ヶ月前`;
-  return `${Math.floor(days / 365)}年前`;
-}
-
-const roleLabel = (role: OrganizationMemberRecord["organizationRole"]): string =>
-  role === "owner" ? "オーナー" : role === "admin" ? "管理者" : "メンバー";
 
 /* ── Time-series aggregation (used by team insights + member panel) ──
    All pure functions over the minimal log shape the data layer returns.
@@ -274,6 +255,23 @@ export function ManagerDashboard({
   onFetchOrgLogs,
   onFetchMemberLogs,
 }: ManagerDashboardProps) {
+  const { t } = useTranslation();
+  const roleLabelLocalized = (role: OrganizationMemberRecord["organizationRole"]): string =>
+    role === "owner" ? t("オーナー") : role === "admin" ? t("管理者") : t("メンバー");
+  const relativeLabelLocalized = (days: number | null): string => {
+    if (days === null) return t("未同期");
+    if (days <= 0) return t("今日");
+    if (days === 1) return t("昨日");
+    if (days < 7) return t("{n}日前", { n: days });
+    if (days < 30) return t("{n}週間前", { n: Math.floor(days / 7) });
+    if (days < 365) return t("{n}ヶ月前", { n: Math.floor(days / 30) });
+    return t("{n}年前", { n: Math.floor(days / 365) });
+  };
+  const activityLabel = (status: ActivityStatus): string => {
+    if (status === "active") return t("アクティブ");
+    if (status === "slowing") return t("停滞ぎみ");
+    return t("休眠");
+  };
   const [searchQuery, setSearchQuery] = useState("");
   /* Team filter. Empty string means "all teams"; the sentinel
      "__unassigned__" surfaces members with no teamName set. Built from
@@ -377,12 +375,12 @@ export function ManagerDashboard({
         setDigestMessage(error);
       } else {
         setDigestState("sent");
-        setDigestMessage("送信しました");
+        setDigestMessage(t("送信しました"));
         setTimeout(() => setDigestState("idle"), 3200);
       }
     } catch (err) {
       setDigestState("error");
-      setDigestMessage(err instanceof Error ? err.message : "送信に失敗しました");
+      setDigestMessage(err instanceof Error ? err.message : t("送信に失敗しました"));
     }
   };
 
@@ -466,8 +464,8 @@ export function ManagerDashboard({
         days: e.days,
         reason:
           (e.member.effortExp || 0) === 0
-            ? "まだ学習記録がありません"
-            : `${relativeLabel(e.days)}から記録がありません`,
+            ? t("まだ学習記録がありません")
+            : t("{when}から記録がありません", { when: relativeLabelLocalized(e.days) }),
       }))
       .sort((a, b) => (b.days ?? Infinity) - (a.days ?? Infinity))
       .slice(0, 6);
@@ -584,9 +582,9 @@ export function ManagerDashboard({
     <div className="manager-dashboard">
       <section className="manager-header">
         <div className="manager-header-titles">
-          <h2 className="manager-title">チーム学習ダッシュボード</h2>
+          <h2 className="manager-title">{t("チーム学習ダッシュボード")}</h2>
           <p className="manager-subtitle">
-            {organizationName || "あなたのチーム"} ・ {teamStats.totalMembers} 名
+            {organizationName || t("あなたのチーム")} ・ {t("{n} 名", { n: teamStats.totalMembers })}
           </p>
         </div>
         <div className="manager-header-actions">
@@ -597,13 +595,13 @@ export function ManagerDashboard({
                 className="manager-export-button"
                 onClick={handleSendDigest}
                 disabled={teamMembers.length === 0 || digestState === "sending"}
-                aria-label="チーム学習サマリーをSlackに送信"
+                aria-label={t("チーム学習サマリーをSlackに送信")}
               >
                 {digestState === "sending"
-                  ? "送信中…"
+                  ? t("送信中…")
                   : digestState === "sent"
-                    ? "Slackに送信済み"
-                    : "Slackにサマリー送信"}
+                    ? t("Slackに送信済み")
+                    : t("Slackにサマリー送信")}
               </button>
               {digestState === "error" && digestMessage ? (
                 <span className="manager-digest-error" role="alert">
@@ -617,9 +615,9 @@ export function ManagerDashboard({
             className="manager-export-button"
             onClick={handleExportCsv}
             disabled={teamMembers.length === 0}
-            aria-label="メンバー一覧をCSVでダウンロード"
+            aria-label={t("メンバー一覧をCSVでダウンロード")}
           >
-            CSVをダウンロード
+            {t("CSVをダウンロード")}
           </button>
         </div>
       </section>
@@ -629,10 +627,9 @@ export function ManagerDashboard({
           charts that read as "broken". */}
       {soloOrg ? (
         <section className="manager-invite-nudge">
-          <strong>メンバーを招待すると、ここにチームの学習が集まります</strong>
+          <strong>{t("メンバーを招待すると、ここにチームの学習が集まります")}</strong>
           <p>
-            設定の「招待リンク」からメンバーを追加すると、稼働状況・学習時間・
-            フォローしたいメンバーが自動でまとまります。
+            {t("設定の「招待リンク」からメンバーを追加すると、稼働状況・学習時間・フォローしたいメンバーが自動でまとまります。")}
           </p>
         </section>
       ) : null}
@@ -640,31 +637,31 @@ export function ManagerDashboard({
       {/* KPI row */}
       <section className="manager-stats-grid">
         <article className="manager-stat-card">
-          <span className="manager-stat-label">メンバー数</span>
+          <span className="manager-stat-label">{t("メンバー数")}</span>
           <strong className="manager-stat-value">{teamStats.totalMembers}</strong>
         </article>
         <article className="manager-stat-card">
-          <span className="manager-stat-label">稼働率（7日以内）</span>
+          <span className="manager-stat-label">{t("稼働率（7日以内）")}</span>
           <strong className="manager-stat-value">
             {teamStats.activeRate}
             <span className="manager-stat-unit">%</span>
           </strong>
-          <span className="manager-stat-sub">{teamStats.activeCount} 名がアクティブ</span>
+          <span className="manager-stat-sub">{t("{n} 名がアクティブ", { n: teamStats.activeCount })}</span>
         </article>
         <article className="manager-stat-card">
-          <span className="manager-stat-label">総学習時間</span>
+          <span className="manager-stat-label">{t("総学習時間")}</span>
           <strong className="manager-stat-value">
             {teamStats.totalHours}
             <span className="manager-stat-unit">h</span>
           </strong>
-          <span className="manager-stat-sub">平均 {teamStats.avgHours}h / 人</span>
+          <span className="manager-stat-sub">{t("平均 {n}h / 人", { n: teamStats.avgHours })}</span>
         </article>
         <article className="manager-stat-card">
-          <span className="manager-stat-label">総アウトプット</span>
+          <span className="manager-stat-label">{t("総アウトプット")}</span>
           <strong className="manager-stat-value">
             {teamStats.totalOutput.toLocaleString()}
           </strong>
-          <span className="manager-stat-sub">コミット・投稿 EXP</span>
+          <span className="manager-stat-sub">{t("コミット・投稿 EXP")}</span>
         </article>
       </section>
 
@@ -674,8 +671,8 @@ export function ManagerDashboard({
         <section className="manager-insights">
           <header className="manager-insights-head">
             <div>
-              <h3 className="manager-chart-title">チームの学習トレンド</h3>
-              <p className="manager-chart-sublabel">直近 {TEAM_WINDOW_WEEKS} 週間</p>
+              <h3 className="manager-chart-title">{t("チームの学習トレンド")}</h3>
+              <p className="manager-chart-sublabel">{t("直近 {n} 週間", { n: TEAM_WINDOW_WEEKS })}</p>
             </div>
             {teamInsights && !teamInsights.isEmpty ? (
               <div className="manager-insights-summary">
@@ -684,37 +681,37 @@ export function ManagerDashboard({
                   <span className="manager-stat-unit">h</span>
                 </span>
                 <span className="manager-insights-meta">
-                  {teamInsights.contributors} 名が記録
+                  {t("{n} 名が記録", { n: teamInsights.contributors })}
                 </span>
               </div>
             ) : null}
           </header>
 
           {orgLogsState === "loading" ? (
-            <p className="manager-insights-state">読み込み中…</p>
+            <p className="manager-insights-state">{t("読み込み中…")}</p>
           ) : orgLogsState === "error" ? (
-            <p className="manager-insights-state">トレンドを読み込めませんでした。</p>
+            <p className="manager-insights-state">{t("トレンドを読み込めませんでした。")}</p>
           ) : teamInsights && teamInsights.isEmpty ? (
             <p className="manager-insights-state">
-              この期間の学習記録はまだありません。メンバーが学習を記録すると、ここに週ごとの推移が表示されます。
+              {t("この期間の学習記録はまだありません。メンバーが学習を記録すると、ここに週ごとの推移が表示されます。")}
             </p>
           ) : teamInsights ? (
             <div className="manager-insights-body">
               <div className="manager-trend">
-                <div className="manager-trend-bars" role="img" aria-label="週ごとのチーム学習時間の推移">
+                <div className="manager-trend-bars" role="img" aria-label={t("週ごとのチーム学習時間の推移")}>
                   {teamInsights.trend.map((w, i) => (
                     <span
                       key={i}
                       className={`manager-trend-bar${w.weeksAgo === 0 ? " is-current" : ""}`}
                       style={{ height: `${Math.max(w.ratio * 100, 3)}%` }}
-                      title={`${w.weeksAgo === 0 ? "今週" : `${w.weeksAgo}週前`} ・ ${formatMinutesJa(w.minutes)}`}
+                      title={`${w.weeksAgo === 0 ? t("今週") : t("{n}週前", { n: w.weeksAgo })} ・ ${formatMinutesJa(w.minutes)}`}
                     />
                   ))}
                 </div>
                 <div className="manager-trend-foot">
-                  <span>{TEAM_WINDOW_WEEKS}週前</span>
+                  <span>{t("{n}週前", { n: TEAM_WINDOW_WEEKS })}</span>
                   <span className="manager-trend-now">
-                    今週 {teamInsights.thisWeekHours}h
+                    {t("今週 {n}h", { n: teamInsights.thisWeekHours })}
                     {teamInsights.deltaPct !== 0 ? (
                       <span
                         className={`manager-trend-delta${teamInsights.deltaPct >= 0 ? " is-up" : " is-down"}`}
@@ -728,9 +725,9 @@ export function ManagerDashboard({
               </div>
 
               <div className="manager-skills">
-                <h4 className="manager-skills-title">学習トピック</h4>
+                <h4 className="manager-skills-title">{t("学習トピック")}</h4>
                 {teamInsights.subjects.length === 0 ? (
-                  <p className="manager-insights-state">トピックの記録がありません。</p>
+                  <p className="manager-insights-state">{t("トピックの記録がありません。")}</p>
                 ) : (
                   <ul className="manager-skills-list">
                     {teamInsights.subjects.map((s) => (
@@ -757,7 +754,7 @@ export function ManagerDashboard({
                     ))}
                     {teamInsights.otherCount > 0 ? (
                       <li className="manager-skill-row is-other">
-                        <span className="manager-skill-name">他 {teamInsights.otherCount} トピック</span>
+                        <span className="manager-skill-name">{t("他 {n} トピック", { n: teamInsights.otherCount })}</span>
                         <span className="manager-bar-track" aria-hidden="true" />
                         <span className="manager-skill-value">
                           {formatMinutesJa(teamInsights.otherMinutes)}
@@ -777,14 +774,14 @@ export function ManagerDashboard({
         <section className="manager-charts">
           <article className="manager-chart-card">
             <header className="manager-chart-head">
-              <h3 className="manager-chart-title">チームの状態</h3>
-              <p className="manager-chart-sublabel">最終同期から</p>
+              <h3 className="manager-chart-title">{t("チームの状態")}</h3>
+              <p className="manager-chart-sublabel">{t("最終同期から")}</p>
             </header>
             <div
               className="manager-engagement-bar"
               role="img"
               aria-label={engagement
-                .map((s) => `${ACTIVITY_META[s.status].label} ${s.count}名`)
+                .map((s) => t("{label} {n}名", { label: activityLabel(s.status), n: s.count }))
                 .join("、")}
             >
               {engagement.map((seg) =>
@@ -801,7 +798,7 @@ export function ManagerDashboard({
               {engagement.map((seg) => (
                 <li key={seg.status}>
                   <span className={`manager-status-dot is-${seg.status}`} aria-hidden="true" />
-                  {ACTIVITY_META[seg.status].label}
+                  {activityLabel(seg.status)}
                   <strong>{seg.count}</strong>
                 </li>
               ))}
@@ -810,12 +807,12 @@ export function ManagerDashboard({
 
           <article className="manager-chart-card">
             <header className="manager-chart-head">
-              <h3 className="manager-chart-title">フォローしたいメンバー</h3>
-              <p className="manager-chart-sublabel">{followUps.length} 名</p>
+              <h3 className="manager-chart-title">{t("フォローしたいメンバー")}</h3>
+              <p className="manager-chart-sublabel">{t("{n} 名", { n: followUps.length })}</p>
             </header>
             {followUps.length === 0 ? (
               <p className="manager-followup-empty">
-                全員が直近で記録しています。良いペースです。
+                {t("全員が直近で記録しています。良いペースです。")}
               </p>
             ) : (
               <ul className="manager-followup-list">
@@ -845,8 +842,8 @@ export function ManagerDashboard({
         <section className="manager-charts">
           <article className="manager-chart-card">
             <header className="manager-chart-head">
-              <h3 className="manager-chart-title">メンバー別 学習時間</h3>
-              <p className="manager-chart-sublabel">累計（時間）</p>
+              <h3 className="manager-chart-title">{t("メンバー別 学習時間")}</h3>
+              <p className="manager-chart-sublabel">{t("累計（時間）")}</p>
             </header>
             <ul className="manager-bar-list">
               {effortDistribution.top.map((row) => (
@@ -865,14 +862,14 @@ export function ManagerDashboard({
               ))}
             </ul>
             {effortDistribution.remainderCount > 0 ? (
-              <p className="manager-chart-foot">他 {effortDistribution.remainderCount} 名</p>
+              <p className="manager-chart-foot">{t("他 {n} 名", { n: effortDistribution.remainderCount })}</p>
             ) : null}
           </article>
 
           <article className="manager-chart-card">
             <header className="manager-chart-head">
-              <h3 className="manager-chart-title">レベル分布</h3>
-              <p className="manager-chart-sublabel">人数</p>
+              <h3 className="manager-chart-title">{t("レベル分布")}</h3>
+              <p className="manager-chart-sublabel">{t("人数")}</p>
             </header>
             <ul className="manager-bar-list">
               {levelDistribution.map((bucket) => (
@@ -896,16 +893,16 @@ export function ManagerDashboard({
       {teamBreakdown.length > 0 ? (
         <section className="manager-chart-card manager-team-rollup">
           <header className="manager-chart-head">
-            <h3 className="manager-chart-title">チーム別</h3>
-            <p className="manager-chart-sublabel">学習時間 / 稼働率</p>
+            <h3 className="manager-chart-title">{t("チーム別")}</h3>
+            <p className="manager-chart-sublabel">{t("学習時間 / 稼働率")}</p>
           </header>
           <ul className="manager-team-list">
             {teamBreakdown.map((row) => (
               <li key={row.name} className="manager-team-row">
                 <span className="manager-team-name" title={row.name}>
-                  {row.name}
+                  {row.name === "未割り当て" ? t("未割り当て") : row.name}
                 </span>
-                <span className="manager-team-meta">{row.members} 名</span>
+                <span className="manager-team-meta">{t("{n} 名", { n: row.members })}</span>
                 <span className="manager-bar-track" aria-hidden="true">
                   <span
                     className="manager-bar-fill"
@@ -913,7 +910,7 @@ export function ManagerDashboard({
                   />
                 </span>
                 <span className="manager-team-hours">{row.hours}h</span>
-                <span className="manager-team-rate">稼働 {row.activeRate}%</span>
+                <span className="manager-team-rate">{t("稼働 {n}%", { n: row.activeRate })}</span>
               </li>
             ))}
           </ul>
@@ -925,20 +922,20 @@ export function ManagerDashboard({
         <input
           type="text"
           className="manager-search"
-          placeholder="メンバーを検索（名前またはID）"
+          placeholder={t("メンバーを検索（名前またはID）")}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          aria-label="メンバー検索"
+          aria-label={t("メンバー検索")}
         />
         <select
           className="manager-team-filter"
           value={sortKey}
           onChange={(e) => setSortKey(e.target.value as SortKey)}
-          aria-label="並び替え"
+          aria-label={t("並び替え")}
         >
           {SORT_OPTIONS.map((opt) => (
             <option key={opt.key} value={opt.key}>
-              {opt.label}
+              {t(opt.label)}
             </option>
           ))}
         </select>
@@ -947,26 +944,26 @@ export function ManagerDashboard({
             className="manager-team-filter"
             value={teamFilter}
             onChange={(e) => setTeamFilter(e.target.value)}
-            aria-label="チームで絞り込む"
+            aria-label={t("チームで絞り込む")}
           >
-            <option value="">すべてのチーム</option>
+            <option value="">{t("すべてのチーム")}</option>
             {teamOptions.map((name) => (
               <option key={name} value={name}>
                 {name}
               </option>
             ))}
-            <option value="__unassigned__">未割り当て</option>
+            <option value="__unassigned__">{t("未割り当て")}</option>
           </select>
         ) : null}
       </section>
 
       {/* Members list */}
       <section className="manager-members-section">
-        <h3 className="manager-members-title">メンバー一覧 ({visibleMembers.length})</h3>
+        <h3 className="manager-members-title">{t("メンバー一覧 ({n})", { n: visibleMembers.length })}</h3>
 
         {visibleMembers.length === 0 ? (
           <div className="manager-empty">
-            <p>該当するメンバーがありません</p>
+            <p>{t("該当するメンバーがありません")}</p>
           </div>
         ) : (
           <div className="manager-members-list">
@@ -995,17 +992,20 @@ export function ManagerDashboard({
                   <div className="manager-member-info">
                     <strong className="manager-member-name">
                       {member.displayName}
-                      {isYou ? <span className="manager-you-badge">あなた</span> : null}
+                      {isYou ? <span className="manager-you-badge">{t("あなた")}</span> : null}
                       {member.organizationRole !== "member" ? (
                         <span className="manager-role-badge">
-                          {roleLabel(member.organizationRole)}
+                          {roleLabelLocalized(member.organizationRole)}
                         </span>
                       ) : null}
                     </strong>
                     <small className="manager-member-id">@{member.userId}</small>
                     <span className="manager-member-meta-row">
-                      <span className={`manager-status-dot is-${row.status}`} aria-hidden="true" />
-                      <span className="manager-member-last">{relativeLabel(row.days)}</span>
+                      <span
+                        className={`manager-status-dot is-${row.status}`}
+                        aria-label={activityLabel(row.status)}
+                      />
+                      <span className="manager-member-last">{relativeLabelLocalized(row.days)}</span>
                       {member.teamName ? (
                         <span className="manager-member-team">{member.teamName}</span>
                       ) : null}
@@ -1014,15 +1014,15 @@ export function ManagerDashboard({
 
                   <div className="manager-member-stats">
                     <div className="manager-member-stat">
-                      <span className="manager-member-stat-label">学習時間</span>
+                      <span className="manager-member-stat-label">{t("学習時間")}</span>
                       <strong>{row.hours}h</strong>
                     </div>
                     <div className="manager-member-stat">
-                      <span className="manager-member-stat-label">アウトプット</span>
+                      <span className="manager-member-stat-label">{t("アウトプット")}</span>
                       <strong>{(member.outputExp || 0).toLocaleString()}</strong>
                     </div>
                     <div className="manager-member-stat">
-                      <span className="manager-member-stat-label">レベル</span>
+                      <span className="manager-member-stat-label">{t("レベル")}</span>
                       <strong>{member.level || 1}</strong>
                     </div>
                   </div>
@@ -1066,6 +1066,16 @@ function MemberDetailPanel({
   onClose: () => void;
   onFetchMemberLogs?: (memberUid: string) => Promise<StudyLogRecord[]>;
 }) {
+  const { t } = useTranslation();
+  const relativeLabelLocalized = (days: number | null): string => {
+    if (days === null) return t("未同期");
+    if (days <= 0) return t("今日");
+    if (days === 1) return t("昨日");
+    if (days < 7) return t("{n}日前", { n: days });
+    if (days < 30) return t("{n}週間前", { n: Math.floor(days / 7) });
+    if (days < 365) return t("{n}ヶ月前", { n: Math.floor(days / 30) });
+    return t("{n}年前", { n: Math.floor(days / 365) });
+  };
   const [logs, setLogs] = useState<StudyLogRecord[] | null>(null);
   const [state, setState] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const now = useMemo(() => Date.now(), []);
@@ -1129,7 +1139,7 @@ function MemberDetailPanel({
       className="manager-detail-overlay"
       role="dialog"
       aria-modal="true"
-      aria-label={`${member.displayName} の学習詳細`}
+      aria-label={t("{name} の学習詳細", { name: member.displayName })}
       onClick={onClose}
     >
       <div className="manager-detail-panel" onClick={(e) => e.stopPropagation()}>
@@ -1145,7 +1155,7 @@ function MemberDetailPanel({
             <div>
               <strong className="manager-detail-name">
                 {member.displayName}
-                {isYou ? <span className="manager-you-badge">あなた</span> : null}
+                {isYou ? <span className="manager-you-badge">{t("あなた")}</span> : null}
               </strong>
               <small className="manager-detail-id">@{member.userId}</small>
             </div>
@@ -1154,7 +1164,7 @@ function MemberDetailPanel({
             type="button"
             className="manager-detail-close"
             onClick={onClose}
-            aria-label="閉じる"
+            aria-label={t("閉じる")}
           >
             ✕
           </button>
@@ -1162,43 +1172,43 @@ function MemberDetailPanel({
 
         <div className="manager-detail-kpis">
           <div className="manager-detail-kpi">
-            <span className="manager-detail-kpi-label">累計学習</span>
+            <span className="manager-detail-kpi-label">{t("累計学習")}</span>
             <strong>{snapshotHours}h</strong>
           </div>
           <div className="manager-detail-kpi">
-            <span className="manager-detail-kpi-label">レベル</span>
+            <span className="manager-detail-kpi-label">{t("レベル")}</span>
             <strong>{member.level || 1}</strong>
           </div>
           <div className="manager-detail-kpi">
-            <span className="manager-detail-kpi-label">アウトプット</span>
+            <span className="manager-detail-kpi-label">{t("アウトプット")}</span>
             <strong>{(member.outputExp || 0).toLocaleString()}</strong>
           </div>
           <div className="manager-detail-kpi">
-            <span className="manager-detail-kpi-label">最終同期</span>
-            <strong>{relativeLabel(daysSince(member.lastSyncedAt, now))}</strong>
+            <span className="manager-detail-kpi-label">{t("最終同期")}</span>
+            <strong>{relativeLabelLocalized(daysSince(member.lastSyncedAt, now))}</strong>
           </div>
         </div>
 
         {!onFetchMemberLogs ? (
-          <p className="manager-insights-state">詳細データは利用できません。</p>
+          <p className="manager-insights-state">{t("詳細データは利用できません。")}</p>
         ) : state === "loading" ? (
-          <p className="manager-insights-state">読み込み中…</p>
+          <p className="manager-insights-state">{t("読み込み中…")}</p>
         ) : state === "error" ? (
-          <p className="manager-insights-state">学習記録を読み込めませんでした。</p>
+          <p className="manager-insights-state">{t("学習記録を読み込めませんでした。")}</p>
         ) : derived && !derived.hasData ? (
           <p className="manager-insights-state">
-            直近 13 週間の学習記録はまだありません。記録が増えると、ここに学習の推移が表示されます。
+            {t("直近 13 週間の学習記録はまだありません。記録が増えると、ここに学習の推移が表示されます。")}
           </p>
         ) : derived ? (
           <div className="manager-detail-body">
             <section className="manager-detail-section">
               <header className="manager-detail-section-head">
-                <h4>学習の記録</h4>
+                <h4>{t("学習の記録")}</h4>
                 <span className="manager-chart-sublabel">
-                  直近 13 週間 ・ {derived.activeDays} 日活動 ・ {derived.windowHours}h
+                  {t("直近 13 週間 ・ {days} 日活動 ・ {hours}h", { days: derived.activeDays, hours: derived.windowHours })}
                 </span>
               </header>
-              <div className="manager-heatmap" role="img" aria-label="13週間の学習ヒートマップ">
+              <div className="manager-heatmap" role="img" aria-label={t("13週間の学習ヒートマップ")}>
                 {derived.heatmap.map((cell) => (
                   <span
                     key={cell.key}
@@ -1208,28 +1218,28 @@ function MemberDetailPanel({
                 ))}
               </div>
               <div className="manager-heat-legend">
-                <span>少</span>
+                <span>{t("少")}</span>
                 <span className="manager-heat-cell is-l0" aria-hidden="true" />
                 <span className="manager-heat-cell is-l1" aria-hidden="true" />
                 <span className="manager-heat-cell is-l2" aria-hidden="true" />
                 <span className="manager-heat-cell is-l3" aria-hidden="true" />
                 <span className="manager-heat-cell is-l4" aria-hidden="true" />
-                <span>多</span>
+                <span>{t("多")}</span>
               </div>
             </section>
 
             <section className="manager-detail-section">
               <header className="manager-detail-section-head">
-                <h4>週ごとの推移</h4>
-                <span className="manager-chart-sublabel">直近 {MEMBER_TREND_WEEKS} 週間</span>
+                <h4>{t("週ごとの推移")}</h4>
+                <span className="manager-chart-sublabel">{t("直近 {n} 週間", { n: MEMBER_TREND_WEEKS })}</span>
               </header>
-              <div className="manager-trend-bars is-compact" role="img" aria-label="週ごとの学習時間">
+              <div className="manager-trend-bars is-compact" role="img" aria-label={t("週ごとの学習時間")}>
                 {derived.trend.map((w, i) => (
                   <span
                     key={i}
                     className={`manager-trend-bar${i === derived.trend.length - 1 ? " is-current" : ""}`}
                     style={{ height: `${Math.max(w.ratio * 100, 3)}%` }}
-                    title={`${derived.trend.length - 1 - i === 0 ? "今週" : `${derived.trend.length - 1 - i}週前`} ・ ${formatMinutesJa(w.minutes)}`}
+                    title={`${derived.trend.length - 1 - i === 0 ? t("今週") : t("{n}週前", { n: derived.trend.length - 1 - i })} ・ ${formatMinutesJa(w.minutes)}`}
                   />
                 ))}
               </div>
@@ -1238,9 +1248,9 @@ function MemberDetailPanel({
             {derived.subjects.length > 0 ? (
               <section className="manager-detail-section">
                 <header className="manager-detail-section-head">
-                  <h4>学習トピック</h4>
+                  <h4>{t("学習トピック")}</h4>
                   {derived.otherCount > 0 ? (
-                    <span className="manager-chart-sublabel">他 {derived.otherCount}</span>
+                    <span className="manager-chart-sublabel">{t("他 {n}", { n: derived.otherCount })}</span>
                   ) : null}
                 </header>
                 <ul className="manager-skills-list">
@@ -1270,7 +1280,7 @@ function MemberDetailPanel({
             {derived.recent.length > 0 ? (
               <section className="manager-detail-section">
                 <header className="manager-detail-section-head">
-                  <h4>最近の記録</h4>
+                  <h4>{t("最近の記録")}</h4>
                 </header>
                 <ul className="manager-detail-logs">
                   {derived.recent.map((log) => (

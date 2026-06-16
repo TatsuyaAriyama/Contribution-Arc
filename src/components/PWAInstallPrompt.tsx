@@ -25,6 +25,7 @@
  * doesn't get crowded by an install ask.
  */
 import { useEffect, useState } from "react";
+import { useTranslation } from "../i18n/LanguageContext";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -59,6 +60,7 @@ function alreadyAccepted(): boolean {
 }
 
 export function PWAInstallPrompt() {
+  const { t } = useTranslation();
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -158,19 +160,19 @@ export function PWAInstallPrompt() {
   };
 
   return (
-    <div className="pwa-install-prompt" role="dialog" aria-label="アプリとして追加">
+    <div className="pwa-install-prompt" role="dialog" aria-label={t("アプリとして追加")}>
       <div className="pwa-install-prompt-body">
-        <strong>アプリとして追加しますか？</strong>
-        <p>ホーム画面 / Dock に追加すると、ブラウザを開かずに 1 タップで起動できます。</p>
+        <strong>{t("アプリとして追加しますか？")}</strong>
+        <p>{t("ホーム画面 / Dock に追加すると、ブラウザを開かずに 1 タップで起動できます。")}</p>
       </div>
       <div className="pwa-install-prompt-actions">
         <button
           type="button"
           className="pwa-install-prompt-dismiss"
           onClick={dismiss}
-          aria-label="閉じる"
+          aria-label={t("閉じる")}
         >
-          後で
+          {t("後で")}
         </button>
         <button
           type="button"
@@ -178,7 +180,7 @@ export function PWAInstallPrompt() {
           onClick={install}
           disabled={busy}
         >
-          追加する
+          {t("追加する")}
         </button>
       </div>
     </div>

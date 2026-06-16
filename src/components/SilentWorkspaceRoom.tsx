@@ -4,6 +4,7 @@ import {
   renderDefaultCharacterSvg,
   renderMorphCubeSvg,
 } from "./CharacterShapeSvg";
+import { useTranslation } from "../i18n/LanguageContext";
 
 export type RoomActivityItem = {
   id: string;
@@ -180,15 +181,15 @@ type SilentWorkspaceRoomProps = {
   appearancePanel?: ReactNode;
 };
 
-function formatChatLogTime(atMs: number) {
+function formatChatLogTime(atMs: number, t: (k: string, vars?: Record<string, string | number>) => string) {
   const diffSec = Math.max(0, Math.floor((Date.now() - atMs) / 1000));
-  if (diffSec < 5) return "今";
-  if (diffSec < 60) return `${diffSec}秒前`;
+  if (diffSec < 5) return t("今");
+  if (diffSec < 60) return t("{n}秒前", { n: diffSec });
   const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}分前`;
+  if (diffMin < 60) return t("{n}分前", { n: diffMin });
   const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}時間前`;
-  return `${Math.floor(diffHr / 24)}日前`;
+  if (diffHr < 24) return t("{n}時間前", { n: diffHr });
+  return t("{n}日前", { n: Math.floor(diffHr / 24) });
 }
 
 /* Active focus minutes for an actor, excluding break time. Used both by
@@ -207,9 +208,9 @@ function getActorActiveMinutes(member: RoomActor) {
   return Math.max(0, Math.floor((Date.now() - new Date(member.joinedAt).getTime()) / 60000));
 }
 
-function getActorStayLabel(member: RoomActor) {
+function getActorStayLabel(member: RoomActor, t: (k: string) => string) {
   if (member.status === "on-break") {
-    return "休憩中";
+    return t("休憩中");
   }
 
   const minutes = Math.max(1, getActorActiveMinutes(member));
@@ -255,6 +256,7 @@ function RoomChatPanel({
   onSend: (text: string) => Promise<boolean>;
   currentUserId: string;
 }) {
+  const { t } = useTranslation();
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
 
@@ -271,14 +273,14 @@ function RoomChatPanel({
   };
 
   return (
-    <section className="atelier-chat-panel" aria-label="ルームチャット">
+    <section className="atelier-chat-panel" aria-label={t("ルームチャット")}>
       <header className="atelier-chat-head">
-        <span className="atelier-chat-title">チャット</span>
+        <span className="atelier-chat-title">{t("チャット")}</span>
         <span className="atelier-chat-count">{messages.length}</span>
       </header>
       <ol className="atelier-chat-list">
         {messages.length === 0 ? (
-          <li className="atelier-chat-empty">まだメッセージはありません。最初の一言を。</li>
+          <li className="atelier-chat-empty">{t("まだメッセージはありません。最初の一言を。")}</li>
         ) : (
           messages.map((m) => {
             const isSelf = m.userId === currentUserId;
@@ -301,10 +303,10 @@ function RoomChatPanel({
         <textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="一言だけ。"
+          placeholder={t("一言だけ。")}
           maxLength={280}
           rows={1}
-          aria-label="チャットメッセージを書く"
+          aria-label={t("チャットメッセージを書く")}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
               e.preventDefault();
@@ -317,7 +319,7 @@ function RoomChatPanel({
           }}
         />
         <button type="submit" disabled={!draft.trim() || isSending}>
-          {isSending ? "送信…" : "送る"}
+          {isSending ? t("送信…") : t("送る")}
         </button>
       </form>
       {error ? <p className="atelier-chat-error" role="alert">{error}</p> : null}
@@ -371,6 +373,7 @@ export function SilentWorkspaceRoom({
   onComposeAppearance,
   appearancePanel,
 }: SilentWorkspaceRoomProps) {
+  const { t } = useTranslation();
   const isFocusPresentation = presentation === "focus";
   const [isPresetEditorOpen, setIsPresetEditorOpen] = useState(false);
   const [isPresetTrayOpen, setIsPresetTrayOpen] = useState(false);
@@ -460,8 +463,8 @@ export function SilentWorkspaceRoom({
     if (newcomers.length === 0) return;
     const label =
       newcomers.length === 1
-        ? `${newcomers[0].name} さんが入室`
-        : `${newcomers[0].name} さん他 ${newcomers.length - 1} 人が入室`;
+        ? t("{name} さんが入室", { name: newcomers[0].name })
+        : t("{name} さん他 {count} 人が入室", { name: newcomers[0].name, count: newcomers.length - 1 });
     setArrivalToast(label);
     const id = window.setTimeout(() => setArrivalToast(null), 3200);
     return () => window.clearTimeout(id);
@@ -626,11 +629,11 @@ export function SilentWorkspaceRoom({
       <div className="workspace-2d-shell is-preview">
         <article className="workspace-room-preview">
           <header className="room-preview-header">
-            <p className="room-preview-kicker">作業部屋</p>
+            <p className="room-preview-kicker">{t("作業部屋")}</p>
             <h3 className="room-preview-title">{roomName}</h3>
           </header>
 
-          <div className="room-preview-members" aria-label="作業中のメンバー">
+          <div className="room-preview-members" aria-label={t("作業中のメンバー")}>
             {previewMembers.length > 0 ? (
               <div className="room-preview-avatar-stack">
                 {previewMembers.map((member) => (
@@ -655,22 +658,22 @@ export function SilentWorkspaceRoom({
               </div>
             ) : null}
             <span className="room-preview-count">
-              {members.length > 0 ? `${members.length}人が作業中` : "まだ誰もいません"}
+              {members.length > 0 ? t("{count}人が作業中", { count: members.length }) : t("まだ誰もいません")}
             </span>
           </div>
 
           <label className="room-preview-task-field">
-            <span>今やってること</span>
+            <span>{t("今やってること")}</span>
             <input
               value={taskValue}
               onChange={handleTaskChange}
-              placeholder="作業内容を入力"
+              placeholder={t("作業内容を入力")}
               maxLength={48}
             />
           </label>
 
           <button type="button" className="room-preview-join" onClick={onJoin}>
-            入室する
+            {t("入室する")}
           </button>
 
           {/* 解体は入室せずに行えるようにする。以前は解体ボタンが
@@ -686,7 +689,7 @@ export function SilentWorkspaceRoom({
               className="room-preview-dismantle"
               onClick={onRoomDelete}
             >
-              解体する
+              {t("解体する")}
             </button>
           ) : null}
         </article>
@@ -719,7 +722,7 @@ export function SilentWorkspaceRoom({
       data-mobile-tab={mobileTab}
     >
       {/* モバイル専用のタブバー。PC では CSS で display:none。 */}
-      <nav className="workspace-mobile-tabs" role="tablist" aria-label="作業部屋の表示">
+      <nav className="workspace-mobile-tabs" role="tablist" aria-label={t("作業部屋の表示")}>
         <button
           type="button"
           role="tab"
@@ -727,7 +730,7 @@ export function SilentWorkspaceRoom({
           aria-selected={mobileTab === "people"}
           onClick={() => setMobileTab("people")}
         >
-          みんな
+          {t("みんな")}
           <span className="workspace-mobile-tab-count">{members.length}</span>
         </button>
         <button
@@ -737,7 +740,7 @@ export function SilentWorkspaceRoom({
           aria-selected={mobileTab === "me"}
           onClick={() => setMobileTab("me")}
         >
-          自分
+          {t("自分")}
         </button>
       </nav>
       <div className="workspace-2d-main">
@@ -782,20 +785,20 @@ export function SilentWorkspaceRoom({
           {showTapHint && !isMobileRoomLayout ? (
             <div className="workspace-tap-hint" role="status">
               <span aria-hidden="true">👆</span>
-              床をタップして移動できます
+              {t("床をタップして移動できます")}
             </div>
           ) : null}
 
           {!isFocusPresentation ? (
             <aside
               className={`workspace-room-overlay ${isOverlayExpanded ? "is-expanded" : "is-collapsed"}`}
-              aria-label="ルーム情報"
+              aria-label={t("ルーム情報")}
             >
               <div className="workspace-room-overlay-head">
                 <div className="workspace-room-overlay-head-text">
                   <strong className="workspace-room-overlay-name">{roomName}</strong>
                   <span className="workspace-room-overlay-meta">
-                    {isJoined ? `${joinedAtLabel}〜 ${currentStayLabel}` : "未入室"}
+                    {isJoined ? `${joinedAtLabel}〜 ${currentStayLabel}` : t("未入室")}
                   </span>
                 </div>
                 {/* Mobile-only expand/collapse toggle. Hidden on
@@ -806,7 +809,7 @@ export function SilentWorkspaceRoom({
                   className="workspace-room-overlay-toggle"
                   onClick={() => setIsOverlayExpanded((prev) => !prev)}
                   aria-expanded={isOverlayExpanded}
-                  aria-label={isOverlayExpanded ? "ルームメニューを閉じる" : "ルームメニューを開く"}
+                  aria-label={isOverlayExpanded ? t("ルームメニューを閉じる") : t("ルームメニューを開く")}
                 >
                   {isOverlayExpanded ? "×" : "⋯"}
                 </button>
@@ -816,14 +819,14 @@ export function SilentWorkspaceRoom({
                 <div className="workspace-room-overlay-recruitment" role="status">
                   <span>{activeRecruitmentSummary.stateLabel}</span>
                   <span className="workspace-room-overlay-recruitment-count">
-                    {activeRecruitmentSummary.joinedCount}人
+                    {t("{count}人", { count: activeRecruitmentSummary.joinedCount })}
                   </span>
                   <button
                     type="button"
                     onClick={activeRecruitmentSummary.onCancel}
-                    aria-label="募集を取り消す"
+                    aria-label={t("募集を取り消す")}
                   >
-                    取消
+                    {t("取消")}
                   </button>
                 </div>
               ) : null}
@@ -832,10 +835,10 @@ export function SilentWorkspaceRoom({
                 <input
                   value={taskValue}
                   onChange={handleTaskChange}
-                  placeholder="今やってること"
+                  placeholder={t("今やってること")}
                   maxLength={48}
                   list="workspace-learning-items-datalist"
-                  aria-label="今やってること"
+                  aria-label={t("今やってること")}
                 />
                 <datalist id="workspace-learning-items-datalist">
                   {learningItemSuggestions.map((item) => (
@@ -848,7 +851,7 @@ export function SilentWorkspaceRoom({
                     className="workspace-room-overlay-ghost-hint"
                     onClick={() => onLearningItemRegister?.(trimmedTask)}
                   >
-                    + 「{trimmedTask}」を記録に追加
+                    {t("+ 「{task}」を記録に追加", { task: trimmedTask })}
                   </button>
                 ) : null}
               </div>
@@ -863,7 +866,7 @@ export function SilentWorkspaceRoom({
                     }
                     aria-pressed={isCurrentUserOnBreak}
                   >
-                    {isCurrentUserOnBreak ? "休憩終了" : "休憩"}
+                    {isCurrentUserOnBreak ? t("休憩終了") : t("休憩")}
                   </button>
                 ) : null}
                 {onOpenRecruitmentModal && isJoined && !activeRecruitmentSummary ? (
@@ -872,7 +875,7 @@ export function SilentWorkspaceRoom({
                     className="workspace-room-overlay-recruit"
                     onClick={onOpenRecruitmentModal}
                   >
-                    募集
+                    {t("募集")}
                   </button>
                 ) : null}
                 {isJoined ? (
@@ -881,7 +884,7 @@ export function SilentWorkspaceRoom({
                     className="workspace-room-overlay-leave"
                     onClick={onLeave}
                   >
-                    退出
+                    {t("退出")}
                   </button>
                 ) : null}
               </div>
@@ -897,7 +900,7 @@ export function SilentWorkspaceRoom({
                 <div
                   className="workspace-room-overlay-comm"
                   role="group"
-                  aria-label="ルーム内アクション"
+                  aria-label={t("ルーム内アクション")}
                 >
                   {visiblePresetMessages.length > 0 ? (
                     <button
@@ -905,10 +908,10 @@ export function SilentWorkspaceRoom({
                       className={`workspace-room-overlay-comm-button${isPresetTrayOpen ? " is-active" : ""}`}
                       onClick={() => setIsPresetTrayOpen((open) => !open)}
                       aria-pressed={isPresetTrayOpen}
-                      aria-label={isPresetTrayOpen ? "定型文を閉じる" : "定型文を開く"}
+                      aria-label={isPresetTrayOpen ? t("定型文を閉じる") : t("定型文を開く")}
                     >
                       <span aria-hidden="true">💬</span>
-                      <small>定型文</small>
+                      <small>{t("定型文")}</small>
                     </button>
                   ) : null}
                   {canDropFloorNote && isJoined && onComposeFloorNote ? (
@@ -916,10 +919,10 @@ export function SilentWorkspaceRoom({
                       type="button"
                       className="workspace-room-overlay-comm-button"
                       onClick={onComposeFloorNote}
-                      aria-label="置き手紙を残す"
+                      aria-label={t("置き手紙を残す")}
                     >
                       <span aria-hidden="true">✉</span>
-                      <small>置き手紙</small>
+                      <small>{t("置き手紙")}</small>
                     </button>
                   ) : null}
                   {onComposeAppearance ? (
@@ -927,10 +930,10 @@ export function SilentWorkspaceRoom({
                       type="button"
                       className="workspace-room-overlay-comm-button"
                       onClick={onComposeAppearance}
-                      aria-label="分身の見た目を変える"
+                      aria-label={t("分身の見た目を変える")}
                     >
                       <span aria-hidden="true">✦</span>
-                      <small>着替え</small>
+                      <small>{t("着替え")}</small>
                     </button>
                   ) : null}
                 </div>
@@ -954,7 +957,7 @@ export function SilentWorkspaceRoom({
                         onRoomRename();
                       }}
                     >
-                      名前変更
+                      {t("名前変更")}
                     </button>
                   ) : null}
                   {onRoomDelete && canDeleteRoom ? (
@@ -966,7 +969,7 @@ export function SilentWorkspaceRoom({
                         onRoomDelete();
                       }}
                     >
-                      解体
+                      {t("解体")}
                     </button>
                   ) : null}
                 </div>
@@ -992,7 +995,7 @@ export function SilentWorkspaceRoom({
           {isJoined && members.length <= 1 && presetLog.length === 0 ? (
             <div className="workspace-stage-empty" aria-hidden="true">
               <span className="workspace-stage-empty-dot" />
-              <p>静かな部屋。最初のひと言を残してみよう。</p>
+              <p>{t("静かな部屋。最初のひと言を残してみよう。")}</p>
             </div>
           ) : null}
 
@@ -1004,11 +1007,11 @@ export function SilentWorkspaceRoom({
           {presetLog.length > 0 ? (
             <aside
               className="workspace-chat-log"
-              aria-label="ルームの発言ログ"
+              aria-label={t("ルームの発言ログ")}
               aria-live="polite"
               aria-atomic="false"
             >
-              <p className="workspace-chat-log-title">最近の発言</p>
+              <p className="workspace-chat-log-title">{t("最近の発言")}</p>
               <ul>
                 {presetLog.map((entry, index) => (
                   <li key={entry.id} className={index === 0 ? "is-newest" : ""}>
@@ -1021,7 +1024,7 @@ export function SilentWorkspaceRoom({
                       <div className="workspace-chat-log-head">
                         <strong>{entry.name}</strong>
                         <span className="workspace-chat-log-time">
-                          {formatChatLogTime(entry.at)}
+                          {formatChatLogTime(entry.at, t)}
                         </span>
                       </div>
                       <p>{entry.message}</p>
@@ -1187,7 +1190,7 @@ export function SilentWorkspaceRoom({
                 <span className="actor-name">{member.name}</span>
                 <span className="actor-task">
                   <strong>{member.currentTask}</strong>
-                  <small>{getActorStayLabel(member)}</small>
+                  <small>{getActorStayLabel(member, t)}</small>
                 </span>
               </button>
             );
@@ -1245,8 +1248,8 @@ export function SilentWorkspaceRoom({
                 buzz(10);
                 onFloorNoteOpen?.(note.id);
               }}
-              aria-label={`${note.name}さんの置き手紙`}
-              title={`${note.name}さんの置き手紙`}
+              aria-label={t("{name}さんの置き手紙", { name: note.name })}
+              title={t("{name}さんの置き手紙", { name: note.name })}
             >
               <span className="workspace-floor-note-icon" aria-hidden="true">
                 ✉
@@ -1271,7 +1274,7 @@ export function SilentWorkspaceRoom({
                     <button
                       type="button"
                       className="workspace-popover-backdrop"
-                      aria-label="閉じる"
+                      aria-label={t("閉じる")}
                       onClick={onPanelClose}
                     />
                     <div
@@ -1287,7 +1290,7 @@ export function SilentWorkspaceRoom({
                     <button
                       type="button"
                       className="workspace-popover-backdrop"
-                      aria-label="閉じる"
+                      aria-label={t("閉じる")}
                       onClick={onPanelClose}
                     />
                     <div
@@ -1325,7 +1328,7 @@ export function SilentWorkspaceRoom({
                   <button
                     type="button"
                     className="workspace-popover-backdrop"
-                    aria-label="閉じる"
+                    aria-label={t("閉じる")}
                     onClick={onPanelClose}
                   />
                   <div
@@ -1347,7 +1350,7 @@ export function SilentWorkspaceRoom({
                   <button
                     type="button"
                     className="workspace-popover-backdrop"
-                    aria-label="閉じる"
+                    aria-label={t("閉じる")}
                     onClick={onPanelClose}
                   />
                   <div
@@ -1369,7 +1372,7 @@ export function SilentWorkspaceRoom({
                   <button
                     type="button"
                     className="workspace-popover-backdrop"
-                    aria-label="閉じる"
+                    aria-label={t("閉じる")}
                     onClick={onPanelClose}
                   />
                   <div
@@ -1388,15 +1391,15 @@ export function SilentWorkspaceRoom({
         {/* モバイル「みんな」タブ：在室者を縦カードで一覧。誰が何を
             しているかを座標配置ではなくリストで即把握できる。タップで
             既存のプロフィール popover を開く。PC では CSS で非表示。 */}
-        <div className="workspace-mobile-panel workspace-mobile-people" role="tabpanel" aria-label="在室者">
+        <div className="workspace-mobile-panel workspace-mobile-people" role="tabpanel" aria-label={t("在室者")}>
           <div className="workspace-mobile-panel-head">
             <strong>{roomName}</strong>
-            <span>{members.length > 0 ? `${members.length}人が作業中` : "まだ誰もいません"}</span>
+            <span>{members.length > 0 ? t("{count}人が作業中", { count: members.length }) : t("まだ誰もいません")}</span>
           </div>
           <ul className="workspace-people-list">
             {members.length === 0 ? (
               <li className="workspace-people-empty">
-                まだ誰もいません。最初の一人になりましょう。
+                {t("まだ誰もいません。最初の一人になりましょう。")}
               </li>
             ) : (
               members.map((member) => {
@@ -1435,15 +1438,15 @@ export function SilentWorkspaceRoom({
                       <span className="workspace-people-text">
                         <span className="workspace-people-name">
                           {member.name}
-                          {isMe ? "（あなた）" : ""}
+                          {isMe ? t("（あなた）") : ""}
                         </span>
                         <span className="workspace-people-task">{task || "—"}</span>
                       </span>
                       <span className="workspace-people-meta">
                         <span className={`workspace-people-status${onBreak ? " is-break" : ""}`}>
-                          {onBreak ? "休憩中" : "集中中"}
+                          {onBreak ? t("休憩中") : t("集中中")}
                         </span>
-                        <span className="workspace-people-stay">{getActorStayLabel(member)}</span>
+                        <span className="workspace-people-stay">{getActorStayLabel(member, t)}</span>
                       </span>
                     </button>
                   </li>
@@ -1467,11 +1470,11 @@ export function SilentWorkspaceRoom({
         {/* モバイル「自分」タブ：操作をここに一元化。状態切替・今やって
             ること・定型文・置き手紙・着替え・募集・退出。散らばっていた
             導線を 1 画面にまとめて迷わないようにする。PC では非表示。 */}
-        <div className="workspace-mobile-panel workspace-mobile-me" role="tabpanel" aria-label="自分の操作">
+        <div className="workspace-mobile-panel workspace-mobile-me" role="tabpanel" aria-label={t("自分の操作")}>
           <div className="workspace-me-status">
             <div className="workspace-me-status-text">
               <span className={`workspace-me-status-label${isCurrentUserOnBreak ? " is-break" : ""}`}>
-                {isJoined ? (isCurrentUserOnBreak ? "休憩中" : "集中中") : "未入室"}
+                {isJoined ? (isCurrentUserOnBreak ? t("休憩中") : t("集中中")) : t("未入室")}
               </span>
               <span className="workspace-me-status-stay">
                 {isJoined ? `${joinedAtLabel}〜 ${currentStayLabel}` : roomName}
@@ -1484,19 +1487,19 @@ export function SilentWorkspaceRoom({
                 onClick={() => onPresetMessage(isCurrentUserOnBreak ? "集中します" : "休憩します")}
                 aria-pressed={isCurrentUserOnBreak}
               >
-                {isCurrentUserOnBreak ? "集中に戻る" : "休憩する"}
+                {isCurrentUserOnBreak ? t("集中に戻る") : t("休憩する")}
               </button>
             ) : null}
           </div>
 
           <label className="workspace-me-task">
-            <span className="workspace-me-section-label">今やってること</span>
+            <span className="workspace-me-section-label">{t("今やってること")}</span>
             <input
               value={taskValue}
               onChange={handleTaskChange}
-              placeholder="今やってること"
+              placeholder={t("今やってること")}
               maxLength={48}
-              aria-label="今やってること"
+              aria-label={t("今やってること")}
             />
             {showGhostHint ? (
               <button
@@ -1504,14 +1507,14 @@ export function SilentWorkspaceRoom({
                 className="workspace-me-ghost-hint"
                 onClick={() => onLearningItemRegister?.(trimmedTask)}
               >
-                + 「{trimmedTask}」を記録に追加
+                {t("+ 「{task}」を記録に追加", { task: trimmedTask })}
               </button>
             ) : null}
           </label>
 
           {visiblePresetMessages.length > 0 && isJoined ? (
             <div className="workspace-me-presets">
-              <span className="workspace-me-section-label">ひとこと送る</span>
+              <span className="workspace-me-section-label">{t("ひとこと送る")}</span>
               <div className="workspace-me-preset-grid">
                 {visiblePresetMessages.map((message, index) => (
                   <button
@@ -1530,17 +1533,17 @@ export function SilentWorkspaceRoom({
             <div className="workspace-me-actions">
               {canDropFloorNote && onComposeFloorNote ? (
                 <button type="button" onClick={onComposeFloorNote}>
-                  <span aria-hidden="true">✉</span> 置き手紙
+                  <span aria-hidden="true">✉</span> {t("置き手紙")}
                 </button>
               ) : null}
               {onComposeAppearance ? (
                 <button type="button" onClick={onComposeAppearance}>
-                  <span aria-hidden="true">✦</span> 着替え
+                  <span aria-hidden="true">✦</span> {t("着替え")}
                 </button>
               ) : null}
               {onOpenRecruitmentModal && !activeRecruitmentSummary ? (
                 <button type="button" onClick={onOpenRecruitmentModal}>
-                  <span aria-hidden="true">📣</span> 募集
+                  <span aria-hidden="true">📣</span> {t("募集")}
                 </button>
               ) : null}
             </div>
@@ -1549,17 +1552,17 @@ export function SilentWorkspaceRoom({
           {activeRecruitmentSummary ? (
             <div className="workspace-me-recruitment" role="status">
               <span>
-                {activeRecruitmentSummary.stateLabel}（{activeRecruitmentSummary.joinedCount}人）
+                {activeRecruitmentSummary.stateLabel}{t("（{count}人）", { count: activeRecruitmentSummary.joinedCount })}
               </span>
               <button type="button" onClick={activeRecruitmentSummary.onCancel}>
-                取消
+                {t("取消")}
               </button>
             </div>
           ) : null}
 
           {isJoined ? (
             <button type="button" className="workspace-me-leave" onClick={onLeave}>
-              退出する
+              {t("退出する")}
             </button>
           ) : null}
         </div>
@@ -1596,7 +1599,7 @@ export function SilentWorkspaceRoom({
             <button
               type="button"
               className="hud-fab-backdrop"
-              aria-label="メニューを閉じる"
+              aria-label={t("メニューを閉じる")}
               onClick={() => {
                 setIsHudOpen(false);
                 setIsPresetTrayOpen(false);
@@ -1616,11 +1619,11 @@ export function SilentWorkspaceRoom({
                 setIsPresetTrayOpen((isOpen) => !isOpen);
               }}
               aria-pressed={isPresetTrayOpen}
-              aria-label={isPresetTrayOpen ? "定型文を閉じる" : "定型文を開く"}
+              aria-label={isPresetTrayOpen ? t("定型文を閉じる") : t("定型文を開く")}
               tabIndex={isHudOpen ? 0 : -1}
             >
               <span className="hud-fab-action-icon" aria-hidden="true">💬</span>
-              <span>{isPresetTrayOpen ? "定型文を閉じる" : "定型文"}</span>
+              <span>{isPresetTrayOpen ? t("定型文を閉じる") : t("定型文")}</span>
             </button>
             {canDropFloorNote && isJoined && onComposeFloorNote ? (
               <button
@@ -1630,11 +1633,11 @@ export function SilentWorkspaceRoom({
                   setIsHudOpen(false);
                   onComposeFloorNote();
                 }}
-                aria-label="置き手紙を残す"
+                aria-label={t("置き手紙を残す")}
                 tabIndex={isHudOpen ? 0 : -1}
               >
                 <span className="hud-fab-action-icon" aria-hidden="true">✉</span>
-                <span>置き手紙を残す</span>
+                <span>{t("置き手紙を残す")}</span>
               </button>
             ) : null}
             {onComposeAppearance ? (
@@ -1645,11 +1648,11 @@ export function SilentWorkspaceRoom({
                   setIsHudOpen(false);
                   onComposeAppearance();
                 }}
-                aria-label="分身の見た目を変える"
+                aria-label={t("分身の見た目を変える")}
                 tabIndex={isHudOpen ? 0 : -1}
               >
                 <span className="hud-fab-action-icon" aria-hidden="true">✦</span>
-                <span>着替え</span>
+                <span>{t("着替え")}</span>
               </button>
             ) : null}
           </div>
@@ -1663,7 +1666,7 @@ export function SilentWorkspaceRoom({
             className="hud-fab-toggle"
             onClick={() => setIsHudOpen((open) => !open)}
             aria-expanded={isHudOpen}
-            aria-label={isHudOpen ? "メニューを閉じる" : "操作メニューを開く"}
+            aria-label={isHudOpen ? t("メニューを閉じる") : t("操作メニューを開く")}
           >
             <span aria-hidden="true" className="hud-fab-toggle-icon">
               +
@@ -1674,14 +1677,14 @@ export function SilentWorkspaceRoom({
               PC でも従来どおり表示されるが、モバイルでは FAB の上に
               スライドアップする ボトムシート風に CSS 側で再配置。 */}
           {isPresetTrayOpen ? (
-            <div className="preset-message-bar" aria-label="定型コミュニケーション">
+            <div className="preset-message-bar" aria-label={t("定型コミュニケーション")}>
               {visiblePresetMessages.map((message, index) => (
                 <button
                   type="button"
                   key={`${message}-${index}`}
                   onClick={() => onPresetMessage(message)}
                   disabled={!isJoined}
-                  title={`${message} (${index + 1} キーで送信)`}
+                  title={t("{message} ({key} キーで送信)", { message, key: index + 1 })}
                 >
                   <kbd className="preset-key-hint" aria-hidden="true">{index + 1}</kbd>
                   <span className="preset-message-text">{message}</span>
@@ -1692,20 +1695,20 @@ export function SilentWorkspaceRoom({
                 className="preset-edit-button"
                 onClick={() => setIsPresetEditorOpen((isOpen) => !isOpen)}
               >
-                {isPresetEditorOpen ? "閉じる" : "定型文編集"}
+                {isPresetEditorOpen ? t("閉じる") : t("定型文編集")}
               </button>
             </div>
           ) : null}
 
           {isPresetTrayOpen && isPresetEditorOpen ? (
-            <div className="preset-message-editor" aria-label="定型文編集">
+            <div className="preset-message-editor" aria-label={t("定型文編集")}>
               {presetSlots.map((message, index) => (
                 <label key={`preset-slot-${index}`}>
                   <span>{index + 1}</span>
                   <input
                     value={message}
                     onChange={(event) => handlePresetChange(index, event.target.value)}
-                    placeholder="定型文を入力"
+                    placeholder={t("定型文を入力")}
                     maxLength={24}
                   />
                 </label>

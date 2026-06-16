@@ -4,6 +4,7 @@ import {
   generateShareImagePng,
   type ShareImageInput,
 } from "../services/shareImage";
+import { useTranslation } from "../i18n/LanguageContext";
 
 type ShareToXModalProps = {
   open: boolean;
@@ -14,6 +15,7 @@ type ShareToXModalProps = {
 const INTENT_URL = "https://twitter.com/intent/tweet";
 
 export function ShareToXModal({ open, onClose, input }: ShareToXModalProps) {
+  const { t } = useTranslation();
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [blob, setBlob] = useState<Blob | null>(null);
   const [text, setText] = useState<string>("");
@@ -65,7 +67,7 @@ export function ShareToXModal({ open, onClose, input }: ShareToXModalProps) {
       })
       .catch((err: unknown) => {
         if (generationToken.current !== token) return;
-        setError(err instanceof Error ? err.message : "画像の生成に失敗しました。");
+        setError(err instanceof Error ? err.message : t("画像の生成に失敗しました。"));
       });
   }, [open, input]);
 
@@ -100,21 +102,21 @@ export function ShareToXModal({ open, onClose, input }: ShareToXModalProps) {
     anchor.click();
     document.body.removeChild(anchor);
     URL.revokeObjectURL(url);
-    setStatus("画像をダウンロードしました。");
+    setStatus(t("画像をダウンロードしました。"));
   };
 
   const handleCopyImage = async () => {
     if (!blob) return;
     if (typeof ClipboardItem === "undefined" || !navigator.clipboard?.write) {
-      setError("このブラウザは画像のクリップボードコピーに対応していません。ダウンロードしてからご利用ください。");
+      setError(t("このブラウザは画像のクリップボードコピーに対応していません。ダウンロードしてからご利用ください。"));
       return;
     }
     try {
       await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-      setStatus("画像をコピーしました。Xの投稿画面で貼り付けてください。");
+      setStatus(t("画像をコピーしました。Xの投稿画面で貼り付けてください。"));
       setError("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "クリップボードへのコピーに失敗しました。");
+      setError(err instanceof Error ? err.message : t("クリップボードへのコピーに失敗しました。"));
     }
   };
 
@@ -123,56 +125,55 @@ export function ShareToXModal({ open, onClose, input }: ShareToXModalProps) {
   };
 
   return (
-    <div className="share-x-modal" role="dialog" aria-modal="true" aria-label="Xでシェア">
+    <div className="share-x-modal" role="dialog" aria-modal="true" aria-label={t("Xでシェア")}>
       <button
         type="button"
         className="share-x-backdrop"
-        aria-label="閉じる"
+        aria-label={t("閉じる")}
         onClick={onClose}
       />
       <div className="share-x-panel">
         <header className="share-x-head">
           <div>
             <p className="card-kicker">Share to X</p>
-            <h2>今日の作業時間をXでシェア</h2>
+            <h2>{t("今日の作業時間をXでシェア")}</h2>
           </div>
-          <button type="button" className="share-x-close" onClick={onClose} aria-label="閉じる">
+          <button type="button" className="share-x-close" onClick={onClose} aria-label={t("閉じる")}>
             ×
           </button>
         </header>
 
         <div className="share-x-body">
-          <div className="share-x-preview" aria-label="シェア画像プレビュー">
+          <div className="share-x-preview" aria-label={t("シェア画像プレビュー")}>
             {imageUrl ? (
-              <img src={imageUrl} alt="シェア画像プレビュー" />
+              <img src={imageUrl} alt={t("シェア画像プレビュー")} />
             ) : (
-              <div className="share-x-preview-placeholder">画像を生成中…</div>
+              <div className="share-x-preview-placeholder">{t("画像を生成中…")}</div>
             )}
           </div>
 
           <div className="share-x-form">
             <label className="share-x-field">
-              <span>投稿文</span>
+              <span>{t("投稿文")}</span>
               <textarea
                 ref={textareaRef}
                 value={text}
                 onChange={(event) => setText(event.target.value)}
                 rows={5}
                 maxLength={280}
-                placeholder="投稿内容を編集できます"
+                placeholder={t("投稿内容を編集できます")}
               />
               <small
                 className={isOverLimit ? "over-limit" : ""}
                 aria-live="polite"
-                aria-label={`投稿文 ${charCount} / 280 文字`}
+                aria-label={t("投稿文 {count} / 280 文字", { count: charCount })}
               >
                 {charCount}/280
               </small>
             </label>
 
             <p className="share-x-hint">
-              ※ X の Web 投稿画面は画像の自動添付に対応していないため、
-              先に「画像をコピー」してから「X を開く」を押し、投稿画面でペースト（Cmd+V / Ctrl+V）してください。
+              {t("※ X の Web 投稿画面は画像の自動添付に対応していないため、先に「画像をコピー」してから「X を開く」を押し、投稿画面でペースト（Cmd+V / Ctrl+V）してください。")}
             </p>
 
             <div className="share-x-actions">
@@ -182,7 +183,7 @@ export function ShareToXModal({ open, onClose, input }: ShareToXModalProps) {
                 onClick={handleDownload}
                 disabled={!blob}
               >
-                画像をダウンロード
+                {t("画像をダウンロード")}
               </button>
               <button
                 type="button"
@@ -190,7 +191,7 @@ export function ShareToXModal({ open, onClose, input }: ShareToXModalProps) {
                 onClick={handleCopyImage}
                 disabled={!blob}
               >
-                画像をコピー
+                {t("画像をコピー")}
               </button>
               <button
                 type="button"
@@ -198,7 +199,7 @@ export function ShareToXModal({ open, onClose, input }: ShareToXModalProps) {
                 onClick={handleOpenX}
                 disabled={!text.trim() || isOverLimit}
               >
-                Xを開く
+                {t("Xを開く")}
               </button>
             </div>
 

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 import { FriendGithubMini } from "./FriendGithubMini";
+import { useTranslation } from "../i18n/LanguageContext";
 
 export type AppView = "home" | "profile" | "workspace" | "logs" | "daily" | "learning" | "shop" | "teams" | "manager" | "feed" | "showcase" | "poker";
 export type FriendPreviewStatus = "online" | "away" | "offline";
@@ -54,6 +55,7 @@ export function PremiumSidebar({
   isMobileOpen = false,
   onMobileClose,
 }: PremiumSidebarProps) {
+  const { t } = useTranslation();
   const visibleFriends = friends.slice(0, 5);
 
   // Wraps view-changing nav callbacks so the mobile drawer always closes
@@ -70,14 +72,14 @@ export function PremiumSidebar({
     >
       {playerStatus}
 
-      <nav className="side-nav" aria-label="Main navigation">
+      <nav className="side-nav" aria-label={t("メインナビゲーション")}>
         <button
           type="button"
           className={currentView === "home" ? "active" : ""}
           onClick={() => handleNavigate(() => onViewChange("home"))}
         >
           <span />
-          ホーム
+          {t("ホーム")}
         </button>
         {/* メイン機能(作業記録)への導線。アプリの主役なのでナビ最上段の
             ホーム直下に置き、唯一の CTA スタイルで一目で分かるようにする。 */}
@@ -87,7 +89,7 @@ export function PremiumSidebar({
           onClick={() => handleNavigate(() => onViewChange("learning"))}
         >
           <span />
-          記録する
+          {t("記録する")}
         </button>
         <button
           type="button"
@@ -95,7 +97,7 @@ export function PremiumSidebar({
           onClick={() => handleNavigate(() => onViewChange("logs"))}
         >
           <span />
-          みんなの記録
+          {t("みんなの記録")}
         </button>
         <button
           type="button"
@@ -103,7 +105,7 @@ export function PremiumSidebar({
           onClick={() => handleNavigate(() => onViewChange("daily"))}
         >
           <span />
-          日報
+          {t("日報")}
         </button>
         <button
           type="button"
@@ -111,7 +113,7 @@ export function PremiumSidebar({
           onClick={() => handleNavigate(() => onViewChange("workspace"))}
         >
           <span />
-          作業部屋
+          {t("作業部屋")}
         </button>
       </nav>
 
@@ -142,7 +144,7 @@ export function PremiumSidebar({
                   <FriendGithubMini username={friend.githubUsername} />
                 ) : null}
                 {friend.githubUrl ? (
-                  <a href={friend.githubUrl} target="_blank" rel="noreferrer" aria-label={`${friend.name}のGitHubを開く`}>
+                  <a href={friend.githubUrl} target="_blank" rel="noreferrer" aria-label={t("{name}のGitHubを開く", { name: friend.name })}>
                     GitHub
                   </a>
                 ) : null}
@@ -151,16 +153,16 @@ export function PremiumSidebar({
           ) : (
             <div className="friend-empty-state">
               <p className="friend-empty-text">
-                フレンドを招待して、
+                {t("フレンドを招待して、")}
                 <br />
-                一緒に学びを積み上げよう
+                {t("一緒に学びを積み上げよう")}
               </p>
               <button
                 type="button"
                 className="friend-empty-cta"
                 onClick={() => handleNavigate(() => onViewChange("profile"))}
               >
-                フレンドを招待する
+                {t("フレンドを招待する")}
               </button>
             </div>
           )}
@@ -196,7 +198,7 @@ export function PremiumSidebar({
               </motion.button>
             ))
           ) : (
-            <p className="friend-empty">今は静かです。誰かの記録が始まるとここに流れます。</p>
+            <p className="friend-empty">{t("今は静かです。誰かの記録が始まるとここに流れます。")}</p>
           )}
         </div>
       </section>
@@ -205,7 +207,7 @@ export function PremiumSidebar({
         type="button"
         className="brand-lockup-compact"
         onClick={() => handleNavigate(() => onViewChange("home"))}
-        aria-label="ホームへ"
+        aria-label={t("ホームへ")}
       >
         <span className="brand-lockup-compact-mark">{logo}</span>
         <span>Contribution Arc</span>
