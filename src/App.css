@@ -22633,37 +22633,52 @@
 }
 
 .learning-header h2 {
-  font-size: 22px;
-  font-weight: 600;
-  margin: 4px 0 2px;
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin: 6px 0 4px;
+  color: var(--ink);
 }
 
 .learning-header small {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
 }
 
 .learning-count-summary {
-  margin: 6px 0 0;
-  font-size: 11px;
+  margin: 8px 0 0;
+  font-size: 11.5px;
   color: var(--muted);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 800;
 }
 
 .learning-add-button {
-  border: 1px solid var(--border);
-  background: var(--cta-bg);
-  color: var(--bg);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1.5px solid var(--ink);
+  background: var(--ink);
+  color: var(--surface);
   border-radius: 999px;
-  padding: 8px 18px;
+  padding: 10px 20px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 800;
+  letter-spacing: 0.01em;
   cursor: pointer;
-  transition: opacity 0.18s ease;
+  box-shadow: 0 4px 12px rgba(var(--ink-rgb), 0.18);
+  transition: transform 0.12s ease, box-shadow 0.16s ease, opacity 0.16s ease;
 }
 
 .learning-add-button:hover {
-  opacity: 0.85;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(var(--ink-rgb), 0.22);
+}
+.learning-add-button:active {
+  transform: scale(0.97);
 }
 
 .learning-controls {
@@ -22676,10 +22691,10 @@
 
 .learning-tabs {
   display: inline-flex;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(var(--ink-rgb), 0.1);
   border-radius: 999px;
-  padding: 3px;
-  background: var(--bg);
+  padding: 4px;
+  background: rgba(var(--ink-rgb), 0.025);
   gap: 2px;
 }
 
@@ -22687,41 +22702,55 @@
   border: none;
   background: transparent;
   color: var(--muted);
-  padding: 6px 14px;
+  padding: 7px 16px;
   border-radius: 999px;
   cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-  transition: background 0.18s ease, color 0.18s ease;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.12s ease;
+}
+
+.learning-tabs button:hover {
+  color: var(--ink);
 }
 
 .learning-tabs button.active {
-  background: var(--cta-bg);
-  color: var(--bg);
+  background: var(--ink);
+  color: var(--surface);
+  box-shadow: 0 2px 6px rgba(var(--ink-rgb), 0.18);
 }
 
 .learning-search {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg);
-  padding: 8px 12px;
+  border: 1px solid rgba(var(--ink-rgb), 0.12);
+  border-radius: 10px;
+  background: var(--surface);
+  padding: 10px 14px;
   font-size: 13px;
   min-width: 200px;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+.learning-search:focus {
+  outline: none;
+  border-color: rgba(var(--ink-rgb), 0.4);
+  box-shadow: 0 0 0 3px rgba(var(--ink-rgb), 0.06);
 }
 
 .learning-sort {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg);
+  border: 1px solid rgba(var(--ink-rgb), 0.12);
+  border-radius: 10px;
+  background: var(--surface);
   color: var(--ink);
-  padding: 8px 12px;
-  font-size: 12px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  font-weight: 700;
   cursor: pointer;
-  transition: border-color 0.16s ease;
+  transition: border-color 0.16s ease, background 0.16s ease;
 }
 
 .learning-sort:hover {
   border-color: var(--ink);
+  background: rgba(var(--ink-rgb), 0.03);
 }
 
 /* 並べ替えモード toggle。普段は控えめ、active は ink 反転 pill。 */
@@ -22792,48 +22821,80 @@
 
 .learning-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
+  gap: 16px;
 }
 
 /* Phase 10c: `<button>` から `<article>` へ. クイック記録チップを
    入れ子にするためにコンテナをインタラクティブでない要素に変更し、
    実際の編集トリガーは内側の .learning-card-trigger に移した. */
 .learning-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0;
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--learning-card-color, var(--ink));
-  border-radius: 12px;
-  background: var(--bg);
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
+  border-radius: 16px;
+  background:
+    /* 左から item color の薄いウォッシュをかける ─ 4px の左ボーダーより
+       柔らかく、各教科の "気配" がカードを覆う形に。 */
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--learning-card-color, var(--ink)) 7%, transparent) 0%,
+      color-mix(in srgb, var(--learning-card-color, var(--ink)) 1%, transparent) 38%,
+      transparent 100%
+    ),
+    var(--surface);
   overflow: hidden;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  box-shadow: 0 1px 0 rgba(var(--ink-rgb), 0.03);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.22s ease,
+    border-color 0.18s ease;
+}
+.learning-card::before {
+  /* 左端の細いアクセント線。旧 4px ボーダーより薄く、内側に
+     収めることで角丸と完全に調和する。 */
+  content: "";
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--learning-card-color, var(--ink));
+  opacity: 0.78;
 }
 
 .learning-card:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+  border-color: rgba(var(--ink-rgb), 0.18);
+  box-shadow:
+    0 12px 26px rgba(var(--ink-rgb), 0.08),
+    0 2px 6px rgba(var(--ink-rgb), 0.04);
 }
 
 .learning-card-trigger {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 14px;
+  row-gap: 8px;
   width: 100%;
   border: none;
   background: transparent;
-  padding: 14px 16px 12px;
+  padding: 16px 18px 14px 22px;
   text-align: left;
   cursor: pointer;
   font: inherit;
   color: inherit;
+  align-items: start;
 }
 
 .learning-card-trigger:focus-visible {
   outline: 2px solid var(--learning-card-color, var(--ink));
   outline-offset: -2px;
-  border-radius: 8px;
+  border-radius: 14px;
 }
 
 /* クイック記録チップ列. カード本体とは罫線で軽く区切って「これは
@@ -22842,25 +22903,30 @@
 .learning-card-quicklog {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 8px 12px 10px;
-  border-top: 1px solid var(--border);
-  background: rgba(var(--ink-rgb), 0.015);
+  gap: 6px;
+  padding: 10px 18px 12px;
+  border-top: 1px dashed rgba(var(--ink-rgb), 0.08);
+  background: linear-gradient(
+    180deg,
+    rgba(var(--ink-rgb), 0.012),
+    rgba(var(--ink-rgb), 0.028)
+  );
 }
 
 .learning-card-quicklog-chip {
-  padding: 4px 10px;
-  border: 1px solid var(--border);
+  padding: 5px 12px;
+  border: 1px solid rgba(var(--ink-rgb), 0.12);
   border-radius: 999px;
-  background: var(--bg);
-  color: var(--muted);
+  background: var(--surface);
+  color: var(--ink);
   font: inherit;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 11.5px;
+  font-weight: 800;
   letter-spacing: 0.02em;
   cursor: pointer;
   transition: border-color 120ms ease-out, color 120ms ease-out,
-    background-color 120ms ease-out, transform 120ms ease-out;
+    background-color 120ms ease-out, transform 120ms ease-out,
+    box-shadow 120ms ease-out;
 }
 
 .learning-card-quicklog-chip:hover {
@@ -23079,24 +23145,61 @@
   opacity: 0.85;
 }
 
+/* head は trigger grid の右カラム (1 行目) に位置取り。
+   photo を grid 左カラムに大きく出すので、head 自身は title +
+   バッジ群を行で並べるだけにする。 */
 .learning-card-head {
+  grid-column: 2 / 3;
+  grid-row: 1 / 2;
   display: flex;
   align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  min-width: 0;
 }
 
 .learning-card-badge {
-  font-size: 16px;
-  line-height: 1;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(var(--ink-rgb), 0.06);
+  color: var(--muted);
+  line-height: 1.4;
+  order: 2;
 }
 
 .learning-card-head strong {
-  font-size: 14px;
-  font-weight: 600;
+  flex: 1 1 100%;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
   color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.25;
+  order: 1;
+}
+.learning-card-status {
+  order: 3;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  line-height: 1.4;
+}
+.learning-card-status.is-done {
+  background: rgba(31, 111, 74, 0.14);
+  color: #1f6f4a;
+}
+.learning-card-status.is-paused {
+  background: rgba(var(--ink-rgb), 0.08);
+  color: var(--muted);
 }
 
 
@@ -23113,12 +23216,19 @@
 }
 
 .learning-card-meta {
+  grid-column: 2 / 3;
+  grid-row: 2 / 3;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px 10px;
-  font-size: 11px;
+  gap: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
   color: var(--muted);
+}
+.learning-card-meta > span:first-child {
+  color: var(--ink);
+  font-weight: 800;
 }
 
 .learning-card-archived {
@@ -23155,24 +23265,34 @@
    a small floor stub so the row keeps its rhythm. Today (rightmost bar)
    gets full opacity; earlier days fade slightly. */
 .learning-card-spark {
+  grid-column: 1 / 3;
+  grid-row: 3 / 4;
   display: flex;
   align-items: flex-end;
-  gap: 3px;
-  height: 18px;
-  margin-top: 2px;
+  gap: 4px;
+  height: 26px;
+  margin-top: 6px;
+  padding: 2px 0;
+  border-top: 1px dashed rgba(var(--ink-rgb), 0.08);
+  padding-top: 6px;
 }
 
 .learning-card-spark-bar {
   flex: 1 1 0;
   min-width: 0;
   height: 8%;
-  border-radius: 2px;
-  background: rgba(var(--ink-rgb), 0.18);
+  border-radius: 3px 3px 1px 1px;
+  background: rgba(var(--ink-rgb), 0.12);
+  transition: height 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .learning-card-spark-bar.has-value {
-  background: var(--learning-card-color, var(--ink));
-  opacity: 0.55;
+  background: linear-gradient(
+    180deg,
+    var(--learning-card-color, var(--ink)),
+    color-mix(in srgb, var(--learning-card-color, var(--ink)) 60%, transparent)
+  );
+  opacity: 0.7;
 }
 
 .learning-card-spark-bar.has-value.is-today {
@@ -36089,18 +36209,27 @@ select:disabled {
   line-height: 1.4;
 }
 
-/* ライブラリカード上の写真アイコン */
+/* ライブラリカード上の写真アイコン (refresh).
+   旧 34px の inline サムネを 56px の正方形カバー風に格上げし、
+   trigger grid の左カラムに固定。photo 無しでも item color の
+   グラデで「これは{緑}の React」「{橙}の英語」と一目で識別できる。 */
 .learning-card-photo {
+  grid-column: 1 / 2;
+  grid-row: 1 / 3;
+  align-self: start;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
-  border: 1px solid var(--line-strong);
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
   overflow: hidden;
   flex-shrink: 0;
+  box-shadow:
+    0 4px 12px rgba(var(--ink-rgb), 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 .learning-card-photo img {
   width: 100%;
@@ -36108,24 +36237,24 @@ select:disabled {
   object-fit: cover;
   display: block;
 }
-/* 写真未設定時の fallback：エディタと同じ glossy グラデ + 頭文字。
-   サイズは小型 (34px) なので頭文字は 14px, アクセント丸も省略。 */
+/* 写真未設定時の fallback：item color から派生したグラデ。
+   光沢を控えめにして "AI 生成" 感を抑え、紙のカバーに寄せた。 */
 .learning-card-photo.is-fallback {
-  border-color: rgba(var(--ink-rgb), 0.18);
+  border-color: rgba(var(--ink-rgb), 0.1);
   background:
     radial-gradient(
       130% 90% at 28% 18%,
-      rgba(255, 255, 255, 0.42) 0%,
+      rgba(255, 255, 255, 0.5) 0%,
       rgba(255, 255, 255, 0) 60%
     ),
     linear-gradient(
       138deg,
-      color-mix(in srgb, var(--learning-thumb-color) 92%, #fff) 0%,
-      color-mix(in srgb, var(--learning-thumb-color) 78%, #000) 100%
+      color-mix(in srgb, var(--learning-thumb-color, var(--learning-card-color, var(--ink))) 88%, #fff) 0%,
+      color-mix(in srgb, var(--learning-thumb-color, var(--learning-card-color, var(--ink))) 70%, #000) 100%
     );
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.32),
-    inset 0 -6px 12px rgba(0, 0, 0, 0.10);
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    inset 0 -8px 18px rgba(0, 0, 0, 0.14);
 }
 .learning-card-photo-initial {
   color: #fff;
