@@ -9731,6 +9731,8 @@ function App() {
     currentTitle,
     currentUser,
     determination,
+    goalId,
+    goalCustomName,
     effortExp,
     following,
     githubId,
