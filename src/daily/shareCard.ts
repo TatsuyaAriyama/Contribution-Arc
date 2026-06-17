@@ -148,7 +148,6 @@ export async function createDailyReportImageBlob(data: DailyShareData): Promise<
   const emptyText = labels.emptyPlaceholder ?? "（まだありません）";
   const untitledText = labels.untitled ?? "（無題）";
   const kickerText = labels.kicker ?? "DAILY REPORT";
-  const streakSuffix = labels.streakSuffix ?? ((days: number) => `${days}日連続`);
 
   const planItems = data.planItems.slice(0, MAX_PLAN_ITEMS);
   const planTextW = CONTENT_W - (CHECK_R * 2 + CHECK_GAP);
@@ -238,24 +237,12 @@ export async function createDailyReportImageBlob(data: DailyShareData): Promise<
   ctx.fillText(kickerText, x, y);
   y += 14 + 8;
 
-  // 日付（左） + ストリーク（右）
+  // 日付 (左)。
+  // 旧仕様: 右端に 🔥 ストリーク pill を描いていたが、ユーザー要望で
+  // 共有画像からは外す (画面内の streak バッジは継続表示)。
   ctx.font = `800 24px ${FONT}`;
   ctx.fillStyle = COLOR.ink;
   ctx.fillText(data.dateLabel, x, y);
-  if (data.streakDays && data.streakDays > 0) {
-    const label = `🔥 ${streakSuffix(data.streakDays)}`;
-    ctx.font = `700 13px ${FONT}`;
-    const tw = ctx.measureText(label).width;
-    const pillW = tw + 22;
-    const pillH = 24;
-    const pillX = PAD + CARD_W - CARD_PAD - pillW;
-    const pillY = y - 1;
-    roundRect(ctx, pillX, pillY, pillW, pillH, 12);
-    ctx.fillStyle = COLOR.greenSoft;
-    ctx.fill();
-    ctx.fillStyle = COLOR.green;
-    ctx.fillText(label, pillX + 11, pillY + 5);
-  }
   y += 32 + 11;
 
   // hairline
