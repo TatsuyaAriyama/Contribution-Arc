@@ -528,6 +528,32 @@ export async function saveUserProgressToCloud(db: Firestore, profile: UserProgre
   );
 }
 
+/**
+ * 目標 (志望校 / 資格) だけを user doc に即時 merge 書き込みする。
+ * 通常の saveUserProgressToCloud は ~15 依存の useEffect 経由で走るため、
+ * 目標を設定した「瞬間」に確実へ残す保証が弱い。目標選択時にこれを直接
+ * 呼び、選んだその場で永続化する（リロードで消えないよう担保）。
+ * goalId / goalCustomName は排他なので、両方を常に書いて古い値を消す。
+ */
+export async function saveUserGoalToCloud(
+  db: Firestore,
+  uid: string,
+  goal: { goalId?: string; goalCustomName?: string },
+) {
+  if (!uid) {
+    return;
+  }
+  await setDoc(
+    doc(db, "users", uid),
+    {
+      goalId: typeof goal.goalId === "string" ? goal.goalId : "",
+      goalCustomName: typeof goal.goalCustomName === "string" ? goal.goalCustomName : "",
+      lastSyncedAt: new Date().toISOString(),
+    },
+    { merge: true },
+  );
+}
+
 export async function saveGithubActivitySummary(db: Firestore, summary: GitHubActivitySummary) {
   if (!summary.userId || !summary.githubId) {
     return;

@@ -63,6 +63,7 @@ import {
   saveStudyLogToCloud,
   deleteStudyLogFromCloud,
   saveUserProgressToCloud,
+  saveUserGoalToCloud,
   saveWorkspaceSessionToCloud,
   subscribeStudyLogsFromCloud,
   transferOrganizationOwnership,
@@ -17992,11 +17993,29 @@ function App() {
             setGoalId(id);
             setGoalCustomName("");
             setIsGoalPickerOpen(false);
+            /* 選んだその場で user doc に即時保存。useEffect 同期の
+               タイミングに依存せず、リロードで確実に残す。 */
+            if (currentUser) {
+              void saveUserGoalToCloud(db, currentUser.uid, {
+                goalId: id,
+                goalCustomName: "",
+              }).catch((error) => {
+                console.info("Goal cloud save (select) skipped.", error);
+              });
+            }
           }}
           onClear={() => {
             setGoalId("");
             setGoalCustomName("");
             setIsGoalPickerOpen(false);
+            if (currentUser) {
+              void saveUserGoalToCloud(db, currentUser.uid, {
+                goalId: "",
+                goalCustomName: "",
+              }).catch((error) => {
+                console.info("Goal cloud save (clear) skipped.", error);
+              });
+            }
           }}
           onClose={() => setIsGoalPickerOpen(false)}
         />
