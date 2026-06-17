@@ -4837,6 +4837,16 @@ function App() {
     const savedDetermination =
       window.localStorage.getItem(getAccountStorageKey(accountScope, "determination")) ||
       (shouldUseLegacyUserStorage ? window.localStorage.getItem(`contribution-arc-determination-${currentUser.uid}`) : null);
+    /* 目標 (志望校 / 資格) を localStorage にもミラーする。cloud read の
+       タイミング / 失敗に左右されず、この端末では確実に残すための保険。
+       goal-updated-at は「ローカルが新しければ cloud より優先」判定用。 */
+    const savedGoalId =
+      window.localStorage.getItem(getAccountStorageKey(accountScope, "goal-id")) || "";
+    const savedGoalCustomName =
+      window.localStorage.getItem(getAccountStorageKey(accountScope, "goal-custom-name")) || "";
+    const savedGoalStampRaw = window.localStorage.getItem(
+      getAccountStorageKey(accountScope, "goal-updated-at"),
+    );
     const savedAvatar =
       window.localStorage.getItem(getAccountStorageKey(accountScope, "avatar")) ||
       (shouldUseLegacyUserStorage ? window.localStorage.getItem(`contribution-arc-avatar-${currentUser.uid}`) : null);
@@ -4923,6 +4933,10 @@ function App() {
     );
     setDetermination(savedDetermination || "");
     setDraftDetermination(savedDetermination || "");
+    /* cloud 解決前でも localStorage の目標を先に反映して、設定済みなら
+       即チップが出る & cloud 失敗時もこの端末では残る。 */
+    setGoalId(savedGoalId);
+    setGoalCustomName(savedGoalCustomName);
     setPlayerAvatar(savedAvatar || currentUser.photoURL || "");
     setPlayerCharacterColor(savedCharacterColor || characterColorOptions[0].value);
     setPlayerCharacterShape(getSafeCharacterShape(savedCharacterShape));
@@ -5018,8 +5032,20 @@ function App() {
         setFollowing(profile.following);
         setDetermination(profile.determination || savedDetermination || "");
         setDraftDetermination(profile.determination || savedDetermination || "");
-        setGoalId(profile.goalId || "");
-        setGoalCustomName(profile.goalCustomName || "");
+        /* 目標の hydrate 競合対策: ローカル選択時刻 > cloud lastSyncedAt
+           なら、cloud 反映前 / 書き込み失敗時でもローカルの最新選択を
+           優先する（「設定して即リロード」しても消えない）。それ以外は
+           cloud を採用し、cloud が空ならローカルにフォールバック。 */
+        const cloudGoalStamp = profile.lastSyncedAt
+          ? new Date(profile.lastSyncedAt).getTime()
+          : 0;
+        const localGoalStamp = savedGoalStampRaw ? Number(savedGoalStampRaw) : 0;
+        const preferLocalGoal =
+          Number.isFinite(localGoalStamp) && localGoalStamp > cloudGoalStamp;
+        setGoalId(preferLocalGoal ? savedGoalId : profile.goalId || savedGoalId);
+        setGoalCustomName(
+          preferLocalGoal ? savedGoalCustomName : profile.goalCustomName || savedGoalCustomName,
+        );
         setPlayerAvatar(profile.photoURL || savedAvatar || currentUser.photoURL || "");
         /* hydrate 競合対策: ローカル選択時刻 > cloud lastSyncedAt なら、
            cloud デバウンス未完了の最新ローカル選択を優先する。
@@ -17993,9 +18019,17 @@ function App() {
             setGoalId(id);
             setGoalCustomName("");
             setIsGoalPickerOpen(false);
-            /* 選んだその場で user doc に即時保存。useEffect 同期の
-               タイミングに依存せず、リロードで確実に残す。 */
+            /* 選んだその場で (1) localStorage に即ミラー = この端末では
+               リロードで確実に残る、(2) user doc にも即時保存して
+               cross-device 同期。useEffect 同期のタイミングに依存しない。 */
             if (currentUser) {
+              const scope = getAccountStorageScope(currentUser.uid, userId);
+              safeSetLocalStorage(getAccountStorageKey(scope, "goal-id"), id);
+              safeSetLocalStorage(getAccountStorageKey(scope, "goal-custom-name"), "");
+              safeSetLocalStorage(
+                getAccountStorageKey(scope, "goal-updated-at"),
+                String(Date.now()),
+              );
               void saveUserGoalToCloud(db, currentUser.uid, {
                 goalId: id,
                 goalCustomName: "",
@@ -18009,6 +18043,13 @@ function App() {
             setGoalCustomName("");
             setIsGoalPickerOpen(false);
             if (currentUser) {
+              const scope = getAccountStorageScope(currentUser.uid, userId);
+              safeSetLocalStorage(getAccountStorageKey(scope, "goal-id"), "");
+              safeSetLocalStorage(getAccountStorageKey(scope, "goal-custom-name"), "");
+              safeSetLocalStorage(
+                getAccountStorageKey(scope, "goal-updated-at"),
+                String(Date.now()),
+              );
               void saveUserGoalToCloud(db, currentUser.uid, {
                 goalId: "",
                 goalCustomName: "",
