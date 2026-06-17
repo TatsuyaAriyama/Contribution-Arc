@@ -213,6 +213,7 @@ import { GoalPickerModal } from "./components/GoalPickerModal";
 import { findGoalById } from "./data/goalCatalog";
 import {
   renderDefaultCharacterSvg,
+  renderOwlSvg,
 } from "./components/CharacterShapeSvg";
 import { SettingsIcon } from "./components/icons/SettingsIcon";
 import { BellIcon } from "./components/icons/BellIcon";
@@ -2265,20 +2266,10 @@ export const ProfileCharacterPreview = memo(function ProfileCharacterPreview({
     >
       <span className={`actor-sprite deep shape-${shape} ${isCustomShape ? "" : "is-blocky"}`}>
         {isOwl ? (
-          <>
-            <span className="sprite-head">
-              <span className="sprite-tuft sprite-tuft-left" />
-              <span className="sprite-tuft sprite-tuft-right" />
-              <span className="sprite-owl-eye sprite-owl-eye-left" />
-              <span className="sprite-owl-eye sprite-owl-eye-right" />
-              <span className="sprite-beak" />
-            </span>
-            <span className="sprite-body" />
-            <span className="sprite-wing sprite-wing-left" />
-            <span className="sprite-wing sprite-wing-right" />
-            <span className="sprite-leg sprite-leg-left" />
-            <span className="sprite-leg sprite-leg-right" />
-          </>
+          /* 宵 (Yoi) は朧と同じ line-art 語彙に統一。CSS sprite 版は
+             saturated カートゥーン調で 朧 / 灯 と並んだ時にシリーズ感が
+             崩れていたので、共有 renderer (clean line-art) に差し替え。 */
+          renderOwlSvg(color || characterColorOptions[0].value)
         ) : isGhost ? (
           ghostSvgMarkup
         ) : isDefault ? (

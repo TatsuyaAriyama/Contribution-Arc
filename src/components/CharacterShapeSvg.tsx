@@ -153,13 +153,16 @@ export function renderGhostSvg(color: string) {
   );
 }
 
-/** 宵 (Yoi) — 丸い夜型のフクロウ。CSS sprite に依存しない自己完結
- *  SVG。アバター / preview / stage 共通で使えるサイズに正規化。 */
+/** 宵 (Yoi) — 朧 (ghost) と同じ語彙のフクロウ。
+ *  - 半透明オーラ (色は引数の actor color)
+ *  - クリーム白 (#fcfbf9) の本体 + ダーク (#43332b) のアウトライン
+ *  - 琥珀 (#c8851a) の差し色
+ *  これで朧と並べた時に同じ「線画 + 紙」シリーズに見える。 */
 export function renderOwlSvg(color: string) {
-  const body = color;
-  const wing = shadeHex(color, -0.22);
-  const tuft = shadeHex(color, -0.32);
-  const belly = shadeHex(color, 0.32);
+  const ink = "#43332b";
+  const body = "#fcfbf9";
+  const amber = "#c8851a";
+  const pupil = "#2a2036";
   return (
     <svg
       className="owl-svg"
@@ -168,29 +171,84 @@ export function renderOwlSvg(color: string) {
       focusable="false"
       preserveAspectRatio="xMidYMid meet"
     >
-      {/* 影 */}
-      <ellipse cx="64" cy="128" rx="40" ry="6" fill="#000" fillOpacity={0.16} />
-      {/* 翼 (奥) */}
-      <ellipse cx="28" cy="80" rx="20" ry="36" fill={wing} />
-      <ellipse cx="100" cy="80" rx="20" ry="36" fill={wing} />
-      {/* 本体 (たまご型) */}
-      <ellipse cx="64" cy="76" rx="42" ry="50" fill={body} />
-      {/* 腹部 */}
-      <ellipse cx="64" cy="92" rx="24" ry="22" fill={belly} fillOpacity={0.55} />
-      {/* 耳房 (tuft) */}
-      <path d="M32 32 l8 -22 l10 18 Z" fill={tuft} />
-      <path d="M96 32 l-8 -22 l-10 18 Z" fill={tuft} />
-      {/* 目 (大きな琥珀) */}
-      <circle cx="48" cy="62" r="14" fill="#fcfbf9" />
-      <circle cx="80" cy="62" r="14" fill="#fcfbf9" />
-      <circle cx="48" cy="62" r="7" fill="#c8851a" />
-      <circle cx="80" cy="62" r="7" fill="#c8851a" />
-      <circle cx="48" cy="61" r="3.4" fill="#2a2036" />
-      <circle cx="80" cy="61" r="3.4" fill="#2a2036" />
+      {/* 後光のオーラ — 朧と同じトリックで color を背景に置く */}
+      <ellipse cx="62" cy="78" rx="52" ry="54" fill={color} fillOpacity={0.26} />
+
+      {/* 耳房 (tuft) — 本体より先に描き、根元が body 内に隠れる */}
+      <path
+        d="M32 38 L36 12 L52 32 Z"
+        fill={body}
+        stroke={ink}
+        strokeWidth={5}
+        strokeLinejoin="round"
+      />
+      <path
+        d="M96 38 L92 12 L76 32 Z"
+        fill={body}
+        stroke={ink}
+        strokeWidth={5}
+        strokeLinejoin="round"
+      />
+
+      {/* 本体 (egg shape) */}
+      <path
+        d="M64 22 C36 22 18 44 18 76 C18 104 38 122 64 122 C90 122 110 104 110 76 C110 44 92 22 64 22 Z"
+        fill={body}
+        stroke={ink}
+        strokeWidth={6}
+        strokeLinejoin="round"
+      />
+
+      {/* 翼のフォールド (subtle 線だけ、肩のあたり) */}
+      <path
+        d="M28 86 Q22 102 32 116"
+        fill="none"
+        stroke={ink}
+        strokeWidth={4}
+        strokeLinecap="round"
+        opacity={0.55}
+      />
+      <path
+        d="M100 86 Q106 102 96 116"
+        fill="none"
+        stroke={ink}
+        strokeWidth={4}
+        strokeLinecap="round"
+        opacity={0.55}
+      />
+
+      {/* 目 (大きな丸 + 琥珀 + 黒瞳 + 白ハイライト) */}
+      <circle cx="48" cy="62" r="12" fill={body} stroke={ink} strokeWidth={4} />
+      <circle cx="80" cy="62" r="12" fill={body} stroke={ink} strokeWidth={4} />
+      <circle cx="48" cy="62" r="6.4" fill={amber} />
+      <circle cx="80" cy="62" r="6.4" fill={amber} />
+      <circle cx="48" cy="61" r="3.2" fill={pupil} />
+      <circle cx="80" cy="61" r="3.2" fill={pupil} />
       <circle cx="50" cy="59" r="1.2" fill="#fff" />
       <circle cx="82" cy="59" r="1.2" fill="#fff" />
-      {/* くちばし */}
-      <path d="M64 70 L58 82 L70 82 Z" fill="#c8851a" />
+
+      {/* くちばし (小さな三角) */}
+      <path
+        d="M64 76 L57 88 L71 88 Z"
+        fill={amber}
+        stroke={ink}
+        strokeWidth={2.5}
+        strokeLinejoin="round"
+      />
+
+      {/* 足 (小さな琥珀の爪) */}
+      <path
+        d="M52 122 L50 132 M58 122 L60 132"
+        stroke={amber}
+        strokeWidth={3.4}
+        strokeLinecap="round"
+      />
+      <path
+        d="M68 122 L70 132 M74 122 L76 132"
+        stroke={amber}
+        strokeWidth={3.4}
+        strokeLinecap="round"
+      />
     </svg>
   );
 }

@@ -1173,20 +1173,10 @@ export function SilentWorkspaceRoom({
                       </g>
                     </svg>
                   ) : member.characterShape === "owl" ? (
-                    <>
-                      <span className="sprite-body" />
-                      <span className="sprite-leg sprite-leg-left" />
-                      <span className="sprite-leg sprite-leg-right" />
-                      <span className="sprite-head">
-                        <span className="sprite-tuft sprite-tuft-left" />
-                        <span className="sprite-tuft sprite-tuft-right" />
-                        <span className="sprite-owl-eye sprite-owl-eye-left" />
-                        <span className="sprite-owl-eye sprite-owl-eye-right" />
-                        <span className="sprite-beak" />
-                      </span>
-                      <span className="sprite-wing sprite-wing-left" />
-                      <span className="sprite-wing sprite-wing-right" />
-                    </>
+                    /* 宵 (Yoi) は朧と同じ line-art 語彙で統一済みの共有
+                       renderer を呼ぶ。CSS sprite 版を撤去して
+                       preview / atelier / room すべてで同じ絵にする。 */
+                    renderOwlSvg(member.color || "#7667a8")
                   ) : (
                     /* "default" (相 / 緑キューブ + face panel + 足):
                        preview と同じ共有 SVG を出して見た目を統一する。
