@@ -340,6 +340,22 @@ export const EN_TRANSLATIONS: Record<string, string> = {
                                 "No friends yet. Search by user ID above to send a request.",
   "申請中":                     "Requested",
   "承認":                       "Accept",
+
+  // === Settings guide (Contribution Arc の使い方) ===
+  "Contribution Arc の使い方":  "How to use Contribution Arc",
+  "はじめての方へ":             "New here?",
+  "学んだことを記録すると、積み上げがグラフに残ります。まずはここから。":
+                                "Log what you're learning and watch your progress fill in the graph. Start here.",
+  "その日の予定と振り返りを書いて、仲間と共有できます。":
+                                "Write your day's plan and reflection, and share it with peers.",
+  "フレンドや仲間の投稿・日報が流れてきます。ハートやリプライで反応できます。":
+                                "See your friends' posts and daily reports — react with hearts and replies.",
+  "同じ部屋に入って一緒に作業できます。今やっていることがリアルタイムで共有されます。":
+                                "Join the same room and work together — what you're doing is shared in real time.",
+  "相手のユーザーIDで申請し、承認されるとつながります。申請はお知らせに届きます。":
+                                "Send a request with someone's user ID — once they accept, you're connected. Requests show up in Announcements.",
+  "会社やチームで使うときは、組織を作って招待リンクで仲間を招きます。組織限定の作業部屋が作れます。":
+                                "Using this for work? Create an organization and invite teammates with a link. You can make workrooms private to your org.",
   "検索":                       "Search",
 
   // === 設定モーダル ===
