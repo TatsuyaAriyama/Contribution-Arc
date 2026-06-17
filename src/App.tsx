@@ -5190,6 +5190,82 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.uid, setLanguage]);
 
+  /* PC ↔ モバイル のキャラ反映ラグ対策 (realtime sync).
+     これまで初回 getDoc で 1 回読みだけだったので、別端末で characterShape /
+     characterColor を変えても、こちらでは reload するまで反映されなかった
+     (報告: 「PC が古いキャラのまま」)。
+     本人の user doc を onSnapshot で購読し、変更があれば
+     character / coins / 所有 shape / 連動フィールドだけを差分反映する。
+     プロフィール本体 (displayName / userId / following etc.) は初回 hydrate
+     と専用 UI 編集が source of truth なので、ここでは "見た目に直結する
+     軽量フィールド" だけに絞り、競合を最小化する。
+     ローカルで chooseCharacter* が押された直後 (characterChoiceLockedRef=true)
+     は cloud → local 上書きをスキップ (自分の選択が一瞬で戻る事故防止)。 */
+  useEffect(() => {
+    if (!currentUser) return;
+    let didFirst = false;
+    const unsub = onSnapshot(
+      doc(db, "users", currentUser.uid),
+      (snap) => {
+        if (!snap.exists()) return;
+        // 初回 snapshot は getDoc が既に同じ内容を applied しているのでスキップ。
+        if (!didFirst) {
+          didFirst = true;
+          return;
+        }
+        const data = snap.data() as Partial<UserProfile>;
+        const profile = normalizeUserProfile(currentUser.uid, data);
+        const accountScope = getAccountStorageScope(currentUser.uid, userId);
+        /* hydrate と同じ「ローカルが新しければ守る」ガード。 */
+        const localStampRaw = window.localStorage.getItem(
+          getAccountStorageKey(accountScope, "character-updated-at"),
+        );
+        const localStamp = localStampRaw ? Number(localStampRaw) : 0;
+        const cloudStamp = profile.lastSyncedAt
+          ? new Date(profile.lastSyncedAt).getTime()
+          : 0;
+        const cloudWinsForChar =
+          !characterChoiceLockedRef.current &&
+          (cloudStamp >= localStamp || !localStamp);
+        if (cloudWinsForChar) {
+          if (profile.characterColor) {
+            setPlayerCharacterColor(profile.characterColor);
+          }
+          const safeShape = getSafeCharacterShape(profile.characterShape);
+          if (safeShape) {
+            setPlayerCharacterShape(safeShape);
+          }
+        }
+        /* 所有 shape / コイン / 報酬日付など、別端末で買ったり受領した
+           ものが反映されないと「ショップで買ったのに使えない」が起きる。
+           こちらは ChoiceLock とは独立に常に最新を採用。 */
+        if (Array.isArray(profile.ownedCharacterShapes)) {
+          setOwnedCharacterShapes((current) => {
+            const merged = Array.from(
+              new Set<CharacterShape>([
+                ...current,
+                ...(profile.ownedCharacterShapes as CharacterShape[]),
+              ]),
+            );
+            return merged.length === current.length &&
+              merged.every((s, i) => s === current[i])
+              ? current
+              : merged;
+          });
+        }
+        if (typeof profile.coins === "number") {
+          const nextCoins = profile.coins;
+          setCoins((current) => (current === nextCoins ? current : nextCoins));
+        }
+      },
+      (error) => {
+        console.info("User profile realtime sync skipped.", error);
+      },
+    );
+    return () => unsub();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.uid, userId]);
+
   useEffect(() => {
     if (!currentUser || onboardingStep !== "welcome") {
       return;
