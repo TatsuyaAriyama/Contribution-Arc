@@ -35453,12 +35453,41 @@ select:disabled {
   background: rgba(var(--ink-rgb), 0.04);
   border: 1.5px solid var(--ink);
   overflow: hidden;
-  padding: 2px;
+  padding: 0;
+  display: grid;
+  place-items: center;
 }
-.profile-menu-icon--avatar svg,
-.profile-menu-icon--avatar > * {
-  width: 100% !important;
-  height: 100% !important;
+/* 内部の ProfileCharacterPreview を 32px 枠に合わせて再構築。
+   default だと 86×86 + sprite に translateY(9px) が掛かっていて、
+   menu icon 枠では sprite が下に大きくはみ出して見えなくなる
+   問題があった。preview / sprite / SVG を 100% にして transform を
+   解除、grid 中央配置で常に円の中心に座らせる。 */
+.profile-menu-icon--avatar .profile-character-preview {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  box-shadow: none;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.profile-menu-icon--avatar .actor-sprite {
+  width: 100%;
+  height: 100%;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  transform: none;
+  display: grid;
+  place-items: center;
+}
+.profile-menu-icon--avatar .actor-sprite > svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 .profile-menu-item--avatar {
   /* avatar 枠が大きい分、項目側の縦余白だけ僅かに増やす */
