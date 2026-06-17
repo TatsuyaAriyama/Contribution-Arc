@@ -212,7 +212,6 @@ import { GoalPickerModal } from "./components/GoalPickerModal";
 import { findGoalById } from "./data/goalCatalog";
 import {
   renderDefaultCharacterSvg,
-  renderMorphCubeSvg,
 } from "./components/CharacterShapeSvg";
 import { SettingsIcon } from "./components/icons/SettingsIcon";
 import { BellIcon } from "./components/icons/BellIcon";
@@ -456,7 +455,7 @@ type RoomUserStatus = "working" | "deep-work" | "on-break";
    (round head with ear tufts, big amber eyes, beak; ground-hops
    instead of walks; ambient ~270° head turn). New shapes can be
    added here. */
-type CharacterShape = "default" | "ghost" | "owl" | "morph";
+type CharacterShape = "default" | "ghost" | "owl";
 
 type RoomUser = {
   id: string;
@@ -724,13 +723,6 @@ const characterShapeOptions: {
     tagline: "夜更けの番人",
     intro: "夜更けをひとり見守る、静かな番人。",
   },
-  {
-    value: "morph",
-    name: "相",
-    romaji: "Sou",
-    tagline: "うつろう輪郭",
-    intro: "立方体の静けさを纏う、形の旅人。気分に合わせて姿を変える、変化の象徴。",
-  },
 ];
 
 // Shop catalog. "default" is intentionally not listed — every account
@@ -750,20 +742,13 @@ const shapeShopCatalog: ShapeShopItem[] = [
     name: "朧 Oboro",
     tagline: "ふわりと漂う魂",
     description: "脚のない魂のシルエット。作業部屋の片隅でふわりと漂う、もう一人のあなた。",
-    price: 500,
+    price: 1000,
   },
   {
     shape: "owl",
     name: "宵 Yoi",
     tagline: "夜更けの番人",
     description: "丸い頭に大きな琥珀の眼。深夜にひとり手を動かす時間のお供に。",
-    price: 500,
-  },
-  {
-    shape: "morph",
-    name: "相 Sou",
-    tagline: "うつろう輪郭",
-    description: "立方体の静けさを纏う、形の旅人。金線で縁取られた金属面が、気分に合わせて姿を変える。",
     price: 500,
   },
 ];
@@ -1590,11 +1575,13 @@ function getSafeCharacterColor(color: string | undefined): string {
 /* Allow-list guard for character shape. Anything outside the known
    set (including legacy `undefined` from older profile docs) falls
    back to "default" — the original humanoid silhouette. */
-const CHARACTER_SHAPES: readonly CharacterShape[] = ["default", "ghost", "owl", "morph"];
+const CHARACTER_SHAPES: readonly CharacterShape[] = ["default", "ghost", "owl"];
 function getSafeCharacterShape(shape: unknown): CharacterShape {
   if (typeof shape !== "string") return "default";
-  // 後方互換: 旧シルエット "frost" は新シルエット "morph" にマップ。
-  if (shape === "frost") return "morph";
+  /* 後方互換: 旧シルエット "frost" / "morph" は廃止 ─ どちらも
+     default に戻す。既存ユーザーで morph を装備中だった場合は
+     起動時に自動で default に切替わる。 */
+  if (shape === "frost" || shape === "morph") return "default";
   return (CHARACTER_SHAPES as readonly string[]).includes(shape)
     ? (shape as CharacterShape)
     : "default";
@@ -2263,14 +2250,13 @@ export const ProfileCharacterPreview = memo(function ProfileCharacterPreview({
 }) {
   const isGhost = shape === "ghost";
   const isOwl = shape === "owl";
-  const isMorph = shape === "morph";
   const isDefault = shape === "default";
-  const isCustomShape = isGhost || isOwl || isMorph || isDefault;
+  const isCustomShape = isGhost || isOwl || isDefault;
   return (
     <div
       className={`profile-character-preview${
         isGhost ? " is-ghost" : ""
-      }${isOwl ? " is-owl" : ""}${isMorph ? " is-morph" : ""}${
+      }${isOwl ? " is-owl" : ""}${
         isDefault ? " is-default-char" : ""
       }`}
       style={{ "--actor-color": color || characterColorOptions[0].value } as CSSProperties}
@@ -2292,8 +2278,6 @@ export const ProfileCharacterPreview = memo(function ProfileCharacterPreview({
             <span className="sprite-leg sprite-leg-left" />
             <span className="sprite-leg sprite-leg-right" />
           </>
-        ) : isMorph ? (
-          renderMorphCubeSvg(color || characterColorOptions[0].value)
         ) : isGhost ? (
           ghostSvgMarkup
         ) : isDefault ? (

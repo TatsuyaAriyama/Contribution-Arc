@@ -3,7 +3,6 @@ import { createPortal } from "react-dom";
 import {
   renderDefaultCharacterSvg,
   renderGhostSvg,
-  renderMorphCubeSvg,
   renderOwlSvg,
 } from "./CharacterShapeSvg";
 import { useTranslation } from "../i18n/LanguageContext";
@@ -20,7 +19,7 @@ export type RoomActivityItem = {
 
 type RoomActorStatus = "working" | "deep-work" | "on-break";
 
-export type CharacterShape = "default" | "ghost" | "owl" | "morph";
+export type CharacterShape = "default" | "ghost" | "owl";
 
 export type PresetLogEntry = {
   id: string;
@@ -643,15 +642,13 @@ export function SilentWorkspaceRoom({
                   const shape = member.characterShape || "default";
                   /* 投稿カード avatar と統一: キャラ shape + カラーで
                       描画。avatar URL があるユーザーは写真優先、
-                      それ以外は shape に応じた SVG。default / morph /
-                      ghost / owl の 4 種をサポート。 */
+                      それ以外は shape に応じた SVG。default / ghost /
+                      owl の 3 種をサポート。 */
                   let content: ReactNode;
                   if (member.avatar) {
                     content = <img src={member.avatar} alt="" />;
                   } else if (shape === "default") {
                     content = renderDefaultCharacterSvg(fillColor, { showEdges: false });
-                  } else if (shape === "morph") {
-                    content = renderMorphCubeSvg(fillColor, { showEdges: false });
                   } else if (shape === "ghost") {
                     content = renderGhostSvg(fillColor);
                   } else if (shape === "owl") {
@@ -1175,10 +1172,6 @@ export function SilentWorkspaceRoom({
                         <rect className="ghost-hat-band" x="88" y="33" width="20" height="4" />
                       </g>
                     </svg>
-                  ) : member.characterShape === "morph" ? (
-                    /* "相 Sou" (morph): cube + 金線 + 目。共有レンダラから
-                       同じ SVG を呼ぶことで preview と stage で見た目が一致。 */
-                    renderMorphCubeSvg(member.color || "#7667a8", { showEdges: false })
                   ) : member.characterShape === "owl" ? (
                     <>
                       <span className="sprite-body" />
@@ -1446,10 +1439,6 @@ export function SilentWorkspaceRoom({
                             shape が予期外の値だった時の最終手段としてだけ残す。 */}
                         {member.characterShape === "default" ? (
                           renderDefaultCharacterSvg(member.characterColor || member.color, {
-                            showEdges: false,
-                          })
-                        ) : member.characterShape === "morph" ? (
-                          renderMorphCubeSvg(member.characterColor || member.color, {
                             showEdges: false,
                           })
                         ) : member.characterShape === "ghost" ? (
