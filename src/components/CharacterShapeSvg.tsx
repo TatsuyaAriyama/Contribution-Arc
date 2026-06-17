@@ -153,16 +153,27 @@ export function renderGhostSvg(color: string) {
   );
 }
 
-/** 宵 (Yoi) — 朧 (ghost) と同じ語彙のフクロウ。
- *  - 半透明オーラ (色は引数の actor color)
- *  - クリーム白 (#fcfbf9) の本体 + ダーク (#43332b) のアウトライン
- *  - 琥珀 (#c8851a) の差し色
- *  これで朧と並べた時に同じ「線画 + 紙」シリーズに見える。 */
-export function renderOwlSvg(color: string) {
-  const ink = "#43332b";
-  const body = "#fcfbf9";
-  const amber = "#c8851a";
-  const pupil = "#2a2036";
+/** 宵 (Yoi) — 元のスクショで使われていた「丸い茶色のフクロウ」を
+ *  忠実に再現する自己完結 SVG。
+ *  - くすんだベージュ/タン色の本体 (#c8a96b 系) + 翼でわずかに暗い陰影
+ *  - 大きな琥珀の目 (白の眼球 → 琥珀虹彩 → 黒瞳 → 白ハイライト)
+ *  - 2 本の耳房 (tuft)
+ *  - 中央の腹部に縦線パターン (羽の流れ)
+ *  - 小さな三角くちばし + 2 本のオレンジの足
+ *  CSS sprite に依存せず、avatar / preview / stage どこでも同じ絵が出る。
+ */
+export function renderOwlSvg(_color: string) {
+  // _color はインタフェース維持用 (他 shape と signature を揃える)。
+  // 旧 sprite owl は固定のベージュ配色だったので、ここも色は固定する。
+  const body = "#c9a96d";     // ベージュ/タン本体
+  const wing = "#a98952";     // 翼 (本体より暗い)
+  const belly = "#b0905a";    // 腹部の地色 (本体よりわずかに暗い)
+  const bellyStripe = "#9a7c4a"; // 腹部の縦線パターン
+  const tuft = "#a98952";     // 耳房
+  const beak = "#e89a3c";     // くちばし & 足
+  const eyeWhite = "#f8f1e1"; // 眼球
+  const eyeIris = "#c8851a";  // 琥珀虹彩
+  const eyePupil = "#2a2036"; // 瞳
   return (
     <svg
       className="owl-svg"
@@ -171,84 +182,55 @@ export function renderOwlSvg(color: string) {
       focusable="false"
       preserveAspectRatio="xMidYMid meet"
     >
-      {/* 後光のオーラ — 朧と同じトリックで color を背景に置く */}
-      <ellipse cx="62" cy="78" rx="52" ry="54" fill={color} fillOpacity={0.26} />
+      {/* 床影 */}
+      <ellipse cx="64" cy="130" rx="36" ry="5" fill="#000" fillOpacity={0.16} />
 
-      {/* 耳房 (tuft) — 本体より先に描き、根元が body 内に隠れる */}
-      <path
-        d="M32 38 L36 12 L52 32 Z"
-        fill={body}
-        stroke={ink}
-        strokeWidth={5}
-        strokeLinejoin="round"
-      />
-      <path
-        d="M96 38 L92 12 L76 32 Z"
-        fill={body}
-        stroke={ink}
-        strokeWidth={5}
-        strokeLinejoin="round"
-      />
+      {/* 足 (本体の手前、くちばしと同色のオレンジ) */}
+      <g stroke={beak} strokeWidth={4.2} strokeLinecap="round">
+        <path d="M52 122 L50 128 M52 122 L54 128" />
+        <path d="M76 122 L74 128 M76 122 L78 128" />
+      </g>
 
-      {/* 本体 (egg shape) */}
-      <path
-        d="M64 22 C36 22 18 44 18 76 C18 104 38 122 64 122 C90 122 110 104 110 76 C110 44 92 22 64 22 Z"
-        fill={body}
-        stroke={ink}
-        strokeWidth={6}
-        strokeLinejoin="round"
-      />
+      {/* 耳房 (本体より先に描いて根元が body の裏に回る) */}
+      <path d="M32 36 L40 12 L52 30 Z" fill={tuft} />
+      <path d="M96 36 L88 12 L76 30 Z" fill={tuft} />
 
-      {/* 翼のフォールド (subtle 線だけ、肩のあたり) */}
-      <path
-        d="M28 86 Q22 102 32 116"
-        fill="none"
-        stroke={ink}
-        strokeWidth={4}
-        strokeLinecap="round"
-        opacity={0.55}
-      />
-      <path
-        d="M100 86 Q106 102 96 116"
-        fill="none"
-        stroke={ink}
-        strokeWidth={4}
-        strokeLinecap="round"
-        opacity={0.55}
-      />
+      {/* 翼 (奥) ─ 本体より大きめの楕円で両肩から下に */}
+      <ellipse cx="22" cy="80" rx="18" ry="34" fill={wing} />
+      <ellipse cx="106" cy="80" rx="18" ry="34" fill={wing} />
 
-      {/* 目 (大きな丸 + 琥珀 + 黒瞳 + 白ハイライト) */}
-      <circle cx="48" cy="62" r="12" fill={body} stroke={ink} strokeWidth={4} />
-      <circle cx="80" cy="62" r="12" fill={body} stroke={ink} strokeWidth={4} />
-      <circle cx="48" cy="62" r="6.4" fill={amber} />
-      <circle cx="80" cy="62" r="6.4" fill={amber} />
-      <circle cx="48" cy="61" r="3.2" fill={pupil} />
-      <circle cx="80" cy="61" r="3.2" fill={pupil} />
-      <circle cx="50" cy="59" r="1.2" fill="#fff" />
-      <circle cx="82" cy="59" r="1.2" fill="#fff" />
+      {/* 本体 (たまご型) */}
+      <ellipse cx="64" cy="76" rx="42" ry="50" fill={body} />
+
+      {/* 腹部のパネル (内側の卵型、わずかに暗いベージュ) */}
+      <ellipse cx="64" cy="92" rx="22" ry="22" fill={belly} />
+
+      {/* 腹部の縦線パターン (羽の流れ表現) */}
+      <g stroke={bellyStripe} strokeWidth={2.4} strokeLinecap="round" opacity={0.7}>
+        <line x1="54" y1="82" x2="52" y2="104" />
+        <line x1="62" y1="80" x2="62" y2="106" />
+        <line x1="70" y1="80" x2="70" y2="106" />
+        <line x1="78" y1="82" x2="80" y2="104" />
+      </g>
+
+      {/* 眼球 (白の大きな円) */}
+      <circle cx="48" cy="62" r="14" fill={eyeWhite} />
+      <circle cx="80" cy="62" r="14" fill={eyeWhite} />
+
+      {/* 琥珀虹彩 */}
+      <circle cx="48" cy="62" r="7.5" fill={eyeIris} />
+      <circle cx="80" cy="62" r="7.5" fill={eyeIris} />
+
+      {/* 黒瞳 */}
+      <circle cx="48" cy="62" r="3.8" fill={eyePupil} />
+      <circle cx="80" cy="62" r="3.8" fill={eyePupil} />
+
+      {/* 白ハイライト */}
+      <circle cx="49.6" cy="60" r="1.4" fill="#fff" />
+      <circle cx="81.6" cy="60" r="1.4" fill="#fff" />
 
       {/* くちばし (小さな三角) */}
-      <path
-        d="M64 76 L57 88 L71 88 Z"
-        fill={amber}
-        stroke={ink}
-        strokeWidth={2.5}
-        strokeLinejoin="round"
-      />
-
-      {/* 足 (小さな琥珀の爪) */}
-      <path
-        d="M52 122 L50 132 M58 122 L60 132"
-        stroke={amber}
-        strokeWidth={3.4}
-        strokeLinecap="round"
-      />
-      <path
-        d="M68 122 L70 132 M74 122 L76 132"
-        stroke={amber}
-        strokeWidth={3.4}
-        strokeLinecap="round"
-      />
+      <path d="M64 72 L58 84 L70 84 Z" fill={beak} />
     </svg>
   );
 }
