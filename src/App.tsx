@@ -21758,9 +21758,11 @@ function App() {
                   aria-label={`${t("お知らせ")}: ${HEADLINE_ANNOUNCEMENT.title}`}
                 >
                   <span className="home-notice-banner-badge" aria-hidden="true">
+                    {/* MENU > お知らせ と同じベル形に統一。megaphone は
+                        「拡声 / 広報」のニュアンスで意味がぼやけていた。 */}
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M3 11.5 17 4v16L3 12.5z" />
-                      <path d="M7 12.5v4l3 1.5v-4" />
+                      <path d="M6 16V10a6 6 0 1 1 12 0v6l1.5 2H4.5z" />
+                      <path d="M10 20a2 2 0 0 0 4 0" />
                     </svg>
                   </span>
                   <span className="home-notice-banner-text">
