@@ -12539,6 +12539,19 @@ function App() {
   const playerStatusCard = (isInteractive = false) => {
     const hasGithub = Boolean(githubUsername || githubId);
     const determinationText = determination?.trim() || "";
+    /* 自分の目標 (志望校 / 資格)。以前はプロフィール最上部に大きなカードで
+       出していたが、設定すると名前のすぐ下を占有して邪魔になるため、
+       Player Status の識別チップ行にコンパクトに集約する。タップで
+       「同じ目標の人を探す」モーダルを開く。 */
+    const ownGoalHit = (goalId || "").trim() ? findGoalById((goalId || "").trim()) : null;
+    const ownGoalName = ownGoalHit?.name || (goalCustomName || "").trim();
+    const ownGoalKindLabel = ownGoalHit
+      ? ownGoalHit.kind === "highschool"
+        ? t("高校受験")
+        : ownGoalHit.kind === "university"
+          ? t("大学受験")
+          : t("資格")
+      : t("目標");
     return (
     <article
       className={isInteractive ? "card status-card status-card-link" : "card status-card"}
@@ -12597,6 +12610,28 @@ function App() {
                 </svg>
                 {githubUsername || "GitHub"}
               </span>
+            ) : null}
+            {ownGoalName ? (
+              <button
+                type="button"
+                className="player-chip player-chip-link player-chip-goal"
+                onClick={() =>
+                  void handleOpenGoalMatch({
+                    goalId: ownGoalHit ? (goalId || "").trim() : undefined,
+                    goalCustomName: ownGoalHit ? undefined : ownGoalName,
+                    goalLabel: ownGoalName,
+                  })
+                }
+                title={`${ownGoalKindLabel}: ${ownGoalName} — ${t("同じ目標の人を探す")}`}
+                aria-label={`${ownGoalKindLabel}: ${ownGoalName}。${t("同じ目標の人を探す")}`}
+              >
+                <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" />
+                  <circle cx="12" cy="12" r="5" />
+                  <circle cx="12" cy="12" r="1.6" fill="currentColor" />
+                </svg>
+                <span className="player-chip-goal-text">{ownGoalName}</span>
+              </button>
             ) : null}
           </div>
         </div>
@@ -13351,7 +13386,7 @@ function App() {
       <section className="profile-goal-chip" aria-label={t("目標")}>
         <div className="profile-goal-chip-main">
           <span className="profile-goal-chip-kicker">{kindLabel}</span>
-          <strong className="profile-goal-chip-name">🎯 {goalName}</strong>
+          <strong className="profile-goal-chip-name">{goalName}</strong>
         </div>
         {/* 同じ目標のユーザーを探す。ログイン中だけ出す (Firestore
             query にサインインが要るため)。catalog hit / custom どちらの
@@ -17983,7 +18018,7 @@ function App() {
             <header className="goal-match-modal-head">
               <div>
                 <p className="card-kicker">{t("同じ目標")}</p>
-                <h2 id="goal-match-modal-title">🎯 {goalMatchModal.goalLabel}</h2>
+                <h2 id="goal-match-modal-title">{goalMatchModal.goalLabel}</h2>
               </div>
               <button
                 type="button"
@@ -19646,9 +19681,9 @@ function App() {
                   </p>
                 </header>
 
-                {/* 自分の目標 chip — 設定済みなら表示。chip 上の
-                    「同じ目標の人を探す」ボタンから仲間を探せる。 */}
-                {profileGoalChip({ goalId, goalCustomName })}
+                {/* 自分の目標は Player Status の識別チップ行にコンパクトに
+                    集約した（旧: ここに大きなカードを出していたが、設定すると
+                    名前直下を占有して邪魔になるため移設）。 */}
 
                 {/* Player Status はプロフィールの主役なので最上部に固定。 */}
                 {playerStatusCard(false)}

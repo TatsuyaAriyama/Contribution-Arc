@@ -7454,6 +7454,29 @@
   transition: background 160ms ease, border-color 160ms ease;
 }
 
+/* 目標チップ：志望校 / 資格をコンパクトに。緑系 = 達成 / ゴールの意味色。
+   ボタン由来の UA スタイルを打ち消し、長い目標名は省略表示。 */
+.player-chip-goal {
+  max-width: 220px;
+  font-family: inherit;
+  border-color: rgba(31, 111, 74, 0.3);
+  background: rgba(31, 111, 74, 0.07);
+  color: var(--green);
+}
+.player-chip-goal:hover {
+  background: rgba(31, 111, 74, 0.13);
+  border-color: rgba(31, 111, 74, 0.45);
+}
+.player-chip-goal svg {
+  flex: 0 0 auto;
+  opacity: 0.85;
+}
+.player-chip-goal-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .player-chip-link:hover {
   background: var(--bg);
   border-color: rgba(var(--ink-rgb), 0.24);
