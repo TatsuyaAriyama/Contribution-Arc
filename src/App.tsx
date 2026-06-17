@@ -18256,7 +18256,7 @@ function App() {
                               setIsAnnouncementsModalOpen(false);
                             }}
                           >
-                            ✏️ {t("要望を書く")}
+                            {t("要望を書く")}
                           </button>
                         ) : null}
                       </div>
@@ -21582,7 +21582,7 @@ function App() {
                               setIsFeedbackModalOpen(true);
                             }}
                           >
-                            ✏️ {t("要望を書く")}
+                            {t("要望を書く")}
                           </button>
                         ) : null}
                       </div>
