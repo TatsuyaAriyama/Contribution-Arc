@@ -10167,22 +10167,47 @@ function App() {
     }
 
     if (friends.length >= 20) {
-      setFriendMessage("フレンド上限に達しています。");
+      setFriendMessage(t("フレンド上限に達しています。"));
+      showToast(t("フレンド上限に達しています。"), { kind: "error" });
       return;
     }
 
     if (profile.uid === currentUser.uid) {
-      setFriendMessage("自分自身にはフレンド申請できません。");
+      setFriendMessage(t("自分自身にはフレンド申請できません。"));
+      showToast(t("自分自身にはフレンド申請できません。"), { kind: "error" });
       return;
     }
 
     if (friends.some((friend) => friend.uid === profile.uid)) {
-      setFriendMessage("すでにフレンドです。");
+      setFriendMessage(t("すでにフレンドです。"));
+      showToast(t("すでにフレンドです。"), { kind: "info" });
       return;
     }
 
-    if (friendRequests.some((request) => request.profile.uid === profile.uid && request.status === "pending")) {
-      setFriendMessage("フレンド申請を送信済みです。");
+    /* 相手から先に申請が届いている場合は、本人が「申請」を押したら
+       そのまま承認扱いにしてしまうのが自然 (= 双方向の意思表示が揃った
+       タイミングで成立)。以前は「送信済み」と誤ったエラーを出して
+       ユーザーが二度詰みになる原因だった。 */
+    const pendingIncomingRequest = friendRequests.find(
+      (request) =>
+        request.profile.uid === profile.uid &&
+        request.status === "pending" &&
+        request.direction === "incoming",
+    );
+    if (pendingIncomingRequest) {
+      void handleFriendAccept(pendingIncomingRequest);
+      return;
+    }
+
+    const pendingOutgoingRequest = friendRequests.find(
+      (request) =>
+        request.profile.uid === profile.uid &&
+        request.status === "pending" &&
+        request.direction === "outgoing",
+    );
+    if (pendingOutgoingRequest) {
+      setFriendMessage(t("フレンド申請を送信済みです。"));
+      showToast(t("フレンド申請を送信済みです。"), { kind: "info" });
       return;
     }
 
@@ -10230,13 +10255,36 @@ function App() {
       // Profile screens / search results don't visibly change state when
       // a request is sent (the "リクエスト" button just goes disabled),
       // so a confirmation toast keeps the user from re-tapping.
-      showToast(`${profile.displayName} にフレンド申請を送りました`, { kind: "success" });
+      showToast(t("{name} にフレンド申請を送りました", { name: profile.displayName }), { kind: "success" });
+      setFriendMessage(t("フレンド申請を送信しました。承認されるとFriendsに表示されます。"));
     } catch (error) {
-      console.info("Friend request cloud send skipped.", error);
-      showToast(t("フレンド申請をローカルに保存しました。再接続後に同期します。"), { kind: "info" });
+      /* 旧コードは catch で console.info だけ出して toast は
+         「ローカルに保存しました」と success 風に表示していたため、
+         実際は cloud 拒否されているのにユーザーは送信成功と勘違いし、
+         相手にも届かない → 友達が成立しない、を生んでいた。
+         エラーコードを toast に出して即診断できるようにする。
+         同時に optimistic に追加したローカル request も rollback。 */
+      const code =
+        error && typeof error === "object" && "code" in error
+          ? String((error as { code?: unknown }).code || "")
+          : "";
+      console.warn("Friend request send failed.", { code, error, requestId });
+      setFriendRequests((requests) =>
+        requests.filter((item) => item.id !== requestId || item.direction !== "outgoing"),
+      );
+      removeStoredFriendRequest(getAccountStorageScope(currentUser.uid, userId), requestId);
+      if (code === "permission-denied") {
+        showToast(
+          t("フレンド申請を送れませんでした (permission-denied)。Firestore ルールが更新されていない可能性があります。"),
+          { kind: "error" },
+        );
+      } else if (code) {
+        showToast(t("フレンド申請を送れませんでした ({code})", { code }), { kind: "error" });
+      } else {
+        showToast(t("フレンド申請を送れませんでした。時間をおいて再度お試しください。"), { kind: "error" });
+      }
+      setFriendMessage("");
     }
-
-    setFriendMessage("フレンド申請を送信しました。承認されるとFriendsに表示されます。");
   };
 
   const handleFriendAccept = async (request: FriendRequest) => {
@@ -10245,12 +10293,13 @@ function App() {
     }
 
     if (request.direction !== "incoming") {
-      setFriendMessage("フレンド申請は相手が承認すると成立します。");
+      setFriendMessage(t("フレンド申請は相手が承認すると成立します。"));
       return;
     }
 
     if (friends.length >= 20) {
-      setFriendMessage("フレンド上限に達しています。");
+      setFriendMessage(t("フレンド上限に達しています。"));
+      showToast(t("フレンド上限に達しています。"), { kind: "error" });
       return;
     }
 
@@ -10293,12 +10342,33 @@ function App() {
         },
         { merge: true },
       );
+      setFriendMessage(t("フレンドになりました。"));
+      showToast(t("{name} とフレンドになりました", { name: nextFriend.name }), { kind: "success" });
     } catch (error) {
-      console.info("Friend request accept cloud sync skipped.", error);
+      /* 承認自体は楽観的にローカル反映済み。cloud 同期が失敗したら
+         相手側に accept が届かないため、ローカルも rollback して
+         整合性を取る (一方的に友達認定された状態を防ぐ)。 */
+      const code =
+        error && typeof error === "object" && "code" in error
+          ? String((error as { code?: unknown }).code || "")
+          : "";
+      console.warn("Friend request accept failed.", { code, error, requestId: request.id });
+      setFriends((items) => items.filter((friend) => friend.uid !== nextFriend.uid));
+      setFriendRequests((requests) =>
+        requests.map((item) => (item.id === request.id ? { ...item, status: "pending" as const, acceptedAt: undefined } : item)),
+      );
+      if (code === "permission-denied") {
+        showToast(
+          t("承認できませんでした (permission-denied)。Firestore ルールが更新されていない可能性があります。"),
+          { kind: "error" },
+        );
+      } else if (code) {
+        showToast(t("承認できませんでした ({code})", { code }), { kind: "error" });
+      } else {
+        showToast(t("承認できませんでした。時間をおいて再度お試しください。"), { kind: "error" });
+      }
+      setFriendMessage("");
     }
-
-    setFriendMessage("フレンドになりました。");
-    showToast(`${nextFriend.name} とフレンドになりました`, { kind: "success" });
   };
 
   const handleNotificationFriendAccept = (

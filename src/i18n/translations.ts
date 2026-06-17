@@ -361,6 +361,33 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "同じ目標の人を探す":         "Find people with the same goal",
   "同じ目標のユーザーはまだ見つかりません。":
                                 "No users with this goal yet.",
+
+  // === Friend requests ===
+  "フレンド上限に達しています。":"You've reached the friend limit.",
+  "自分自身にはフレンド申請できません。":
+                                "You can't send a friend request to yourself.",
+  "すでにフレンドです。":        "You're already friends.",
+  "フレンド申請を送信済みです。":"Friend request already sent.",
+  "フレンド申請を送信しました。承認されるとFriendsに表示されます。":
+                                "Friend request sent. You'll see them in Friends once they accept.",
+  "{name} にフレンド申請を送りました":
+                                "Sent a friend request to {name}",
+  "フレンド申請を送れませんでした (permission-denied)。Firestore ルールが更新されていない可能性があります。":
+                                "Couldn't send the friend request (permission-denied). The Firestore rules may not be updated.",
+  "フレンド申請を送れませんでした ({code})":
+                                "Couldn't send the friend request ({code})",
+  "フレンド申請を送れませんでした。時間をおいて再度お試しください。":
+                                "Couldn't send the friend request. Please try again later.",
+  "フレンドになりました。":      "You're now friends.",
+  "{name} とフレンドになりました":
+                                "You're now friends with {name}",
+  "フレンド申請は相手が承認すると成立します。":
+                                "The other person needs to accept to become friends.",
+  "承認できませんでした (permission-denied)。Firestore ルールが更新されていない可能性があります。":
+                                "Couldn't accept (permission-denied). The Firestore rules may not be updated.",
+  "承認できませんでした ({code})":"Couldn't accept ({code})",
+  "承認できませんでした。時間をおいて再度お試しください。":
+                                "Couldn't accept. Please try again later.",
   "目標を変更":                 "Change goal",
   "目標をクリア":               "Clear goal",
 
