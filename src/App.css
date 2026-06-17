@@ -830,11 +830,227 @@
 
 .settings-character-color-panel {
   display: grid;
-  gap: 12px;
-  padding: 12px;
+  gap: 16px;
+  padding: 16px;
   border: 1px solid rgba(var(--ink-rgb), 0.08);
   border-radius: 18px;
   background: rgba(var(--surface-rgb), 0.72);
+}
+
+/* === Hero preview =====================================
+   選択中の shape × color を大きく見せる。横並びで preview +
+   キャラ名 + tagline。色 / 形変更が即反映されるので live preview
+   として機能する。 */
+.settings-character-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.settings-character-hero-stage {
+  width: 88px;
+  height: 88px;
+  display: grid;
+  place-items: center;
+}
+.settings-character-hero-stage .profile-character-preview {
+  width: 100%;
+  height: 100%;
+}
+.settings-character-hero-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.settings-character-hero-kicker {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.settings-character-hero-name {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  line-height: 1.1;
+}
+.settings-character-hero-name span {
+  margin-left: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+.settings-character-hero-tag {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* === Section header ==================================== */
+.settings-character-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.settings-character-section-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* === Shape row (3 横並びコンパクトタイル) ============== */
+.character-shape-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.character-shape-tile {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto;
+  justify-items: center;
+  gap: 6px;
+  padding: 12px 8px 10px;
+  border: 1px solid rgba(var(--ink-rgb), 0.1);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease,
+    box-shadow 0.16s ease;
+}
+.character-shape-tile:hover {
+  transform: translateY(-1px);
+  border-color: rgba(31, 111, 74, 0.22);
+  box-shadow: 0 10px 22px rgba(var(--ink-rgb), 0.06);
+}
+.character-shape-tile.is-active {
+  border-color: rgba(31, 111, 74, 0.5);
+  background: rgba(31, 111, 74, 0.06);
+  box-shadow:
+    0 0 0 2px rgba(31, 111, 74, 0.35),
+    0 12px 26px rgba(var(--ink-rgb), 0.08);
+}
+.character-shape-tile.is-locked {
+  opacity: 0.78;
+}
+.character-shape-tile-preview {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background: rgba(var(--ink-rgb), 0.025);
+}
+.character-shape-tile-preview .profile-character-preview {
+  width: 100%;
+  height: 100%;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.character-shape-tile.is-locked .character-shape-tile-preview {
+  filter: grayscale(0.7) opacity(0.65);
+}
+.character-shape-tile-name {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+.character-shape-tile-name small {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.character-shape-tile-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 800;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--surface);
+}
+.character-shape-tile-badge.is-lock {
+  background: rgba(var(--ink-rgb), 0.08);
+  color: var(--ink);
+  font-size: 11px;
+}
+
+/* === Color row (横並びの円形スウォッチ) ================ */
+.character-color-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.character-color-swatch {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  background: transparent;
+  cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(var(--ink-rgb), 0.12);
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+  display: grid;
+  place-items: center;
+}
+.character-color-swatch:hover {
+  transform: scale(1.06);
+  box-shadow: 0 0 0 1px rgba(var(--ink-rgb), 0.22),
+    0 6px 14px rgba(var(--ink-rgb), 0.12);
+}
+.character-color-swatch > span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+.character-color-swatch.is-active {
+  box-shadow:
+    0 0 0 2px var(--ink),
+    0 6px 14px rgba(var(--ink-rgb), 0.18);
+}
+.character-color-swatch-check {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
 }
 
 .settings-theme-panel {

@@ -17699,31 +17699,42 @@ function App() {
 
 
               <div className="settings-character-color-panel" id="settings-character-panel">
-                <div className="settings-character-color-head">
-                  <span>{t("分身キャラクター")}</span>
-                  <ProfileCharacterPreview
-                    color={playerCharacterColor}
-
-                    shape={playerCharacterShape}
-                  />
+                {/* === Hero preview ===
+                    現在の shape × color を大きく見せる。色 / 形を変えた
+                    瞬間にここがリアルタイム更新されるので、ユーザーは
+                    プレビューを見ながらカスタマイズできる。 */}
+                <div className="settings-character-hero">
+                  <span className="settings-character-hero-stage">
+                    <ProfileCharacterPreview
+                      color={playerCharacterColor}
+                      shape={playerCharacterShape}
+                    />
+                  </span>
+                  <div className="settings-character-hero-text">
+                    <span className="settings-character-hero-kicker">
+                      {t("分身キャラクター")}
+                    </span>
+                    {(() => {
+                      const active = characterShapeOptions.find((o) => o.value === playerCharacterShape);
+                      if (!active) return null;
+                      return (
+                        <>
+                          <strong className="settings-character-hero-name">
+                            {active.name} <span>{active.romaji}</span>
+                          </strong>
+                          <small className="settings-character-hero-tag">{active.tagline}</small>
+                        </>
+                      );
+                    })()}
+                  </div>
                 </div>
 
-                {(() => {
-                  const active = characterShapeOptions.find((o) => o.value === playerCharacterShape);
-                  if (!active) return null;
-                  return (
-                    <p className="character-active-intro">
-                      <strong>
-                        {active.name} <span>{active.romaji}</span>
-                      </strong>
-                      {active.intro}
-                    </p>
-                  );
-                })()}
-
-                <div className="character-customize-section compact">
-                  <p className="character-customize-section-label">{t("シルエット")}</p>
-                  <div className="character-shape-grid compact" aria-label={t("キャラクターの形")}>
+                {/* === Shape (シルエット) ===
+                    縦並びカードを横並びコンパクトカードに圧縮。1 行内に
+                    収まるので「3 種から選ぶ」が一目で分かる。 */}
+                <div className="settings-character-section">
+                  <p className="settings-character-section-label">{t("シルエット")}</p>
+                  <div className="character-shape-row" aria-label={t("キャラクターの形")}>
                     {characterShapeOptions.map((option) => {
                       const isLocked = !ownedCharacterShapes.includes(option.value);
                       const isActive = playerCharacterShape === option.value;
@@ -17731,8 +17742,8 @@ function App() {
                         <button
                           type="button"
                           key={option.value}
-                          className={`shape-tile ${isActive ? "active " : ""}${
-                            isLocked ? "is-locked" : ""
+                          className={`character-shape-tile${isActive ? " is-active" : ""}${
+                            isLocked ? " is-locked" : ""
                           }`}
                           onClick={() => {
                             if (isLocked) {
@@ -17750,25 +17761,22 @@ function App() {
                           }
                           aria-pressed={isActive}
                         >
-                          <span className="shape-tile-stage" aria-hidden="true">
+                          <span className="character-shape-tile-preview" aria-hidden="true">
                             <ProfileCharacterPreview
                               color={playerCharacterColor}
                               shape={option.value}
                             />
                           </span>
-                          <span className="shape-tile-text">
-                            <strong className="shape-tile-name">
-                              {option.name}
-                              <span className="shape-tile-romaji">{option.romaji}</span>
-                            </strong>
-                            <small className="shape-tile-tag">{option.tagline}</small>
+                          <span className="character-shape-tile-name">
+                            {option.name}
+                            <small>{option.romaji}</small>
                           </span>
                           {isLocked ? (
-                            <span className="shape-tile-badge is-lock" aria-hidden="true">
+                            <span className="character-shape-tile-badge is-lock" aria-hidden="true">
                               🔒
                             </span>
                           ) : isActive ? (
-                            <span className="shape-tile-badge is-check" aria-hidden="true">
+                            <span className="character-shape-tile-badge is-check" aria-hidden="true">
                               ✓
                             </span>
                           ) : null}
@@ -17778,22 +17786,32 @@ function App() {
                   </div>
                 </div>
 
-                <div className="character-customize-section compact">
-                  <p className="character-customize-section-label">{t("カラー")}</p>
-                  <div className="character-color-grid compact" aria-label={t("分身カラー")}>
-                    {characterColorOptions.map((color) => (
-                      <button
-                        type="button"
-                        key={color.value}
-                        className={playerCharacterColor === color.value ? "active" : ""}
-                        onClick={() => chooseCharacterColor(color.value)}
-                        title={color.name}
-                        aria-label={`${color.name}を選択`}
-                      >
-                        <span style={{ background: color.value }} />
-                        <small>{color.name}</small>
-                      </button>
-                    ))}
+                {/* === Color (カラー) ===
+                    縦並びボタンを横並びの円形スウォッチに変更。色名は
+                    title (tooltip) と aria-label に残し、画面の情報量を
+                    減らして「色を選ぶ」が一目で分かる。 */}
+                <div className="settings-character-section">
+                  <p className="settings-character-section-label">{t("カラー")}</p>
+                  <div className="character-color-row" aria-label={t("分身カラー")}>
+                    {characterColorOptions.map((color) => {
+                      const isActive = playerCharacterColor === color.value;
+                      return (
+                        <button
+                          type="button"
+                          key={color.value}
+                          className={`character-color-swatch${isActive ? " is-active" : ""}`}
+                          onClick={() => chooseCharacterColor(color.value)}
+                          title={color.name}
+                          aria-label={`${color.name}を選択`}
+                          aria-pressed={isActive}
+                        >
+                          <span style={{ background: color.value }} />
+                          {isActive ? (
+                            <span className="character-color-swatch-check" aria-hidden="true">✓</span>
+                          ) : null}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
