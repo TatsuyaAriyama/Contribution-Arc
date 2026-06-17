@@ -32930,10 +32930,19 @@ body.workspace-popover-active .preset-message-panel.hud-fab,
    ・ "一覧を更新" は footer 風の控えめなテキストボタン
    ========================================================= */
 @media (max-width: 720px) {
-  /* (a) ヘッダー整理：← Home と Silent Workspace の説明文を撤去。
-         bottom-nav の "ホーム" タブで戻れるし、Silent Workspace の
-         説明文は initial onboarding tutorial で別途見せる前提。 */
+  /* (a) ヘッダー整理：← Home は bottom-nav の "ホーム" タブで戻れる
+         ので隠す。Silent Workspace の説明文も initial onboarding tutorial
+         に任せる。ただし ♠ ポーカーのエントリだけは別途貯まる Focus
+         Chip → Arc 変換の入口として残す必要があるので、profile-topbar
+         自体は表示し続け、内部の不要なボタンだけを個別非表示にする。 */
   .workspace-screen .profile-topbar {
+    display: flex !important;
+    justify-content: flex-end !important;
+    padding: 8px 12px 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+  }
+  .workspace-screen .profile-topbar > button:not(.workspace-poker-entry) {
     display: none !important;
   }
   .workspace-screen .workspace-2d-card .workspace-heading {
