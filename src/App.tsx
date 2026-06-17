@@ -19849,7 +19849,13 @@ function App() {
                   <button
                     type="button"
                     className="profile-menu-item"
-                    onClick={() => setIsSearchOpen(true)}
+                    onClick={() => {
+                      /* モーダルではなく専用画面に遷移する。MENU から
+                         タップした時にトップに小さく出る popover はモバイル
+                         で見落とされやすく「押しても何も起きない」と
+                         感じる原因だったので、Friends 画面そのものへ移動。 */
+                      setCurrentView("friends");
+                    }}
                   >
                     <span className="profile-menu-icon" aria-hidden="true">
                       {/* フレンド = 2 人並びのシルエット。旧アイコンは
@@ -21214,6 +21220,192 @@ function App() {
                   </article>
                 );
               })}
+            </div>
+          </section>
+        </motion.section>
+      ) : currentView === "friends" ? (
+        /* MENU > フレンド・検索 から遷移する専用画面。検索フォーム +
+           届いた申請 + 既存フレンド一覧を 1 画面に並べる。モーダル
+           popover では「押しても何も起きない」と感じる原因になっていた
+           ため、ちゃんとした画面として実装する。 */
+        <motion.section
+          className="friends-screen"
+          aria-label={t("フレンド")}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={SPRING_SNAPPY}
+        >
+          <div className="profile-topbar">
+            <button type="button" onClick={() => setCurrentView("profile")}>
+              ← {t("プロフィール")}
+            </button>
+          </div>
+
+          <section className="friends-screen-card">
+            <header className="friends-screen-head">
+              <p className="card-kicker">Friends</p>
+              <h1>{t("フレンド")}</h1>
+            </header>
+
+            {/* ユーザー検索 */}
+            <form className="friends-screen-search" onSubmit={handleUserSearch}>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value.toLowerCase())}
+                placeholder={t("ユーザーIDで探す (例: ari.dev)")}
+                maxLength={30}
+                aria-label={t("ユーザーID")}
+              />
+              <button type="submit" disabled={isSearching}>
+                {isSearching ? "…" : t("検索")}
+              </button>
+            </form>
+            {!userId ? (
+              <p className="friends-screen-note">
+                {t("フォロー機能を使うには、設定から自分のユーザーIDを登録してください。")}
+              </p>
+            ) : null}
+            {searchError ? (
+              <p className="friends-screen-error" role="alert">
+                {searchError}
+              </p>
+            ) : null}
+            {searchResults.length > 0 ? (
+              <ul className="friends-screen-results">
+                {searchResults.slice(0, 12).map((profile) => {
+                  const isFriend = friends.some((friend) => friend.uid === profile.uid);
+                  const isPending = friendRequests.some(
+                    (request) =>
+                      request.profile.uid === profile.uid &&
+                      request.status === "pending",
+                  );
+                  return (
+                    <li key={profile.uid}>
+                      <button
+                        type="button"
+                        className="friends-screen-row"
+                        onClick={() => {
+                          handleUserProfileOpen(profile);
+                        }}
+                      >
+                        <ProfileCharacterPreview
+                          color={profile.characterColor}
+                          shape={profile.characterShape || "default"}
+                        />
+                        <span className="friends-screen-row-text">
+                          <strong>{profile.displayName || profile.userId}</strong>
+                          <small>
+                            @{profile.userId}
+                            {isFriend ? ` · ${t("フレンド")}` : isPending ? ` · ${t("申請中")}` : ""}
+                          </small>
+                        </span>
+                        <span aria-hidden="true" className="friends-screen-row-arrow">›</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
+
+            {/* 届いている申請 */}
+            {(() => {
+              const incoming = friendRequests.filter(
+                (r) => r.direction === "incoming" && r.status === "pending",
+              );
+              if (incoming.length === 0) return null;
+              return (
+                <div className="friends-screen-section">
+                  <p className="friends-screen-section-label">
+                    {t("届いている申請")} ({incoming.length})
+                  </p>
+                  <ul className="friends-screen-results">
+                    {incoming.map((request) => (
+                      <li key={request.id}>
+                        <div className="friends-screen-row friends-screen-row-incoming">
+                          <ProfileCharacterPreview
+                            color={request.profile.characterColor}
+                            shape={request.profile.characterShape || "default"}
+                          />
+                          <span className="friends-screen-row-text">
+                            <strong>{request.profile.displayName || request.profile.userId}</strong>
+                            <small>@{request.profile.userId}</small>
+                          </span>
+                          <span className="friends-screen-row-actions">
+                            <button
+                              type="button"
+                              className="friends-screen-accept"
+                              onClick={() => handleFriendAccept(request)}
+                            >
+                              {t("承認")}
+                            </button>
+                            <button
+                              type="button"
+                              className="friends-screen-reject"
+                              onClick={() => handleFriendReject(request)}
+                              aria-label={t("削除")}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })()}
+
+            {/* フレンド一覧 */}
+            <div className="friends-screen-section">
+              <p className="friends-screen-section-label">
+                {t("フレンド")} ({friends.length})
+              </p>
+              {friends.length === 0 ? (
+                <p className="friends-screen-empty">
+                  {t("まだフレンドがいません。上の検索からユーザーIDで申請してみよう。")}
+                </p>
+              ) : (
+                <ul className="friends-screen-results">
+                  {friends.map((friend) => (
+                    <li key={friend.uid}>
+                      <button
+                        type="button"
+                        className="friends-screen-row"
+                        onClick={async () => {
+                          /* フレンド行 → プロフィール画面へ。最新の
+                             プロフィール doc を取りに行ってから開く。 */
+                          try {
+                            const snap = await getDoc(doc(db, "users", friend.uid));
+                            if (snap.exists()) {
+                              const profile = normalizeUserProfile(
+                                friend.uid,
+                                snap.data() as Partial<UserProfile>,
+                              );
+                              handleUserProfileOpen(profile);
+                            }
+                          } catch (error) {
+                            console.info("Open friend profile skipped.", error);
+                          }
+                        }}
+                      >
+                        {friend.avatar ? (
+                          <span className="friends-screen-row-avatar-img">
+                            <img src={friend.avatar} alt="" />
+                          </span>
+                        ) : (
+                          <ProfileCharacterPreview color={undefined} shape="default" />
+                        )}
+                        <span className="friends-screen-row-text">
+                          <strong>{friend.name}</strong>
+                          <small>@{friend.userId}</small>
+                        </span>
+                        <span aria-hidden="true" className="friends-screen-row-arrow">›</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </section>
         </motion.section>

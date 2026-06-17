@@ -333,6 +333,13 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "通知":                       "Notifications",
   "フレンド":                   "Friends",
   "フレンド・検索":             "Friends & Search",
+  "ユーザーIDで探す (例: ari.dev)":
+                                "Search by user ID (e.g. ari.dev)",
+  "届いている申請":             "Incoming requests",
+  "まだフレンドがいません。上の検索からユーザーIDで申請してみよう。":
+                                "No friends yet. Search by user ID above to send a request.",
+  "申請中":                     "Requested",
+  "承認":                       "Accept",
   "検索":                       "Search",
 
   // === 設定モーダル ===

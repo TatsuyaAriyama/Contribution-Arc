@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { FriendGithubMini } from "./FriendGithubMini";
 import { useTranslation } from "../i18n/LanguageContext";
 
-export type AppView = "home" | "profile" | "workspace" | "logs" | "daily" | "learning" | "shop" | "teams" | "manager" | "feed" | "showcase" | "poker";
+export type AppView = "home" | "profile" | "workspace" | "logs" | "daily" | "learning" | "shop" | "teams" | "manager" | "feed" | "showcase" | "poker" | "friends";
 export type FriendPreviewStatus = "online" | "away" | "offline";
 
 export type FriendPreview = {
