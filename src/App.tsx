@@ -12690,18 +12690,43 @@ function App() {
       </div>
 
       <div className="contribution-summary" aria-label="GitHub contribution summary">
-        <div>
-          <strong>{outputStats.commits.toLocaleString()}</strong>
-          <span>commits</span>
-        </div>
-        <div>
-          <strong>{outputStats.contributions.toLocaleString()}</strong>
-          <span>contributions</span>
-        </div>
-        <div>
-          <strong>{outputStats.pullRequests.toLocaleString()}</strong>
-          <span>PRs</span>
-        </div>
+        {/* 過去 1 年の GitHub 活動を 3 つの数値で要約。jogruber API は
+            commits / PRs を分けて返してくれないので、見える情報だけで
+            意味のある指標に組み直した。
+              - 累計コントリビュート (= githubContributions.total)
+              - 活動日数 (count > 0 の日数)
+              - 過去 1 年の最長連続日数 */}
+        {(() => {
+          const days = githubContributions?.days ?? [];
+          const total = githubContributions?.total ?? 0;
+          const activeDays = days.reduce((acc, day) => (day.count > 0 ? acc + 1 : acc), 0);
+          let longest = 0;
+          let run = 0;
+          for (const day of days) {
+            if (day.count > 0) {
+              run += 1;
+              if (run > longest) longest = run;
+            } else {
+              run = 0;
+            }
+          }
+          return (
+            <>
+              <div>
+                <strong>{total.toLocaleString()}</strong>
+                <span>contributions</span>
+              </div>
+              <div>
+                <strong>{activeDays.toLocaleString()}</strong>
+                <span>active days</span>
+              </div>
+              <div>
+                <strong>{longest.toLocaleString()}</strong>
+                <span>longest streak</span>
+              </div>
+            </>
+          );
+        })()}
       </div>
 
       {/* Determination line. A one-sentence "what I'm aiming at"
