@@ -15077,13 +15077,24 @@ function App() {
               メニュー項目から isSearchOpen / isNotificationsOpen を立てて開く。 */}
 
           {/* 検索パネルはトリガー無しでここに描画。アバターメニューの
-              「ユーザーを探す」項目（または ⌘K）で isSearchOpen を立てて開く。 */}
-          <div className="topbar-popover-wrap topbar-popover-wrap-search topbar-popover-wrap-headless" ref={searchPopoverRef}>
-            {isSearchOpen ? (
-              <section
-                className="topbar-popover topbar-popover-search"
-                aria-label={t("ユーザーを探す")}
-              >
+              「ユーザーを探す」項目（または ⌘K）で isSearchOpen を立てて開く。
+              開いたときはバックドロップ付きの中央モーダルとして全画面に
+              オーバーレイする (旧 topbar 内 popover はモバイル profile 画面
+              からだと top-right に隠れて気付かれない問題があった)。 */}
+          {isSearchOpen ? (
+            <div
+              className="user-search-modal-backdrop"
+              role="presentation"
+              onClick={() => setIsSearchOpen(false)}
+            >
+              <div className="topbar-popover-wrap topbar-popover-wrap-search topbar-popover-wrap-headless" ref={searchPopoverRef}>
+                <section
+                  className="topbar-popover topbar-popover-search is-modal"
+                  aria-label={t("ユーザーを探す")}
+                  role="dialog"
+                  aria-modal="true"
+                  onClick={(event) => event.stopPropagation()}
+                >
                 <div className="topbar-popover-head">
                   <p className="card-kicker">User Search</p>
                   <strong>{t("ユーザーを探す")}</strong>
@@ -15150,9 +15161,10 @@ function App() {
                     })}
                   </div>
                 ) : null}
-              </section>
-            ) : null}
-          </div>
+                </section>
+              </div>
+            </div>
+          ) : null}
           {/* 通知パネルもトリガー無しで描画。アバターメニューの「お知らせ」
               項目から handleNotificationsToggle で開く（未読は同項目にバッジ）。 */}
           <div className="notification-wrap notification-wrap-headless" ref={notificationsWrapRef}>

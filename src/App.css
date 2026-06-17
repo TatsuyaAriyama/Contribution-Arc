@@ -16571,6 +16571,37 @@
 .topbar-popover-search {
   width: min(340px, 86vw);
 }
+
+/* ===== 検索パネルを中央モーダルとして表示 =====
+   MENU の「フレンド・検索」から開かれた検索パネルは、トリガーが画面の
+   どこにあっても確実に視界の中心に出るように、バックドロップ + fixed
+   配置の正規モーダルとして描画する。旧 topbar 内の絶対配置 popover は
+   モバイル profile 画面からだと top-right に隠れて気付かれないバグ
+   (「フレンドが押せない」) の原因になっていた。 */
+.user-search-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(var(--ink-rgb), 0.46);
+  display: grid;
+  place-items: start center;
+  padding: calc(env(safe-area-inset-top, 0px) + 64px) 16px 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.user-search-modal-backdrop .topbar-popover-wrap-search {
+  width: 100%;
+  max-width: 420px;
+  position: relative;
+}
+.topbar-popover-search.is-modal {
+  position: relative;
+  width: 100%;
+  top: auto;
+  right: auto;
+  max-height: min(560px, calc(100vh - 96px));
+  box-shadow: 0 24px 60px rgba(var(--ink-rgb), 0.28);
+}
 .topbar-search-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
