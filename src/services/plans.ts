@@ -19,6 +19,9 @@
  *     正式課金を始めるときに false にする。
  */
 
+import { translate } from "../i18n/LanguageContext";
+import type { Language } from "../i18n/translations";
+
 export type PlanTier = "free" | "team" | "enterprise";
 
 /** ゲーティング用の機能キー。表示文言とは分離しておく。 */
@@ -154,4 +157,20 @@ export function orgHasFeature(planTier: PlanTier | undefined | null, feature: Pl
 /** 不正/旧データを安全な PlanTier に丸める。 */
 export function normalizePlanTier(value: unknown): PlanTier {
   return value === "team" || value === "enterprise" ? value : "free";
+}
+
+/**
+ * 表示用にプランの JP 文言をアクティブ言語へ翻訳して返す。
+ * PLANS の JP 文字列は変えず (i18n の辞書キーとして使う)、レンダー時に
+ * このヘルパで包む。
+ */
+export function getPlanLocalized(tier: PlanTier, language: Language): PlanDef {
+  const plan = getPlan(tier);
+  return {
+    ...plan,
+    priceLabel: translate(language, plan.priceLabel),
+    priceUnit: plan.priceUnit ? translate(language, plan.priceUnit) : plan.priceUnit,
+    tagline: translate(language, plan.tagline),
+    features: plan.features.map((feature) => translate(language, feature)),
+  };
 }

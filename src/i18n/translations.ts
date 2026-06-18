@@ -1207,4 +1207,154 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "アウトプットが多い順": "Most output",
   "その他": "Other",
   "、": ", ",
+
+  // === Phase 4d: App.tsx toast / window.confirm / org / slack ===
+  "ピリオドは先頭と末尾には使えません。": "Period cannot be used at the start or end.",
+  "ピリオドは連続して使えません。": "Periods cannot be used consecutively.",
+  "「{name}」に参加しました": "Joined \"{name}\"",
+  "+{grant} Focus Chip 🔥（ポーカーで通常チップの 1.5× 配当 / 残り {remaining} 枚 ）":
+    "+{grant} Focus Chip 🔥 (×1.5 payout in poker vs. normal chips / {remaining} left)",
+  "+{reward} Arc 獲得（投稿ボーナス上限 {cap} に到達）":
+    "+{reward} Arc earned (reached the {cap} posting-bonus cap)",
+  "+{reward} Arc 獲得（累計 {earned} / {cap}）":
+    "+{reward} Arc earned (total {earned} / {cap})",
+  "このログを削除しますか？": "Delete this log?",
+  "{name} をフレンドから外しました": "Removed {name} from friends",
+  "{name} をブロックしました": "Blocked {name}",
+  "{name} に応援を送りました": "Cheered {name}",
+  "{friend} を「{room}」に招待しました": "Invited {friend} to \"{room}\"",
+  "{n} 人に一斉招待を送りました": "Sent invites to {n} people",
+  "「{name}」へ移動しました": "Moved to \"{name}\"",
+  "{name} を作業部屋から強制退出させますか？この操作は取り消せません。":
+    "Force {name} out of the workroom? This action cannot be undone.",
+  "{name} を退出させました": "Removed {name}",
+  "退室しました ・ {time} で +{exp} EXP": "Left the room · +{exp} EXP for {time}",
+  "組織「{name}」を作成しました": "Created organization \"{name}\"",
+  "招待リンク（コピーしてください）": "Invite link (copy this)",
+  "オーナーは退出できません。Admin ダッシュボードから他メンバーへオーナーを譲渡してから退出してください。":
+    "Owners cannot leave. Transfer ownership to another member from the Admin dashboard first.",
+  "「{name}」から退出します。組織限定のルームは見えなくなります。":
+    "Leave \"{name}\"? You'll lose access to org-only rooms.",
+  "{name} を「{org}」から除名します。除名後、本人の組織限定ルームは見えなくなります。本人のアカウントとログは残ります。よろしいですか？":
+    "Remove {name} from \"{org}\"? They'll lose access to org-only rooms. Their account and logs remain. Proceed?",
+  "{name} を除名しました": "Removed {name}",
+  "データを削除しました。認証アカウントの完全削除には、もう一度ログインして再度アカウント削除を実行してください。":
+    "Your data has been deleted. To fully remove the authentication account, please sign in again and re-run account deletion.",
+  "「{org}」のオーナー権限を {name} に譲渡します。譲渡後、あなたはメンバーになります。よろしいですか？":
+    "Transfer ownership of \"{org}\" to {name}? You'll become a regular member. Proceed?",
+  "オーナーを {name} に譲渡しました": "Transferred ownership to {name}",
+  "現在のオーナーのみ譲渡できます。": "Only the current owner can transfer ownership.",
+  "譲渡先は同じ組織のメンバーである必要があります。": "The recipient must be a member of the same organization.",
+  "同じユーザーへの譲渡はできません。": "You cannot transfer to the same user.",
+  "オーナー譲渡に失敗しました。再度お試しください。": "Ownership transfer failed. Please try again.",
+  "監査ログを読み込めませんでした。": "Couldn't load audit logs.",
+  "https://hooks.slack.com/services/… 形式のURLのみ受け付けます。":
+    "Only URLs in the https://hooks.slack.com/services/… format are accepted.",
+  "保存しました。": "Saved.",
+  "Slack連携を解除しました。": "Slack integration disconnected.",
+  "保存に失敗しました。再度お試しください。": "Save failed. Please try again.",
+  "先にSlack Incoming Webhook URLを入力してください。": "Please enter the Slack Incoming Webhook URL first.",
+  "Slackチャンネルに送信しました。届いていれば設定OKです。":
+    "Sent to your Slack channel. If it arrived, the setup is good.",
+  "URLが Slack の hooks.slack.com 形式ではありません。": "URL is not in the Slack hooks.slack.com format.",
+  "Slackへの送信に失敗しました ({code}).": "Failed to send to Slack ({code}).",
+  "日次サマリーを送信しました。": "Daily summary sent.",
+  "送信に失敗しました ({code}).": "Send failed ({code}).",
+  "再読み込みに失敗しました。": "Reload failed.",
+  "役割": "Role",
+  "ストリーク": "Streak",
+  "最終アクティブ": "Last active",
+  "Roomを作成しました。": "Room created.",
+  "{name}を解体しますか？このRoomは一覧から消えます。":
+    "Disband {name}? This room will be removed from the list.",
+  "[Dev] 他ユーザーが作成した「{name}」を解体しますか？この操作は取り消せません。":
+    "[Dev] Disband \"{name}\" created by another user? This action cannot be undone.",
+  "組織を作って始める": "Create an organization to start",
+  "オーナーは削除できません。Admin ダッシュボードからオーナーを譲渡してから削除してください。":
+    "Owners cannot be deleted. Transfer ownership from the Admin dashboard first.",
+  "プライバシーポリシー": "Privacy policy",
+  "ポーカーを準備中…": "Preparing poker…",
+  "✦ 分身を変える": "✦ Change your character",
+  "組織情報を読み込めませんでした。": "Couldn't load organization info.",
+
+  // === Character shape names / taglines / intros ===
+  "灯": "Tomo",
+  "朧": "Oboro",
+  "宵": "Yoi",
+  "そばに灯る相棒": "A companion that lights the dark beside you",
+  "ふわりと漂う魂": "A soul that drifts softly",
+  "夜更けの番人": "Keeper of the late night",
+  "暗がりにそっと灯る、はじまりの相棒。":
+    "A first companion that quietly lights the dark.",
+  "輪郭をほどいて漂う、もう一人のあなた。":
+    "Another you, drifting with edges undone.",
+  "夜更けをひとり見守る、静かな番人。":
+    "A quiet keeper watching alone through the late night.",
+  "朧 Oboro": "Oboro",
+  "宵 Yoi": "Yoi",
+  "脚のない魂のシルエット。作業部屋の片隅でふわりと漂う、もう一人のあなた。":
+    "A footless silhouette of a soul. Another you, drifting softly in the corner of the workroom.",
+  "丸い頭に大きな琥珀の眼。深夜にひとり手を動かす時間のお供に。":
+    "A round head with large amber eyes — your companion for the quiet hours of working alone late at night.",
+
+  // === Arc pack badges ===
+  "10%お得": "10% off",
+  "20%お得": "20% off",
+  "30%お得": "30% off",
+
+  // === Character colors (palette names) ===
+  "常磐": "Evergreen",
+  "深緑": "Deep Green",
+  "青磁": "Celadon",
+  "縹": "Hanada Blue",
+  "紺": "Navy",
+  "鈍色": "Slate",
+  "菫": "Violet",
+  "梅紫": "Plum Purple",
+  "薔薇": "Rose",
+  "琥珀": "Amber",
+  "苔色": "Moss",
+  "煉瓦": "Brick",
+  "胡桃": "Walnut",
+  "枯草": "Dry Grass",
+  "若竹": "Young Bamboo",
+  "藍鼠": "Indigo Gray",
+  "鴇鼠": "Rose Gray",
+  "利休鼠": "Sage Gray",
+  "藤鼠": "Wisteria Gray",
+  "墨": "Sumi Black",
+
+  // === Shape tile suffixes (composed messages) ===
+  "（ショップで購入）": " (buy in Shop)",
+  "はショップで購入できます": " is available in the Shop",
+  "を選択": " — select",
+  "{name} はショップで購入できます": "{name} is available in the Shop",
+  "{name} {romaji} はショップで購入できます。ショップへ行きますか？":
+    "{name} {romaji} is available in the Shop. Go to the Shop?",
+  "{name} {romaji}(ショップで購入)":
+    "{name} {romaji} (buy in Shop)",
+
+  // === Workspace preset messages ===
+  "進捗どうですか？": "How's it going?",
+  "おつかれさまです": "Nice work today",
+  "集中します": "Focusing now",
+  "休憩します": "Taking a break",
+  "一緒にやろう": "Let's work together",
+  "今日はReactやります": "Working on React today",
+
+  // === PTR + invite + org admin + post quota + donut chart ===
+  "離して更新": "Release to refresh",
+  "↓ 引っ張って更新": "↓ Pull to refresh",
+  "招待リンクが見つかりません。": "Invite link not found.",
+  "招待リンクの有効期限が切れています。": "Invite link has expired.",
+  "この招待リンクは上限まで使用されています。":
+    "This invite link has reached its usage limit.",
+  "組織への参加に失敗しました。": "Failed to join the organization.",
+  "メンバー一覧を読み込めませんでした。": "Couldn't load member list.",
+  "本日の利用上限に達しました。しばらく経ってから再読み込みしてください。":
+    "Today's usage limit reached. Please reload after a while.",
+  "ログの読み込みを待っています。": "Waiting to load posts.",
+  "{month}月{day}日": "{month}/{day}",
+  "13週合計": "13-week total",
+  "学習中: {building}": "Studying: {building}",
 };

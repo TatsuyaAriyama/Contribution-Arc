@@ -15,7 +15,10 @@ type ShareToXModalProps = {
 const INTENT_URL = "https://twitter.com/intent/tweet";
 
 export function ShareToXModal({ open, onClose, input }: ShareToXModalProps) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
+  // Honor the active UI language so the canvas + tweet text match what
+  // the user sees in the app, regardless of what the caller passed.
+  const localizedInput: ShareImageInput = { ...input, language: input.language ?? language };
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [blob, setBlob] = useState<Blob | null>(null);
   const [text, setText] = useState<string>("");
@@ -55,8 +58,8 @@ export function ShareToXModal({ open, onClose, input }: ShareToXModalProps) {
     const token = ++generationToken.current;
     setError("");
     setStatus("");
-    setText(buildShareTweet(input));
-    generateShareImagePng(input)
+    setText(buildShareTweet(localizedInput));
+    generateShareImagePng(localizedInput)
       .then((generated) => {
         if (generationToken.current !== token) return;
         setBlob(generated);
@@ -69,7 +72,9 @@ export function ShareToXModal({ open, onClose, input }: ShareToXModalProps) {
         if (generationToken.current !== token) return;
         setError(err instanceof Error ? err.message : t("画像の生成に失敗しました。"));
       });
-  }, [open, input]);
+    // localizedInput is derived synchronously from `input` + active language
+    // — react to changes in either by including language in the deps.
+  }, [open, input, language]);
 
   // Clean up the object URL when the modal unmounts or closes.
   useEffect(() => {

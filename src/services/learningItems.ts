@@ -79,7 +79,11 @@ function mapLearningItemDocs(snapshot: QuerySnapshot, userId: string): LearningI
       return {
         id: entry.id,
         userId: readString(data.userId, userId),
-        name: readString(data.name, "未設定"),
+        // Generic fallback used only when a learning item lacks a name
+        // entirely (legacy / malformed doc). Kept untranslated since the
+        // service file has no language context — the UI hides empty
+        // names anyway.
+        name: readString(data.name, "Untitled"),
         category: readCategory(data.category),
         color: readString(data.color, "#888"),
         totalPages,

@@ -95,32 +95,47 @@ export function formatStudyTimeJa(minutes: number, language: "ja" | "en" = "ja")
   return language === "en" ? `${hours} h` : `${hours}時間`;
 }
 
-/** 60 分未満は "N分"、それ以上は "H時間" or "H時間M分"。 */
-export function formatStayTime(minutes: number) {
+/** 60 分未満は "N分"、それ以上は "H時間" or "H時間M分"。
+ *  language === "en" のとき "N min" / "Xh" / "Xh Ym" に切替える。 */
+export function formatStayTime(minutes: number, language: "ja" | "en" = "ja") {
   if (minutes < 60) {
-    return `${minutes}分`;
+    return language === "en" ? `${minutes} min` : `${minutes}分`;
   }
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
+  if (language === "en") {
+    return rest > 0 ? `${hours}h ${rest}m` : `${hours}h`;
+  }
   return rest > 0 ? `${hours}時間${rest}分` : `${hours}時間`;
 }
 
 /**
  * Compact "last logged" label used on learning cards.
  * 未記録 / 今日 / 昨日 / N日前 / N週間前 / Nヶ月前 / N年前 に分類。
+ * language === "en" のとき "Not logged" / "Today" / "Yesterday" /
+ * "Xd ago" / "Xw ago" / "Xmo ago" / "Xy ago" に切替える。
  */
 export function formatLearningLastLogged(
   lastTs: number | undefined,
   todayMidnightMs: number,
   dayMs: number,
+  language: "ja" | "en" = "ja",
 ) {
-  if (!lastTs) return "未記録";
-  if (lastTs >= todayMidnightMs) return "今日";
+  const isEn = language === "en";
+  if (!lastTs) return isEn ? "Not logged" : "未記録";
+  if (lastTs >= todayMidnightMs) return isEn ? "Today" : "今日";
   const yesterdayMidnight = todayMidnightMs - dayMs;
-  if (lastTs >= yesterdayMidnight) return "昨日";
+  if (lastTs >= yesterdayMidnight) return isEn ? "Yesterday" : "昨日";
   const diffDays = Math.max(1, Math.floor((todayMidnightMs - lastTs) / dayMs));
-  if (diffDays < 7) return `${diffDays}日前`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)}週間前`;
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)}ヶ月前`;
-  return `${Math.floor(diffDays / 365)}年前`;
+  if (diffDays < 7) return isEn ? `${diffDays}d ago` : `${diffDays}日前`;
+  if (diffDays < 30) {
+    const weeks = Math.floor(diffDays / 7);
+    return isEn ? `${weeks}w ago` : `${weeks}週間前`;
+  }
+  if (diffDays < 365) {
+    const months = Math.floor(diffDays / 30);
+    return isEn ? `${months}mo ago` : `${months}ヶ月前`;
+  }
+  const years = Math.floor(diffDays / 365);
+  return isEn ? `${years}y ago` : `${years}年前`;
 }

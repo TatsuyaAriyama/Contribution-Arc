@@ -135,7 +135,7 @@ import {
   type GithubContributions,
 } from "./services/githubContributions";
 import { computeStudyStreak } from "./services/studyStreak";
-import { PLANS, getPlan, BETA_ALL_FEATURES_FREE, type PlanTier } from "./services/plans";
+import { PLANS, getPlanLocalized, BETA_ALL_FEATURES_FREE, type PlanTier } from "./services/plans";
 import {
   clampNumber,
   formatDailyDate,
@@ -1452,25 +1452,25 @@ function removeSeedStudyLogs(logs: StudyLog[]) {
   return logs.filter((log) => !log.id.startsWith("seed-"));
 }
 
-function validateUserId(value: string) {
+function validateUserId(value: string, t: (k: string) => string) {
   if (!value) {
-    return "ユーザーIDを入力してください。";
+    return t("ユーザーIDを入力してください。");
   }
 
   if (value.length > 30) {
-    return "ユーザーIDは30文字以内にしてください。";
+    return t("ユーザーIDは30文字以内にしてください。");
   }
 
   if (!/^[a-z0-9._]+$/.test(value)) {
-    return "使用できる文字は小文字の半角英数字、_、. のみです。";
+    return t("使用できる文字は小文字の半角英数字、_、. のみです。");
   }
 
   if (value.startsWith(".") || value.endsWith(".")) {
-    return "ピリオドは先頭と末尾には使えません。";
+    return t("ピリオドは先頭と末尾には使えません。");
   }
 
   if (value.includes("..")) {
-    return "ピリオドは連続して使えません。";
+    return t("ピリオドは連続して使えません。");
   }
 
   return "";
@@ -1713,7 +1713,10 @@ function removeStoredFriendRequest(scope: string, requestId: string) {
   }
 }
 
-function workspaceMemberToProfile(member: WorkspaceMember): UserProfile {
+function workspaceMemberToProfile(
+  member: WorkspaceMember,
+  t: (k: string, vars?: Record<string, string | number>) => string,
+): UserProfile {
   return {
     uid: member.userId,
     userId: member.userId.startsWith("npc-") ? member.name.toLowerCase() : member.userId,
@@ -1722,14 +1725,17 @@ function workspaceMemberToProfile(member: WorkspaceMember): UserProfile {
     searchName: member.name.toLowerCase(),
     following: [],
     followers: [],
-    determination: member.status === "on-break" ? "少し休憩中です。" : `${member.building}を積み上げています。`,
+    determination:
+      member.status === "on-break"
+        ? t("少し休憩中です。")
+        : t("{building}を積み上げています。", { building: member.building }),
     characterColor: getSafeCharacterColor(member.characterColor || member.color),
     characterShape: member.characterShape,
   };
 }
 
-function profileResolveText(profile: UserProfile) {
-  return profile.determination?.trim() || "静かに積み上げています。";
+function profileResolveText(profile: UserProfile, t: (k: string) => string) {
+  return profile.determination?.trim() || t("静かに積み上げています。");
 }
 
 function formatPostTime(createdAt: string) {
@@ -3114,7 +3120,7 @@ function getLocalhostUrl() {
   return `${window.location.protocol}//localhost:${window.location.port}${window.location.pathname}${window.location.search}`;
 }
 
-function getAuthErrorDetail(error: unknown): AuthErrorDetail {
+function getAuthErrorDetail(error: unknown, t: (k: string) => string): AuthErrorDetail {
   const code = getAuthErrorCode(error);
   const localhostUrl = getLocalhostUrl();
 
@@ -3123,79 +3129,79 @@ function getAuthErrorDetail(error: unknown): AuthErrorDetail {
   switch (code) {
     case "auth/unauthorized-domain":
       return {
-        title: "このURLはFirebase Authで許可されていません。",
+        title: t("このURLはFirebase Authで許可されていません。"),
         message: localhostUrl
-          ? "127.0.0.1 ではなく localhost で開くとログインできる可能性が高いです。"
-          : "Firebase ConsoleのAuthentication設定で、このドメインをAuthorized domainsに追加してください。",
-        action: localhostUrl ? `こちらで開き直してください: ${localhostUrl}` : undefined,
+          ? t("127.0.0.1 ではなく localhost で開くとログインできる可能性が高いです。")
+          : t("Firebase ConsoleのAuthentication設定で、このドメインをAuthorized domainsに追加してください。"),
+        action: localhostUrl ? `${t("こちらで開き直してください:")} ${localhostUrl}` : undefined,
         code,
       };
     case "auth/operation-not-allowed":
       return {
-        title: "このログイン方法がFirebase側で有効化されていません。",
-        message: "Firebase ConsoleのAuthentication > Sign-in methodで、選んだログイン方法を有効にしてください。",
+        title: t("このログイン方法がFirebase側で有効化されていません。"),
+        message: t("Firebase ConsoleのAuthentication > Sign-in methodで、選んだログイン方法を有効にしてください。"),
         code,
       };
     case "auth/invalid-credential":
     case "auth/wrong-password":
     case "auth/user-not-found":
       return {
-        title: "メールアドレスまたはパスワードが正しくありません。",
-        message: "まだ登録していない場合は、Sign upに切り替えてアカウントを作成してください。",
+        title: t("メールアドレスまたはパスワードが正しくありません。"),
+        message: t("まだ登録していない場合は、Sign upに切り替えてアカウントを作成してください。"),
         code,
       };
     case "auth/email-already-in-use":
       return {
-        title: "このメールアドレスはすでに登録されています。",
-        message: "Loginに切り替えてログインしてください。",
+        title: t("このメールアドレスはすでに登録されています。"),
+        message: t("Loginに切り替えてログインしてください。"),
         code,
       };
     case "auth/weak-password":
       return {
-        title: "パスワードが短すぎます。",
-        message: "6文字以上のパスワードを入力してください。",
+        title: t("パスワードが短すぎます。"),
+        message: t("6文字以上のパスワードを入力してください。"),
         code,
       };
     case "auth/invalid-email":
       return {
-        title: "メールアドレスの形式が正しくありません。",
-        message: "入力内容を確認してもう一度お試しください。",
+        title: t("メールアドレスの形式が正しくありません。"),
+        message: t("入力内容を確認してもう一度お試しください。"),
         code,
       };
     case "auth/popup-blocked":
       return {
-        title: "ログイン用ポップアップがブロックされました。",
-        message: "ブラウザのポップアップ許可設定を確認して、もう一度お試しください。",
+        title: t("ログイン用ポップアップがブロックされました。"),
+        message: t("ブラウザのポップアップ許可設定を確認して、もう一度お試しください。"),
         code,
       };
     case "auth/popup-closed-by-user":
       return {
-        title: "ログイン画面が閉じられました。",
-        message: "もう一度ログインボタンを押してください。",
+        title: t("ログイン画面が閉じられました。"),
+        message: t("もう一度ログインボタンを押してください。"),
         code,
       };
     case "auth/account-exists-with-different-credential":
       return {
-        title: "同じメールアドレスの別ログイン方法が存在します。",
-        message: "以前使ったログイン方法でログインしてください。",
+        title: t("同じメールアドレスの別ログイン方法が存在します。"),
+        message: t("以前使ったログイン方法でログインしてください。"),
         code,
       };
     case "auth/network-request-failed":
       return {
-        title: "ネットワーク接続に失敗しました。",
-        message: "通信状況を確認して、少し待ってからもう一度お試しください。",
+        title: t("ネットワーク接続に失敗しました。"),
+        message: t("通信状況を確認して、少し待ってからもう一度お試しください。"),
         code,
       };
     case "auth/too-many-requests":
       return {
-        title: "ログイン試行が一時的に制限されています。",
-        message: "時間を置いてからもう一度お試しください。",
+        title: t("ログイン試行が一時的に制限されています。"),
+        message: t("時間を置いてからもう一度お試しください。"),
         code,
       };
     default:
       return {
-        title: "ログインに失敗しました。",
-        message: "設定または入力内容を確認してください。詳しいエラーはブラウザコンソールにも出力しています。",
+        title: t("ログインに失敗しました。"),
+        message: t("設定または入力内容を確認してください。詳しいエラーはブラウザコンソールにも出力しています。"),
         code: code || undefined,
       };
   }
@@ -3226,7 +3232,7 @@ function LoginScreen() {
         await signInWithEmailAndPassword(auth, email, password);
       }
     } catch (error) {
-      setAuthError(getAuthErrorDetail(error));
+      setAuthError(getAuthErrorDetail(error, t));
     } finally {
       setIsSubmitting(false);
     }
@@ -3275,7 +3281,7 @@ function LoginScreen() {
         }
       }
     } catch (error) {
-      setAuthError(getAuthErrorDetail(error));
+      setAuthError(getAuthErrorDetail(error, t));
     } finally {
       setIsSubmitting(false);
     }
@@ -4066,10 +4072,10 @@ function App() {
     };
     const onMove = (event: TouchEvent) => {
       if (startY === null) return;
-      const t = event.touches[0];
-      if (!t) return;
-      const deltaY = t.clientY - startY;
-      const deltaX = Math.abs(t.clientX - startX);
+      const touch = event.touches[0];
+      if (!touch) return;
+      const deltaY = touch.clientY - startY;
+      const deltaX = Math.abs(touch.clientX - startX);
       // 縦方向優位でなければ即解除 — 横スワイプ・斜めドラッグを除外。
       if (deltaY < 0 || (deltaY > 24 && deltaY < deltaX * 1.5)) {
         startY = null;
@@ -4087,7 +4093,7 @@ function App() {
       if (deltaY > 48) {
         armed = deltaY >= PULL_THRESHOLD;
         const el = ensureIndicator();
-        el.textContent = armed ? "離して更新" : "↓ 引っ張って更新";
+        el.textContent = armed ? t("離して更新") : t("↓ 引っ張って更新");
         el.dataset.armed = armed ? "true" : "false";
         // 抵抗カーブ: 実距離の平方根近似で「ぐっと重くなる」感触。
         const visual = Math.min(64, Math.sqrt(deltaY) * 4);
@@ -4115,7 +4121,7 @@ function App() {
       window.removeEventListener("touchcancel", onEnd);
       removeIndicator();
     };
-  }, [currentView]);
+  }, [currentView, t]);
 
   const setCurrentView = useCallback((next: AppView) => {
     if (typeof document === "undefined") {
@@ -4607,7 +4613,7 @@ function App() {
       .then((org) => {
         setCurrentOrganization(org);
         setOrgInviteToken("");
-        showToast(`「${org.name}」に参加しました`, { kind: "success" });
+        showToast(t("「{name}」に参加しました", { name: org.name }), { kind: "success" });
         try {
           const url = new URL(window.location.href);
           url.searchParams.delete("join-org");
@@ -4620,12 +4626,12 @@ function App() {
         const code = (error as Error)?.message || "";
         const message =
           code === "INVITE_NOT_FOUND"
-            ? "招待リンクが見つかりません。"
+            ? t("招待リンクが見つかりません。")
             : code === "INVITE_EXPIRED"
-              ? "招待リンクの有効期限が切れています。"
+              ? t("招待リンクの有効期限が切れています。")
               : code === "INVITE_EXHAUSTED"
-                ? "この招待リンクは上限まで使用されています。"
-                : "組織への参加に失敗しました。";
+                ? t("この招待リンクは上限まで使用されています。")
+                : t("組織への参加に失敗しました。");
         setOrgError(message);
       });
   }, [orgInviteToken, currentUser]);
@@ -4644,7 +4650,7 @@ function App() {
       })
       .catch((error) => {
         console.warn("Failed to load org members for manager dashboard", error);
-        setOrgAdminError("メンバー一覧を読み込めませんでした。");
+        setOrgAdminError(t("メンバー一覧を読み込めませんでした。"));
       })
       .finally(() => {
         setIsLoadingOrgMembers(false);
@@ -5280,7 +5286,7 @@ function App() {
     const timeoutId = window.setTimeout(() => {
       setDraftUserName(customUserName || currentUser.displayName || currentUser.email?.split("@")[0] || "");
       setDraftUserId(userId);
-      setSettingsError("ユーザーIDを入力するとContribution Arcを開始できます。");
+      setSettingsError(t("ユーザーIDを入力するとContribution Arcを開始できます。"));
       setIsSettingsOpen(true);
       setOnboardingStep("settings");
     }, 5000);
@@ -5725,12 +5731,12 @@ function App() {
             // Quota exhausted: retrying just wastes whatever is left. Stop
             // the loop and surface a message instead.
             console.info("Posts realtime sync paused — quota exhausted.");
-            setPostError("本日の利用上限に達しました。しばらく経ってから再読み込みしてください。");
+            setPostError(t("本日の利用上限に達しました。しばらく経ってから再読み込みしてください。"));
             return;
           }
 
           console.info("Posts realtime sync errored — will reconnect.", error);
-          setPostError("ログの読み込みを待っています。");
+          setPostError(t("ログの読み込みを待っています。"));
           if (unsubscribe) {
             unsubscribe();
             unsubscribe = null;
@@ -5787,7 +5793,7 @@ function App() {
       if (reconnectTimer) window.clearTimeout(reconnectTimer);
       if (pendingRetryTimer) window.clearInterval(pendingRetryTimer);
     };
-  }, [currentUser]);
+  }, [currentUser, t]);
 
   // Fetch replies for every visible post whenever the post list
   // changes. Previously this used a single collection-group query
@@ -7299,7 +7305,7 @@ function App() {
       const totals = selectedArcDaySubjectTotals ?? { items: [], total: 0 };
       return {
         ...totals,
-        label: `${selectedArcDay.date.getMonth() + 1}月${selectedArcDay.date.getDate()}日`,
+        label: t("{month}月{day}日", { month: selectedArcDay.date.getMonth() + 1, day: selectedArcDay.date.getDate() }),
         isDaily: true,
         // Stable key so framer-motion's AnimatePresence re-mounts on
         // day change, triggering the swap animation.
@@ -7308,11 +7314,11 @@ function App() {
     }
     return {
       ...arcSubjectTotals,
-      label: "13週合計",
+      label: t("13週合計"),
       isDaily: false,
       key: "total",
     };
-  }, [selectedArcDay, selectedArcDaySubjectTotals, arcSubjectTotals]);
+  }, [selectedArcDay, selectedArcDaySubjectTotals, arcSubjectTotals, t]);
   const contributionArcCurvePath = useMemo(() => {
     const weekMinutes = contributionArc.weekMinutes;
     if (weekMinutes.length === 0) return "";
@@ -7595,7 +7601,10 @@ function App() {
     setFocusChips((v) => v + grant);
     setFocusStayMinutesSnapshot((v) => v + grant * FOCUS_CHIP_INTERVAL_MIN);
     showToast(
-      `+${grant} Focus Chip 🔥（ポーカーで通常チップの 1.5× 配当 / 残り ${room - grant} 枚 ）`,
+      t("+{grant} Focus Chip 🔥（ポーカーで通常チップの 1.5× 配当 / 残り {remaining} 枚 ）", {
+        grant,
+        remaining: room - grant,
+      }),
       { kind: "success" },
     );
   }, [
@@ -7686,13 +7695,13 @@ function App() {
 
   const handleRoomChatSend = async (rawText: string): Promise<boolean> => {
     if (!currentUser || !selectedRoom) {
-      setRoomChatError("送信できません。ルームを選択してください。");
+      setRoomChatError(t("送信できません。ルームを選択してください。"));
       return false;
     }
     const text = rawText.trim().slice(0, 280);
     if (!text) return false;
     if (containsBlockedWord(text)) {
-      setRoomChatError("不適切な言葉が含まれているため送信できません。");
+      setRoomChatError(t("不適切な言葉が含まれているため送信できません。"));
       return false;
     }
     setRoomChatError("");
@@ -7708,7 +7717,7 @@ function App() {
       return true;
     } catch (error) {
       console.info("Room chat send failed.", error);
-      setRoomChatError("送信に失敗しました。時間をおいて再度お試しください。");
+      setRoomChatError(t("送信に失敗しました。時間をおいて再度お試しください。"));
       return false;
     }
   };
@@ -7750,7 +7759,7 @@ function App() {
         return {
           ...enriched,
           status: "online" as const,
-          activity: `学習中: ${activeFriend.building}`,
+          activity: t("学習中: {building}", { building: activeFriend.building }),
         };
       }
 
@@ -8391,7 +8400,7 @@ function App() {
     });
     // 控えめなフィードバック. 煽らない・派手にしない — MEMORY の
     // デザイン方針(Linear/Arc 系) に合わせる.
-    showToast(`+${formatStudyTimeJa(safeMinutes)} ${item.name}`, { kind: "success" });
+    showToast(t("+{time} {name}", { time: formatStudyTimeJa(safeMinutes), name: item.name }), { kind: "success" });
     // 学習を記録したら自動的に FEED にも流す（細長コンパクト表示）。
     // 通常の手書き投稿と違って横長 1 行で出るのでタイムラインを圧迫しない。
     // 集約は enqueueAutoPost 側で 5 分ガード。
@@ -8882,8 +8891,8 @@ function App() {
       const reachedCap = nextEarned >= FEED_REWARD_LIFETIME_CAP;
       showToast(
         reachedCap
-          ? `+${reward} Arc 獲得（投稿ボーナス上限 ${FEED_REWARD_LIFETIME_CAP} に到達）`
-          : `+${reward} Arc 獲得（累計 ${nextEarned} / ${FEED_REWARD_LIFETIME_CAP}）`,
+          ? t("+{reward} Arc 獲得（投稿ボーナス上限 {cap} に到達）", { reward, cap: FEED_REWARD_LIFETIME_CAP })
+          : t("+{reward} Arc 獲得（累計 {earned} / {cap}）", { reward, earned: nextEarned, cap: FEED_REWARD_LIFETIME_CAP }),
         { kind: "success" },
       );
     }
@@ -8946,6 +8955,7 @@ function App() {
           buildPostBlocks(
             { name: playerName, meta: `Lv ${levelState.level}` },
             text,
+            language,
           ),
         );
       }
@@ -9070,7 +9080,7 @@ function App() {
       return;
     }
 
-    const isConfirmed = window.confirm("このログを削除しますか？");
+    const isConfirmed = window.confirm(t("このログを削除しますか？"));
     if (!isConfirmed) {
       return;
     }
@@ -9997,7 +10007,7 @@ function App() {
     const nextName = draftUserName.trim();
     const nextDisplayName = nextName || playerName || currentUser.email?.split("@")[0] || "Developer";
     const nextUserId = draftUserId.trim();
-    const userIdError = validateUserId(nextUserId);
+    const userIdError = validateUserId(nextUserId, t);
     if (userIdError) {
       setSettingsError(userIdError);
       return;
@@ -10053,7 +10063,7 @@ function App() {
             const nextUserIdSnapshot = await transaction.get(nextUserIdRef);
 
             if (nextUserIdSnapshot.exists() && nextUserIdSnapshot.data().uid !== currentUser.uid) {
-              throw new Error("このユーザーIDはすでに使われています。");
+              throw new Error(t("このユーザーIDはすでに使われています。"));
             }
 
             if (currentUserId && currentUserId !== nextUserId) {
@@ -10547,7 +10557,7 @@ function App() {
     } catch (error) {
       console.info("Friend remove cloud sync skipped.", error);
     }
-    showToast(`${friend.name} をフレンドから外しました`, { kind: "info" });
+    showToast(t("{name} をフレンドから外しました", { name: friend.name }), { kind: "info" });
   };
 
   // ミュート切替（関係維持・通知のみ抑制）
@@ -10571,7 +10581,7 @@ function App() {
       }
     }
     setFriendRequests((requests) => requests.filter((item) => item.profile.uid !== target.uid));
-    showToast(`${target.name} をブロックしました`, { kind: "info" });
+    showToast(t("{name} をブロックしました", { name: target.name }), { kind: "info" });
   };
 
   const handleUnblockUser = (uid: string) => {
@@ -10602,7 +10612,7 @@ function App() {
         recipientUid: recipient.uid,
         createdAt: new Date().toISOString(),
       });
-      showToast(`${recipient.name} に応援を送りました`, { kind: "success" });
+      showToast(t("{name} に応援を送りました", { name: recipient.name }), { kind: "success" });
     } catch (error) {
       console.info("Encouragement send skipped (likely duplicate).", error);
     }
@@ -10641,7 +10651,7 @@ function App() {
 
     try {
       await createWorkspaceInvite(db, invite);
-      showToast(`${friend.name} を「${selectedRoom.name}」に招待しました`, { kind: "success" });
+      showToast(t("{friend} を「{room}」に招待しました", { friend: friend.name, room: selectedRoom.name }), { kind: "success" });
     } catch (error) {
       console.info("Workspace invite send skipped.", error);
       setInvitedFriendUids((prev) => {
@@ -10672,7 +10682,7 @@ function App() {
         /* 1件失敗しても続行 */
       }
     }
-    if (sent > 1) showToast(`${sent} 人に一斉招待を送りました`, { kind: "success" });
+    if (sent > 1) showToast(t("{n} 人に一斉招待を送りました", { n: sent }), { kind: "success" });
   };
 
   // Accept an incoming invite: jump to the inviter's room and mark the
@@ -10693,7 +10703,7 @@ function App() {
       console.info("Workspace invite accept sync skipped.", error);
     }
 
-    showToast(`「${invite.roomName}」へ移動しました`, { kind: "success" });
+    showToast(t("「{name}」へ移動しました", { name: invite.roomName }), { kind: "success" });
   };
 
   const handleNotificationInviteAccept = (
@@ -10803,7 +10813,7 @@ function App() {
       return;
     }
     const confirmed = window.confirm(
-      `${member.name} を作業部屋から強制退出させますか？この操作は取り消せません。`,
+      t("{name} を作業部屋から強制退出させますか？この操作は取り消せません。", { name: member.name }),
     );
     if (!confirmed) {
       return;
@@ -10832,7 +10842,7 @@ function App() {
       .catch((error) => {
         console.error("Admin force-leave failed.", error);
       });
-    showToast(`${member.name} を退出させました`, { kind: "success" });
+    showToast(t("{name} を退出させました", { name: member.name }), { kind: "success" });
   };
 
   // Tapping an avatar *inside the workspace room*. Opens the same compact
@@ -11071,8 +11081,8 @@ function App() {
             type: "dailyLog",
             title: "作業部屋を自動退室しました",
             body: isGhostCleanup
-              ? `在室時間が上限を超えていたため自動退室しました。今回は${formatStayTime(session.durationMinutes)}（+${session.earnedExp} EXP）として記録しています。`
-              : `無操作が続いたため、最終操作までの${formatStayTime(session.durationMinutes)}（+${session.earnedExp} EXP）を記録しました。`,
+              ? `在室時間が上限を超えていたため自動退室しました。今回は${formatStayTime(session.durationMinutes, language)}（+${session.earnedExp} EXP）として記録しています。`
+              : `無操作が続いたため、最終操作までの${formatStayTime(session.durationMinutes, language)}（+${session.earnedExp} EXP）を記録しました。`,
             createdAt: session.leftAt,
             read: false,
             sourceUserId: currentUser.uid,
@@ -11081,7 +11091,7 @@ function App() {
         );
       } else {
         showToast(
-          `退室しました ・ ${formatStayTime(session.durationMinutes)} で +${session.earnedExp} EXP`,
+          t("退室しました ・ {time} で +{exp} EXP", { time: formatStayTime(session.durationMinutes, language), exp: session.earnedExp }),
           { kind: "success" },
         );
       }
@@ -11094,7 +11104,7 @@ function App() {
       const taskLabel = session.task ? `「${session.task}」を` : "";
       void enqueueAutoPost({
         kind: "auto-workspace",
-        text: `${session.roomName} で${taskLabel}${formatStayTime(session.durationMinutes)}積み上げました ✦ +${session.earnedExp} EXP`,
+        text: `${session.roomName} で${taskLabel}${formatStayTime(session.durationMinutes, language)}積み上げました ✦ +${session.earnedExp} EXP`,
         studyMinutesValue: session.durationMinutes,
         roomIdValue: session.roomId,
         roomNameValue: session.roomName,
@@ -11248,6 +11258,7 @@ function App() {
           { name: playerName, meta: `Lv ${levelState.level} · ${studyStreak}日連続` },
           roomName,
           nextTask,
+          language,
         ),
       );
     }
@@ -11293,7 +11304,7 @@ function App() {
         buildRoomLeaveBlocks(
           { name: playerName, meta: `Lv ${levelState.level} · ${studyStreak}日連続` },
           selectedRoom.name,
-          formatStayTime(stayMinutes),
+          formatStayTime(stayMinutes, language),
         ),
       );
     }
@@ -11571,7 +11582,7 @@ function App() {
     if (!currentUser || isOrgWorking) return;
     const name = newOrgName.trim();
     if (!name) {
-      setOrgError("組織名を入力してください。");
+      setOrgError(t("組織名を入力してください。"));
       return;
     }
     setIsOrgWorking(true);
@@ -11581,7 +11592,7 @@ function App() {
       setCurrentOrganization(org);
       setNewOrgName("");
       setIsOrgCreateOpen(false);
-      showToast(`組織「${org.name}」を作成しました`, { kind: "success" });
+      showToast(t("組織「{name}」を作成しました", { name: org.name }), { kind: "success" });
     } catch (error) {
       console.warn("Create org failed", error);
       // 原因切り分けのため、Firestore のエラーコード/メッセージを画面に出す。
@@ -11615,11 +11626,11 @@ function App() {
       } catch {
         // Clipboard may be blocked on some Safari versions; surface
         // the URL so the user can copy it manually.
-        window.prompt("招待リンク（コピーしてください）", url);
+        window.prompt(t("招待リンク（コピーしてください）"), url);
       }
     } catch (error) {
       console.warn("Create org invite failed", error);
-      setOrgError("招待リンクを発行できませんでした。");
+      setOrgError(t("招待リンクを発行できませんでした。"));
     } finally {
       setIsOrgWorking(false);
     }
@@ -11628,11 +11639,11 @@ function App() {
   const handleLeaveOrganization = async () => {
     if (!currentUser || !currentOrganization || isOrgWorking) return;
     if (currentOrganization.ownerUid === currentUser.uid) {
-      setOrgError("オーナーは退出できません。Admin ダッシュボードから他メンバーへオーナーを譲渡してから退出してください。");
+      setOrgError(t("オーナーは退出できません。Admin ダッシュボードから他メンバーへオーナーを譲渡してから退出してください。"));
       return;
     }
     const confirmed = window.confirm(
-      `「${currentOrganization.name}」から退出します。組織限定のルームは見えなくなります。`,
+      t("「{name}」から退出します。組織限定のルームは見えなくなります。", { name: currentOrganization.name }),
     );
     if (!confirmed) return;
     setIsOrgWorking(true);
@@ -11647,7 +11658,7 @@ function App() {
       showToast(t("組織から退出しました"), { kind: "success" });
     } catch (error) {
       console.warn("Leave org failed", error);
-      setOrgError("退出に失敗しました。再度お試しください。");
+      setOrgError(t("退出に失敗しました。再度お試しください。"));
     } finally {
       setIsOrgWorking(false);
     }
@@ -11726,7 +11737,7 @@ function App() {
       setOrgMembers(members);
     } catch (error) {
       console.warn("List org members failed", error);
-      setOrgAdminError("メンバー一覧を読み込めませんでした。再度お試しください。");
+      setOrgAdminError(t("メンバー一覧を読み込めませんでした。再度お試しください。"));
     } finally {
       setIsLoadingOrgMembers(false);
     }
@@ -11749,7 +11760,7 @@ function App() {
       );
       setCurrentOrganization(joined);
       setDiscoveredOrgs([]);
-      showToast(`「${joined.name}」に参加しました`, { kind: "success" });
+      showToast(t("「{name}」に参加しました", { name: joined.name }), { kind: "success" });
     } catch (error) {
       const code = (error as Error)?.message || "";
       const message =
@@ -11807,7 +11818,7 @@ function App() {
     if (target.uid === currentUser.uid) return;
     if (target.organizationRole === "owner") return;
     const confirmed = window.confirm(
-      `${target.displayName} を「${currentOrganization.name}」から除名します。除名後、本人の組織限定ルームは見えなくなります。本人のアカウントとログは残ります。よろしいですか？`,
+      t("{name} を「{org}」から除名します。除名後、本人の組織限定ルームは見えなくなります。本人のアカウントとログは残ります。よろしいですか？", { name: target.displayName, org: currentOrganization.name }),
     );
     if (!confirmed) return;
     setOrgAdminError("");
@@ -11826,10 +11837,10 @@ function App() {
       } catch {
         /* the row will refresh on next admin open */
       }
-      showToast(`${target.displayName} を除名しました`, { kind: "success" });
+      showToast(t("{name} を除名しました", { name: target.displayName }), { kind: "success" });
     } catch (error) {
       console.warn("Remove member failed", error);
-      setOrgAdminError("除名に失敗しました。Firestore のルール権限を確認してください。");
+      setOrgAdminError(t("除名に失敗しました。Firestore のルール権限を確認してください。"));
     }
   };
 
@@ -11941,7 +11952,7 @@ function App() {
           setIsDeleteConfirmOpen(false);
           setDeleteConfirmText("");
           showToast(
-            "データを削除しました。認証アカウントの完全削除には、もう一度ログインして再度アカウント削除を実行してください。",
+            t("データを削除しました。認証アカウントの完全削除には、もう一度ログインして再度アカウント削除を実行してください。"),
             { kind: "info" },
           );
           return;
@@ -11970,7 +11981,7 @@ function App() {
     if (currentOrganization.ownerUid !== currentUser.uid) return;
     if (target.uid === currentUser.uid) return;
     const confirmed = window.confirm(
-      `「${currentOrganization.name}」のオーナー権限を ${target.displayName} に譲渡します。譲渡後、あなたはメンバーになります。よろしいですか？`,
+      t("「{org}」のオーナー権限を {name} に譲渡します。譲渡後、あなたはメンバーになります。よろしいですか？", { org: currentOrganization.name, name: target.displayName }),
     );
     if (!confirmed) return;
     setOrgAdminError("");
@@ -11991,19 +12002,19 @@ function App() {
       } catch {
         /* non-fatal — the badges will update on next admin open */
       }
-      showToast(`オーナーを ${target.displayName} に譲渡しました`, { kind: "success" });
+      showToast(t("オーナーを {name} に譲渡しました", { name: target.displayName }), { kind: "success" });
     } catch (error) {
       const code = (error as Error)?.message || "";
       const message =
         code === "ORG_NOT_FOUND"
-          ? "組織情報を読み込めませんでした。"
+          ? t("組織情報を読み込めませんでした。")
           : code === "NOT_CURRENT_OWNER"
-            ? "現在のオーナーのみ譲渡できます。"
+            ? t("現在のオーナーのみ譲渡できます。")
             : code === "NEW_OWNER_NOT_MEMBER"
-              ? "譲渡先は同じ組織のメンバーである必要があります。"
+              ? t("譲渡先は同じ組織のメンバーである必要があります。")
               : code === "SAME_OWNER"
-                ? "同じユーザーへの譲渡はできません。"
-                : "オーナー譲渡に失敗しました。再度お試しください。";
+                ? t("同じユーザーへの譲渡はできません。")
+                : t("オーナー譲渡に失敗しました。再度お試しください。");
       setOrgAdminError(message);
     }
   };
@@ -12021,7 +12032,7 @@ function App() {
       setOrgAuditLogs(logs);
     } catch (error) {
       console.warn("List audit logs failed", error);
-      setOrgAdminError("監査ログを読み込めませんでした。");
+      setOrgAdminError(t("監査ログを読み込めませんでした。"));
     } finally {
       setIsLoadingAuditLogs(false);
     }
@@ -12043,7 +12054,7 @@ function App() {
     const trimmedUrl = slackDraftUrl.trim();
     if (trimmedUrl && !isValidSlackWebhookUrl(trimmedUrl)) {
       setSlackSaveState("error");
-      setSlackSaveMessage("https://hooks.slack.com/services/… 形式のURLのみ受け付けます。");
+      setSlackSaveMessage(t("https://hooks.slack.com/services/… 形式のURLのみ受け付けます。"));
       return;
     }
     setSlackSaveState("saving");
@@ -12082,12 +12093,12 @@ function App() {
           : prev,
       );
       setSlackSaveState("saved");
-      setSlackSaveMessage(trimmedUrl ? "保存しました。" : "Slack連携を解除しました。");
+      setSlackSaveMessage(trimmedUrl ? t("保存しました。") : t("Slack連携を解除しました。"));
       showToast(t("Slack設定を保存しました"), { kind: "success" });
     } catch (error) {
       console.warn("Save slack settings failed", error);
       setSlackSaveState("error");
-      setSlackSaveMessage("保存に失敗しました。再度お試しください。");
+      setSlackSaveMessage(t("保存に失敗しました。再度お試しください。"));
     }
   };
 
@@ -12099,7 +12110,7 @@ function App() {
     if (!currentOrganization) return;
     if (!isValidSlackWebhookUrl(trimmedUrl)) {
       setSlackSaveState("error");
-      setSlackSaveMessage("先にSlack Incoming Webhook URLを入力してください。");
+      setSlackSaveMessage(t("先にSlack Incoming Webhook URLを入力してください。"));
       return;
     }
     setSlackSaveState("saving");
@@ -12109,13 +12120,13 @@ function App() {
     });
     if (result.ok) {
       setSlackSaveState("saved");
-      setSlackSaveMessage("Slackチャンネルに送信しました。届いていれば設定OKです。");
+      setSlackSaveMessage(t("Slackチャンネルに送信しました。届いていれば設定OKです。"));
     } else {
       setSlackSaveState("error");
       setSlackSaveMessage(
         result.error === "INVALID_WEBHOOK_URL"
-          ? "URLが Slack の hooks.slack.com 形式ではありません。"
-          : `Slackへの送信に失敗しました (${result.error || "unknown"}).`,
+          ? t("URLが Slack の hooks.slack.com 形式ではありません。")
+          : t("Slackへの送信に失敗しました ({code}).", { code: result.error || "unknown" }),
       );
     }
   };
@@ -12151,11 +12162,11 @@ function App() {
     );
     if (result.ok) {
       setSlackSaveState("saved");
-      setSlackSaveMessage("日次サマリーを送信しました。");
+      setSlackSaveMessage(t("日次サマリーを送信しました。"));
       showToast(t("日次サマリーをSlackに送信"), { kind: "success" });
     } else {
       setSlackSaveState("error");
-      setSlackSaveMessage(`送信に失敗しました (${result.error || "unknown"}).`);
+      setSlackSaveMessage(t("送信に失敗しました ({code}).", { code: result.error || "unknown" }));
     }
   };
 
@@ -12168,7 +12179,7 @@ function App() {
       setOrgMembers(members);
     } catch (error) {
       console.warn("Refresh org members failed", error);
-      setOrgAdminError("再読み込みに失敗しました。");
+      setOrgAdminError(t("再読み込みに失敗しました。"));
     } finally {
       setIsLoadingOrgMembers(false);
     }
@@ -12180,15 +12191,15 @@ function App() {
     // mojibake on Japanese display names. Columns are documented in
     // Japanese matching the on-screen labels.
     const header = [
-      "ユーザーID",
-      "表示名",
-      "役割",
-      "レベル",
+      t("ユーザーID"),
+      t("表示名"),
+      t("役割"),
+      t("レベル"),
       "Effort EXP",
       "Output EXP",
-      "ストリーク",
-      "コミット数",
-      "最終アクティブ",
+      t("ストリーク"),
+      t("コミット数"),
+      t("最終アクティブ"),
     ];
     const escape = (value: string | number) => {
       const stringValue = String(value ?? "");
@@ -12204,10 +12215,10 @@ function App() {
           member.userId,
           member.displayName,
           member.organizationRole === "owner"
-            ? "オーナー"
+            ? t("オーナー")
             : member.organizationRole === "admin"
-              ? "管理者"
-              : "メンバー",
+              ? t("管理者")
+              : t("メンバー"),
           member.level,
           member.effortExp,
           member.outputExp,
@@ -12313,7 +12324,7 @@ function App() {
     setCurrentView("workspace");
     setNewRoomName("");
     setRoomCreateState("saved");
-    setRoomCreateMessage("Roomを作成しました。");
+    setRoomCreateMessage(t("Roomを作成しました。"));
   };
 
   const startRoomTitleEdit = (room: WorkspaceRoom) => {
@@ -12387,8 +12398,8 @@ function App() {
     const isOwnRoom = room.createdBy === currentUser.uid;
     const isConfirmed = window.confirm(
       isOwnRoom
-        ? `${room.name}を解体しますか？このRoomは一覧から消えます。`
-        : `[Dev] 他ユーザーが作成した「${room.name}」を解体しますか？この操作は取り消せません。`,
+        ? t("{name}を解体しますか？このRoomは一覧から消えます。", { name: room.name })
+        : t("[Dev] 他ユーザーが作成した「{name}」を解体しますか？この操作は取り消せません。", { name: room.name }),
     );
     if (!isConfirmed) {
       return;
@@ -12565,7 +12576,7 @@ function App() {
     )
       .then(() => {
         showToast(
-          `${affected.length}件を「${trimmed}」に変更しました`,
+          t("{count}件を「{name}」に変更しました", { count: affected.length, name: trimmed }),
           { kind: "success" },
         );
       })
@@ -12671,7 +12682,7 @@ function App() {
             }
           : undefined
       }
-      aria-label={isInteractive ? "プロフィール画面を開く" : undefined}
+      aria-label={isInteractive ? t("プロフィール画面を開く") : undefined}
     >
       <div className="card-kicker">Player Status</div>
       <div className="player-heading">
@@ -12689,22 +12700,22 @@ function App() {
           <h2>{playerName} <span className="player-level-badge">Lv.{levelState.level}</span></h2>
           <div className="player-heading-chips">
             {studyStreak > 0 ? (
-              <span className="player-chip player-chip-streak" title={`${studyStreak}日連続で学習中`}>
-                🔥 {studyStreak}日連続
+              <span className="player-chip player-chip-streak" title={t("{n}日連続で学習中", { n: studyStreak })}>
+                🔥 {t("{n}日連続", { n: studyStreak })}
               </span>
             ) : null}
             {todayStudyMinutes > 0 ? (
               <span className="player-chip player-chip-today">
-                今日 {formatStudyTimeJa(todayStudyMinutes)}
+                {t("今日 {duration}", { duration: formatStudyTimeJa(todayStudyMinutes) })}
               </span>
             ) : null}
             {currentOrganization ? (
-              <span className="player-chip player-chip-org" title={`${currentOrganization.name}所属`}>
+              <span className="player-chip player-chip-org" title={t("{name}所属", { name: currentOrganization.name })}>
                 {currentOrganization.name}
               </span>
             ) : null}
             {hasGithub ? (
-              <span className="player-chip player-chip-github" title="GitHub 連携済み">
+              <span className="player-chip player-chip-github" title={t("GitHub 連携済み")}>
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="11" height="11">
                   <path
                     fill="currentColor"
@@ -12809,13 +12820,13 @@ function App() {
           every time they glance at status. Empty state nudges
           editing. */}
       <div className="player-determination">
-        <span>決意</span>
+        <span>{t("決意")}</span>
         {isInteractive ? (
           determinationText ? (
             <p>{determinationText}</p>
           ) : (
             <p className="player-determination-empty">
-              プロフィール設定で「決意」を一行書いておくと、起動時の合言葉になります。
+              {t("プロフィール設定で「決意」を一行書いておくと、起動時の合言葉になります。")}
             </p>
           )
         ) : (
@@ -12834,7 +12845,7 @@ function App() {
                 event.currentTarget.blur(); // blur が走り handleDeterminationSave が呼ばれる
               }
             }}
-            placeholder="今の決意を一行で書いておこう"
+            placeholder={t("今の決意を一行で書いておこう")}
             aria-label={t("決意入力")}
             maxLength={140}
           />
@@ -12899,7 +12910,7 @@ function App() {
               className="study-log-main"
               onClick={() => handlePostAuthorOpen(post)}
             >
-              <span className="study-log-eyebrow">学習の記録</span>
+              <span className="study-log-eyebrow">{t("学習の記録")}</span>
               <strong className="study-log-subject">
                 {subject ? `『${subject}』` : post.text}
               </strong>
@@ -12911,7 +12922,7 @@ function App() {
               type="button"
               className={`log-post-compact-like${isLiked ? " is-liked" : ""}`}
               onClick={() => handlePostLike(post)}
-              aria-label={isLiked ? "ハートを取り消す" : "ハートする"}
+              aria-label={isLiked ? t("ハートを取り消す") : t("ハートする")}
               aria-pressed={isLiked}
             >
               <span aria-hidden="true">{isLiked ? "♥" : "♡"}</span>
@@ -12931,7 +12942,7 @@ function App() {
             type="button"
             className="log-post-author-compact"
             onClick={() => handlePostAuthorOpen(post)}
-            aria-label={`${post.username} のプロフィールを開く`}
+            aria-label={t("{username} のプロフィールを開く", { username: post.username })}
           >
             <ProfileCharacterPreview color={autoLook.color} shape={autoLook.shape} />
           </button>
@@ -12944,7 +12955,7 @@ function App() {
             type="button"
             className={`log-post-compact-like${isLiked ? " is-liked" : ""}`}
             onClick={() => handlePostLike(post)}
-            aria-label={isLiked ? "ハートを取り消す" : "ハートする"}
+            aria-label={isLiked ? t("ハートを取り消す") : t("ハートする")}
             aria-pressed={isLiked}
           >
             <span aria-hidden="true">{isLiked ? "♥" : "♡"}</span>
@@ -12990,11 +13001,11 @@ function App() {
               {post.username}
               {post.postType === "auto-workspace" ? (
                 <span className="log-post-auto-badge" data-kind="workspace" aria-label={t("作業部屋での積み上げ")}>
-                  ✦ 作業ログ
+                  ✦ {t("作業ログ")}
                 </span>
               ) : post.postType === "auto-study" ? (
                 <span className="log-post-auto-badge" data-kind="study" aria-label={t("学習記録から自動投稿")}>
-                  📘 学習ログ
+                  📘 {t("学習ログ")}
                 </span>
               ) : null}
             </strong>
@@ -13017,7 +13028,7 @@ function App() {
             type="button"
             className={isLiked ? "log-like-button liked" : "log-like-button"}
             onClick={() => handlePostLike(post)}
-            aria-label={isLiked ? "ハートを取り消す" : "ハートする"}
+            aria-label={isLiked ? t("ハートを取り消す") : t("ハートする")}
             aria-pressed={isLiked}
             data-tooltip={isLiked ? "Liked" : "Like"}
             whileTap={{ scale: 0.84 }}
@@ -13084,16 +13095,16 @@ function App() {
                 "数値カウントが何を表しているか" 即座に判別できない。
                 小さな日本語ラベルを併記し (CSS でモバイルのみ表示)、
                 ボタンの意味を明示する。 */}
-            <small className="log-action-label">いいね</small>
+            <small className="log-action-label">{t("いいね")}</small>
           </motion.button>
 
           <button
             type="button"
             className={isReplyOpen ? "log-reply-toggle is-open" : "log-reply-toggle"}
             onClick={() => togglePostReplyOpen(post.id)}
-            aria-label={isReplyOpen ? "返信を閉じる" : "返信を書く"}
+            aria-label={isReplyOpen ? t("返信を閉じる") : t("返信を書く")}
             aria-expanded={isReplyOpen}
-            data-tooltip={isReplyOpen ? "閉じる" : "返信"}
+            data-tooltip={isReplyOpen ? t("閉じる") : t("返信")}
           >
             <span className="log-reply-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="18" height="18">
@@ -13107,7 +13118,7 @@ function App() {
               </svg>
             </span>
             {replies.length > 0 ? <span>{replies.length.toLocaleString()}</span> : null}
-            <small className="log-action-label">{isReplyOpen ? "閉じる" : "返信"}</small>
+            <small className="log-action-label">{isReplyOpen ? t("閉じる") : t("返信")}</small>
           </button>
 
           {post.userId === currentUserUid ? (
@@ -13116,7 +13127,7 @@ function App() {
               className="log-delete-button"
               onClick={() => handlePostDelete(post)}
               aria-label={t("投稿を削除")}
-              data-tooltip="削除"
+              data-tooltip={t("削除")}
             >
               <span className="log-delete-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" width="16" height="16">
@@ -13130,7 +13141,7 @@ function App() {
                   />
                 </svg>
               </span>
-              <small className="log-action-label">削除</small>
+              <small className="log-action-label">{t("削除")}</small>
             </button>
           ) : null}
         </div>
@@ -13144,7 +13155,7 @@ function App() {
                   key={reply.id}
                   className="post-reply-item"
                   onClick={() => handleReplyAuthorOpen(reply)}
-                  aria-label={`${reply.username}のプロフィールを開く`}
+                  aria-label={t("{username}のプロフィールを開く", { username: reply.username })}
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{
@@ -13174,7 +13185,7 @@ function App() {
                   </p>
                 </motion.button>
               ))}
-              {replies.length > visibleReplies.length ? <small>ほか {replies.length - visibleReplies.length} 件</small> : null}
+              {replies.length > visibleReplies.length ? <small>{t("ほか {count} 件", { count: replies.length - visibleReplies.length })}</small> : null}
             </div>
           ) : null}
 
@@ -13198,11 +13209,11 @@ function App() {
                     setReplyDrafts((drafts) => ({ ...drafts, [post.id]: event.target.value }));
                     setReplyError("");
                   }}
-                  placeholder="短く返信"
+                  placeholder={t("短く返信")}
                   maxLength={160}
                 />
                 <button type="submit" disabled={!replyDraft.trim()}>
-                  返信
+                  {t("返信")}
                 </button>
               </motion.form>
             ) : null}
@@ -13565,10 +13576,10 @@ function App() {
             <p className="card-kicker">This Week</p>
             <div className="profile-week-chart-summary">
               <strong>{formatStudyTimeJa(weekTotal)}</strong>
-              <span>今週の学習</span>
+              <span>{t("今週の学習")}</span>
             </div>
           </div>
-          <p className="profile-week-chart-note">曜日別の内訳はまもなく表示されます。</p>
+          <p className="profile-week-chart-note">{t("曜日別の内訳はまもなく表示されます。")}</p>
         </section>
       );
     }
@@ -13577,7 +13588,7 @@ function App() {
         <div className="profile-week-chart-head">
           <p className="card-kicker">This Week</p>
         </div>
-        <p className="profile-week-chart-empty">今週はまだ記録がありません。</p>
+        <p className="profile-week-chart-empty">{t("今週はまだ記録がありません。")}</p>
       </section>
     );
   };
@@ -13587,7 +13598,7 @@ function App() {
       allWorkspaceRooms.find((room) => room.activeMembers.some((item) => item.userId === member.userId)) ||
       selectedRoom;
     const elapsedMinutes = getElapsedMinutes(member.joinedAt, workspaceNow);
-    const memberProfile = workspaceMemberToProfile(member);
+    const memberProfile = workspaceMemberToProfile(member, t);
     const pendingOutgoingRequest = friendRequests.find(
       (request) =>
         request.profile.uid === memberProfile.uid && request.status === "pending" && request.direction === "outgoing",
@@ -13603,12 +13614,12 @@ function App() {
     const hasPendingRequest = Boolean(pendingOutgoingRequest || pendingIncomingRequest);
 
     const connectionLabel = isFriend
-      ? "つながっています"
+      ? t("つながっています")
       : pendingIncomingRequest
-        ? "申請が届いています"
+        ? t("申請が届いています")
         : pendingOutgoingRequest
-          ? "承認待ち"
-          : "未接続";
+          ? t("承認待ち")
+          : t("未接続");
     const connectionState = isFriend
       ? "is-friend"
       : hasPendingRequest
@@ -13648,7 +13659,7 @@ function App() {
                       {connectionLabel}
                     </span>
                     {liveStreak > 0 ? (
-                      <span className="player-chip player-chip-streak">🔥 {liveStreak}日連続</span>
+                      <span className="player-chip player-chip-streak">🔥 {t("{n}日連続", { n: liveStreak })}</span>
                     ) : null}
                     {liveProfile?.githubUsername ? (
                       <a
@@ -13674,13 +13685,13 @@ function App() {
         </header>
 
         <div className="profile-resolve-panel">
-          <span>決意</span>
-          <p>{profileResolveText(memberProfile)}</p>
+          <span>{t("決意")}</span>
+          <p>{profileResolveText(memberProfile, t)}</p>
         </div>
 
         <section className="member-profile-now" aria-label={t("いまの活動")}>
           <div className="member-profile-now-main">
-            <span className="member-profile-now-label">いま</span>
+            <span className="member-profile-now-label">{t("いま")}</span>
             <div className="member-profile-now-body">
               <strong>
                 <i style={{ background: member.color }} />
@@ -13688,13 +13699,13 @@ function App() {
               </strong>
               <small>
                 {memberRoom?.name || "Silent Workspace"}
-                {" · 滞在 "}
-                {formatStayTime(elapsedMinutes)}
+                {` · ${t("滞在")} `}
+                {formatStayTime(elapsedMinutes, language)}
               </small>
             </div>
           </div>
           <div className="member-profile-now-exp" aria-label={t("今日獲得したEXP")}>
-            <span className="member-profile-now-exp-label">今日</span>
+            <span className="member-profile-now-exp-label">{t("今日")}</span>
             <strong>+{getRoomSessionExp(elapsedMinutes)} EXP</strong>
           </div>
         </section>
@@ -13705,11 +13716,11 @@ function App() {
             disabled={isFriend || hasPendingRequest}
             onClick={() => handleFriendRequest(memberProfile)}
           >
-            {isFriend ? "フレンド" : pendingIncomingRequest ? "申請が届いています" : pendingOutgoingRequest ? "申請中" : "フレンド申請"}
+            {isFriend ? t("フレンド") : pendingIncomingRequest ? t("申請が届いています") : pendingOutgoingRequest ? t("申請中") : t("フレンド申請")}
           </button>
           {pendingIncomingRequest ? (
             <button type="button" onClick={() => handleFriendAccept(pendingIncomingRequest)}>
-              承認する
+              {t("承認する")}
             </button>
           ) : null}
         </div>
@@ -13731,7 +13742,7 @@ function App() {
         room.activeMembers.some((item) => item.userId === member.userId),
       ) || selectedRoom;
     const elapsedMinutes = getElapsedMinutes(member.joinedAt, workspaceNow);
-    const memberProfile = workspaceMemberToProfile(member);
+    const memberProfile = workspaceMemberToProfile(member, t);
     const liveProfile = cloudUser || workspaceProfiles[member.userId];
     // resolveAuthorAppearance に通すと、本人なら playerCharacterColor/Shape、
     // 他人なら authorAppearances → workspaceProfiles → 投稿スナップショット
@@ -13765,14 +13776,14 @@ function App() {
     const hasPendingRequest = Boolean(pendingOutgoingRequest || pendingIncomingRequest);
 
     const connectionLabel = isSelf
-      ? "あなた"
+      ? t("あなた")
       : isFriend
-        ? "つながっています"
+        ? t("つながっています")
         : pendingIncomingRequest
-          ? "申請が届いています"
+          ? t("申請が届いています")
           : pendingOutgoingRequest
-            ? "承認待ち"
-            : "未接続";
+            ? t("承認待ち")
+            : t("未接続");
     const connectionState = isSelf
       ? "is-self"
       : isFriend
@@ -13807,7 +13818,7 @@ function App() {
                 {connectionLabel}
               </span>
               {liveStreak > 0 ? (
-                <span className="player-chip player-chip-streak">🔥 {liveStreak}日連続</span>
+                <span className="player-chip player-chip-streak">🔥 {t("{n}日連続", { n: liveStreak })}</span>
               ) : null}
             </div>
           </div>
@@ -13821,12 +13832,12 @@ function App() {
             </strong>
             <small>
               {memberRoom?.name || "Silent Workspace"}
-              {" · 滞在 "}
-              {formatStayTime(elapsedMinutes)}
+              {` · ${t("滞在")} `}
+              {formatStayTime(elapsedMinutes, language)}
             </small>
           </div>
           <div className="room-member-card-now-exp">
-            <span>今日</span>
+            <span>{t("今日")}</span>
             <strong>+{getRoomSessionExp(elapsedMinutes)} EXP</strong>
           </div>
         </div>
@@ -13839,17 +13850,17 @@ function App() {
               onClick={() => handleFriendRequest(memberProfile)}
             >
               {isFriend
-                ? "フレンド"
+                ? t("フレンド")
                 : pendingIncomingRequest
-                  ? "申請が届いています"
+                  ? t("申請が届いています")
                   : pendingOutgoingRequest
-                    ? "申請中"
-                    : "フレンド申請"}
+                    ? t("申請中")
+                    : t("フレンド申請")}
             </button>
           )}
           {!isSelf && pendingIncomingRequest ? (
             <button type="button" onClick={() => handleFriendAccept(pendingIncomingRequest)}>
-              承認する
+              {t("承認する")}
             </button>
           ) : null}
           <button
@@ -13860,7 +13871,7 @@ function App() {
               void handleMemberProfileOpen(member);
             }}
           >
-            詳細
+            {t("詳細")}
           </button>
           {isDeveloperAccount && !isSelf && memberRoom ? (
             <button
@@ -13868,7 +13879,7 @@ function App() {
               className="is-danger room-member-card-force-leave"
               onClick={() => handleAdminForceLeave(member, memberRoom.id)}
             >
-              退出させる
+              {t("退出させる")}
             </button>
           ) : null}
         </div>
@@ -13938,12 +13949,12 @@ function App() {
     const githubUrl = getFriendGithubUrl(profile.userId);
 
     const connectionLabel = isFriend
-      ? "つながっています"
+      ? t("つながっています")
       : pendingIncomingRequest
-        ? "申請が届いています"
+        ? t("申請が届いています")
         : pendingOutgoingRequest
-          ? "承認待ち"
-          : "未接続";
+          ? t("承認待ち")
+          : t("未接続");
     const connectionState = isFriend
       ? "is-friend"
       : hasPendingRequest
@@ -13983,7 +13994,7 @@ function App() {
                 {connectionLabel}
               </span>
               {liveStreak > 0 ? (
-                <span className="player-chip player-chip-streak">🔥 {liveStreak}日連続</span>
+                <span className="player-chip player-chip-streak">🔥 {t("{n}日連続", { n: liveStreak })}</span>
               ) : null}
               {liveProfile.githubUsername ? (
                 <span className="player-chip player-chip-github">
@@ -14002,7 +14013,7 @@ function App() {
 
         {/* 決意 — 枠もグラデも持たない引用。細い 2px の緑アクセント線だけ
             添えて、本人の宣言を静かに引き立てる。 */}
-        <blockquote className="friend-resolve">{profileResolveText(profile)}</blockquote>
+        <blockquote className="friend-resolve">{profileResolveText(profile, t)}</blockquote>
 
         {/* THIS WEEK — このカードの視覚的中心。Contribution 風の7セル強度
             ストリップ＋「今週◯分 · 連続◯日」。記録ゼロでもセルは残し、
@@ -14025,8 +14036,8 @@ function App() {
                 role="img"
                 aria-label={
                   week.isEmpty
-                    ? "今週はまだ記録がありません"
-                    : `今週の合計 ${formatStudyTimeJa(week.totalMinutes)}`
+                    ? t("今週はまだ記録がありません")
+                    : t("今週の合計 {time}", { time: formatStudyTimeJa(week.totalMinutes) })
                 }
               >
                 {week.cells.map((cell, index) => (
@@ -14039,9 +14050,9 @@ function App() {
                 ))}
               </div>
               {week.isEmpty ? (
-                <p className="friend-week-foot is-empty">今週はまだ記録がありません。</p>
+                <p className="friend-week-foot is-empty">{t("今週はまだ記録がありません。")}</p>
               ) : week.noBreakdown ? (
-                <p className="friend-week-foot">曜日別の内訳はまもなく表示されます。</p>
+                <p className="friend-week-foot">{t("曜日別の内訳はまもなく表示されます。")}</p>
               ) : null}
             </section>
           );
@@ -14056,19 +14067,19 @@ function App() {
             disabled={isFriend || hasPendingRequest}
             onClick={() => handleFriendRequest(profile)}
           >
-            {isFriend ? "フレンド" : pendingIncomingRequest ? "申請が届いています" : pendingOutgoingRequest ? "申請中" : "フレンド申請"}
+            {isFriend ? t("フレンド") : pendingIncomingRequest ? t("申請が届いています") : pendingOutgoingRequest ? t("申請中") : t("フレンド申請")}
           </button>
           {pendingIncomingRequest ? (
             <>
               <button type="button" className="friend-action-accept" onClick={() => handleFriendAccept(pendingIncomingRequest)}>
-                承認する
+                {t("承認する")}
               </button>
               <button
                 type="button"
                 className="friend-action-decline"
                 onClick={() => handleFriendReject(pendingIncomingRequest)}
               >
-                拒否
+                {t("拒否")}
               </button>
             </>
           ) : null}
@@ -14077,9 +14088,9 @@ function App() {
               type="button"
               className="friend-action-mute"
               onClick={() => handleToggleFriendMute(profile.uid)}
-              title={mutedFriendUids.includes(profile.uid) ? "ミュート解除" : "通知をミュート"}
+              title={mutedFriendUids.includes(profile.uid) ? t("ミュート解除") : t("通知をミュート")}
             >
-              {mutedFriendUids.includes(profile.uid) ? "ミュート解除" : "ミュート"}
+              {mutedFriendUids.includes(profile.uid) ? t("ミュート解除") : t("ミュート")}
             </button>
           ) : null}
           {liveGithubUrl ? (
@@ -14116,12 +14127,12 @@ function App() {
                         const friend = friends.find((item) => item.uid === profile.uid);
                         if (!friend) return;
                         const ok = window.confirm(
-                          `${profile.displayName || friend.name} をフレンドから外しますか？`,
+                          t("{name} をフレンドから外しますか？", { name: profile.displayName || friend.name }),
                         );
                         if (ok) void handleFriendRemove(friend);
                       }}
                     >
-                      フレンド解除
+                      {t("フレンド解除")}
                     </button>
                   ) : null}
                   {blockedFriendUids.includes(profile.uid) ? (
@@ -14133,7 +14144,7 @@ function App() {
                         handleUnblockUser(profile.uid);
                       }}
                     >
-                      ブロックを解除する
+                      {t("ブロックを解除する")}
                     </button>
                   ) : (
                     <button
@@ -14143,12 +14154,12 @@ function App() {
                       onClick={() => {
                         setProfileActionsMenuOpen(false);
                         const ok = window.confirm(
-                          `${profile.displayName || "このユーザー"} をブロックしますか？\nフレンド関係は解除され、申請も届かなくなります。`,
+                          t("{name} をブロックしますか？\nフレンド関係は解除され、申請も届かなくなります。", { name: profile.displayName || t("このユーザー") }),
                         );
-                        if (ok) void handleBlockUser({ uid: profile.uid, name: profile.displayName || "ユーザー" });
+                        if (ok) void handleBlockUser({ uid: profile.uid, name: profile.displayName || t("ユーザー") });
                       }}
                     >
-                      このユーザーをブロック
+                      {t("このユーザーをブロック")}
                     </button>
                   )}
                 </div>
@@ -14173,10 +14184,10 @@ function App() {
                 className="contribution-arc-showcase-link"
                 onClick={() => setCurrentView("showcase")}
                 aria-label={t("世界観を見る")}
-                title="世界観を見る"
+                title={t("世界観を見る")}
               >
                 <span aria-hidden="true">✦</span>
-                <span>世界観</span>
+                <span>{t("世界観")}</span>
               </button>
             </p>
             <strong>
@@ -14350,36 +14361,36 @@ function App() {
           </div>
         </div>
           <div className="contribution-arc-legend" aria-hidden="true">
-            <span>少</span>
+            <span>{t("少")}</span>
             <i className="lv-0" />
             <i className="lv-1" />
             <i className="lv-2" />
             <i className="lv-3" />
             <i className="lv-4" />
-            <span>多</span>
+            <span>{t("多")}</span>
           </div>
           {githubContributionArc ? (
             <div className="contribution-arc-github-stats">
               <span>
-                今週 <strong>{githubContributionArc.thisWeekCount}</strong> commit
+                {t("今週")} <strong>{githubContributionArc.thisWeekCount}</strong> commit
               </span>
               <span>
-                先週 <strong>{githubContributionArc.lastWeekCount}</strong>
+                {t("先週")} <strong>{githubContributionArc.lastWeekCount}</strong>
               </span>
               <span>
-                最長 <strong>{githubContributionArc.longestStreak}日</strong>
+                {t("最長")} <strong>{githubContributionArc.longestStreak}{t("日")}</strong>
               </span>
             </div>
           ) : !githubUsername ? (
             <div className="contribution-arc-github-cta">
-              <span>GitHub を連携すると commit もこの図に重なります</span>
+              <span>{t("GitHub を連携すると commit もこの図に重なります")}</span>
               <button
                 type="button"
                 className="contribution-arc-github-link-btn"
                 onClick={handleLinkGithub}
                 disabled={isLinkingGithub}
               >
-                {isLinkingGithub ? "連携中…" : "GitHub を連携"}
+                {isLinkingGithub ? t("連携中…") : t("GitHub を連携")}
               </button>
               {linkGithubError ? (
                 <p className="contribution-arc-github-link-error">{linkGithubError}</p>
@@ -14387,7 +14398,7 @@ function App() {
             </div>
           ) : (
             <p className="contribution-arc-github-status">
-              {githubContributionsError ? "GitHub データの取得に失敗しました" : "GitHub データを読み込み中…"}
+              {githubContributionsError ? t("GitHub データの取得に失敗しました") : t("GitHub データを読み込み中…")}
             </p>
           )}
         </div>
@@ -14396,7 +14407,7 @@ function App() {
             <motion.div
               key={donutDisplay.key}
               className={`contribution-arc-donut${donutDisplay.isDaily ? " is-daily" : ""}`}
-              aria-label={donutDisplay.isDaily ? `${donutDisplay.label}の学習ジャンル配分` : "13週の学習ジャンル配分"}
+              aria-label={donutDisplay.isDaily ? t("{label}の学習ジャンル配分", { label: donutDisplay.label }) : t("13週の学習ジャンル配分")}
               initial={{ opacity: 0, scale: 0.94, rotate: -6 }}
               animate={{ opacity: 1, scale: 1, rotate: 0 }}
               exit={{ opacity: 0, scale: 0.94, rotate: 6 }}
@@ -14440,7 +14451,7 @@ function App() {
                 <div className="contribution-arc-donut-center">
                   <small>{donutDisplay.label}</small>
                   <strong>{formatStudyTimeJa(donutDisplay.total)}</strong>
-                  <span>{donutDisplay.items.length}ジャンル</span>
+                  <span>{t("{n}ジャンル", { n: donutDisplay.items.length })}</span>
                 </div>
               </div>
               <ul className="contribution-arc-donut-legend">
@@ -14480,7 +14491,7 @@ function App() {
                               setEditingDonutDraft("");
                             }
                           }}
-                          aria-label={`${item.subject}の名前を編集`}
+                          aria-label={t("{subject}の名前を編集", { subject: item.subject })}
                         />
                       ) : (
                         <strong className="legend-name">{item.subject}</strong>
@@ -14495,8 +14506,8 @@ function App() {
                             setEditingDonutSubject(item.subject);
                             setEditingDonutDraft(item.subject);
                           }}
-                          aria-label={`${item.subject}の名前を編集`}
-                          title="名前を編集"
+                          aria-label={t("{subject}の名前を編集", { subject: item.subject })}
+                          title={t("名前を編集")}
                         >
                           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                             <path d="M14.5 4.5l5 5L8 21H3v-5L14.5 4.5z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
@@ -14514,7 +14525,7 @@ function App() {
                   onClick={() => setSelectedArcDayKey(null)}
                   aria-label={t("13週合計に戻す")}
                 >
-                  13週合計に戻す
+                  {t("13週合計に戻す")}
                 </button>
               ) : null}
             </motion.div>
@@ -14522,7 +14533,7 @@ function App() {
             <motion.div
               key={donutDisplay.key}
               className="contribution-arc-donut is-daily is-empty-daily"
-              aria-label={`${donutDisplay.label}の学習ジャンル配分（記録なし）`}
+              aria-label={t("{label}の学習ジャンル配分（記録なし）", { label: donutDisplay.label })}
               initial={{ opacity: 0, scale: 0.94, rotate: -6 }}
               animate={{ opacity: 1, scale: 1, rotate: 0 }}
               exit={{ opacity: 0, scale: 0.94, rotate: 6 }}
@@ -14541,18 +14552,18 @@ function App() {
                 </svg>
                 <div className="contribution-arc-donut-center">
                   <small>{donutDisplay.label}</small>
-                  <strong>0時間</strong>
-                  <span>学習記録なし</span>
+                  <strong>{t("0時間")}</strong>
+                  <span>{t("学習記録なし")}</span>
                 </div>
               </div>
-              <p className="contribution-arc-donut-empty-note">この日はまだ学習が記録されていません。</p>
+              <p className="contribution-arc-donut-empty-note">{t("この日はまだ学習が記録されていません。")}</p>
               <button
                 type="button"
                 className="contribution-arc-donut-reset"
                 onClick={() => setSelectedArcDayKey(null)}
                 aria-label={t("13週合計に戻す")}
               >
-                13週合計に戻す
+                {t("13週合計に戻す")}
               </button>
             </motion.div>
           ) : (
@@ -14564,7 +14575,7 @@ function App() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
             >
-              <p>学習を記録するとここにジャンル分布が現れます。</p>
+              <p>{t("学習を記録するとここにジャンル分布が現れます。")}</p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -14574,13 +14585,12 @@ function App() {
             <div className="contribution-arc-detail-head">
               <div>
                 <strong>
-                  {selectedArcDay.date.getFullYear()}年 {selectedArcDay.date.getMonth() + 1}月
-                  {selectedArcDay.date.getDate()}日
+                  {t("{year}年 {month}月{day}日", { year: selectedArcDay.date.getFullYear(), month: selectedArcDay.date.getMonth() + 1, day: selectedArcDay.date.getDate() })}
                 </strong>
                 <span>
                   {selectedArcDay.minutes > 0
-                    ? `${formatStudyTimeJa(selectedArcDay.minutes)} 学習`
-                    : "学習記録なし"}
+                    ? t("{duration} 学習", { duration: formatStudyTimeJa(selectedArcDay.minutes) })
+                    : t("学習記録なし")}
                 </span>
               </div>
               <button
@@ -14607,7 +14617,7 @@ function App() {
                 ))}
               </ul>
             ) : (
-              <p className="contribution-arc-detail-empty">この日はまだ記録がありません。</p>
+              <p className="contribution-arc-detail-empty">{t("この日はまだ記録がありません。")}</p>
             )}
           </div>
         ) : null}
@@ -14815,18 +14825,18 @@ function App() {
               <strong>
                 {feedKindFilter === "study"
                   ? timelineFilter === "following"
-                    ? "フォロー中の学習記録はまだありません。"
-                    : "まだ学習記録はありません。"
+                    ? t("フォロー中の学習記録はまだありません。")
+                    : t("まだ学習記録はありません。")
                   : timelineFilter === "following"
-                    ? "フォロー中の投稿はまだありません。"
-                    : "まだ投稿はありません。"}
+                    ? t("フォロー中の投稿はまだありません。")
+                    : t("まだ投稿はありません。")}
               </strong>
               <span>
                 {feedKindFilter === "study"
-                  ? "ライブラリの各カードから学習時間を記録すると、ここに流れます。"
+                  ? t("ライブラリの各カードから学習時間を記録すると、ここに流れます。")
                   : timelineFilter === "following"
-                    ? "気になるエンジニアをフォローすると、ここに学びと作業部屋の募集が流れます。"
-                    : "今日作っているもの、学んだこと、作業部屋の募集が静かに流れます。"}
+                    ? t("気になるエンジニアをフォローすると、ここに学びと作業部屋の募集が流れます。")
+                    : t("今日作っているもの、学んだこと、作業部屋の募集が静かに流れます。")}
               </span>
             </article>
           )}
@@ -14862,17 +14872,17 @@ function App() {
 
           <div className="desktop-app-context">
             <span>{activeRoom ? "In room" : "Viewing"}</span>
-            <strong>{activeRoom?.name || selectedRoom?.name || "作業部屋"}</strong>
+            <strong>{activeRoom?.name || selectedRoom?.name || t("作業部屋")}</strong>
           </div>
 
           <div className="desktop-app-actions">
             <span className="desktop-status-pill">
               <i aria-hidden="true" />
-              {activeRoom ? `${formatStayTime(currentStayMinutes)} focused` : `${roomOnlineCount} online`}
+              {activeRoom ? `${formatStayTime(currentStayMinutes, language)} focused` : `${roomOnlineCount} online`}
             </span>
             <span className="desktop-github-pill">{githubConnectionLabel}</span>
             <button type="button" onClick={handleSettingsOpen}>
-              プロフィール
+              {t("プロフィール")}
             </button>
           </div>
         </header>
@@ -14945,21 +14955,21 @@ function App() {
               const greeting = onboardingGreeting.trim();
               const resolve = onboardingResolve.trim();
               if (!greeting || !resolve) {
-                setPostError("あいさつと決意の両方を入力してください。");
+                setPostError(t("あいさつと決意の両方を入力してください。"));
                 return;
               }
               void handlePostSubmit(undefined, `${greeting}\n\n${resolve}`);
             }}
           >
-            <p className="card-kicker">チュートリアル · 最後のステップ</p>
-            <h1 id="onboarding-firstpost-title">あいさつと、あなたの決意</h1>
+            <p className="card-kicker">{t("チュートリアル · 最後のステップ")}</p>
+            <h1 id="onboarding-firstpost-title">{t("あいさつと、あなたの決意")}</h1>
             <p className="onboarding-firstpost-lead">
-              最初の一歩として、あいさつとこれからの決意を書いて投稿しましょう。
-              投稿するまで他の操作はできません。
+              {t("最初の一歩として、あいさつとこれからの決意を書いて投稿しましょう。")}
+              {t("投稿するまで他の操作はできません。")}
             </p>
 
             <label className="onboarding-firstpost-field">
-              <span>あいさつ</span>
+              <span>{t("あいさつ")}</span>
               <input
                 type="text"
                 value={onboardingGreeting}
@@ -14967,21 +14977,21 @@ function App() {
                   setOnboardingGreeting(event.target.value);
                   setPostError("");
                 }}
-                placeholder="初めまして！"
+                placeholder={t("初めまして！")}
                 maxLength={40}
                 autoFocus
               />
             </label>
 
             <label className="onboarding-firstpost-field">
-              <span>あなたの決意</span>
+              <span>{t("あなたの決意")}</span>
               <textarea
                 value={onboardingResolve}
                 onChange={(event) => {
                   setOnboardingResolve(event.target.value);
                   setPostError("");
                 }}
-                placeholder="これから挑戦したいこと・続けたいこと（例: 毎日少しでもコミットを積み上げる）"
+                placeholder={t("これから挑戦したいこと・続けたいこと（例: 毎日少しでもコミットを積み上げる）")}
                 maxLength={200}
                 rows={3}
               />
@@ -15000,7 +15010,7 @@ function App() {
                 isPosting || !onboardingGreeting.trim() || !onboardingResolve.trim()
               }
             >
-              {isPosting ? "送信中…" : "この決意を投稿して始める"}
+              {isPosting ? t("送信中…") : t("この決意を投稿して始める")}
             </button>
           </form>
         </div>
@@ -15023,25 +15033,25 @@ function App() {
               void handleOnboardingFirstPlanSubmit();
             }}
           >
-            <p className="card-kicker">チュートリアル · 1 日を始める</p>
-            <h1 id="onboarding-firstplan-title">今日やることを 1 行で書こう</h1>
+            <p className="card-kicker">{t("チュートリアル · 1 日を始める")}</p>
+            <h1 id="onboarding-firstplan-title">{t("今日やることを 1 行で書こう")}</h1>
             <p className="onboarding-firstpost-lead">
-              日報の「今日やること」として残ります。
+              {t("日報の「今日やること」として残ります。")}
               <br />
-              短くて OK。書いてから 1 日が始まります。
+              {t("短くて OK。書いてから 1 日が始まります。")}
               <br />
-              <small>※ 1 日の終わりには「振り返り」も書けます (任意)。</small>
+              <small>{t("※ 1 日の終わりには「振り返り」も書けます (任意)。")}</small>
             </p>
 
             <label className="onboarding-firstpost-field">
-              <span>今日やること</span>
+              <span>{t("今日やること")}</span>
               <textarea
                 value={onboardingFirstPlanDraft}
                 onChange={(event) => {
                   setOnboardingFirstPlanDraft(event.target.value);
                   setOnboardingFirstPlanError("");
                 }}
-                placeholder="例: DDIA Ch.7 を読み切る / API の設計をまとめる"
+                placeholder={t("例: DDIA Ch.7 を読み切る / API の設計をまとめる")}
                 maxLength={300}
                 rows={3}
                 autoFocus
@@ -15059,7 +15069,7 @@ function App() {
               className="onboarding-firstpost-cta"
               disabled={isSavingOnboardingFirstPlan || !onboardingFirstPlanDraft.trim()}
             >
-              {isSavingOnboardingFirstPlan ? "保存中…" : "今日を始める"}
+              {isSavingOnboardingFirstPlan ? t("保存中…") : t("今日を始める")}
             </button>
           </form>
         </div>
@@ -15209,7 +15219,7 @@ function App() {
                     aria-label={t("ユーザーID")}
                   />
                   <button type="submit" disabled={isSearching}>
-                    {isSearching ? "…" : "検索"}
+                    {isSearching ? "…" : t("検索")}
                   </button>
                 </form>
                 {!userId ? (
@@ -15252,7 +15262,7 @@ function App() {
                             <strong>{profile.displayName || profile.userId}</strong>
                             <small>
                               @{profile.userId}
-                              {isFriend ? " · フレンド" : isPending ? " · 申請中" : ""}
+                              {isFriend ? ` · ${t("フレンド")}` : isPending ? ` · ${t("申請中")}` : ""}
                             </small>
                           </span>
                         </button>
@@ -15271,7 +15281,7 @@ function App() {
               <section className="notification-panel" aria-label={t("お知らせ")}>
                 <div className="notification-head">
                   <p className="card-kicker">Notifications</p>
-                  <strong>お知らせ</strong>
+                  <strong>{t("お知らせ")}</strong>
                 </div>
 
                 <div className="notification-list">
@@ -15337,7 +15347,7 @@ function App() {
                               className="notification-accept"
                               onClick={(event) => handleNotificationFriendAccept(event, friendRequest)}
                             >
-                              承認
+                              {t("承認")}
                             </button>
                             <button
                               type="button"
@@ -15345,7 +15355,7 @@ function App() {
                               onClick={(event) => handleNotificationFriendReject(event, friendRequest)}
                               aria-label={t("フレンド申請を拒否")}
                             >
-                              拒否
+                              {t("拒否")}
                             </button>
                           </div>
                         ) : null}
@@ -15355,14 +15365,14 @@ function App() {
                             className="notification-accept"
                             onClick={(event) => handleNotificationInviteAccept(event, workspaceInvite)}
                           >
-                            参加
+                            {t("参加")}
                           </button>
                         ) : null}
                       </article>
                     );
                     })
                   ) : (
-                    <p className="notification-empty">新しいお知らせはありません。</p>
+                    <p className="notification-empty">{t("新しいお知らせはありません。")}</p>
                   )}
                 </div>
               </section>
@@ -15621,7 +15631,7 @@ function App() {
             <div>
               <p className="card-kicker">Learning Item</p>
               <h2 id="learning-modal-title">
-                {learningEditorState.mode === "create" ? "学習対象を追加" : "学習対象を編集"}
+                {learningEditorState.mode === "create" ? t("学習対象を追加") : t("学習対象を編集")}
               </h2>
             </div>
 
@@ -15633,13 +15643,13 @@ function App() {
               }}
             >
               <label>
-                <span>名前</span>
+                <span>{t("名前")}</span>
                 <input
                   value={learningEditorState.name}
                   onChange={(event) =>
                     setLearningEditorState((state) => (state ? { ...state, name: event.target.value } : state))
                   }
-                  placeholder="DDIA / Go言語 など"
+                  placeholder={t("DDIA / Go言語 など")}
                   maxLength={60}
                   autoFocus
                   required
@@ -15716,13 +15726,13 @@ function App() {
                   }
                 />
                 <span>
-                  <strong>書籍として記録する</strong>
-                  <small>チェックするとページ数で進捗を追える</small>
+                  <strong>{t("書籍として記録する")}</strong>
+                  <small>{t("チェックするとページ数で進捗を追える")}</small>
                 </span>
               </label>
 
               <div className="learning-color-panel">
-                <span>カラー</span>
+                <span>{t("カラー")}</span>
                 <div className="character-color-grid compact" aria-label={t("カラー")}>
                   {studyColorOptions.map((color) => (
                     <button
@@ -15733,7 +15743,7 @@ function App() {
                         setLearningEditorState((state) => (state ? { ...state, color: color.value } : state))
                       }
                       title={color.name}
-                      aria-label={`${color.name}を選択`}
+                      aria-label={t("{name}を選択", { name: color.name })}
                     >
                       <span style={{ background: color.value }} />
                       <small>{color.name}</small>
@@ -15769,7 +15779,7 @@ function App() {
               {learningEditorState.category === "book" ? (
                 <div className="learning-book-fields">
                   <label>
-                    <span>総ページ数</span>
+                    <span>{t("総ページ数")}</span>
                     <input
                       type="number"
                       min={0}
@@ -15777,11 +15787,11 @@ function App() {
                       onChange={(event) =>
                         setLearningEditorState((state) => (state ? { ...state, totalPages: event.target.value } : state))
                       }
-                      placeholder="例: 600"
+                      placeholder={t("例: 600")}
                     />
                   </label>
                   <label>
-                    <span>現在のページ</span>
+                    <span>{t("現在のページ")}</span>
                     <input
                       type="number"
                       min={0}
@@ -15789,7 +15799,7 @@ function App() {
                       onChange={(event) =>
                         setLearningEditorState((state) => (state ? { ...state, currentPages: event.target.value } : state))
                       }
-                      placeholder="例: 120"
+                      placeholder={t("例: 120")}
                     />
                   </label>
                 </div>
@@ -15816,18 +15826,18 @@ function App() {
                     onClick={handleLearningEditorArchiveToggle}
                   >
                     {learningItems.find((item) => item.id === learningEditorState.itemId)?.archived
-                      ? "アーカイブ解除"
-                      : "アーカイブ"}
+                      ? t("アーカイブ解除")
+                      : t("アーカイブ")}
                   </button>
                 ) : (
                   <span aria-hidden="true" />
                 )}
                 <div className="learning-modal-actions-right">
                   <button type="button" className="learning-cancel-button" onClick={closeLearningEditor}>
-                    キャンセル
+                    {t("キャンセル")}
                   </button>
                   <button type="submit" className="learning-save-button">
-                    保存
+                    {t("保存")}
                   </button>
                 </div>
               </div>
@@ -15836,8 +15846,8 @@ function App() {
             {learningEditorState.mode === "edit" ? (
               <div className="learning-danger-zone" role="group" aria-label={t("危険な操作")}>
                 <div className="learning-danger-zone-info">
-                  <strong>削除</strong>
-                  <small>この学習対象の登録を完全に削除します。学習ログ自体は残ります。</small>
+                  <strong>{t("削除")}</strong>
+                  <small>{t("この学習対象の登録を完全に削除します。学習ログ自体は残ります。")}</small>
                 </div>
                 {isLearningDeleteConfirming ? (
                   <div className="learning-danger-zone-confirm">
@@ -15846,14 +15856,14 @@ function App() {
                       className="learning-delete-cancel"
                       onClick={() => setIsLearningDeleteConfirming(false)}
                     >
-                      やめる
+                      {t("やめる")}
                     </button>
                     <button
                       type="button"
                       className="learning-delete-confirm"
                       onClick={handleLearningEditorDelete}
                     >
-                      本当に削除する
+                      {t("本当に削除する")}
                     </button>
                   </div>
                 ) : (
@@ -15862,7 +15872,7 @@ function App() {
                     className="learning-delete-trigger"
                     onClick={() => setIsLearningDeleteConfirming(true)}
                   >
-                    削除する
+                    {t("削除する")}
                   </button>
                 )}
               </div>
@@ -15906,7 +15916,7 @@ function App() {
           if (ts.getTime() >= weekStartMs) thisWeekMinutes += log.minutes;
         });
         const lastTs = itemLogs.length ? new Date(itemLogs[0].createdAt).getTime() : undefined;
-        const lastLabel = formatLearningLastLogged(lastTs, today.getTime(), dayMsLocal);
+        const lastLabel = formatLearningLastLogged(lastTs, today.getTime(), dayMsLocal, language);
         const status = item.status ?? "active";
         const isBook = item.category === "book";
         const hasProgress = isBook && typeof item.totalPages === "number" && item.totalPages > 0;
@@ -16302,9 +16312,9 @@ function App() {
           >
             <div>
               <p className="card-kicker">Teams</p>
-              <h2 id="org-create-modal-title">組織を作って始める</h2>
+              <h2 id="org-create-modal-title">{t("組織を作って始める")}</h2>
               <p className="recruitment-modal-help">
-                チーム名を入れるだけで組織を作成できます。あとで招待リンクで仲間を招けます。
+                {t("チーム名を入れるだけで組織を作成できます。あとで招待リンクで仲間を招けます。")}
               </p>
             </div>
 
@@ -16316,7 +16326,7 @@ function App() {
               }}
             >
               <label className="recruitment-field">
-                <span>チーム名 / 組織名</span>
+                <span>{t("チーム名 / 組織名")}</span>
                 <input
                   autoFocus
                   value={newOrgName}
@@ -16324,7 +16334,7 @@ function App() {
                     setNewOrgName(event.target.value);
                     if (orgError) setOrgError("");
                   }}
-                  placeholder="例: Acme Inc."
+                  placeholder={t("例: Acme Inc.")}
                   maxLength={64}
                   aria-label={t("組織名")}
                 />
@@ -16337,14 +16347,14 @@ function App() {
                   onClick={() => setIsOrgCreateOpen(false)}
                   disabled={isOrgWorking}
                 >
-                  キャンセル
+                  {t("キャンセル")}
                 </button>
                 <button
                   type="submit"
                   className="teams-cta-primary"
                   disabled={isOrgWorking || !newOrgName.trim()}
                 >
-                  {isOrgWorking ? "作成中…" : "作成して始める →"}
+                  {isOrgWorking ? t("作成中…") : t("作成して始める →")}
                 </button>
               </div>
             </form>
@@ -17833,9 +17843,9 @@ function App() {
                       return (
                         <>
                           <strong className="settings-character-hero-name">
-                            {active.name} <span>{active.romaji}</span>
+                            {t(active.name)} <span>{active.romaji}</span>
                           </strong>
-                          <small className="settings-character-hero-tag">{active.tagline}</small>
+                          <small className="settings-character-hero-tag">{t(active.tagline)}</small>
                         </>
                       );
                     })()}
@@ -17870,11 +17880,11 @@ function App() {
                               chooseCharacterShape(option.value);
                             }
                           }}
-                          title={isLocked ? `${option.name} ${option.romaji}（ショップで購入）` : `${option.name} ${option.romaji}`}
+                          title={isLocked ? `${t(option.name)} ${option.romaji}${t("（ショップで購入）")}` : `${t(option.name)} ${option.romaji}`}
                           aria-label={
                             isLocked
-                              ? `${option.name} ${option.romaji}はショップで購入できます`
-                              : `${option.name} ${option.romaji}を選択`
+                              ? `${t(option.name)} ${option.romaji}${t("はショップで購入できます")}`
+                              : `${t(option.name)} ${option.romaji}${t("を選択")}`
                           }
                           aria-pressed={isActive}
                         >
@@ -17885,7 +17895,7 @@ function App() {
                             />
                           </span>
                           <span className="character-shape-tile-name">
-                            {option.name}
+                            {t(option.name)}
                             <small>{option.romaji}</small>
                           </span>
                           {isLocked ? (
@@ -17918,8 +17928,8 @@ function App() {
                           key={color.value}
                           className={`character-color-swatch${isActive ? " is-active" : ""}`}
                           onClick={() => chooseCharacterColor(color.value)}
-                          title={color.name}
-                          aria-label={`${color.name}を選択`}
+                          title={t(color.name)}
+                          aria-label={`${t(color.name)}${t("を選択")}`}
                           aria-pressed={isActive}
                         >
                           <span style={{ background: color.value }} />
@@ -18343,7 +18353,7 @@ function App() {
                           ) : null}
                           {announcement.date}
                         </span>
-                        <strong className="home-announcement-title">{announcement.title}</strong>
+                        <strong className="home-announcement-title">{t(announcement.title)}</strong>
                       </span>
                       <span
                         className={`home-announcement-chevron${isOpen ? " is-open" : ""}`}
@@ -18362,7 +18372,7 @@ function App() {
                     </button>
                     {isOpen ? (
                       <div className="home-announcement-body">
-                        <p className="home-announcement-body-text">{announcement.body}</p>
+                        <p className="home-announcement-body-text">{t(announcement.body)}</p>
                         {announcement.pinned ? (
                           <button
                             type="button"
@@ -19307,7 +19317,7 @@ function App() {
                   const noteText = item.note?.trim() || "";
                   const isPageEditOpen = learningPageEditId === item.id;
                   const lastTs = lastLoggedByItem.get(item.id);
-                  const lastLabel = formatLearningLastLogged(lastTs, todayMidnight.getTime(), dayMs);
+                  const lastLabel = formatLearningLastLogged(lastTs, todayMidnight.getTime(), dayMs, language);
                   const isFreshToday = !!lastTs && lastTs >= todayMidnight.getTime();
                   const sparkline = sparklineByItem.get(item.id);
                   const sparklineMax = sparkline
@@ -19854,11 +19864,11 @@ function App() {
                           void navigator.clipboard.writeText(url);
                           showToast(t("プロフィールリンクをコピーしました"), { kind: "success" });
                         } catch {
-                          window.prompt("プロフィールリンク（コピーしてください）", url);
+                          window.prompt(t("プロフィールリンク（コピーしてください）"), url);
                         }
                       }}
                       aria-label={t("プロフィールリンクをコピー")}
-                      title="プロフィールリンクをコピー"
+                      title={t("プロフィールリンクをコピー")}
                     >
                       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <rect x="8" y="5" width="11" height="14" rx="2" />
@@ -20083,7 +20093,7 @@ function App() {
           animate={{ opacity: 1, y: 0 }}
           transition={SPRING_SNAPPY}
         >
-          <Suspense fallback={<div className="poker-loading">ポーカーを準備中…</div>}>
+          <Suspense fallback={<div className="poker-loading">{t("ポーカーを準備中…")}</div>}>
             <PokerView
               onBack={() => setCurrentView("workspace")}
               arcBalance={coins}
@@ -20471,7 +20481,7 @@ function App() {
                       members={workspaceActors}
                       currentUserId={currentUser.uid}
                       isJoined={isInSelectedRoom}
-                      currentStayLabel={formatStayTime(currentStayMinutes)}
+                      currentStayLabel={formatStayTime(currentStayMinutes, language)}
                       joinedAtLabel={
                         currentPresence
                           ? new Date(currentPresence.joinedAt).toLocaleTimeString("ja-JP", {
@@ -20540,7 +20550,7 @@ function App() {
                             >
                               ×
                             </button>
-                            <span className="room-note-card-kicker">✦ 分身を変える</span>
+                            <span className="room-note-card-kicker">{t("✦ 分身を変える")}</span>
                             <div className="room-appearance-preview">
                               <ProfileCharacterPreview
                                 color={playerCharacterColor}
@@ -20554,15 +20564,15 @@ function App() {
                                 return (
                                   <p className="character-active-intro">
                                     <strong>
-                                      {active.name} <span>{active.romaji}</span>
+                                      {t(active.name)} <span>{active.romaji}</span>
                                     </strong>
-                                    {active.intro}
+                                    {t(active.intro)}
                                   </p>
                                 );
                               })()}
                             </div>
                             <div className="character-customize-section compact">
-                              <p className="character-customize-section-label">シルエット</p>
+                              <p className="character-customize-section-label">{t("シルエット")}</p>
                               <div
                                 className="character-shape-grid compact"
                                 aria-label={t("キャラクターの形")}
@@ -20584,7 +20594,7 @@ function App() {
                                                ロック中シルエットはタップ
                                                不可とし、近日対応を案内。 */
                                             showToast(
-                                              `${option.name} ${option.romaji} is coming soon.`,
+                                              `${t(option.name)} ${option.romaji} is coming soon.`,
                                               { kind: "info" },
                                             );
                                             return;
@@ -20594,11 +20604,11 @@ function App() {
                                           // 誤認されるので、トーストで明示してから
                                           // confirm でショップ遷移を選ばせる。
                                           showToast(
-                                            `${option.name} はショップで購入できます`,
+                                            t("{name} はショップで購入できます", { name: t(option.name) }),
                                             { kind: "info" },
                                           );
                                           const ok = window.confirm(
-                                            `${option.name} ${option.romaji} はショップで購入できます。ショップへ行きますか？`,
+                                            t("{name} {romaji} はショップで購入できます。ショップへ行きますか？", { name: t(option.name), romaji: option.romaji }),
                                           );
                                           if (ok) setCurrentView("shop");
                                         } else {
@@ -20607,13 +20617,13 @@ function App() {
                                       }}
                                       title={
                                         isLocked
-                                          ? `${option.name} ${option.romaji}（ショップで購入）`
-                                          : `${option.name} ${option.romaji}`
+                                          ? t("{name} {romaji}（ショップで購入）", { name: t(option.name), romaji: option.romaji })
+                                          : `${t(option.name)} ${option.romaji}`
                                       }
                                       aria-label={
                                         isLocked
-                                          ? `${option.name} ${option.romaji}はショップで購入できます`
-                                          : `${option.name} ${option.romaji}を選択`
+                                          ? `${t(option.name)} ${option.romaji}${t("はショップで購入できます")}`
+                                          : `${t(option.name)} ${option.romaji}${t("を選択")}`
                                       }
                                       aria-pressed={isActive}
                                     >
@@ -20625,7 +20635,7 @@ function App() {
                                       </span>
                                       <span className="shape-tile-text">
                                         <strong className="shape-tile-name">
-                                          {option.name}
+                                          {t(option.name)}
                                           <span className="shape-tile-romaji">{option.romaji}</span>
                                         </strong>
                                       </span>
@@ -20650,7 +20660,7 @@ function App() {
                               </div>
                             </div>
                             <div className="character-customize-section compact">
-                              <p className="character-customize-section-label">カラー</p>
+                              <p className="character-customize-section-label">{t("カラー")}</p>
                               <div className="character-color-grid compact" aria-label={t("分身カラー")}>
                                 {characterColorOptions.map((color) => (
                                   <button
@@ -20660,11 +20670,11 @@ function App() {
                                       playerCharacterColor === color.value ? "active" : ""
                                     }
                                     onClick={() => chooseCharacterColor(color.value)}
-                                    title={color.name}
-                                    aria-label={`${color.name}を選択`}
+                                    title={t(color.name)}
+                                    aria-label={`${t(color.name)}${t("を選択")}`}
                                   >
                                     <span style={{ background: color.value }} />
-                                    <small>{color.name}</small>
+                                    <small>{t(color.name)}</small>
                                   </button>
                                 ))}
                               </div>
@@ -20962,8 +20972,8 @@ function App() {
             <section className="teams-plan-manage" aria-label={t("現在のプラン")}>
               <div className="teams-plan-manage-head">
                 <p className="card-kicker">{currentOrganization.name} の現在のプラン</p>
-                <h2>{getPlan(currentOrganization.planTier ?? "free").name}</h2>
-                <p>{getPlan(currentOrganization.planTier ?? "free").tagline}</p>
+                <h2>{getPlanLocalized(currentOrganization.planTier ?? "free", language).name}</h2>
+                <p>{getPlanLocalized(currentOrganization.planTier ?? "free", language).tagline}</p>
               </div>
               <div className="teams-plan-manage-actions">
                 {BETA_ALL_FEATURES_FREE ? (
@@ -21086,25 +21096,30 @@ function App() {
               {/* 料金表は src/services/plans.ts(単一の真実)から生成。
                   表示文言・価格・推奨バッジはすべて PLANS を編集すれば
                   こことゲーティングが同時に揃う。 */}
-              {PLANS.map((plan) => (
-                <article
-                  key={plan.tier}
-                  className={`teams-plan${plan.featured ? " is-featured" : ""}`}
-                >
-                  {plan.featured ? <span className="teams-plan-badge">推奨</span> : null}
-                  <h3>{plan.name}</h3>
-                  <p className="teams-plan-price">
-                    {plan.priceLabel}
-                    {plan.priceUnit ? <small>{plan.priceUnit}</small> : null}
-                  </p>
-                  <p className="teams-plan-tagline">{plan.tagline}</p>
-                  <ul>
-                    {plan.features.map((feature) => (
-                      <li key={feature}>{feature}</li>
-                    ))}
-                  </ul>
-                </article>
-              ))}
+              {PLANS.map((plan) => {
+                // JP literals in PLANS double as dictionary keys — translate
+                // at render time so the pricing card matches the UI language.
+                const localized = getPlanLocalized(plan.tier, language);
+                return (
+                  <article
+                    key={plan.tier}
+                    className={`teams-plan${plan.featured ? " is-featured" : ""}`}
+                  >
+                    {plan.featured ? <span className="teams-plan-badge">{t("推奨")}</span> : null}
+                    <h3>{plan.name}</h3>
+                    <p className="teams-plan-price">
+                      {localized.priceLabel}
+                      {localized.priceUnit ? <small>{localized.priceUnit}</small> : null}
+                    </p>
+                    <p className="teams-plan-tagline">{localized.tagline}</p>
+                    <ul>
+                      {localized.features.map((feature) => (
+                        <li key={feature}>{feature}</li>
+                      ))}
+                    </ul>
+                  </article>
+                );
+              })}
             </div>
             <p className="teams-pricing-note">
               ※ 価格は予定です。β 期間中は全機能無料でお使いいただけます。
@@ -21306,9 +21321,9 @@ function App() {
                       />
                     </div>
                     <div className="shop-product-body">
-                      <p className="shop-product-tagline">{item.tagline}</p>
+                      <p className="shop-product-tagline">{t(item.tagline)}</p>
                       <h4 className="shop-product-name">{item.name}</h4>
-                      <p className="shop-product-description">{item.description}</p>
+                      <p className="shop-product-description">{t(item.description)}</p>
                     </div>
                     <div className="shop-product-footer">
                       {isOwned ? (
@@ -21592,6 +21607,7 @@ function App() {
                   const payload = buildWeeklyDigestPayload({
                     organizationName: currentOrganization.name,
                     members: orgMembers,
+                    language,
                   });
                   const result = await postToSlackWebhook(webhookUrl, payload);
                   if (!result.ok) {
@@ -21611,8 +21627,8 @@ function App() {
             <div className="manager-empty-state">
               <div className="card">
                 <p className="card-kicker">Manager Dashboard</p>
-                <h2>アクセス権限がありません</h2>
-                <p>マネージャーダッシュボードはOrganizationのオーナーのみアクセス可能です</p>
+                <h2>{t("アクセス権限がありません")}</h2>
+                <p>{t("マネージャーダッシュボードはOrganizationのオーナーのみアクセス可能です")}</p>
               </div>
             </div>
           )}
@@ -21687,7 +21703,7 @@ function App() {
                           ) : null}
                           {announcement.date}
                         </span>
-                        <strong className="home-announcement-title">{announcement.title}</strong>
+                        <strong className="home-announcement-title">{t(announcement.title)}</strong>
                       </span>
                       <span
                         className={`home-announcement-chevron${isOpen ? " is-open" : ""}`}
@@ -21709,7 +21725,7 @@ function App() {
                         id={`announcement-body-${announcement.id}`}
                         className="home-announcement-body"
                       >
-                        <p className="home-announcement-body-text">{announcement.body}</p>
+                        <p className="home-announcement-body-text">{t(announcement.body)}</p>
                         {announcement.pinned ? (
                           <button
                             type="button"
@@ -21763,8 +21779,8 @@ function App() {
             >
               <span className="home-teams-ribbon-icon" aria-hidden="true">●</span>
               <span className="home-teams-ribbon-copy">
-                <strong>{org.name} に参加する</strong>
-                <small>あなたのメールドメインが許可されています — タップで参加</small>
+                <strong>{t("{name} に参加する", { name: org.name })}</strong>
+                <small>{t("あなたのメールドメインが許可されています — タップで参加")}</small>
               </span>
               <span className="home-teams-ribbon-arrow" aria-hidden="true">→</span>
             </button>
@@ -21784,8 +21800,8 @@ function App() {
           onClick={() => setCurrentView("teams")}
         >
           <span className="home-teams-ribbon-copy">
-            <strong>チーム / 企業で使う</strong>
-            <small>組織限定ルーム・Admin ダッシュボード・Slack 連携</small>
+            <strong>{t("チーム / 企業で使う")}</strong>
+            <small>{t("組織限定ルーム・Admin ダッシュボード・Slack 連携")}</small>
           </span>
           <span className="home-teams-ribbon-arrow" aria-hidden="true">→</span>
         </button>
@@ -21892,7 +21908,7 @@ function App() {
                   type="button"
                   className="home-notice-banner"
                   onClick={() => setIsAnnouncementsModalOpen(true)}
-                  aria-label={`${t("お知らせ")}: ${HEADLINE_ANNOUNCEMENT.title}`}
+                  aria-label={`${t("お知らせ")}: ${t(HEADLINE_ANNOUNCEMENT.title)}`}
                 >
                   <span className="home-notice-banner-badge" aria-hidden="true">
                     {/* MENU > お知らせ と同じベル形に統一。megaphone は
@@ -21904,7 +21920,7 @@ function App() {
                   </span>
                   <span className="home-notice-banner-text">
                     <span className="home-notice-banner-kicker">{t("お知らせ")}</span>
-                    <span className="home-notice-banner-title">{HEADLINE_ANNOUNCEMENT.title}</span>
+                    <span className="home-notice-banner-title">{t(HEADLINE_ANNOUNCEMENT.title)}</span>
                   </span>
                   <span className="home-notice-banner-chevron" aria-hidden="true">›</span>
                 </button>
@@ -22026,14 +22042,14 @@ function App() {
               </text>
             </svg>
             <p className="showcase-tagline">
-              日々のコミットが、あなたの軌跡を描く。
+              {t("日々のコミットが、あなたの軌跡を描く。")}
             </p>
             <button
               type="button"
               className="showcase-cta"
               onClick={() => setCurrentView("home")}
             >
-              はじめる
+              {t("はじめる")}
               <span aria-hidden="true">→</span>
             </button>
           </div>

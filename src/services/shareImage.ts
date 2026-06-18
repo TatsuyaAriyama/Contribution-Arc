@@ -5,12 +5,17 @@
 // the browser. The generated Blob is handed to the share modal, which
 // offers download / clipboard-copy / open-on-X actions.
 
+import { translate } from "../i18n/LanguageContext";
+import type { Language } from "../i18n/translations";
+
 export type ShareImageInput = {
   displayName: string; // e.g. "Ari"
   minutes: number; // e.g. 187
   subject: string; // e.g. "開発" — may be empty
   date: string; // e.g. "2026-05-25"
   streak: number; // e.g. 12
+  /** UI language. Defaults to "ja" for back-compat. */
+  language?: Language;
 };
 
 const SERVICE_NAME = "Contribution Arc";
@@ -23,23 +28,34 @@ const SUB_INK = "#5B5B73";
 const FONT_STACK =
   '"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", system-ui, -apple-system, "Segoe UI", sans-serif';
 
-/** "3時間7分" / "47分" — natural Japanese duration formatting. */
-function formatDurationJa(totalMinutes: number) {
+/** "3時間7分" / "47分" / "3h 7m" / "47 min" — natural duration formatting. */
+function formatDuration(totalMinutes: number, language: Language) {
   const minutes = Math.max(0, Math.floor(totalMinutes));
   if (minutes < 60) {
-    return `${minutes}分`;
+    return language === "en" ? `${minutes} min` : `${minutes}分`;
   }
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
+  if (language === "en") {
+    return rest > 0 ? `${hours}h ${rest}m` : `${hours}h`;
+  }
   return rest > 0 ? `${hours}時間${rest}分` : `${hours}時間`;
 }
 
-/** "2026年5月25日 (月)" — long-form date for the share image. */
-function formatDateLabel(isoDate: string) {
+/** "2026年5月25日 (月)" / "May 25, 2026 (Mon)" — long-form date for the share image. */
+function formatDateLabel(isoDate: string, language: Language) {
   // Accepts "YYYY-MM-DD" or full ISO. Falls back to raw string on parse fail.
   const parsed = new Date(isoDate.length === 10 ? `${isoDate}T00:00:00` : isoDate);
   if (Number.isNaN(parsed.getTime())) {
     return isoDate;
+  }
+  if (language === "en") {
+    const weekdayEn = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][parsed.getDay()];
+    const monthEn = [
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ][parsed.getMonth()];
+    return `${monthEn} ${parsed.getDate()}, ${parsed.getFullYear()} (${weekdayEn})`;
   }
   const weekday = ["日", "月", "火", "水", "木", "金", "土"][parsed.getDay()];
   return `${parsed.getFullYear()}年${parsed.getMonth() + 1}月${parsed.getDate()}日 (${weekday})`;
@@ -63,6 +79,7 @@ function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: n
 
 /** Render the share image to a 1200x630 PNG blob. */
 export async function generateShareImagePng(input: ShareImageInput): Promise<Blob> {
+  const language: Language = input.language ?? "ja";
   const width = 1200;
   const height = 630;
   const canvas = document.createElement("canvas");
@@ -105,7 +122,7 @@ export async function generateShareImagePng(input: ShareImageInput): Promise<Blo
 
   // ── Top-right: streak badge (purple pill).
   if (input.streak > 0) {
-    const badgeText = `${input.streak}日連続`;
+    const badgeText = translate(language, "{count}日連続", { count: input.streak });
     ctx.font = `800 28px ${FONT_STACK}`;
     const padX = 24;
     const padY = 14;
@@ -129,7 +146,7 @@ export async function generateShareImagePng(input: ShareImageInput): Promise<Blo
   }
 
   // ── Hero: study time, centered, oversized.
-  const heroText = formatDurationJa(input.minutes);
+  const heroText = formatDuration(input.minutes, language);
   ctx.fillStyle = INK;
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
@@ -170,13 +187,13 @@ export async function generateShareImagePng(input: ShareImageInput): Promise<Blo
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
   const subjectPart = input.subject ? `${input.subject} · ` : "";
-  ctx.fillText(`${subjectPart}${formatDateLabel(input.date)}`, width / 2, heroY + 50);
+  ctx.fillText(`${subjectPart}${formatDateLabel(input.date, language)}`, width / 2, heroY + 50);
 
   // ── Top-center label above the hero ("今日の作業時間").
   ctx.font = `700 30px ${FONT_STACK}`;
   ctx.fillStyle = BRAND_PURPLE;
   ctx.textBaseline = "alphabetic";
-  ctx.fillText("今日の作業時間", width / 2, heroY - 220);
+  ctx.fillText(translate(language, "今日の作業時間"), width / 2, heroY - 220);
 
   // ── Bottom-right: brand mark + URL (subtle).
   ctx.textAlign = "right";
@@ -222,7 +239,15 @@ export async function generateShareImagePng(input: ShareImageInput): Promise<Blo
  * (X's t.co shortens links but we still keep the raw text compact).
  */
 export function buildShareTweet(input: ShareImageInput): string {
-  const duration = formatDurationJa(input.minutes);
+  const language: Language = input.language ?? "ja";
+  const duration = formatDuration(input.minutes, language);
+  if (language === "en") {
+    const subjectClause = input.subject ? `${input.subject} for ` : "";
+    const streakClause = input.streak > 1 ? ` (${input.streak}-day streak)` : "";
+    const body = `Today I put in ${subjectClause}${duration}${streakClause}.`;
+    const tags = "#dailylog #ContributionArc";
+    return `${body}\n${tags}\n${SERVICE_URL}`;
+  }
   const subjectClause = input.subject ? `${input.subject}を` : "";
   const streakClause = input.streak > 1 ? `（${input.streak}日連続）` : "";
   const body = `今日は${subjectClause}${duration}積み上げました${streakClause}`;

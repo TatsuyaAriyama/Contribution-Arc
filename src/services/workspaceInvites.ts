@@ -83,7 +83,10 @@ export function subscribeIncomingWorkspaceInvites(
             fromName: readString(data.fromName, "Developer"),
             toUid: readString(data.toUid),
             roomId: readString(data.roomId),
-            roomName: readString(data.roomName, "作業部屋"),
+            // Fallback shown only when the inviter's Firestore record
+            // is missing roomName entirely (legacy / data error). Kept
+            // generic so it doesn't leak JP into EN UIs.
+            roomName: readString(data.roomName, "Workspace"),
             message: readString(data.message),
             status: readStatus(data.status),
             createdAt: readCreatedAt(data.createdAt),

@@ -168,7 +168,7 @@ export function ArcPurchasePanel({ catalog, onPurchaseGranted }: Props) {
                 <span className="arc-pack-amount-unit">Arc</span>
               </div>
               {pack.badge ? (
-                <span className="arc-pack-badge">{pack.badge}</span>
+                <span className="arc-pack-badge">{t(pack.badge)}</span>
               ) : null}
               <div className="shop-product-footer">
                 <button

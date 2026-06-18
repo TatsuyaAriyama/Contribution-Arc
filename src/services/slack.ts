@@ -16,6 +16,9 @@
  * is the source of truth, Slack is an outbound mirror.
  */
 
+import { translate } from "../i18n/LanguageContext";
+import type { Language } from "../i18n/translations";
+
 const WEBHOOK_HOST_ALLOWLIST = ["hooks.slack.com"];
 
 export type SlackEventPayload = {
@@ -106,8 +109,13 @@ function contextElements(meta?: string) {
   ];
 }
 
-export function buildRoomJoinBlocks(actor: ActorMeta, roomName: string, task: string): SlackEventPayload {
-  const fallback = `${actor.emoji || ":wave:"} *${actor.name}* が *${roomName}* に入室（${task}）`;
+export function buildRoomJoinBlocks(
+  actor: ActorMeta,
+  roomName: string,
+  task: string,
+  language: Language = "ja",
+): SlackEventPayload {
+  const fallback = `${actor.emoji || ":wave:"} ${translate(language, "*{name}* が *{room}* に入室（{task}）", { name: actor.name, room: roomName, task })}`;
   return {
     text: fallback,
     blocks: [
@@ -127,8 +135,13 @@ export function buildRoomJoinBlocks(actor: ActorMeta, roomName: string, task: st
   };
 }
 
-export function buildRoomLeaveBlocks(actor: ActorMeta, roomName: string, stayLabel: string): SlackEventPayload {
-  const fallback = `${actor.emoji || ":door:"} *${actor.name}* が *${roomName}* を退室（滞在 ${stayLabel}）`;
+export function buildRoomLeaveBlocks(
+  actor: ActorMeta,
+  roomName: string,
+  stayLabel: string,
+  language: Language = "ja",
+): SlackEventPayload {
+  const fallback = `${actor.emoji || ":door:"} ${translate(language, "*{name}* が *{room}* を退室（滞在 {stay}）", { name: actor.name, room: roomName, stay: stayLabel })}`;
   return {
     text: fallback,
     blocks: [
@@ -148,8 +161,12 @@ export function buildRoomLeaveBlocks(actor: ActorMeta, roomName: string, stayLab
   };
 }
 
-export function buildBreakStartedBlocks(actor: ActorMeta, roomName: string): SlackEventPayload {
-  const fallback = `${actor.emoji || ":coffee:"} *${actor.name}* が *${roomName}* で休憩中`;
+export function buildBreakStartedBlocks(
+  actor: ActorMeta,
+  roomName: string,
+  language: Language = "ja",
+): SlackEventPayload {
+  const fallback = `${actor.emoji || ":coffee:"} ${translate(language, "*{name}* が *{room}* で休憩中", { name: actor.name, room: roomName })}`;
   return {
     text: fallback,
     blocks: [
@@ -168,8 +185,9 @@ export function buildRecruitmentBlocks(
   duration: number,
   startAtLabel: string,
   message: string,
+  language: Language = "ja",
 ): SlackEventPayload {
-  const fallback = `${actor.emoji || ":loudspeaker:"} *${actor.name}* が *${roomName}* で募集中（${task}・${duration}分・開始 ${startAtLabel}）`;
+  const fallback = `${actor.emoji || ":loudspeaker:"} ${translate(language, "*{name}* が *{room}* で募集中（{task}・{duration}分・開始 {start}）", { name: actor.name, room: roomName, task, duration, start: startAtLabel })}`;
   const sections: Array<Record<string, unknown>> = [
     {
       type: "section",
@@ -191,11 +209,15 @@ export function buildRecruitmentBlocks(
   return { text: fallback, blocks: sections };
 }
 
-export function buildPostBlocks(actor: ActorMeta, postText: string): SlackEventPayload {
+export function buildPostBlocks(
+  actor: ActorMeta,
+  postText: string,
+  language: Language = "ja",
+): SlackEventPayload {
   // Truncate the post body so a 280-char wall doesn't take over the
   // Slack channel — anyone interested can click through to the app.
   const truncated = postText.length > 140 ? `${postText.slice(0, 140)}…` : postText;
-  const fallback = `${actor.emoji || ":memo:"} *${actor.name}* が記録を投稿しました`;
+  const fallback = `${actor.emoji || ":memo:"} ${translate(language, "*{name}* が記録を投稿しました", { name: actor.name })}`;
   return {
     text: fallback,
     blocks: [
@@ -228,13 +250,31 @@ export function buildDailyDigestBlocks(
     totalContributions: number;
   },
   topMembers: Array<{ name: string; effort: number; streak: number }>,
+  language: Language = "ja",
 ): SlackEventPayload {
-  const headline = `:bar_chart: *${orgName}* の日次サマリー`;
-  const summaryLine = `メンバー *${metrics.memberCount}* 人 · Effort *${metrics.totalEffort.toLocaleString()}* · Output *${metrics.totalOutput.toLocaleString()}* · Contributions *${metrics.totalContributions.toLocaleString()}*`;
+  const headline = `:bar_chart: ${translate(language, "*{org}* の日次サマリー", { org: orgName })}`;
+  const summaryLine = translate(
+    language,
+    "メンバー *{members}* 人 · Effort *{effort}* · Output *{output}* · Contributions *{contributions}*",
+    {
+      members: metrics.memberCount,
+      effort: metrics.totalEffort.toLocaleString(),
+      output: metrics.totalOutput.toLocaleString(),
+      contributions: metrics.totalContributions.toLocaleString(),
+    },
+  );
   const rankingLines = topMembers
     .slice(0, 5)
-    .map((m, idx) => `${idx + 1}. *${m.name}* — Effort ${m.effort.toLocaleString()} / ${m.streak}日連続`)
+    .map((m, idx) =>
+      translate(language, "{rank}. *{name}* — Effort {effort} / {streak}日連続", {
+        rank: idx + 1,
+        name: m.name,
+        effort: m.effort.toLocaleString(),
+        streak: m.streak,
+      }),
+    )
     .join("\n");
+  const emptyLine = `_${translate(language, "今日はまだ活動がありません。")}_`;
   const fallback = `${headline}\n${summaryLine}`;
   return {
     text: fallback,
@@ -254,7 +294,7 @@ export function buildDailyDigestBlocks(
         type: "section",
         text: {
           type: "mrkdwn",
-          text: rankingLines || "_今日はまだ活動がありません。_",
+          text: rankingLines || emptyLine,
         },
       },
     ],

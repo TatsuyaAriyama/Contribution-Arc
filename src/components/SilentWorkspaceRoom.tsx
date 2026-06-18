@@ -1528,7 +1528,7 @@ export function SilentWorkspaceRoom({
                     type="button"
                     onClick={() => onPresetMessage(message)}
                   >
-                    {message}
+                    {t(message)}
                   </button>
                 ))}
               </div>
@@ -1690,10 +1690,10 @@ export function SilentWorkspaceRoom({
                   key={`${message}-${index}`}
                   onClick={() => onPresetMessage(message)}
                   disabled={!isJoined}
-                  title={t("{message} ({key} キーで送信)", { message, key: index + 1 })}
+                  title={t("{message} ({key} キーで送信)", { message: t(message), key: index + 1 })}
                 >
                   <kbd className="preset-key-hint" aria-hidden="true">{index + 1}</kbd>
-                  <span className="preset-message-text">{message}</span>
+                  <span className="preset-message-text">{t(message)}</span>
                 </button>
               ))}
               <button

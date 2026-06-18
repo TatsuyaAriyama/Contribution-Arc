@@ -12,6 +12,8 @@
  * sees "投資の可視化" — not a leaderboard.
  */
 
+import { translate } from "../i18n/LanguageContext";
+import type { Language } from "../i18n/translations";
 import type { OrganizationMemberRecord } from "./cloudData";
 import type { SlackEventPayload } from "./slack";
 
@@ -23,6 +25,8 @@ export type WeeklyDigestInput = {
   /** How many top contributors to list. Default 5 — keeps the Slack
    *  message readable on mobile without scrolling. */
   topN?: number;
+  /** Output language. Defaults to "ja" for back-compat. */
+  language?: Language;
 };
 
 /** Pad a number with leading zero for date formatting. */
@@ -41,6 +45,7 @@ export function buildWeeklyDigestText(input: WeeklyDigestInput): string {
   const { organizationName, members } = input;
   const generatedAt = input.generatedAt ?? new Date();
   const topN = input.topN ?? 5;
+  const language: Language = input.language ?? "ja";
 
   const totalMembers = members.length;
   const totalMinutes = members.reduce((sum, m) => sum + (m.effortExp || 0), 0);
@@ -55,16 +60,24 @@ export function buildWeeklyDigestText(input: WeeklyDigestInput): string {
     .filter((m) => (m.effortExp || 0) > 0);
 
   const lines: string[] = [];
-  lines.push(`*Contribution Arc — ${organizationName} 学習サマリー*`);
-  lines.push(`_${formatDate(generatedAt)} 時点_`);
+  lines.push(
+    `*Contribution Arc — ${translate(language, "{org} 学習サマリー", { org: organizationName })}*`,
+  );
+  lines.push(`_${translate(language, "{date} 時点", { date: formatDate(generatedAt) })}_`);
   lines.push("");
-  lines.push(`• チーム総学習時間: *${totalHours}h*`);
-  lines.push(`• 稼働中メンバー: *${activeCount}/${totalMembers}* 名 (${activeRate}%)`);
-  lines.push(`• 平均/人: *${avgHours}h*`);
+  lines.push(translate(language, "• チーム総学習時間: *{hours}h*", { hours: totalHours }));
+  lines.push(
+    translate(language, "• 稼働中メンバー: *{active}/{total}* 名 ({rate}%)", {
+      active: activeCount,
+      total: totalMembers,
+      rate: activeRate,
+    }),
+  );
+  lines.push(translate(language, "• 平均/人: *{hours}h*", { hours: avgHours }));
 
   if (top.length > 0) {
     lines.push("");
-    lines.push("*メンバー別 学習時間 (累計上位)*");
+    lines.push(`*${translate(language, "メンバー別 学習時間 (累計上位)")}*`);
     for (const member of top) {
       const hours = Math.round((member.effortExp || 0) / 60);
       lines.push(`• ${member.displayName} — ${hours}h`);
