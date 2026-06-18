@@ -23000,7 +23000,7 @@
 .learning-grid {
   display: grid;
   /* 横 4 列くらいで作業項目を一覧。本棚のサムネタイルとして多く見せる。 */
-  grid-template-columns: repeat(auto-fill, minmax(82px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
   gap: 10px;
 }
 
@@ -23537,11 +23537,16 @@
    詳細パネルで行う（タイルではかさばる UI を隠す）。
    detail 等で共有されるクラスもあるため、必ず .learning-grid 配下に限定。 */
 .learning-grid .learning-card-trigger {
-  padding: 8px 8px 9px;
-  gap: 6px;
+  /* upstream は trigger を 56px|1fr の 2 カラム grid にしているが、
+     狭いタイルでは本文カラムが潰れて 1 文字ずつ折り返す。compact では
+     grid をやめて縦スタックにし、写真→名前→累計を順に積む。 */
+  display: flex;
+  flex-direction: column;
   align-items: center;
+  gap: 6px;
+  padding: 8px 8px 9px;
 }
-/* head を縦積み: 写真を大きく上に、名前を下に中央寄せ */
+/* head（写真を内包）を縦積み・中央寄せに。 */
 .learning-grid .learning-card-head {
   flex-direction: column;
   align-items: center;
@@ -23550,11 +23555,14 @@
 }
 .learning-grid .learning-card-photo {
   width: 100%;
+  max-width: 72px;
   height: auto;
   aspect-ratio: 1 / 1;
   border-radius: 11px;
 }
 .learning-grid .learning-card-head strong {
+  width: 100%;
+  flex: 0 0 auto;
   font-size: 12px;
   line-height: 1.25;
   text-align: center;
@@ -23563,9 +23571,11 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   max-height: 2.5em;
+  overflow: hidden;
 }
 /* 累計だけ中央に小さく残す。最終記録 / アーカイブ等の副次メタは隠す */
 .learning-grid .learning-card-meta {
+  width: 100%;
   justify-content: center;
   gap: 0;
   font-size: 10px;
