@@ -1619,4 +1619,9 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "ユーザー検索に失敗しました。": "User search failed.",
   "ユーザー検索の権限が有効になっていません。少し時間を置いて再度お試しください。":
     "User search permission isn't active yet. Please try again in a moment.",
+
+  // === Phase 4l: Settings → Your data panel ===
+  "あなたの学習ログ・投稿・組織メンバーシップなどを JSON で一括ダウンロードできます。アカウント削除は元に戻せません。":
+    "Download your learning logs, posts, and organization memberships as a single JSON file. Account deletion cannot be undone.",
+  "エクスポート中…": "Exporting…",
 };
