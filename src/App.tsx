@@ -1600,14 +1600,14 @@ function getFriendGithubUrl(userId: string) {
   return userId && !userId.startsWith("npc-") ? `https://github.com/${userId}` : "";
 }
 
-function profileToFriend(profile: UserProfile): FriendPreview {
+function profileToFriend(profile: UserProfile, t: (k: string) => string): FriendPreview {
   return {
     uid: profile.uid,
     userId: profile.userId,
     name: profile.displayName,
     avatar: profile.photoURL,
     status: "offline",
-    activity: profile.determination || "オフライン",
+    activity: profile.determination || t("オフライン"),
     githubUrl: getFriendGithubUrl(profile.userId),
     githubUsername: profile.githubUsername || "",
   };
@@ -6200,7 +6200,7 @@ function App() {
         cloudRequests
           .filter((request) => request.status === "accepted")
           .forEach((request) => {
-            const nextFriend = profileToFriend(request.profile);
+            const nextFriend = profileToFriend(request.profile, t);
             if (!nextFriends.some((friend) => friend.uid === nextFriend.uid)) {
               nextFriends.unshift(nextFriend);
             }
@@ -8130,8 +8130,8 @@ function App() {
         {
           id: notificationId,
           type: "dailyLog",
-          title: `${report.userName || "Developer"}の日報`,
-          body: (report.reflection || report.plan || "日報が更新されました。").slice(0, 120),
+          title: t("{name}の日報", { name: report.userName || "Developer" }),
+          body: (report.reflection || report.plan || t("日報が更新されました。")).slice(0, 120),
           createdAt,
           read: false,
           sourceUserId,
@@ -8165,7 +8165,7 @@ function App() {
         {
           id: notificationId,
           type: "post",
-          title: `${post.username}の投稿`,
+          title: t("{name}の投稿", { name: post.username }),
           body: post.text.slice(0, 120),
           createdAt: post.createdAt,
           read: false,
@@ -8199,11 +8199,11 @@ function App() {
             if (prevLikers.has(likerUid)) return; // 前回も like 済み → diff なし
             const likerProfile = workspaceProfiles[likerUid];
             const likerName = likerProfile?.displayName || "Developer";
-            const preview = post.text.slice(0, 40) || "あなたの投稿";
+            const preview = post.text.slice(0, 40) || t("あなたの投稿");
             upsertAppNotification({
               id: `like:${post.id}:${likerUid}`,
               type: "like",
-              title: `${likerName} がいいねしました`,
+              title: t("{name} がいいねしました", { name: likerName }),
               body: preview,
               createdAt: new Date().toISOString(),
               read: false,
@@ -8241,13 +8241,13 @@ function App() {
         const parentPost = postLookup.get(reply.postId);
         const parentPreview = parentPost?.text
           ? parentPost.text.slice(0, 30) + (parentPost.text.length > 30 ? "…" : "")
-          : "あなたの投稿";
+          : t("あなたの投稿");
         pushAppNotification(
           {
             id: notificationId,
             type: "reply",
-            title: `${reply.username || "Developer"}が返信`,
-            body: `${reply.text.slice(0, 120)}\n― ${parentPreview}`,
+            title: t("{name}が返信", { name: reply.username || "Developer" }),
+            body: t("{text}\n― {preview}", { text: reply.text.slice(0, 120), preview: parentPreview }),
             createdAt: reply.createdAt,
             read: false,
             sourceUserId: reply.userId,
@@ -8285,8 +8285,8 @@ function App() {
           {
             id: notificationId,
             type: "friendRequest",
-            title: "フレンド申請",
-            body: `${request.profile.displayName}からフレンド申請が届きました`,
+            title: t("フレンド申請"),
+            body: t("{name}からフレンド申請が届きました", { name: request.profile.displayName }),
             createdAt: request.createdAt,
             read: false,
             sourceUserId: request.profile.uid,
@@ -8314,8 +8314,8 @@ function App() {
           {
             id: notificationId,
             type: "workspaceInvite",
-            title: "作業部屋への招待",
-            body: `${invite.fromName}が「${invite.roomName}」に招待しました`,
+            title: t("作業部屋への招待"),
+            body: t("{name}が「{room}」に招待しました", { name: invite.fromName, room: invite.roomName }),
             createdAt: invite.createdAt,
             read: false,
             sourceUserId: invite.fromUid,
@@ -8837,7 +8837,7 @@ function App() {
 
     const text = (overrideText ?? postDraft).trim();
     if (!text) {
-      setPostError("ログ内容を入力してください。");
+      setPostError(t("ログ内容を入力してください。"));
       return;
     }
 
@@ -9010,7 +9010,7 @@ function App() {
 
     void togglePostLikeInCloud(db, post.id, currentUser.uid, isLiked).catch((error) => {
       console.info("Post like sync skipped.", error);
-      setPostError("リアクションを保存できませんでした。");
+      setPostError(t("リアクションを保存できませんでした。"));
       // 楽観的更新を rollback。元の post を該当 id で復元する。
       // (onSnapshot でいずれサーバー値が同期されるが、瞬間的な不整合と
       //  カウンタの逆ズレを防ぐ)
@@ -9069,7 +9069,7 @@ function App() {
       await savePostReplyToCloud(db, reply);
     } catch (error) {
       console.info("Post reply save skipped.", error);
-      setReplyError("返信を保存できませんでした。");
+      setReplyError(t("返信を保存できませんでした。"));
       setPostReplies((items) => items.filter((item) => item.id !== reply.id));
       setReplyDrafts((drafts) => ({ ...drafts, [post.id]: text }));
     }
@@ -9090,7 +9090,7 @@ function App() {
     void deletePersistentItem("posts", post.id);
     void deleteDoc(doc(db, "posts", post.id)).catch((error) => {
       console.info("Post delete skipped.", error);
-      setPostError("ログを削除できませんでした。");
+      setPostError(t("ログを削除できませんでした。"));
     });
   };
 
@@ -9105,7 +9105,7 @@ function App() {
     if (!currentUser || isSendingFeedback) return;
     const text = feedbackDraft.trim().slice(0, 2000);
     if (!text) {
-      setFeedbackError("内容を入力してください。");
+      setFeedbackError(t("内容を入力してください。"));
       return;
     }
     setIsSendingFeedback(true);
@@ -9131,7 +9131,7 @@ function App() {
       showToast(t("ご要望を送信しました。ありがとうございます。"), { kind: "success" });
     } catch (error) {
       console.info("Feedback submit failed.", error);
-      setFeedbackError("送信に失敗しました。時間をおいて再度お試しください。");
+      setFeedbackError(t("送信に失敗しました。時間をおいて再度お試しください。"));
     } finally {
       setIsSendingFeedback(false);
     }
@@ -9217,7 +9217,7 @@ function App() {
 
     const planText = dailyPromptDraft.trim();
     if (!planText) {
-      setDailyPromptError("今日やることを入力してください。");
+      setDailyPromptError(t("今日やることを入力してください。"));
       return;
     }
 
@@ -9289,7 +9289,7 @@ function App() {
     if (!currentUser || isSavingOnboardingFirstPlan) return;
     const planText = onboardingFirstPlanDraft.trim();
     if (!planText) {
-      setOnboardingFirstPlanError("今日やることを 1 行で書いてみよう。");
+      setOnboardingFirstPlanError(t("今日やることを 1 行で書いてみよう。"));
       return;
     }
 
@@ -10199,7 +10199,7 @@ function App() {
 
       setSearchResults(results);
       if (results.length === 0) {
-        setSearchError("該当するユーザーが見つかりません。");
+        setSearchError(t("該当するユーザーが見つかりません。"));
       }
     } catch (error) {
       setSearchError(
@@ -10416,7 +10416,7 @@ function App() {
       return;
     }
 
-    const nextFriend = profileToFriend(request.profile);
+    const nextFriend = profileToFriend(request.profile, t);
     const currentProfile = getCurrentProfile(
       currentUser,
       playerName,
@@ -10914,7 +10914,7 @@ function App() {
     if (!currentUser || !selectedRoom) return;
     const text = floorNoteDraft.trim();
     if (!text) {
-      setFloorNoteError("メッセージを入力してください。");
+      setFloorNoteError(t("メッセージを入力してください。"));
       return;
     }
     setIsSavingFloorNote(true);
@@ -10941,7 +10941,7 @@ function App() {
       setFloorNoteDraft("");
     } catch (error) {
       console.info("Floor note save failed.", error);
-      setFloorNoteError("置き手紙を残せませんでした。");
+      setFloorNoteError(t("置き手紙を残せませんでした。"));
     } finally {
       setIsSavingFloorNote(false);
     }
@@ -11079,10 +11079,16 @@ function App() {
           {
             id: `workspace-auto-leave-${session.id}`,
             type: "dailyLog",
-            title: "作業部屋を自動退室しました",
+            title: t("作業部屋を自動退室しました"),
             body: isGhostCleanup
-              ? `在室時間が上限を超えていたため自動退室しました。今回は${formatStayTime(session.durationMinutes, language)}（+${session.earnedExp} EXP）として記録しています。`
-              : `無操作が続いたため、最終操作までの${formatStayTime(session.durationMinutes, language)}（+${session.earnedExp} EXP）を記録しました。`,
+              ? t("在室時間が上限を超えていたため自動退室しました。今回は{time}（+{exp} EXP）として記録しています。", {
+                  time: formatStayTime(session.durationMinutes, language),
+                  exp: session.earnedExp,
+                })
+              : t("無操作が続いたため、最終操作までの{time}（+{exp} EXP）を記録しました。", {
+                  time: formatStayTime(session.durationMinutes, language),
+                  exp: session.earnedExp,
+                }),
             createdAt: session.leftAt,
             read: false,
             sourceUserId: currentUser.uid,
@@ -11101,10 +11107,15 @@ function App() {
     // 自動で流す。ゴースト救済（実測ではない概算）の場合は本人の意思では
     // ないので流さない。アイドル自動退室は流す — そこで作業していたのは事実。
     if (!isGhostCleanup && session.durationMinutes >= 5) {
-      const taskLabel = session.task ? `「${session.task}」を` : "";
+      const taskLabel = session.task ? t("「{task}」を", { task: session.task }) : "";
       void enqueueAutoPost({
         kind: "auto-workspace",
-        text: `${session.roomName} で${taskLabel}${formatStayTime(session.durationMinutes, language)}積み上げました ✦ +${session.earnedExp} EXP`,
+        text: t("{room} で{taskLabel}{time}積み上げました ✦ +{exp} EXP", {
+          room: session.roomName,
+          taskLabel,
+          time: formatStayTime(session.durationMinutes, language),
+          exp: session.earnedExp,
+        }),
         studyMinutesValue: session.durationMinutes,
         roomIdValue: session.roomId,
         roomNameValue: session.roomName,
@@ -11128,8 +11139,8 @@ function App() {
   const startWorkspaceSession = (roomId: string, task: string, color: string) => {
     const nextTask = task.trim();
     if (!nextTask) {
-      setWorkspaceStartError("作業内容を入力してください。");
-      setWorkspaceBubble("作業内容を入力してください。");
+      setWorkspaceStartError(t("作業内容を入力してください。"));
+      setWorkspaceBubble(t("作業内容を入力してください。"));
       return;
     }
 
@@ -11139,8 +11150,8 @@ function App() {
     const targetRoom = allWorkspaceRooms.find((room) => room.id === roomId);
 
     if (!targetRoom) {
-      setWorkspaceStartError("Roomデータを読み込めませんでした。もう一度Roomを選択してください。");
-      setWorkspaceBubble("Roomデータを読み込めませんでした。");
+      setWorkspaceStartError(t("Roomデータを読み込めませんでした。もう一度Roomを選択してください。"));
+      setWorkspaceBubble(t("Roomデータを読み込めませんでした。"));
       return;
     }
 
@@ -11234,8 +11245,8 @@ function App() {
     if (!nextTask) {
       setPendingJoinRoomId(roomId);
       setWorkspaceDraftTask("");
-      setWorkspaceStartError("作業内容を入力してください。");
-      setWorkspaceBubble("作業内容を入力してください。");
+      setWorkspaceStartError(t("作業内容を入力してください。"));
+      setWorkspaceBubble(t("作業内容を入力してください。"));
       return;
     }
 
@@ -11251,11 +11262,11 @@ function App() {
       currentOrganization.slackEvents?.roomJoins
     ) {
       const room = allWorkspaceRooms.find((item) => item.id === roomId);
-      const roomName = room?.name || "作業部屋";
+      const roomName = room?.name || t("作業部屋");
       void postToSlackWebhook(
         currentOrganization.slackWebhookUrl,
         buildRoomJoinBlocks(
-          { name: playerName, meta: `Lv ${levelState.level} · ${studyStreak}日連続` },
+          { name: playerName, meta: t("Lv {lv} · {days}日連続", { lv: levelState.level, days: studyStreak }) },
           roomName,
           nextTask,
           language,
@@ -11273,7 +11284,7 @@ function App() {
 
     const nextTask = workspaceDraftTask.trim();
     if (!nextTask) {
-      setWorkspaceStartError("作業内容を入力してください。");
+      setWorkspaceStartError(t("作業内容を入力してください。"));
       return;
     }
 
@@ -11302,7 +11313,7 @@ function App() {
       void postToSlackWebhook(
         currentOrganization.slackWebhookUrl,
         buildRoomLeaveBlocks(
-          { name: playerName, meta: `Lv ${levelState.level} · ${studyStreak}日連続` },
+          { name: playerName, meta: t("Lv {lv} · {days}日連続", { lv: levelState.level, days: studyStreak }) },
           selectedRoom.name,
           formatStayTime(stayMinutes, language),
           language,
@@ -11338,17 +11349,17 @@ function App() {
   const handleCreateRecruitmentSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!currentUser || !selectedRoom) {
-      setRecruitmentError("入室する作業部屋を選択してください。");
+      setRecruitmentError(t("入室する作業部屋を選択してください。"));
       return;
     }
     const task = workspaceTask.trim();
     if (!task) {
-      setRecruitmentError("作業内容を入力してから募集してください。");
+      setRecruitmentError(t("作業内容を入力してから募集してください。"));
       return;
     }
     const message = recruitmentDraft.message.trim();
     if (message.length > 140) {
-      setRecruitmentError("メッセージは140字までです。");
+      setRecruitmentError(t("メッセージは140字までです。"));
       return;
     }
 
@@ -11356,21 +11367,21 @@ function App() {
     let startAtDate = now;
     if (recruitmentDraft.mode === "scheduled") {
       if (!recruitmentDraft.scheduledAt) {
-        setRecruitmentError("開始時刻を入力してください。");
+        setRecruitmentError(t("開始時刻を入力してください。"));
         return;
       }
       const scheduled = new Date(recruitmentDraft.scheduledAt);
       if (Number.isNaN(scheduled.getTime())) {
-        setRecruitmentError("開始時刻が正しくありません。");
+        setRecruitmentError(t("開始時刻が正しくありません。"));
         return;
       }
       if (scheduled.getTime() <= now.getTime()) {
-        setRecruitmentError("開始時刻は今より後を指定してください。");
+        setRecruitmentError(t("開始時刻は今より後を指定してください。"));
         return;
       }
       const maxFuture = new Date(now.getTime() + 24 * 60 * 60 * 1000);
       if (scheduled.getTime() > maxFuture.getTime()) {
-        setRecruitmentError("予約は24時間以内までです。");
+        setRecruitmentError(t("予約は24時間以内までです。"));
         return;
       }
       startAtDate = scheduled;
@@ -11415,7 +11426,7 @@ function App() {
         void postToSlackWebhook(
           currentOrganization.slackWebhookUrl,
           buildRecruitmentBlocks(
-            { name: playerName, meta: `Lv ${levelState.level} · ${studyStreak}日連続` },
+            { name: playerName, meta: t("Lv {lv} · {days}日連続", { lv: levelState.level, days: studyStreak }) },
             selectedRoom.name,
             task,
             duration,
@@ -11427,7 +11438,7 @@ function App() {
       }
     } catch (error) {
       console.warn("Failed to create recruitment", error);
-      setRecruitmentError("募集の投稿に失敗しました。時間をおいて再度お試しください。");
+      setRecruitmentError(t("募集の投稿に失敗しました。時間をおいて再度お試しください。"));
     }
   };
 
@@ -11602,7 +11613,10 @@ function App() {
       const code = (error as { code?: string })?.code;
       const message = (error as { message?: string })?.message;
       setOrgError(
-        `組織を作成できませんでした。[${code ?? "unknown"}] ${message ?? ""}`.trim(),
+        t("組織を作成できませんでした。[{code}] {message}", {
+          code: code ?? "unknown",
+          message: message ?? "",
+        }).trim(),
       );
     } finally {
       setIsOrgWorking(false);
@@ -11768,10 +11782,10 @@ function App() {
       const code = (error as Error)?.message || "";
       const message =
         code === "ORG_NOT_FOUND"
-          ? "組織が見つかりませんでした。"
+          ? t("組織が見つかりませんでした。")
           : code === "DOMAIN_NOT_ALLOWED"
-            ? "このドメインからの自動参加は許可されていません。"
-            : "参加に失敗しました。再度お試しください。";
+            ? t("このドメインからの自動参加は許可されていません。")
+            : t("参加に失敗しました。再度お試しください。");
       setOrgError(message);
     } finally {
       setIsOrgWorking(false);
@@ -11803,11 +11817,11 @@ function App() {
         setDomainDraft((refreshed.autoJoinDomains || []).join("\n"));
       }
       setDomainSaveState("saved");
-      setDomainSaveMessage(list.length > 0 ? `${list.length}件のドメインを保存しました。` : "ドメイン自動参加を解除しました。");
+      setDomainSaveMessage(list.length > 0 ? t("{n}件のドメインを保存しました。", { n: list.length }) : t("ドメイン自動参加を解除しました。"));
     } catch (error) {
       console.warn("Save domain settings failed", error);
       setDomainSaveState("error");
-      setDomainSaveMessage("保存に失敗しました。");
+      setDomainSaveMessage(t("保存に失敗しました。"));
     }
   };
 
@@ -11918,7 +11932,7 @@ function App() {
   const handleDeleteAccount = async () => {
     if (!currentUser || isDeletingAccount) return;
     if (deleteConfirmText.trim() !== (userId || currentUser.uid)) {
-      setDeleteError("確認のため、上のユーザーIDをそのまま入力してください。");
+      setDeleteError(t("確認のため、上のユーザーIDをそのまま入力してください。"));
       return;
     }
     setIsDeletingAccount(true);
@@ -11967,7 +11981,7 @@ function App() {
       showToast(t("アカウントを削除しました"), { kind: "success" });
     } catch (error) {
       console.warn("Delete account failed", error);
-      setDeleteError("削除に失敗しました。ネットワークまたは権限を確認のうえ、再度お試しください。");
+      setDeleteError(t("削除に失敗しました。ネットワークまたは権限を確認のうえ、再度お試しください。"));
     } finally {
       setIsDeletingAccount(false);
     }
@@ -16770,25 +16784,25 @@ function App() {
                             <button
                               type="button"
                               className="friends-modal-block"
-                              aria-label={`${friend.name} をブロック`}
-                              title="ブロックする"
+                              aria-label={t("{name} をブロック", { name: friend.name })}
+                              title={t("ブロックする")}
                               onClick={() => {
                                 const ok = window.confirm(
-                                  `${friend.name} をブロックしますか？\nフレンド関係も同時に解除され、相手からの通知や申請が届かなくなります。`,
+                                  t("{name} をブロックしますか？\nフレンド関係も同時に解除され、相手からの通知や申請が届かなくなります。", { name: friend.name }),
                                 );
                                 if (ok) void handleBlockUser({ uid: friend.uid, name: friend.name });
                               }}
                             >
-                              ブロック
+                              {t("ブロック")}
                             </button>
                             <button
                               type="button"
                               className="friends-modal-remove"
-                              aria-label={`${friend.name} をフレンドから外す`}
-                              title="フレンドから外す"
+                              aria-label={t("{name} をフレンドから外す", { name: friend.name })}
+                              title={t("フレンドから外す")}
                               onClick={() => {
                                 const ok = window.confirm(
-                                  `${friend.name} をフレンドから外しますか？\nお互いの友達リストから消えます。`,
+                                  t("{name} をフレンドから外しますか？\nお互いの友達リストから消えます。", { name: friend.name }),
                                 );
                                 if (ok) void handleFriendRemove(friend);
                               }}
@@ -16802,11 +16816,11 @@ function App() {
                   })
                 ) : enrichedFriends.length > 0 ? (
                   <p className="friends-modal-empty">
-                    検索に一致するフレンドはいません。
+                    {t("検索に一致するフレンドはいません。")}
                   </p>
                 ) : (
                   <p className="friends-modal-empty">
-                    まだフレンドがいません。プロフィールから招待しましょう。
+                    {t("まだフレンドがいません。プロフィールから招待しましょう。")}
                   </p>
                 )}
               </div>
@@ -16815,8 +16829,8 @@ function App() {
               {recommendedUids.length > 0 ? (
                 <div className="friends-modal-recommend">
                   <p className="friends-modal-recommend-title">
-                    あなたへのおすすめ
-                    <small>共通のフレンドから推薦</small>
+                    {t("あなたへのおすすめ")}
+                    <small>{t("共通のフレンドから推薦")}</small>
                   </p>
                   <ul>
                     {recommendedUids.map(({ uid, mutualCount, profile }) => (
@@ -16840,7 +16854,7 @@ function App() {
                             <strong>{profile.displayName}</strong>
                             {profile.userId ? <small>@{profile.userId}</small> : null}
                             <small className="friends-modal-recommend-mutual">
-                              共通フレンド {mutualCount}人
+                              {t("共通フレンド {count}人", { count: mutualCount })}
                             </small>
                           </span>
                         </button>
@@ -16854,8 +16868,8 @@ function App() {
               {blockedFriendUids.length > 0 ? (
                 <div className="friends-modal-blocked">
                   <p className="friends-modal-blocked-title">
-                    ブロック中
-                    <small>{blockedFriendUids.length}人</small>
+                    {t("ブロック中")}
+                    <small>{t("{count}人", { count: blockedFriendUids.length })}</small>
                   </p>
                   <ul>
                     {blockedFriendUids.map((uid) => {
@@ -16869,7 +16883,7 @@ function App() {
                             className="friends-modal-unblock"
                             onClick={() => handleUnblockUser(uid)}
                           >
-                            解除
+                            {t("解除")}
                           </button>
                         </li>
                       );
@@ -16881,14 +16895,14 @@ function App() {
               {/* 一括招待フッターバー */}
               {friendsBulkSelectMode ? (
                 <div className="friends-modal-bulk-bar" role="status">
-                  <span>{friendsBulkSelectedUids.size} 人を選択中</span>
+                  <span>{t("{count} 人を選択中", { count: friendsBulkSelectedUids.size })}</span>
                   <button
                     type="button"
                     className="friends-modal-bulk-clear"
                     onClick={() => setFriendsBulkSelectedUids(new Set())}
                     disabled={friendsBulkSelectedUids.size === 0}
                   >
-                    クリア
+                    {t("クリア")}
                   </button>
                   <button
                     type="button"
@@ -16901,8 +16915,8 @@ function App() {
                     disabled={friendsBulkSelectedUids.size === 0 || !selectedRoom}
                   >
                     {friendsBulkSelectedUids.size > 0
-                      ? `${friendsBulkSelectedUids.size} 人を招待`
-                      : "招待先を選択"}
+                      ? t("{count} 人を招待", { count: friendsBulkSelectedUids.size })
+                      : t("招待先を選択")}
                   </button>
                 </div>
               ) : null}
@@ -16922,14 +16936,14 @@ function App() {
           >
             <div>
               <p className="card-kicker">Workspace Recruitment</p>
-              <h2 id="recruitment-modal-title">作業部屋の募集を投稿</h2>
+              <h2 id="recruitment-modal-title">{t("作業部屋の募集を投稿")}</h2>
               <p className="recruitment-modal-help">
                 {selectedRoom ? (
                   <>
-                    部屋: <strong>{selectedRoom.name}</strong> / 作業: <strong>{workspaceTask.trim() || "(作業内容を入力してください)"}</strong>
+                    {t("部屋:")} <strong>{selectedRoom.name}</strong> / {t("作業:")} <strong>{workspaceTask.trim() || t("(作業内容を入力してください)")}</strong>
                   </>
                 ) : (
-                  "作業部屋を選択してください。"
+                  t("作業部屋を選択してください。")
                 )}
               </p>
             </div>
@@ -16943,7 +16957,7 @@ function App() {
                   className={recruitmentDraft.mode === "now" ? "is-active" : ""}
                   onClick={() => setRecruitmentDraft((prev) => ({ ...prev, mode: "now" }))}
                 >
-                  今から
+                  {t("今から")}
                 </button>
                 <button
                   type="button"
@@ -16952,13 +16966,13 @@ function App() {
                   className={recruitmentDraft.mode === "scheduled" ? "is-active" : ""}
                   onClick={() => setRecruitmentDraft((prev) => ({ ...prev, mode: "scheduled" }))}
                 >
-                  予約
+                  {t("予約")}
                 </button>
               </div>
 
               {recruitmentDraft.mode === "scheduled" ? (
                 <label className="recruitment-field">
-                  <span>開始時刻</span>
+                  <span>{t("開始時刻")}</span>
                   <input
                     type="datetime-local"
                     value={recruitmentDraft.scheduledAt}
@@ -16970,7 +16984,7 @@ function App() {
               ) : null}
 
               <div className="recruitment-field">
-                <span>想定時間</span>
+                <span>{t("想定時間")}</span>
                 <div className="recruitment-duration-options" role="radiogroup">
                   {[30, 60, 120, 180].map((minutes) => (
                     <button
@@ -16988,13 +17002,13 @@ function App() {
               </div>
 
               <label className="recruitment-field">
-                <span>メッセージ (任意, 140字)</span>
+                <span>{t("メッセージ (任意, 140字)")}</span>
                 <textarea
                   value={recruitmentDraft.message}
                   onChange={(event) =>
                     setRecruitmentDraft((prev) => ({ ...prev, message: event.target.value }))
                   }
-                  placeholder="一緒にやりませんか"
+                  placeholder={t("一緒にやりませんか")}
                   maxLength={140}
                   rows={3}
                 />
@@ -17005,10 +17019,10 @@ function App() {
 
               <div className="recruitment-modal-actions">
                 <button type="button" className="learning-cancel-button" onClick={handleCloseRecruitmentModal}>
-                  キャンセル
+                  {t("キャンセル")}
                 </button>
                 <button type="submit" className="learning-save-button">
-                  投稿する
+                  {t("投稿する")}
                 </button>
               </div>
             </form>
@@ -17033,21 +17047,17 @@ function App() {
           >
             <div>
               <p className="card-kicker">Danger zone</p>
-              <h2 id="delete-account-title">アカウントを削除しますか？</h2>
+              <h2 id="delete-account-title">{t("アカウントを削除しますか？")}</h2>
               <p className="delete-account-copy">
-                以下のデータが全て削除されます：プロフィール、投稿、学習ログ、
-                日報、Learning Item、作業セッション、募集履歴、GitHub 連携、
-                フレンドリクエスト。組織からは退出し、組織内のあなたのメンバーシップ
-                記録は監査ログに「退出」として残ります（個人特定可能なログ本体は
-                削除されます）。
+                {t("以下のデータが全て削除されます：プロフィール、投稿、学習ログ、日報、Learning Item、作業セッション、募集履歴、GitHub 連携、フレンドリクエスト。組織からは退出し、組織内のあなたのメンバーシップ記録は監査ログに「退出」として残ります（個人特定可能なログ本体は削除されます）。")}
                 <br />
-                <strong>この操作は取り消せません。</strong>
+                <strong>{t("この操作は取り消せません。")}</strong>
               </p>
             </div>
 
             <div className="delete-account-confirm">
               <label>
-                <span>続行するには、あなたのユーザーID「{userId || currentUser?.uid}」を入力してください</span>
+                <span>{t("続行するには、あなたのユーザーID「{id}」を入力してください", { id: userId || currentUser?.uid })}</span>
                 <input
                   value={deleteConfirmText}
                   onChange={(event) => {
@@ -17069,7 +17079,7 @@ function App() {
                 onClick={() => setIsDeleteConfirmOpen(false)}
                 disabled={isDeletingAccount}
               >
-                やめる
+                {t("やめる")}
               </button>
               <button
                 type="button"
@@ -17080,7 +17090,7 @@ function App() {
                   deleteConfirmText.trim() !== (userId || currentUser?.uid || "")
                 }
               >
-                {isDeletingAccount ? "削除中…" : "本当に削除する"}
+                {isDeletingAccount ? t("削除中…") : t("本当に削除する")}
               </button>
             </div>
           </section>
@@ -17140,27 +17150,27 @@ function App() {
               return (
                 <div className="org-admin-metrics" role="group" aria-label={t("集計")}>
                   <div className="org-admin-metric">
-                    <span>メンバー</span>
-                    <strong>{totalMembers.toLocaleString()}人</strong>
+                    <span>{t("メンバー")}</span>
+                    <strong>{t("{count}人", { count: totalMembers.toLocaleString() })}</strong>
                   </div>
                   <div className="org-admin-metric">
-                    <span>合計 Effort EXP</span>
+                    <span>{t("合計 Effort EXP")}</span>
                     <strong>{totalEffort.toLocaleString()}</strong>
                   </div>
                   <div className="org-admin-metric">
-                    <span>合計 Output EXP</span>
+                    <span>{t("合計 Output EXP")}</span>
                     <strong>{totalOutput.toLocaleString()}</strong>
                   </div>
                   <div className="org-admin-metric">
-                    <span>最長ストリーク</span>
-                    <strong>{maxStreak.toLocaleString()}日</strong>
+                    <span>{t("最長ストリーク")}</span>
+                    <strong>{t("{count}日", { count: maxStreak.toLocaleString() })}</strong>
                   </div>
                   <div className="org-admin-metric">
-                    <span>合計 Contributions</span>
+                    <span>{t("合計 Contributions")}</span>
                     <strong>{totalContribution.toLocaleString()}</strong>
                   </div>
                   <div className="org-admin-metric">
-                    <span>最新アクティブ</span>
+                    <span>{t("最新アクティブ")}</span>
                     <strong>{lastActiveLabel}</strong>
                   </div>
                 </div>
@@ -17175,7 +17185,7 @@ function App() {
                 className={orgAdminTab === "members" ? "is-active" : ""}
                 onClick={() => setOrgAdminTab("members")}
               >
-                メンバー
+                {t("メンバー")}
               </button>
               <button
                 type="button"
@@ -17189,7 +17199,7 @@ function App() {
                   }
                 }}
               >
-                監査ログ
+                {t("監査ログ")}
               </button>
             </div>
 
@@ -17202,7 +17212,7 @@ function App() {
                 onClick={handleRefreshOrgMembers}
                 disabled={isLoadingOrgMembers}
               >
-                {isLoadingOrgMembers ? "更新中…" : "再読み込み"}
+                {isLoadingOrgMembers ? t("更新中…") : t("再読み込み")}
               </button>
               <button
                 type="button"
@@ -17210,7 +17220,7 @@ function App() {
                 onClick={handleExportOrgMembersCsv}
                 disabled={orgMembers.length === 0 || isLoadingOrgMembers}
               >
-                CSV をダウンロード
+                {t("CSV をダウンロード")}
               </button>
             </div>
 
@@ -17220,14 +17230,14 @@ function App() {
               <table className="org-admin-table">
                 <thead>
                   <tr>
-                    <th>名前</th>
-                    <th>役割</th>
-                    <th>チーム</th>
+                    <th>{t("名前")}</th>
+                    <th>{t("役割")}</th>
+                    <th>{t("チーム")}</th>
                     <th>Lv</th>
                     <th>Effort</th>
                     <th>Output</th>
-                    <th>ストリーク</th>
-                    <th>最終アクティブ</th>
+                    <th>{t("ストリーク")}</th>
+                    <th>{t("最終アクティブ")}</th>
                     {currentOrganization?.ownerUid === currentUser?.uid ? <th aria-label={t("操作")} /> : null}
                   </tr>
                 </thead>
@@ -17235,7 +17245,7 @@ function App() {
                   {orgMembers.length === 0 && !isLoadingOrgMembers ? (
                     <tr>
                       <td colSpan={8} className="org-admin-empty">
-                        まだメンバーがいません。招待リンクで仲間を招待しましょう。
+                        {t("まだメンバーがいません。招待リンクで仲間を招待しましょう。")}
                       </td>
                     </tr>
                   ) : null}
@@ -17274,10 +17284,10 @@ function App() {
                           <td>
                             <span className={`org-admin-role role-${member.organizationRole}`}>
                               {member.organizationRole === "owner"
-                                ? "オーナー"
+                                ? t("オーナー")
                                 : member.organizationRole === "admin"
-                                  ? "管理者"
-                                  : "メンバー"}
+                                  ? t("管理者")
+                                  : t("メンバー")}
                             </span>
                           </td>
                           <td className="org-admin-team-cell">
@@ -17286,9 +17296,9 @@ function App() {
                                 type="text"
                                 className="org-admin-team-input"
                                 defaultValue={member.teamName || ""}
-                                placeholder="未割り当て"
+                                placeholder={t("未割り当て")}
                                 maxLength={40}
-                                aria-label={`${member.displayName} のチーム`}
+                                aria-label={t("{name} のチーム", { name: member.displayName })}
                                 onBlur={(event) => {
                                   void handleSetMemberTeamName(member, event.target.value);
                                 }}
@@ -17318,17 +17328,17 @@ function App() {
                                     type="button"
                                     className="org-admin-transfer"
                                     onClick={() => handleTransferOwnership(member)}
-                                    title="このメンバーにオーナーを譲渡"
+                                    title={t("このメンバーにオーナーを譲渡")}
                                   >
-                                    オーナー譲渡
+                                    {t("オーナー譲渡")}
                                   </button>
                                   <button
                                     type="button"
                                     className="org-admin-remove"
                                     onClick={() => handleRemoveMember(member)}
-                                    title="このメンバーを組織から除名"
+                                    title={t("このメンバーを組織から除名")}
                                   >
-                                    除名
+                                    {t("除名")}
                                   </button>
                                 </div>
                               ) : null}
@@ -17350,24 +17360,24 @@ function App() {
                     onClick={handleLoadAuditLogs}
                     disabled={isLoadingAuditLogs}
                   >
-                    {isLoadingAuditLogs ? "更新中…" : "再読み込み"}
+                    {isLoadingAuditLogs ? t("更新中…") : t("再読み込み")}
                   </button>
                 </div>
                 <div className="org-admin-table-scroll">
                   <table className="org-admin-table">
                     <thead>
                       <tr>
-                        <th>日時</th>
-                        <th>イベント</th>
-                        <th>対象</th>
-                        <th>実行者</th>
+                        <th>{t("日時")}</th>
+                        <th>{t("イベント")}</th>
+                        <th>{t("対象")}</th>
+                        <th>{t("実行者")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {orgAuditLogs.length === 0 && !isLoadingAuditLogs ? (
                         <tr>
                           <td colSpan={4} className="org-admin-empty">
-                            記録されたイベントはまだありません。
+                            {t("記録されたイベントはまだありません。")}
                           </td>
                         </tr>
                       ) : null}
@@ -17383,15 +17393,15 @@ function App() {
                           : "—";
                         const eventLabel =
                           log.type === "organization.created"
-                            ? "組織を作成"
+                            ? t("組織を作成")
                             : log.type === "organization.member_joined"
-                              ? "メンバーが参加"
+                              ? t("メンバーが参加")
                               : log.type === "organization.member_left"
-                                ? "メンバーが退出"
+                                ? t("メンバーが退出")
                                 : log.type === "organization.slack_updated"
-                                  ? "Slack設定を更新"
+                                  ? t("Slack設定を更新")
                                   : log.type === "room.created"
-                                    ? "ルームを作成"
+                                    ? t("ルームを作成")
                                     : log.type;
                         return (
                           <tr key={log.id}>
@@ -17410,7 +17420,7 @@ function App() {
                   </table>
                 </div>
                 <p className="org-admin-foot">
-                  追記専用の台帳です。ログは編集・削除できません。最大100件まで表示。
+                  {t("追記専用の台帳です。ログは編集・削除できません。最大100件まで表示。")}
                 </p>
               </div>
             )}
@@ -17419,7 +17429,7 @@ function App() {
               <header className="org-admin-slack-head">
                 <div>
                   <p className="card-kicker">Integrations</p>
-                  <h3>Slack 連携</h3>
+                  <h3>{t("Slack 連携")}</h3>
                 </div>
                 <a
                   className="org-admin-slack-help"
@@ -17427,12 +17437,11 @@ function App() {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Webhook URLの取得方法 →
+                  {t("Webhook URLの取得方法 →")}
                 </a>
               </header>
               <p className="org-admin-slack-copy">
-                Slack の Incoming Webhook URL を貼り付けると、組織メンバーの入室や募集が
-                指定チャンネルに自動投稿されます。URL は組織のオーナーのみ編集できます。
+                {t("Slack の Incoming Webhook URL を貼り付けると、組織メンバーの入室や募集が指定チャンネルに自動投稿されます。URL は組織のオーナーのみ編集できます。")}
               </p>
               <label className="org-admin-slack-field">
                 <span>Webhook URL</span>
@@ -17461,8 +17470,8 @@ function App() {
                     onChange={(event) => setSlackDraftRoomJoins(event.target.checked)}
                   />
                   <div>
-                    <strong>入室通知</strong>
-                    <small>メンバーが作業部屋に入った時</small>
+                    <strong>{t("入室通知")}</strong>
+                    <small>{t("メンバーが作業部屋に入った時")}</small>
                   </div>
                 </label>
                 <label className={`org-admin-slack-toggle ${slackDraftRoomLeaves ? "is-on" : ""}`}>
@@ -17472,8 +17481,8 @@ function App() {
                     onChange={(event) => setSlackDraftRoomLeaves(event.target.checked)}
                   />
                   <div>
-                    <strong>退室通知</strong>
-                    <small>メンバーが退出した時（滞在時間付き）</small>
+                    <strong>{t("退室通知")}</strong>
+                    <small>{t("メンバーが退出した時（滞在時間付き）")}</small>
                   </div>
                 </label>
                 <label className={`org-admin-slack-toggle ${slackDraftBreakStarted ? "is-on" : ""}`}>
@@ -17483,8 +17492,8 @@ function App() {
                     onChange={(event) => setSlackDraftBreakStarted(event.target.checked)}
                   />
                   <div>
-                    <strong>休憩開始</strong>
-                    <small>メンバーが休憩に入った時</small>
+                    <strong>{t("休憩開始")}</strong>
+                    <small>{t("メンバーが休憩に入った時")}</small>
                   </div>
                 </label>
                 <label className={`org-admin-slack-toggle ${slackDraftRecruitments ? "is-on" : ""}`}>
@@ -17494,8 +17503,8 @@ function App() {
                     onChange={(event) => setSlackDraftRecruitments(event.target.checked)}
                   />
                   <div>
-                    <strong>募集通知</strong>
-                    <small>メンバーが募集を出した時</small>
+                    <strong>{t("募集通知")}</strong>
+                    <small>{t("メンバーが募集を出した時")}</small>
                   </div>
                 </label>
                 <label className={`org-admin-slack-toggle ${slackDraftPosts ? "is-on" : ""}`}>
@@ -17505,8 +17514,8 @@ function App() {
                     onChange={(event) => setSlackDraftPosts(event.target.checked)}
                   />
                   <div>
-                    <strong>投稿通知</strong>
-                    <small>メンバーがフィードに投稿した時</small>
+                    <strong>{t("投稿通知")}</strong>
+                    <small>{t("メンバーがフィードに投稿した時")}</small>
                   </div>
                 </label>
                 <label className={`org-admin-slack-toggle ${slackDraftDailyDigest ? "is-on" : ""}`}>
@@ -17516,8 +17525,8 @@ function App() {
                     onChange={(event) => setSlackDraftDailyDigest(event.target.checked)}
                   />
                   <div>
-                    <strong>日次サマリー</strong>
-                    <small>手動送信ボタンから利用（自動配信は今後対応）</small>
+                    <strong>{t("日次サマリー")}</strong>
+                    <small>{t("手動送信ボタンから利用（自動配信は今後対応）")}</small>
                   </div>
                 </label>
               </div>
@@ -17529,7 +17538,7 @@ function App() {
                   onClick={handleSlackTestSend}
                   disabled={slackSaveState === "saving"}
                 >
-                  テスト送信
+                  {t("テスト送信")}
                 </button>
                 {currentOrganization.slackWebhookUrl && slackDraftDailyDigest ? (
                   <button
@@ -17538,7 +17547,7 @@ function App() {
                     onClick={handleSendDailyDigest}
                     disabled={slackSaveState === "saving" || isLoadingOrgMembers}
                   >
-                    日次サマリーを送信
+                    {t("日次サマリーを送信")}
                   </button>
                 ) : null}
                 <button
@@ -17547,7 +17556,7 @@ function App() {
                   onClick={handleSaveSlackSettings}
                   disabled={slackSaveState === "saving"}
                 >
-                  {slackSaveState === "saving" ? "保存中…" : "保存"}
+                  {slackSaveState === "saving" ? t("保存中…") : t("保存")}
                 </button>
               </div>
 
@@ -17569,16 +17578,14 @@ function App() {
               <header className="org-admin-slack-head">
                 <div>
                   <p className="card-kicker">Domain auto-join</p>
-                  <h3>ドメイン自動参加</h3>
+                  <h3>{t("ドメイン自動参加")}</h3>
                 </div>
               </header>
               <p className="org-admin-slack-copy">
-                許可するメールドメインを 1 行 1 件で入力します。該当ドメインの
-                Google アカウントでサインインしたユーザーは、招待リンクなしで
-                組織に参加できます（任意 / オフのままでも招待リンクは使えます）。
+                {t("許可するメールドメインを 1 行 1 件で入力します。該当ドメインのGoogle アカウントでサインインしたユーザーは、招待リンクなしで組織に参加できます（任意 / オフのままでも招待リンクは使えます）。")}
               </p>
               <label className="org-admin-slack-field">
-                <span>許可ドメイン</span>
+                <span>{t("許可ドメイン")}</span>
                 <textarea
                   value={domainDraft}
                   onChange={(event) => {
@@ -17600,7 +17607,7 @@ function App() {
                   onClick={handleSaveDomainSettings}
                   disabled={domainSaveState === "saving"}
                 >
-                  {domainSaveState === "saving" ? "保存中…" : "保存"}
+                  {domainSaveState === "saving" ? t("保存中…") : t("保存")}
                 </button>
               </div>
               {domainSaveMessage ? (
@@ -17614,7 +17621,7 @@ function App() {
             </section>
 
             <p className="org-admin-foot">
-              個別の学習ログ・投稿内容は admin にも表示しません。投資の可視化のみが目的です。
+              {t("個別の学習ログ・投稿内容は admin にも表示しません。投資の可視化のみが目的です。")}
             </p>
           </section>
         </div>
@@ -18101,11 +18108,10 @@ function App() {
               {!isOnboardingSettings ? (
                 <div className="settings-data-panel" role="group" aria-label={t("個人データ管理")}>
                   <div className="settings-data-head">
-                    <span>個人データ管理</span>
+                    <span>{t("個人データ管理")}</span>
                   </div>
                   <p className="settings-org-copy">
-                    あなたの学習ログ・投稿・組織メンバーシップなどを JSON で
-                    一括ダウンロードできます。アカウント削除は元に戻せません。
+                    {t("あなたの学習ログ・投稿・組織メンバーシップなどを JSON で一括ダウンロードできます。アカウント削除は元に戻せません。")}
                   </p>
                   <div className="settings-data-actions">
                     <button
@@ -18114,7 +18120,7 @@ function App() {
                       onClick={handleExportPersonalData}
                       disabled={isExportingData}
                     >
-                      {isExportingData ? "エクスポート中…" : "データをエクスポート"}
+                      {isExportingData ? t("エクスポート中…") : t("データをエクスポート")}
                     </button>
                     <button
                       type="button"
@@ -18483,7 +18489,7 @@ function App() {
 
             <form className="workspace-start-form" onSubmit={handleWorkspaceStart}>
               <label>
-                <span>作業内容</span>
+                <span>{t("作業内容")}</span>
                 <input
                   value={workspaceDraftTask}
                   onChange={(event) => {
@@ -18500,10 +18506,10 @@ function App() {
               {workspaceStartError ? <p className="workspace-start-error">{workspaceStartError}</p> : null}
 
               <fieldset className="workspace-start-color">
-                <legend>記録カラー</legend>
+                <legend>{t("記録カラー")}</legend>
                 <div className="workspace-start-colors">
                   {studyColorOptions.map((color) => (
-                    <label key={color.value} title={color.name}>
+                    <label key={color.value} title={t(color.name)}>
                       <input
                         type="radio"
                         name="workspace-session-color"
@@ -18519,9 +18525,9 @@ function App() {
 
               <div className="workspace-start-actions">
                 <button type="button" onClick={() => setPendingJoinRoomId(null)}>
-                  Cancel
+                  {t("Cancel")}
                 </button>
-                <button type="submit">作業を始める</button>
+                <button type="submit">{t("作業を始める")}</button>
               </div>
             </form>
           </section>
@@ -19294,7 +19300,7 @@ function App() {
                           className="learning-suggestion-chip"
                           onClick={() => openLearningEditorForCreate(name)}
                         >
-                          + {name}
+                          + {t(name)}
                         </button>
                       ))}
                     </div>
@@ -19411,7 +19417,7 @@ function App() {
                           </span>
                           {isBook ? (
                             <span className="learning-card-badge" aria-hidden="true">
-                              書籍
+                              {t("書籍")}
                             </span>
                           ) : null}
                           <strong>{item.name}</strong>
@@ -19647,32 +19653,32 @@ function App() {
             <TutorialHint
               uid={currentUser.uid}
               feature="logs"
-              title="みんなの記録 — 仲間の積み上げが流れる場所"
-              body="他のユーザーが今日何をしているかをタイムラインで追えます。"
+              title={t("みんなの記録 — 仲間の積み上げが流れる場所")}
+              body={t("他のユーザーが今日何をしているかをタイムラインで追えます。")}
               bullets={[
-                "投稿にいいねで応援、返信で対話",
-                "「Following / All」タブで自分のフォロー先だけに絞れます",
-                "気になる人をフォローすると、その人の投稿が優先で流れる",
-                "あなたの学習を投稿すると、誰かの励みになります",
+                t("投稿にいいねで応援、返信で対話"),
+                t("「Following / All」タブで自分のフォロー先だけに絞れます"),
+                t("気になる人をフォローすると、その人の投稿が優先で流れる"),
+                t("あなたの学習を投稿すると、誰かの励みになります"),
               ]}
             />
           ) : null}
 
           <section className="today-strip" aria-label={t("今日の足場")}>
             <div className="today-strip-stat">
-              <span className="today-strip-label">今日</span>
+              <span className="today-strip-label">{t("今日")}</span>
               <span className="today-strip-value">{formatStudyTimeJa(todayStudyMinutes)}</span>
             </div>
             <div className="today-strip-divider" aria-hidden="true" />
             <div className="today-strip-stat">
-              <span className="today-strip-label">今週</span>
+              <span className="today-strip-label">{t("今週")}</span>
               <span className="today-strip-value">{formatStudyTimeJa(totalWeeklyMinutes)}</span>
             </div>
             {lastStudyLog ? (
               <>
                 <div className="today-strip-divider" aria-hidden="true" />
                 <div className="today-strip-stat today-strip-recent">
-                  <span className="today-strip-label">最後に学んだ</span>
+                  <span className="today-strip-label">{t("最後に学んだ")}</span>
                   <span className="today-strip-value today-strip-recent-subject">{lastStudyLog.subject}</span>
                 </div>
               </>
@@ -19684,7 +19690,7 @@ function App() {
                 onClick={() => setIsShareToXOpen(true)}
                 aria-label={t("今日の作業時間をXでシェア")}
               >
-                Xでシェア
+                {t("Xでシェア")}
               </button>
             ) : null}
           </section>
@@ -19693,7 +19699,7 @@ function App() {
             <div className="log-composer-head">
               <div>
                 <p className="card-kicker">Timeline</p>
-                <h2>今日の学びを共有する</h2>
+                <h2>{t("今日の学びを共有する")}</h2>
               </div>
               <span>{visibleTimelinePosts.length.toLocaleString()} logs</span>
             </div>
@@ -19707,22 +19713,22 @@ function App() {
                     setPostDraft(event.target.value);
                     setPostError("");
                   }}
-                  placeholder="What are you building tonight?"
+                  placeholder={t("What are you building tonight?")}
                   maxLength={280}
                   rows={4}
                 />
                 <div className="log-composer-footer">
                   <div className="log-compose-shortcuts">
                     <button type="button" onClick={useRoomPresenceAsPost}>
-                      Roomから作成
+                      {t("Roomから作成")}
                     </button>
                     <button type="button" onClick={useLatestStudyLogAsPost}>
-                      学習ログから作成
+                      {t("学習ログから作成")}
                     </button>
                   </div>
                   <span>{postDraft.length}/280</span>
                   <button type="submit" disabled={isPosting || !postDraft.trim()}>
-                    {isPosting ? "Posting" : "投稿"}
+                    {isPosting ? t("Posting") : t("投稿")}
                   </button>
                 </div>
                 {postError ? <p className="log-post-error">{postError}</p> : null}
@@ -19758,14 +19764,14 @@ function App() {
               ) : timelineFilter === "following" ? (
                 <article className="log-empty-card">
                   <p className="card-kicker">Following</p>
-                  <strong>フォロー中のログはまだありません。</strong>
-                  <span>気になるエンジニアをフォローすると、ここに学びが流れます。Allタブで全員のログを見ることもできます。</span>
+                  <strong>{t("フォロー中のログはまだありません。")}</strong>
+                  <span>{t("気になるエンジニアをフォローすると、ここに学びが流れます。Allタブで全員のログを見ることもできます。")}</span>
                 </article>
               ) : (
                 <article className="log-empty-card">
                   <p className="card-kicker">Quiet Progress</p>
-                  <strong>まだログはありません。</strong>
-                  <span>今日作っているもの、学んだこと、commitしたことを静かに共有できます。</span>
+                  <strong>{t("まだログはありません。")}</strong>
+                  <span>{t("今日作っているもの、学んだこと、commitしたことを静かに共有できます。")}</span>
                 </article>
               )}
             </section>
@@ -19773,15 +19779,15 @@ function App() {
             <aside className="log-side-panel" aria-label="Room logs">
               <div>
                 <p className="card-kicker">Current Room</p>
-                <strong>{selectedRoom?.name || "作業部屋"}</strong>
+                <strong>{selectedRoom?.name || t("作業部屋")}</strong>
                 <span>{roomOnlineCount} online · {formatStudyTimeJa(roomTotalMinutes)}</span>
               </div>
               <div className="room-log-preview">
-                <p className="card-kicker">このRoomの最近の投稿</p>
+                <p className="card-kicker">{t("このRoomの最近の投稿")}</p>
                 {selectedRoomPosts.length > 0 ? (
                   selectedRoomPosts.map((post) => postCard(post, "compact"))
                 ) : (
-                  <span>このRoomのログはまだありません。</span>
+                  <span>{t("このRoomのログはまだありません。")}</span>
                 )}
               </div>
             </aside>
@@ -19884,7 +19890,7 @@ function App() {
                       className="profile-nondo-corner-btn"
                       onClick={handleSettingsOpen}
                       aria-label={t("設定を開く")}
-                      title="設定"
+                      title={t("設定")}
                     >
                       {/* 旧アイコンは曲線連続の塊で「設定」と分かりにくかった
                           ので、Feather Icons 互換のシンプルな歯車に差し替え。
@@ -20689,7 +20695,7 @@ function App() {
                                 className="is-primary"
                                 onClick={handleCloseRoomPanels}
                               >
-                                完了
+                                {t("完了")}
                               </button>
                             </div>
                           </article>
@@ -20714,14 +20720,14 @@ function App() {
                               >
                                 ×
                               </button>
-                              <span className="room-note-card-kicker">✉ 置き手紙を残す</span>
+                              <span className="room-note-card-kicker">{t("✉ 置き手紙を残す")}</span>
                               <textarea
                                 value={floorNoteDraft}
                                 onChange={(event) => {
                                   setFloorNoteDraft(event.target.value);
                                   if (floorNoteError) setFloorNoteError("");
                                 }}
-                                placeholder="次に来た人へのひとこと（例：明日の朝、レビューお願いします）"
+                                placeholder={t("次に来た人へのひとこと（例：明日の朝、レビューお願いします）")}
                                 maxLength={200}
                                 autoFocus
                               />
@@ -20736,7 +20742,7 @@ function App() {
                                   className="is-ghost"
                                   onClick={handleCloseRoomPanels}
                                 >
-                                  やめる
+                                  {t("やめる")}
                                 </button>
                                 <button
                                   type="button"
@@ -20744,7 +20750,7 @@ function App() {
                                   onClick={() => void handleSaveFloorNote()}
                                   disabled={isSavingFloorNote || !floorNoteDraft.trim()}
                                 >
-                                  {isSavingFloorNote ? "残しています…" : "置く"}
+                                  {isSavingFloorNote ? t("残しています…") : t("置く")}
                                 </button>
                               </div>
                             </article>
@@ -20763,14 +20769,14 @@ function App() {
                               >
                                 ×
                               </button>
-                              <span className="room-note-card-kicker">✉ 置き手紙</span>
+                              <span className="room-note-card-kicker">{t("✉ 置き手紙")}</span>
                               <span className="room-note-card-author">
                                 <i style={{ background: note.color || "var(--ink)" }} />
                                 {note.name}
                               </span>
                               <p className="room-note-card-body">{note.text}</p>
                               <span className="room-note-card-time">
-                                {formatPostTime(note.createdAt)}・24時間で消えます
+                                {formatPostTime(note.createdAt)}{t("・24時間で消えます")}
                               </span>
                               {note.userId === currentUserUid ? (
                                 <div className="room-note-card-actions">
@@ -20779,7 +20785,7 @@ function App() {
                                     className="is-danger"
                                     onClick={() => void handleDeleteFloorNote(note.id)}
                                   >
-                                    削除
+                                    {t("削除")}
                                   </button>
                                 </div>
                               ) : null}
@@ -20807,7 +20813,7 @@ function App() {
                             >
                               ×
                             </button>
-                            <span className="room-monument-card-kicker">🏛️ 記念碑</span>
+                            <span className="room-monument-card-kicker">{t("🏛️ 記念碑")}</span>
                             <span className="room-monument-card-icon">{monument.icon}</span>
                             <h3>{monument.name}</h3>
                             <p>{monument.detail}</p>
@@ -20833,11 +20839,13 @@ function App() {
                         const isUpcoming = feedNowTick < startAtMs;
                         return {
                           stateLabel: isUpcoming
-                            ? `${new Date(mine.startAt).toLocaleTimeString("ja-JP", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}開始予定`
-                            : "募集中",
+                            ? t("{time}開始予定", {
+                                time: new Date(mine.startAt).toLocaleTimeString("ja-JP", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }),
+                              })
+                            : t("募集中"),
                           joinedCount: mine.joinedUserIds.length,
                           onCancel: () => handleCancelRecruitment(mine),
                         };
@@ -20847,8 +20855,8 @@ function App() {
                 ) : (
                   <div className="room-empty-detail">
                     <p className="card-kicker">Silent Workspace</p>
-                    <h3>まずはRoomを作成しましょう。</h3>
-                    <p>上の入力欄から、自分の集中場所を作成できます。</p>
+                    <h3>{t("まずはRoomを作成しましょう。")}</h3>
+                    <p>{t("上の入力欄から、自分の集中場所を作成できます。")}</p>
                   </div>
                 )}
               </div>
@@ -20872,12 +20880,11 @@ function App() {
           <header className="teams-hero">
             <p className="card-kicker">Contribution Arc for Teams</p>
             <h1>
-              チームの学びと集中を、<br />
-              静かに可視化する。
+              {t("チームの学びと集中を、")}<br />
+              {t("静かに可視化する。")}
             </h1>
             <p className="teams-hero-lede">
-              通知も通話もない作業部屋に集まるだけ。学習時間と GitHub コミットが
-              自動で積み上がり、チームが学びに投じた時間が静かに可視化されます。
+              {t("通知も通話もない作業部屋に集まるだけ。学習時間と GitHub コミットが自動で積み上がり、チームが学びに投じた時間が静かに可視化されます。")}
             </p>
             <div className="teams-hero-cta">
               {currentOrganization ? (
@@ -20888,7 +20895,7 @@ function App() {
                     setCurrentView("workspace");
                   }}
                 >
-                  {currentOrganization.name} のワークスペースを開く →
+                  {t("{name} のワークスペースを開く →", { name: currentOrganization.name })}
                 </button>
               ) : currentUser ? (
                 <button
@@ -20900,7 +20907,7 @@ function App() {
                     setIsOrgCreateOpen(true);
                   }}
                 >
-                  組織を作って始める →
+                  {t("組織を作って始める →")}
                 </button>
               ) : (
                 <button
@@ -20908,25 +20915,25 @@ function App() {
                   className="teams-cta-primary"
                   onClick={() => signInWithPopup(auth, googleProvider).catch(() => undefined)}
                 >
-                  Google で 30 秒で始める →
+                  {t("Google で 30 秒で始める →")}
                 </button>
               )}
               <a
                 href="mailto:ari.initx@gmail.com?subject=Contribution%20Arc%20for%20Teams%20%E5%B0%8E%E5%85%A5%E7%9B%B8%E8%AB%87"
                 className="teams-cta-secondary"
               >
-                導入相談（メール）
+                {t("導入相談（メール）")}
               </a>
             </div>
             <p className="teams-hero-fineprint">
-              クレジットカード不要・β 期間中は全機能無料
+              {t("クレジットカード不要・β 期間中は全機能無料")}
             </p>
             <ul className="teams-trustbar" aria-label={t("主な機能")}>
-              <li>通知ゼロ設計</li>
-              <li>Slack 連携</li>
-              <li>GitHub 連携</li>
-              <li>CSV エクスポート</li>
-              <li>SSO / SCIM 対応予定</li>
+              <li>{t("通知ゼロ設計")}</li>
+              <li>{t("Slack 連携")}</li>
+              <li>{t("GitHub 連携")}</li>
+              <li>{t("CSV エクスポート")}</li>
+              <li>{t("SSO / SCIM 対応予定")}</li>
             </ul>
           </header>
 
@@ -20936,28 +20943,28 @@ function App() {
                 <span />
                 <span />
                 <span />
-                <p>Admin ダッシュボード</p>
+                <p>{t("Admin ダッシュボード")}</p>
               </div>
               <div className="teams-preview-body">
                 <div className="teams-preview-metrics">
                   <div className="teams-metric">
-                    <p className="teams-metric-label">今月の累計学習</p>
+                    <p className="teams-metric-label">{t("今月の累計学習")}</p>
                     <p className="teams-metric-value">
-                      428<small>時間</small>
+                      428<small>{t("時間")}</small>
                     </p>
-                    <p className="teams-metric-delta">先月比 +18%</p>
+                    <p className="teams-metric-delta">{t("先月比 +18%")}</p>
                   </div>
                   <div className="teams-metric">
-                    <p className="teams-metric-label">アクティブメンバー</p>
+                    <p className="teams-metric-label">{t("アクティブメンバー")}</p>
                     <p className="teams-metric-value">
-                      24<small>人</small>
+                      24<small>{t("人")}</small>
                     </p>
-                    <p className="teams-metric-delta">継続率 92%</p>
+                    <p className="teams-metric-delta">{t("継続率 92%")}</p>
                   </div>
                   <div className="teams-metric">
-                    <p className="teams-metric-label">今週のコミット</p>
+                    <p className="teams-metric-label">{t("今週のコミット")}</p>
                     <p className="teams-metric-value">1,206</p>
-                    <p className="teams-metric-delta">直近 7 日間</p>
+                    <p className="teams-metric-delta">{t("直近 7 日間")}</p>
                   </div>
                 </div>
                 <div className="teams-preview-chart" aria-hidden="true">
@@ -20968,22 +20975,22 @@ function App() {
               </div>
             </div>
             <p className="teams-preview-caption">
-              ※ 表示はイメージです。チームの学習時間・コミットを集計し、CSV で書き出せます。
+              {t("※ 表示はイメージです。チームの学習時間・コミットを集計し、CSV で書き出せます。")}
             </p>
           </section>
 
           {currentOrganization && currentOrganization.ownerUid === currentUser?.uid ? (
             <section className="teams-plan-manage" aria-label={t("現在のプラン")}>
               <div className="teams-plan-manage-head">
-                <p className="card-kicker">{currentOrganization.name} の現在のプラン</p>
+                <p className="card-kicker">{t("{name} の現在のプラン", { name: currentOrganization.name })}</p>
                 <h2>{getPlanLocalized(currentOrganization.planTier ?? "free", language).name}</h2>
                 <p>{getPlanLocalized(currentOrganization.planTier ?? "free", language).tagline}</p>
               </div>
               <div className="teams-plan-manage-actions">
                 {BETA_ALL_FEATURES_FREE ? (
                   <p className="teams-plan-manage-beta">
-                    β 期間中はすべての機能を無料でお使いいただけます。<br />
-                    正式版の開始時にプランの選択・お支払いが有効になります。
+                    {t("β 期間中はすべての機能を無料でお使いいただけます。")}<br />
+                    {t("正式版の開始時にプランの選択・お支払いが有効になります。")}
                   </p>
                 ) : isBillingConfigured() ? (
                   (currentOrganization.planTier ?? "free") === "free" ? (
@@ -20994,13 +21001,13 @@ function App() {
                         onClick={() => handleStartCheckout("team")}
                         disabled={billingBusy}
                       >
-                        {billingBusy ? "処理中…" : "Team にアップグレード →"}
+                        {billingBusy ? t("処理中…") : t("Team にアップグレード →")}
                       </button>
                       <a
                         className="teams-cta-secondary"
                         href="mailto:ari.initx@gmail.com?subject=Enterprise%20%E5%B0%8E%E5%85%A5%E7%9B%B8%E8%AB%87"
                       >
-                        Enterprise を相談
+                        {t("Enterprise を相談")}
                       </a>
                     </>
                   ) : (
@@ -21010,7 +21017,7 @@ function App() {
                       onClick={handleManageBilling}
                       disabled={billingBusy}
                     >
-                      {billingBusy ? "処理中…" : "請求・プランを管理 →"}
+                      {billingBusy ? t("処理中…") : t("請求・プランを管理 →")}
                     </button>
                   )
                 ) : (
@@ -21018,7 +21025,7 @@ function App() {
                     className="teams-cta-secondary"
                     href="mailto:ari.initx@gmail.com?subject=Contribution%20Arc%20for%20Teams%20%E5%B0%8E%E5%85%A5%E7%9B%B8%E8%AB%87"
                   >
-                    アップグレードの相談（メール）
+                    {t("アップグレードの相談（メール）")}
                   </a>
                 )}
               </div>
@@ -21027,24 +21034,21 @@ function App() {
 
           <section className="teams-values" aria-label={t("価値提案")}>
             <article>
-              <h3>組織限定の作業部屋</h3>
+              <h3>{t("組織限定の作業部屋")}</h3>
               <p>
-                社内・チーム内だけで共有できるルーム。他社や個人ユーザーからは
-                見えず、招待リンクで仲間を招きます。
+                {t("社内・チーム内だけで共有できるルーム。他社や個人ユーザーからは見えず、招待リンクで仲間を招きます。")}
               </p>
             </article>
             <article>
-              <h3>Slack に流れる気配</h3>
+              <h3>{t("Slack に流れる気配")}</h3>
               <p>
-                メンバーの入室・募集・日次サマリーを Slack チャンネルに
-                自動投稿。リモート同士でも空気感が伝わります。
+                {t("メンバーの入室・募集・日次サマリーを Slack チャンネルに自動投稿。リモート同士でも空気感が伝わります。")}
               </p>
             </article>
             <article>
-              <h3>投資の可視化</h3>
+              <h3>{t("投資の可視化")}</h3>
               <p>
-                Admin ダッシュボードでチームの累計学習時間・ストリーク・
-                コミット数を集計。CSV エクスポートで L&D レポートに直結。
+                {t("Admin ダッシュボードでチームの累計学習時間・ストリーク・コミット数を集計。CSV エクスポートで L&D レポートに直結。")}
               </p>
             </article>
           </section>
@@ -21052,23 +21056,23 @@ function App() {
           <section className="teams-steps" aria-label={t("導入の流れ")}>
             <header>
               <p className="card-kicker">How it works</p>
-              <h2>最短 30 秒で、チームの可視化を始められる</h2>
+              <h2>{t("最短 30 秒で、チームの可視化を始められる")}</h2>
             </header>
             <ol className="teams-steps-list">
               <li>
                 <span className="teams-step-no">01</span>
-                <h3>組織を作る</h3>
-                <p>Google で 30 秒。クレジットカードは要りません。</p>
+                <h3>{t("組織を作る")}</h3>
+                <p>{t("Google で 30 秒。クレジットカードは要りません。")}</p>
               </li>
               <li>
                 <span className="teams-step-no">02</span>
-                <h3>招待リンクを配る</h3>
-                <p>リンクを共有するだけ。メンバーは作業部屋に入るだけで集計が始まります。</p>
+                <h3>{t("招待リンクを配る")}</h3>
+                <p>{t("リンクを共有するだけ。メンバーは作業部屋に入るだけで集計が始まります。")}</p>
               </li>
               <li>
                 <span className="teams-step-no">03</span>
-                <h3>ダッシュボードで可視化</h3>
-                <p>学習時間・コミット・継続率を集計し、CSV で L&amp;D レポートへ。</p>
+                <h3>{t("ダッシュボードで可視化")}</h3>
+                <p>{t("学習時間・コミット・継続率を集計し、CSV で L&D レポートへ。")}</p>
               </li>
             </ol>
           </section>
@@ -21076,25 +21080,23 @@ function App() {
           <section className="teams-privacy" aria-label={t("プライバシー方針")}>
             <div>
               <p className="card-kicker">Privacy by design</p>
-              <h2>監視ではなく、投資の可視化に振り切る</h2>
+              <h2>{t("監視ではなく、投資の可視化に振り切る")}</h2>
               <p>
-                個別の学習ログ・投稿内容は admin にも表示しません。
-                可視化されるのは「チームがどれだけ投資したか」だけ。
-                マネージャー・現場の双方が安心して使える設計です。
+                {t("個別の学習ログ・投稿内容は admin にも表示しません。可視化されるのは「チームがどれだけ投資したか」だけ。マネージャー・現場の双方が安心して使える設計です。")}
               </p>
             </div>
             <ul>
-              <li>個別の作業内容・投稿本文は admin に非表示</li>
-              <li>退出すると組織限定ルームは即時に見えなくなります</li>
-              <li>データは Firestore に暗号化保存・退会時に削除可能</li>
-              <li>労務管理を意識した長時間警告・休憩促し（順次対応）</li>
+              <li>{t("個別の作業内容・投稿本文は admin に非表示")}</li>
+              <li>{t("退出すると組織限定ルームは即時に見えなくなります")}</li>
+              <li>{t("データは Firestore に暗号化保存・退会時に削除可能")}</li>
+              <li>{t("労務管理を意識した長時間警告・休憩促し（順次対応）")}</li>
             </ul>
           </section>
 
           <section className="teams-pricing" aria-label={t("プラン")}>
             <header>
-              <h2>プラン（β 期間中は全機能無料）</h2>
-              <p>正式版リリース時に以下の構成で提供予定です。</p>
+              <h2>{t("プラン(β 期間中は全機能無料)")}</h2>
+              <p>{t("正式版リリース時に以下の構成で提供予定です。")}</p>
             </header>
             <div className="teams-pricing-grid">
               {/* 料金表は src/services/plans.ts(単一の真実)から生成。
@@ -21126,55 +21128,52 @@ function App() {
               })}
             </div>
             <p className="teams-pricing-note">
-              ※ 価格は予定です。β 期間中は全機能無料でお使いいただけます。
+              {t("※ 価格は予定です。β 期間中は全機能無料でお使いいただけます。")}
             </p>
           </section>
 
           <section className="teams-faq" aria-label={t("よくある質問")}>
             <header>
               <p className="card-kicker">FAQ</p>
-              <h2>導入前の、よくある質問</h2>
+              <h2>{t("導入前の、よくある質問")}</h2>
             </header>
             <div className="teams-faq-list">
               <details>
-                <summary>個人の作業内容は管理者に見えますか？</summary>
+                <summary>{t("個人の作業内容は管理者に見えますか？")}</summary>
                 <p>
-                  いいえ。個別の学習ログ・投稿本文は admin にも表示しません。
-                  可視化されるのは「チームがどれだけ学びに投資したか」だけです。
+                  {t("いいえ。個別の学習ログ・投稿本文は admin にも表示しません。可視化されるのは「チームがどれだけ学びに投資したか」だけです。")}
                 </p>
               </details>
               <details>
-                <summary>データはどこに保存されますか？</summary>
+                <summary>{t("データはどこに保存されますか？")}</summary>
                 <p>
-                  Google Cloud（Firestore）に暗号化して保存します。
-                  退会時にはデータを削除できます。
+                  {t("Google Cloud(Firestore)に暗号化して保存します。退会時にはデータを削除できます。")}
                 </p>
               </details>
               <details>
-                <summary>最低何人から使えますか？</summary>
+                <summary>{t("最低何人から使えますか？")}</summary>
                 <p>
-                  1 人からお使いいただけます。Team プランは 5〜50 名のチームを想定しています。
+                  {t("1 人からお使いいただけます。Team プランは 5〜50 名のチームを想定しています。")}
                 </p>
               </details>
               <details>
-                <summary>解約はいつでもできますか？</summary>
+                <summary>{t("解約はいつでもできますか？")}</summary>
                 <p>
-                  はい。請求ポータルからいつでも解約でき、当月末までご利用いただけます。
+                  {t("はい。請求ポータルからいつでも解約でき、当月末までご利用いただけます。")}
                 </p>
               </details>
               <details>
-                <summary>SSO / SCIM には対応していますか？</summary>
+                <summary>{t("SSO / SCIM には対応していますか？")}</summary>
                 <p>
-                  Enterprise プランで SAML / SSO・SCIM プロビジョニング・監査ログに対応します。
-                  導入相談からご連絡ください。
+                  {t("Enterprise プランで SAML / SSO・SCIM プロビジョニング・監査ログに対応します。導入相談からご連絡ください。")}
                 </p>
               </details>
             </div>
           </section>
 
           <section className="teams-cta-band" aria-label={t("始める")}>
-            <h2>チームの学びを、今日から可視化する。</h2>
-            <p>β 期間中は全機能無料。まずは組織を作って、作業部屋を開いてみてください。</p>
+            <h2>{t("チームの学びを、今日から可視化する。")}</h2>
+            <p>{t("β 期間中は全機能無料。まずは組織を作って、作業部屋を開いてみてください。")}</p>
             <div className="teams-hero-cta">
               {currentOrganization ? (
                 <button
@@ -21184,7 +21183,7 @@ function App() {
                     setCurrentView("workspace");
                   }}
                 >
-                  {currentOrganization.name} のワークスペースを開く →
+                  {t("{name} のワークスペースを開く →", { name: currentOrganization.name })}
                 </button>
               ) : currentUser ? (
                 <button
@@ -21196,7 +21195,7 @@ function App() {
                     setIsOrgCreateOpen(true);
                   }}
                 >
-                  組織を作って始める →
+                  {t("組織を作って始める →")}
                 </button>
               ) : (
                 <button
@@ -21204,30 +21203,30 @@ function App() {
                   className="teams-cta-primary"
                   onClick={() => signInWithPopup(auth, googleProvider).catch(() => undefined)}
                 >
-                  Google で 30 秒で始める →
+                  {t("Google で 30 秒で始める →")}
                 </button>
               )}
               <a
                 href="mailto:ari.initx@gmail.com?subject=Contribution%20Arc%20for%20Teams%20%E5%B0%8E%E5%85%A5%E7%9B%B8%E8%AB%87"
                 className="teams-cta-secondary"
               >
-                導入相談（メール）
+                {t("導入相談(メール)")}
               </a>
             </div>
           </section>
 
           <footer className="teams-foot">
             <p>
-              質問・導入相談は{" "}
+              {t("質問・導入相談は")}{" "}
               <a href="mailto:ari.initx@gmail.com">ari.initx@gmail.com</a>{" "}
-              までお気軽にどうぞ。
+              {t("までお気軽にどうぞ。")}
             </p>
             <button
               type="button"
               className="teams-cta-secondary"
               onClick={() => setCurrentView("home")}
             >
-              ← ホームに戻る
+              ← {t("ホームに戻る")}
             </button>
           </footer>
         </motion.section>
@@ -21249,13 +21248,13 @@ function App() {
             <div className="shop-card-head">
               <div>
                 <p className="card-kicker">Shop</p>
-                <h2>キャラクターをカスタマイズ</h2>
+                <h2>{t("キャラクターをカスタマイズ")}</h2>
                 <p className="shop-card-lede">
-                  シルエットや姿を変えて、自分だけの分身に。所持している Arc で購入できます。
+                  {t("シルエットや姿を変えて、自分だけの分身に。所持している Arc で購入できます。")}
                 </p>
               </div>
               <div className="shop-balance" aria-label={t("所持 Arc")}>
-                <span className="shop-balance-label">所持 Arc</span>
+                <span className="shop-balance-label">{t("所持 Arc")}</span>
                 <strong className="shop-balance-value">
                   <span className="shop-coin-icon" aria-hidden="true">◆</span>
                   {coins.toLocaleString()}
@@ -21270,18 +21269,18 @@ function App() {
                 toward the 500 lifetime cap. */}
             <div className="shop-feed-bonus" role="group" aria-label={t("投稿で Arc を貯める")}>
               <div className="shop-feed-bonus-head">
-                <strong>投稿で Arc を貯める</strong>
+                <strong>{t("投稿で Arc を貯める")}</strong>
                 <span className="shop-feed-bonus-amount">
                   {feedRewardArcEarned} / 500 Arc
                 </span>
               </div>
               <p className="shop-feed-bonus-copy">
-                1 日 1 回投稿すると +50 Arc。累計 500 Arc までもらえます。
+                {t("1 日 1 回投稿すると +50 Arc。累計 500 Arc までもらえます。")}
                 {feedRewardArcEarned >= 500
-                  ? "上限に到達しました。ありがとうございます！"
+                  ? t("上限に到達しました。ありがとうございます！")
                   : lastFeedRewardDate === todayDateKey
-                    ? "今日の分は受け取り済み。明日また投稿してみてください。"
-                    : "今日はまだ受け取っていません。投稿してみてください。"}
+                    ? t("今日の分は受け取り済み。明日また投稿してみてください。")
+                    : t("今日はまだ受け取っていません。投稿してみてください。")}
               </p>
               <div
                 className="shop-feed-bonus-bar"
@@ -21304,8 +21303,8 @@ function App() {
 
           <section className="shop-section" aria-label={t("シルエット")}>
             <header className="shop-section-head">
-              <h3>シルエット</h3>
-              <span>分身の姿を変える</span>
+              <h3>{t("シルエット")}</h3>
+              <span>{t("分身の姿を変える")}</span>
             </header>
             <div className="shop-product-grid">
               {shapeShopCatalog.map((item) => {
@@ -21332,16 +21331,16 @@ function App() {
                     <div className="shop-product-footer">
                       {isOwned ? (
                         <>
-                          <span className="shop-product-owned">所持済み</span>
+                          <span className="shop-product-owned">{t("所持済み")}</span>
                           {isEquipped ? (
-                            <span className="shop-product-equipped">使用中</span>
+                            <span className="shop-product-equipped">{t("使用中")}</span>
                           ) : (
                             <button
                               type="button"
                               className="shop-product-equip"
                               onClick={() => chooseCharacterShape(item.shape)}
                             >
-                              着用する
+                              {t("着用する")}
                             </button>
                           )}
                         </>
@@ -21358,7 +21357,7 @@ function App() {
                             onClick={() => {
                               if (!canAfford) return;
                               const ok = window.confirm(
-                                `${item.name} を ${item.price.toLocaleString()} Arc で購入しますか？`,
+                                t("{name} を {price} Arc で購入しますか？", { name: t(item.name), price: item.price.toLocaleString() }),
                               );
                               if (!ok) return;
                               setCoins((value) => Math.max(0, value - item.price));
@@ -21368,7 +21367,7 @@ function App() {
                               chooseCharacterShape(item.shape);
                             }}
                           >
-                            {canAfford ? "購入する" : "Arc 不足"}
+                            {canAfford ? t("購入する") : t("Arc 不足")}
                           </button>
                         </>
                       )}
@@ -21606,7 +21605,7 @@ function App() {
                 onSendSlackDigest={async () => {
                   const webhookUrl = currentOrganization.slackWebhookUrl;
                   if (!webhookUrl || !isValidSlackWebhookUrl(webhookUrl)) {
-                    return "Slackウェブフックが設定されていません";
+                    return t("Slackウェブフックが設定されていません");
                   }
                   const payload = buildWeeklyDigestPayload({
                     organizationName: currentOrganization.name,
@@ -21615,7 +21614,7 @@ function App() {
                   });
                   const result = await postToSlackWebhook(webhookUrl, payload);
                   if (!result.ok) {
-                    return `Slack送信に失敗: ${result.error || "unknown"}`;
+                    return t("Slack送信に失敗: {error}", { error: result.error || "unknown" });
                   }
                   return undefined;
                 }}

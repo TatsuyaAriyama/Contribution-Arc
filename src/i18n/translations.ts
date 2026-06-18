@@ -1342,6 +1342,24 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "一緒にやろう": "Let's work together",
   "今日はReactやります": "Working on React today",
 
+
+  // === Phase 4c: subagent (App.tsx 1000-4000) follow-ups ===
+  "少し休憩中です。": "Taking a short break.",
+  "{building}を積み上げています。": "Building {building}.",
+  "静かに積み上げています。": "Quietly building.",
+  "夜の集中作業に向いた、ゆっくり流れるビルドルーム。": "A slow-paced build room suited for late-night deep work.",
+  "小さく集中し、積み上げを共有するための静かな空間。": "A quiet space to focus in small bursts and share progress.",
+  "このURLはFirebase Authで許可されていません。": "This URL isn't allowed by Firebase Auth.",
+  "Firebase ConsoleのAuthentication設定で、このドメインをAuthorized domainsに追加してください。": "Add this domain to Authorized domains in Firebase Console > Authentication.",
+  "こちらで開き直してください:": "Reopen here:",
+  "まだ登録していない場合は、Sign upに切り替えてアカウントを作成してください。": "If you haven't signed up yet, switch to Sign up to create an account.",
+  "入力内容を確認してもう一度お試しください。": "Check your input and try again.",
+  "ブラウザのポップアップ許可設定を確認して、もう一度お試しください。": "Check your browser's popup permissions and try again.",
+  "ネットワーク接続に失敗しました。": "Network connection failed.",
+  "通信状況を確認して、少し待ってからもう一度お試しください。": "Check your connection and try again in a moment.",
+  "時間を置いてからもう一度お試しください。": "Wait a moment and try again.",
+  "設定または入力内容を確認してください。詳しいエラーはブラウザコンソールにも出力しています。": "Check your settings or input. Detailed errors are also logged to the browser console.",
+  "初めまして！": "Nice to meet you!",
   // === PTR + invite + org admin + post quota + donut chart ===
   "離して更新": "Release to refresh",
   "↓ 引っ張って更新": "↓ Pull to refresh",
@@ -1367,6 +1385,14 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "除名に失敗しました。Firestore のルール権限を確認してください。":
     "Couldn't remove the member. Check the Firestore rule permissions.",
   "チーム名の保存に失敗しました。": "Couldn't save the team name.",
+
+  // === Phase 4g: ANNOUNCEMENTS titles + bodies ===
+  "ライブラリに写真アイコン機能を追加しました": "Photo icons in your library",
+  "ライブラリの学習対象ごとに、写真を自由に設定できるようになりました。\n教材の表紙や好きな写真をアイコンにすると、ライブラリが自分だけの本棚のように見やすく整理できます。\n\n使い方:\n1. ライブラリで学習対象を開き、編集画面の「写真 (任意)」から「写真を追加」をタップ\n2. カメラまたはアルバムから写真を選択\n3. 保存すると、ライブラリの一覧でその写真がアイコンとして表示されます\n\n写真はいつでも変更・削除できます。ぜひお気に入りの教材を登録してみてください。":
+    "You can now set a photo for each learning subject in your library.\nUse a textbook cover or any photo you like as the icon — your library will look like your own personal bookshelf.\n\nHow to use:\n1. Open a learning subject in your library, tap \"Add photo\" under \"Photo (optional)\" in the edit view\n2. Pick a photo from camera or album\n3. After saving, that photo will appear as the icon in your library list\n\nPhotos can be changed or removed any time. Try registering your favorite study materials.",
+  "Contribution Arc をご利用いただきありがとうございます": "Thank you for using Contribution Arc",
+  "いつもご利用いただきありがとうございます。\n現在も、サービスをより良い形でユーザーのみなさまにご利用いただけるよう、日々改善に励んでおります。\n不具合のご報告や、追加してほしい機能などがございましたら、こちらの要望欄にご記載いただけますと幸いです。\nいただいたご意見は、今後の開発の参考にさせていただきます。\n引き続きよろしくお願いいたします。":
+    "Thank you for using Contribution Arc.\nWe're still actively improving the service so it works better for everyone.\nIf you find a bug or have a feature request, please share it in the feedback form.\nWe'll use your input to guide future development.\nThank you for your continued support.",
 
   // === Phase 4d: service files ===
   // plans.ts — pricing / pricing table
@@ -1424,4 +1450,164 @@ export const EN_TRANSLATIONS: Record<string, string> = {
     "• Average per person: *{hours}h*",
   "メンバー別 学習時間 (累計上位)":
     "Study time by member (top contributors)",
+
+  // === Phase 4h: workspace start / recruitment / domain / delete errors ===
+  "作業内容を入力してください。": "Please enter what you're working on.",
+  "Roomデータを読み込めませんでした。もう一度Roomを選択してください。":
+    "Couldn't load the room data. Please select the room again.",
+  "Roomデータを読み込めませんでした。": "Couldn't load the room data.",
+  "入室する作業部屋を選択してください。": "Please select a workroom to enter.",
+  "作業内容を入力してから募集してください。": "Please enter what you're working on before recruiting.",
+  "メッセージは140字までです。": "Messages must be 140 characters or fewer.",
+  "開始時刻を入力してください。": "Please enter a start time.",
+  "開始時刻が正しくありません。": "The start time is invalid.",
+  "開始時刻は今より後を指定してください。": "Please pick a start time after now.",
+  "予約は24時間以内までです。": "Reservations are limited to 24 hours from now.",
+  "保存に失敗しました。": "Save failed.",
+  "確認のため、上のユーザーIDをそのまま入力してください。":
+    "For confirmation, please retype your user ID exactly as shown above.",
+  "削除に失敗しました。ネットワークまたは権限を確認のうえ、再度お試しください。":
+    "Deletion failed. Check your network and permissions, then try again.",
+
+  // === Phase 4i: workspace auto-leave / org / Slack meta / domain ===
+  "在室時間が上限を超えていたため自動退室しました。今回は{time}（+{exp} EXP）として記録しています。":
+    "You were auto-left because the session exceeded the limit. Recorded as {time} (+{exp} EXP).",
+  "無操作が続いたため、最終操作までの{time}（+{exp} EXP）を記録しました。":
+    "No activity for a while — recorded {time} up to the last action (+{exp} EXP).",
+  "「{task}」を": "\"{task}\" — ",
+  "{room} で{taskLabel}{time}積み上げました ✦ +{exp} EXP":
+    "Worked {taskLabel}for {time} in {room} ✦ +{exp} EXP",
+  "Lv {lv} · {days}日連続": "Lv {lv} · {days}-day streak",
+  "組織を作成できませんでした。[{code}] {message}":
+    "Couldn't create the organization. [{code}] {message}",
+  "組織が見つかりませんでした。": "Organization not found.",
+  "このドメインからの自動参加は許可されていません。": "Auto-join is not allowed from this domain.",
+  "参加に失敗しました。再度お試しください。": "Couldn't join. Please try again.",
+  "{n}件のドメインを保存しました。": "Saved {n} domain(s).",
+  "ドメイン自動参加を解除しました。": "Domain auto-join disabled.",
+
+  // === Phase 4j: Shop/IAP, workspace appearance, monument, Teams marketing/FAQ ===
+  "{name} {romaji}（ショップで購入）": "{name} {romaji} (buy in shop)",
+  "{name} {romaji}はショップで購入できます": "{name} {romaji} can be purchased in the shop",
+  "{name} {romaji}を選択": "Select {name} {romaji}",
+  "次に来た人へのひとこと（例：明日の朝、レビューお願いします）":
+    "A note for whoever shows up next (e.g. \"Please review this tomorrow morning\")",
+  "やめる": "Cancel",
+  "残しています…": "Leaving it…",
+  "置く": "Drop",
+  "✉ 置き手紙を残す": "✉ Leave a note",
+  "✉ 置き手紙": "✉ Note",
+  "・24時間で消えます": " · disappears in 24 hours",
+  "🏛️ 記念碑": "🏛️ Monument",
+  "{time}開始予定": "Starts at {time}",
+  "まずはRoomを作成しましょう。": "Let's start by creating a room.",
+  "上の入力欄から、自分の集中場所を作成できます。": "Use the field above to create your own focus space.",
+  "チームの学びと集中を、": "Your team's learning and focus,",
+  "静かに可視化する。": "quietly made visible.",
+  "通知も通話もない作業部屋に集まるだけ。学習時間と GitHub コミットが自動で積み上がり、チームが学びに投じた時間が静かに可視化されます。":
+    "Just gather in a workroom with no notifications and no calls. Study time and GitHub commits accumulate automatically, quietly visualizing the time your team invests in learning.",
+  "{name} のワークスペースを開く →": "Open {name}'s workspace →",
+  "組織を作って始める →": "Create an organization to start →",
+  "Google で 30 秒で始める →": "Start with Google in 30 seconds →",
+  "導入相談（メール）": "Talk to us about adoption (email)",
+  "導入相談(メール)": "Talk to us about adoption (email)",
+  "クレジットカード不要・β 期間中は全機能無料": "No credit card required · All features free during beta",
+  "通知ゼロ設計": "Zero-notification design",
+  "GitHub 連携": "GitHub integration",
+  "CSV エクスポート": "CSV export",
+  "SSO / SCIM 対応予定": "SSO / SCIM coming soon",
+  "Admin ダッシュボード": "Admin dashboard",
+  "今月の累計学習": "Total study this month",
+  "先月比 +18%": "+18% vs last month",
+  "アクティブメンバー": "Active members",
+  "継続率 92%": "92% retention",
+  "今週のコミット": "Commits this week",
+  "直近 7 日間": "Last 7 days",
+  "※ 表示はイメージです。チームの学習時間・コミットを集計し、CSV で書き出せます。":
+    "* Display is illustrative. Team study time and commits are aggregated and exportable as CSV.",
+  "{name} の現在のプラン": "{name}'s current plan",
+  "β 期間中はすべての機能を無料でお使いいただけます。": "All features are free during the beta.",
+  "正式版の開始時にプランの選択・お支払いが有効になります。":
+    "Plan selection and billing will activate at general availability.",
+  "Team にアップグレード →": "Upgrade to Team →",
+  "Enterprise を相談": "Discuss Enterprise",
+  "請求・プランを管理 →": "Manage billing & plan →",
+  "アップグレードの相談(メール)": "Talk to us about upgrading (email)",
+  "組織限定の作業部屋": "Org-only workrooms",
+  "社内・チーム内だけで共有できるルーム。他社や個人ユーザーからは見えず、招待リンクで仲間を招きます。":
+    "Rooms shared only within your company or team. Invisible to other organizations and solo users; invite teammates via invite link.",
+  "Slack に流れる気配": "Presence in Slack",
+  "メンバーの入室・募集・日次サマリーを Slack チャンネルに自動投稿。リモート同士でも空気感が伝わります。":
+    "Member joins, recruitments, and daily summaries auto-post to your Slack channel. The atmosphere comes through even when remote.",
+  "投資の可視化": "Visualize your investment",
+  "Admin ダッシュボードでチームの累計学習時間・ストリーク・コミット数を集計。CSV エクスポートで L&D レポートに直結。":
+    "Aggregate your team's total study time, streaks, and commits in the admin dashboard. Export as CSV directly into L&D reports.",
+  "最短 30 秒で、チームの可視化を始められる": "Start visualizing your team in as little as 30 seconds",
+  "組織を作る": "Create an organization",
+  "Google で 30 秒。クレジットカードは要りません。": "30 seconds with Google. No credit card required.",
+  "招待リンクを配る": "Share the invite link",
+  "リンクを共有するだけ。メンバーは作業部屋に入るだけで集計が始まります。":
+    "Just share the link. Aggregation begins as soon as members enter a workroom.",
+  "ダッシュボードで可視化": "Visualize in the dashboard",
+  "学習時間・コミット・継続率を集計し、CSV で L&D レポートへ。":
+    "Aggregate study time, commits, and retention; export as CSV into your L&D report.",
+  "監視ではなく、投資の可視化に振り切る": "Visualize investment, not surveillance",
+  "個別の学習ログ・投稿内容は admin にも表示しません。可視化されるのは「チームがどれだけ投資したか」だけ。マネージャー・現場の双方が安心して使える設計です。":
+    "Individual study logs and post contents are hidden even from admins. Only \"how much the team invested\" is visualized — designed so both managers and the front line can use it with confidence.",
+  "個別の作業内容・投稿本文は admin に非表示": "Individual work content and post bodies hidden from admins",
+  "退出すると組織限定ルームは即時に見えなくなります": "Org-only rooms become invisible immediately on leaving",
+  "データは Firestore に暗号化保存・退会時に削除可能":
+    "Data is stored encrypted in Firestore; deletable on account closure",
+  "労務管理を意識した長時間警告・休憩促し（順次対応）":
+    "Long-session warnings and break prompts mindful of labor management (rolling out)",
+  "プラン(β 期間中は全機能無料)": "Plans (all features free during beta)",
+  "正式版リリース時に以下の構成で提供予定です。": "We plan to offer the following at general availability.",
+  "※ 価格は予定です。β 期間中は全機能無料でお使いいただけます。":
+    "* Prices are tentative. All features are free during the beta.",
+  "導入前の、よくある質問": "Frequently asked questions before adoption",
+  "個人の作業内容は管理者に見えますか？": "Can administrators see individuals' work?",
+  "いいえ。個別の学習ログ・投稿本文は admin にも表示しません。可視化されるのは「チームがどれだけ学びに投資したか」だけです。":
+    "No. Individual study logs and post bodies are hidden even from admins. Only \"how much the team invested in learning\" is visualized.",
+  "データはどこに保存されますか？": "Where is data stored?",
+  "Google Cloud(Firestore)に暗号化して保存します。退会時にはデータを削除できます。":
+    "Stored encrypted in Google Cloud (Firestore). You can delete your data when you close the account.",
+  "最低何人から使えますか？": "What is the minimum team size?",
+  "1 人からお使いいただけます。Team プランは 5〜50 名のチームを想定しています。":
+    "You can use it from 1 person. The Team plan is designed for teams of 5–50.",
+  "解約はいつでもできますか？": "Can I cancel any time?",
+  "はい。請求ポータルからいつでも解約でき、当月末までご利用いただけます。":
+    "Yes. Cancel any time from the billing portal; access continues through the end of the current month.",
+  "SSO / SCIM には対応していますか？": "Do you support SSO / SCIM?",
+  "Enterprise プランで SAML / SSO・SCIM プロビジョニング・監査ログに対応します。導入相談からご連絡ください。":
+    "The Enterprise plan supports SAML / SSO, SCIM provisioning, and audit logs. Please reach out via the adoption inquiry.",
+  "チームの学びを、今日から可視化する。": "Start visualizing your team's learning today.",
+  "β 期間中は全機能無料。まずは組織を作って、作業部屋を開いてみてください。":
+    "All features are free during the beta. First create an organization and try opening a workroom.",
+  "質問・導入相談は": "For questions or adoption inquiries,",
+  "までお気軽にどうぞ。": "feel free to reach out.",
+  "ホームに戻る": "Back to home",
+  "キャラクターをカスタマイズ": "Customize your character",
+  "シルエットや姿を変えて、自分だけの分身に。所持している Arc で購入できます。":
+    "Change your silhouette and look to make your character your own. Purchase with the Arc you own.",
+  "1 日 1 回投稿すると +50 Arc。累計 500 Arc までもらえます。":
+    "Post once a day to earn +50 Arc. You can earn up to 500 Arc in total.",
+  "上限に到達しました。ありがとうございます！": "You've hit the cap. Thank you!",
+  "今日はまだ受け取っていません。投稿してみてください。": "You haven't received today's bonus yet. Try posting.",
+  "分身の姿を変える": "Change your character's look",
+  "所持済み": "Owned",
+  "使用中": "Equipped",
+  "着用する": "Equip",
+  "{name} を {price} Arc で購入しますか？": "Buy {name} for {price} Arc?",
+  "購入する": "Buy",
+  "Arc 不足": "Not enough Arc",
+  "Slackウェブフックが設定されていません": "Slack webhook is not configured",
+  "Slack送信に失敗: {error}": "Failed to send to Slack: {error}",
+  "アクセス権限がありません": "You don't have permission",
+  "マネージャーダッシュボードはOrganizationのオーナーのみアクセス可能です":
+    "The Manager dashboard is accessible only to the organization owner",
+  "{name} に参加する": "Join {name}",
+  "あなたのメールドメインが許可されています — タップで参加": "Your email domain is allowed — tap to join",
+  "チーム / 企業で使う": "Use with your team / company",
+  "組織限定ルーム・Admin ダッシュボード・Slack 連携": "Org-only rooms · Admin dashboard · Slack integration",
+  "はじめる": "Get started",
 };
