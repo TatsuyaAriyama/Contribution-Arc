@@ -5445,7 +5445,12 @@ function App() {
         );
         const safeShape: CharacterShape = resolvedOwned.includes(loadedShape) ? loadedShape : "default";
         const grantedCoins = isAdmin ? Math.max(profile.coins || 0, 30000) : profile.coins || 0;
-        setOwnedCharacterShapes(resolvedOwned);
+        /* purchase 直後の reload で local の新規所持シルエットが cloud
+           の stale な値に上書きされて消える事故を防ぐため、現在 state
+           (localStorage hydrate 由来) と union してから採用する。 */
+        setOwnedCharacterShapes((current) =>
+          Array.from(new Set<CharacterShape>([...resolvedOwned, ...current])),
+        );
         setCoins(grantedCoins);
         setLastFeedRewardDate(profile.lastFeedRewardDate || "");
         setFeedRewardArcEarned(profile.feedRewardArcEarned || 0);
@@ -5610,12 +5615,12 @@ function App() {
           });
         }
         if (typeof profile.coins === "number") {
-          /* admin (= 開発者本人) は floor を 30000 にする。realtime sync
-             で cloud の生値 (0 等) が降ってきても、admin floor を尊重
-             しないと初回ロードで grantedCoins=30000 を入れた直後に
-             0 に上書きされてしまう。 */
-          const isAdminLive = (currentUser?.email || "").toLowerCase() === "ari.initx@gmail.com";
-          const nextCoins = isAdminLive ? Math.max(profile.coins, 30000) : profile.coins;
+          /* realtime sync では admin floor を適用しない。
+             ここで Math.max(profile.coins, 30000) すると、購入で減らした
+             直後に snapshot が降ってきて 30000 に戻され「coin が減らない /
+             購入が無効化される」回帰が起きる。初回 hydrate (5447 付近) で
+             だけ floor を当てる方針に変更。 */
+          const nextCoins = profile.coins;
           setCoins((current) => (current === nextCoins ? current : nextCoins));
         }
       },
