@@ -1624,4 +1624,11 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "あなたの学習ログ・投稿・組織メンバーシップなどを JSON で一括ダウンロードできます。アカウント削除は元に戻せません。":
     "Download your learning logs, posts, and organization memberships as a single JSON file. Account deletion cannot be undone.",
   "エクスポート中…": "Exporting…",
+
+  // === Phase 4m: Goal picker — EN free-text mode ===
+  "あなたの目標": "Your goal",
+  "例: 第一志望合格 / 資格取得 / アプリ開発":
+    "e.g. Get into MIT / Pass CFA L1 / Build a SaaS",
+  "同じ目標を持つ人があなたを見つけられます。":
+    "Others working toward the same goal can find you.",
 };

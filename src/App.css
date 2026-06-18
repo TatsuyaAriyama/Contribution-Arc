@@ -38699,6 +38699,27 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   font-weight: 900;
   cursor: pointer;
 }
+.goal-picker-done:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* EN モード: 自由入力フォーム。catalog UI と違いタブや一覧が無いので
+   モーダルの縦サイズを抑え、ラベル → input → 注釈 → footer の縦配置に。 */
+.goal-picker-modal--custom {
+  gap: 14px;
+}
+.goal-picker-custom-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.goal-picker-custom-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
 
 /* プロフィールメニュー: 目標エントリのサブテキスト (選択中の目標名) */
 .profile-menu-sub {

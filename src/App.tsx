@@ -18178,10 +18178,13 @@ function App() {
           という報告があったため。コードはコミット履歴に残るので
           ここでは復活させない。 */}
 
-      {/* 目標 (志望校 / 資格) 選択モーダル。プロフィールメニューから開く。 */}
+      {/* 目標 (志望校 / 資格) 選択モーダル。プロフィールメニューから開く。
+          EN モードでは GoalPickerModal が free-text 入力に切替わるので、
+          onSelectCustom 経由で goalCustomName を保存する。 */}
       {isGoalPickerOpen ? (
         <GoalPickerModal
           currentGoalId={goalId}
+          currentCustomName={goalCustomName}
           onSelect={(id) => {
             setGoalId(id);
             setGoalCustomName("");
@@ -18202,6 +18205,29 @@ function App() {
                 goalCustomName: "",
               }).catch((error) => {
                 console.info("Goal cloud save (select) skipped.", error);
+              });
+            }
+          }}
+          onSelectCustom={(customName) => {
+            setGoalId("");
+            setGoalCustomName(customName);
+            setIsGoalPickerOpen(false);
+            if (currentUser) {
+              const scope = getAccountStorageScope(currentUser.uid, userId);
+              safeSetLocalStorage(getAccountStorageKey(scope, "goal-id"), "");
+              safeSetLocalStorage(
+                getAccountStorageKey(scope, "goal-custom-name"),
+                customName,
+              );
+              safeSetLocalStorage(
+                getAccountStorageKey(scope, "goal-updated-at"),
+                String(Date.now()),
+              );
+              void saveUserGoalToCloud(db, currentUser.uid, {
+                goalId: "",
+                goalCustomName: customName,
+              }).catch((error) => {
+                console.info("Goal cloud save (custom) skipped.", error);
               });
             }
           }}

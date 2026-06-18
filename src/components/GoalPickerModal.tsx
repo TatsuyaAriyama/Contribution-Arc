@@ -20,15 +20,47 @@ import { useTranslation } from "../i18n/LanguageContext";
  */
 type Props = {
   currentGoalId: string;
+  /** 現在の自由入力 (英語モード or 一覧外目標)。EN モードでフォームに既定値として表示。 */
+  currentCustomName?: string;
   onSelect: (goalId: string) => void;
+  /** 自由入力での目標設定 (EN モード)。trim 済み・空文字なら呼ばれない。 */
+  onSelectCustom?: (customName: string) => void;
   onClear: () => void;
   onClose: () => void;
 };
 
 const MAX_RESULTS = 60;
+const CUSTOM_GOAL_MAX_LENGTH = 60;
 
-export function GoalPickerModal({ currentGoalId, onSelect, onClear, onClose }: Props) {
-  const { t } = useTranslation();
+export function GoalPickerModal({
+  currentGoalId,
+  currentCustomName = "",
+  onSelect,
+  onSelectCustom,
+  onClear,
+  onClose,
+}: Props) {
+  const { t, language } = useTranslation();
+
+  /* EN モードは Japan-specific な高校/大学カタログがほぼ役に立たない
+     ので、free-text 入力に切替える。catalog 検索 UI を出すと "Find Tokyo
+     University" のような期待を煽ってしまうため、思い切って別画面にする。
+     onSelectCustom が無い場合は (後方互換のため) 通常の catalog UI に
+     フォールバックする。 */
+  if (language === "en" && onSelectCustom) {
+    return (
+      <CustomGoalForm
+        initialName={currentCustomName}
+        hasExisting={Boolean(currentGoalId || currentCustomName)}
+        onSubmit={(name) => {
+          onSelectCustom(name);
+        }}
+        onClear={onClear}
+        onClose={onClose}
+        t={t}
+      />
+    );
+  }
   const [kind, setKind] = useState<GoalKind>(() => {
     // 現在選択中の goal があればそのカテゴリで開く、なければ大学から
     const current = GOAL_CATALOG.find((g) => g.id === currentGoalId);
@@ -140,6 +172,96 @@ export function GoalPickerModal({ currentGoalId, onSelect, onClear, onClose }: P
             {t("閉じる")}
           </button>
         </footer>
+      </section>
+    </div>
+  );
+}
+
+/* EN モード用の自由入力フォーム。
+ *  - 1 つのテキストフィールド + "Save" / "Clear" / "Close"
+ *  - submit で trim & 長さチェック (60 字)。
+ *  - 既存値があれば編集できるよう placeholder ではなく value に流し込む。
+ */
+function CustomGoalForm({
+  initialName,
+  hasExisting,
+  onSubmit,
+  onClear,
+  onClose,
+  t,
+}: {
+  initialName: string;
+  hasExisting: boolean;
+  onSubmit: (name: string) => void;
+  onClear: () => void;
+  onClose: () => void;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+}) {
+  const [value, setValue] = useState(initialName);
+  const trimmed = value.trim();
+  const canSubmit = trimmed.length > 0 && trimmed.length <= CUSTOM_GOAL_MAX_LENGTH;
+
+  return (
+    <div className="settings-modal-backdrop" role="presentation" onClick={onClose}>
+      <section
+        className="settings-modal goal-picker-modal goal-picker-modal--custom"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="goal-picker-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="goal-picker-head">
+          <div>
+            <p className="card-kicker">Goal</p>
+            <h2 id="goal-picker-title">{t("目標を選ぶ")}</h2>
+          </div>
+          <button
+            type="button"
+            className="goal-picker-close"
+            onClick={onClose}
+            aria-label={t("閉じる")}
+          >
+            ×
+          </button>
+        </header>
+
+        <form
+          className="goal-picker-custom-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (canSubmit) onSubmit(trimmed);
+          }}
+        >
+          <label className="goal-picker-custom-label" htmlFor="goal-picker-custom-input">
+            {t("あなたの目標")}
+          </label>
+          <input
+            id="goal-picker-custom-input"
+            type="text"
+            className="goal-picker-search"
+            placeholder={t("例: 第一志望合格 / 資格取得 / アプリ開発")}
+            value={value}
+            maxLength={CUSTOM_GOAL_MAX_LENGTH}
+            onChange={(e) => setValue(e.target.value)}
+            autoFocus
+          />
+          <p className="goal-picker-meta">
+            {t("同じ目標を持つ人があなたを見つけられます。")}
+          </p>
+
+          <footer className="goal-picker-foot">
+            {hasExisting ? (
+              <button type="button" className="goal-picker-clear" onClick={onClear}>
+                {t("目標をクリア")}
+              </button>
+            ) : (
+              <span />
+            )}
+            <button type="submit" className="goal-picker-done" disabled={!canSubmit}>
+              {t("保存")}
+            </button>
+          </footer>
+        </form>
       </section>
     </div>
   );
