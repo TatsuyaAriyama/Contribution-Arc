@@ -7760,6 +7760,31 @@
   outline: none;
 }
 
+/* 自分の日報リストの空状態 — first-run 用の welcoming コピー。 */
+.daily-history-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 14px;
+  border: 1px dashed rgba(var(--ink-rgb), 0.16);
+  border-radius: 12px;
+  background: rgba(var(--ink-rgb), 0.02);
+  text-align: center;
+}
+.daily-history-empty-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.daily-history-empty-hint {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(var(--ink-rgb), 0.6);
+  line-height: 1.55;
+}
+
 .map-card {
   padding: 22px;
 }
