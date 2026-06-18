@@ -5444,7 +5444,7 @@ function App() {
           new Set<CharacterShape>(["default", ...loadedOwned]),
         );
         const safeShape: CharacterShape = resolvedOwned.includes(loadedShape) ? loadedShape : "default";
-        const grantedCoins = isAdmin ? Math.max(profile.coins || 0, 10000) : profile.coins || 0;
+        const grantedCoins = isAdmin ? Math.max(profile.coins || 0, 30000) : profile.coins || 0;
         setOwnedCharacterShapes(resolvedOwned);
         setCoins(grantedCoins);
         setLastFeedRewardDate(profile.lastFeedRewardDate || "");
