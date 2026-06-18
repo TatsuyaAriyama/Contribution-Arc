@@ -3857,7 +3857,8 @@ function App() {
     photo: string;
     status: LearningStatus;
   } | null>(null);
-  const [learningCategoryTab, setLearningCategoryTab] = useState<"all" | "active" | "done" | "archived">("all");
+  // タブ UI は撤去したが、フィルタ判定で参照するため "all" 固定で保持。
+  const [learningCategoryTab] = useState<"all" | "active" | "done" | "archived">("all");
   const [learningSearchQuery, setLearningSearchQuery] = useState("");
   // Library sort order. "recent" (default) keeps the active-work-first
   // behaviour; the others let the user reorder without touching data.
@@ -19751,18 +19752,6 @@ function App() {
           <header className="learning-header">
             <div>
               <h2>{t("ライブラリ")}</h2>
-              {(() => {
-                // Quiet inventory summary — counts only, no streaks or
-                // targets. Helps the user gauge library size at a glance.
-                const live = learningItems.filter((item) => !item.archived);
-                const doneCount = live.filter((item) => (item.status ?? "active") === "done").length;
-                const archivedCount = learningItems.length - live.length;
-                if (learningItems.length === 0) return null;
-                const parts = [t("{count}件", { count: live.length })];
-                if (doneCount > 0) parts.push(t("達成済み{count}", { count: doneCount }));
-                if (archivedCount > 0) parts.push(t("休止中{count}", { count: archivedCount }));
-                return <p className="learning-count-summary">{parts.join(" · ")}</p>;
-              })()}
             </div>
             <div className="learning-header-actions">
               <button
@@ -19784,26 +19773,6 @@ function App() {
           </header>
 
           <div className="learning-controls">
-            <div className="learning-tabs" role="tablist">
-              {(
-                [
-                  { value: "all" as const, label: t("すべて") },
-                  { value: "active" as const, label: t("学習中") },
-                  { value: "done" as const, label: t("達成済み") },
-                  { value: "archived" as const, label: t("休止中") },
-                ]
-              ).map((tab) => (
-                <button
-                  key={tab.value}
-                  type="button"
-                  role="tab"
-                  className={learningCategoryTab === tab.value ? "active" : ""}
-                  onClick={() => setLearningCategoryTab(tab.value)}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
             <input
               className="learning-search"
               type="search"

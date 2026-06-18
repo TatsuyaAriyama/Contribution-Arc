@@ -23104,10 +23104,10 @@
 
 .learning-grid {
   display: grid;
-  /* 表紙サムネ + タイトルのみのシンプルな棚。横 4 列前後で並べる。 */
-  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-  column-gap: 12px;
-  row-gap: 18px;
+  /* 必ず横 4 列。auto-fill だと端末幅で 3 列になっていたので固定する。 */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  column-gap: 10px;
+  row-gap: 16px;
   align-items: start;
 }
 /* ドラッグ&ドロップ並べ替え：掴んでいるタイルを少し浮かせる。 */
