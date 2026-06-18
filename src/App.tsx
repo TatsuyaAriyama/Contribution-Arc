@@ -4736,6 +4736,10 @@ function App() {
   // 右パネルのセグメントタブ: "mine" = 自分の過去日報 / "team" = みんなの日報。
   // 性質の違う 2 リストを縦積みせず切替式にして、Team Daily の発見性を上げる。
   const [dailyHistoryTab, setDailyHistoryTab] = useState<"mine" | "team">("mine");
+  /* 自分の日報リストは未展開時は直近 7 日分のみ。"もっと見る" を押すと
+     全件 (最大 50) まで広げる。リスト全体が常に長く伸びてスクロール
+     負担になっていたのを抑える。 */
+  const [showAllMyReports, setShowAllMyReports] = useState(false);
   // 他ユーザーのプロフィールカードの ⋯(その他)メニュー開閉。ブロック等の
   // 破壊的アクションを主要動線から隠してここに収める。常に1ユーザー分の
   // カードしか表示しないので単一の boolean で足りる。
@@ -16752,6 +16756,24 @@ function App() {
                   {t("他のメンバーの学習データはここでは表示されません。")}
                 </p>
               )}
+
+              {/* 削除はリスト本体から取り除いたので、詳細モーダル内に
+                  破壊的アクションとして配置する。確認 prompt は
+                  handleDailyReportDelete 内で出るのでここでは即発火。 */}
+              {isMine ? (
+                <div className="daily-detail-modal-danger">
+                  <button
+                    type="button"
+                    className="daily-detail-modal-delete"
+                    onClick={() => {
+                      handleDailyReportDelete(report);
+                      setExpandedDailyReport(null);
+                    }}
+                  >
+                    {t("この日報を削除")}
+                  </button>
+                </div>
+              ) : null}
             </section>
           </div>
         );
@@ -19491,34 +19513,61 @@ function App() {
               ) : null}
             </div>
             <div className="daily-history-list">
-              {filteredDailyReports.length > 0 ? (
-                filteredDailyReports.slice(0, 20).map((report) => (
-                  <article
-                    key={report.id}
-                    className={report.date === selectedDailyDate ? "active" : ""}
-                  >
-                    <button type="button" onClick={() => handleDailyDateChange(report.date)}>
-                      <strong>
-                        {formatDailyDate(report.date, language)}
-                        {report.isDraft ? (
-                          <span className="daily-history-badge" aria-label={t("下書き")}>
-                            {t("下書き")}
-                          </span>
-                        ) : null}
-                      </strong>
-                      <span>{report.plan || t("今日やることは未入力")}</span>
-                      <small>{report.reflection ? t("振り返り済み") : t("振り返り未入力")}</small>
-                    </button>
-                    <button
-                      type="button"
-                      className="daily-delete-button"
-                      onClick={() => handleDailyReportDelete(report)}
-                    >
-                      {t("削除")}
-                    </button>
-                  </article>
-                ))
-              ) : dailyReports.length > 0 ? (
+              {filteredDailyReports.length > 0 ? (() => {
+                /* 検索 / 日付フィルタ中はフィルタヒットを全件出す
+                   (期待外で隠すと「探した日報が無い」と誤認するため)。
+                   未フィルタ時のみ "7 日表示 → もっと見る で 50 件" の
+                   ふるい分けを適用する。 */
+                const isFiltered = Boolean(dailyHistoryDateFilter || dailyHistorySearch);
+                const visibleReports = isFiltered
+                  ? filteredDailyReports.slice(0, 50)
+                  : showAllMyReports
+                    ? filteredDailyReports.slice(0, 50)
+                    : filteredDailyReports.slice(0, 7);
+                const hasMore = !isFiltered && filteredDailyReports.length > visibleReports.length;
+                return (
+                  <>
+                    {visibleReports.map((report) => (
+                      <article
+                        key={report.id}
+                        className={report.date === selectedDailyDate ? "active" : ""}
+                      >
+                        <button type="button" onClick={() => handleDailyDateChange(report.date)}>
+                          <strong>
+                            {formatDailyDate(report.date, language)}
+                            {report.isDraft ? (
+                              <span className="daily-history-badge" aria-label={t("下書き")}>
+                                {t("下書き")}
+                              </span>
+                            ) : null}
+                          </strong>
+                          <span>{report.plan || t("今日やることは未入力")}</span>
+                          <small>{report.reflection ? t("振り返り済み") : t("振り返り未入力")}</small>
+                        </button>
+                        {/* 詳細モーダルへの導線。削除や全文表示はここから。 */}
+                        <button
+                          type="button"
+                          className="daily-history-detail-button"
+                          onClick={() => setExpandedDailyReport(report)}
+                          aria-label={t("詳細を開く")}
+                          title={t("詳細を開く")}
+                        >
+                          ⋯
+                        </button>
+                      </article>
+                    ))}
+                    {hasMore ? (
+                      <button
+                        type="button"
+                        className="daily-history-more"
+                        onClick={() => setShowAllMyReports(true)}
+                      >
+                        {t("もっと見る ({count} 件)", { count: filteredDailyReports.length - visibleReports.length })}
+                      </button>
+                    ) : null}
+                  </>
+                );
+              })() : dailyReports.length > 0 ? (
                 <p>{t("一致する日報はありません。")}</p>
               ) : (
                 <p>{t("まだ日報はありません。")}</p>

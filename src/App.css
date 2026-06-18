@@ -7689,6 +7689,77 @@
   outline: none;
 }
 
+/* 過去日報リストの右端に置く詳細モーダル導線 ("⋯") + "もっと見る"
+   ボタン + 詳細モーダル底部の delete 行。 */
+.daily-history-detail-button {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
+  border-radius: 999px;
+  background: rgba(var(--surface-rgb), 0.72);
+  color: rgba(var(--ink-rgb), 0.5);
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+}
+.daily-history-detail-button:hover,
+.daily-history-detail-button:focus-visible {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: rgba(var(--ink-rgb), 0.22);
+  outline: none;
+}
+.daily-history-more {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 14px;
+  border: 1px dashed rgba(var(--ink-rgb), 0.16);
+  border-radius: 12px;
+  background: transparent;
+  color: rgba(var(--ink-rgb), 0.6);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+}
+.daily-history-more:hover,
+.daily-history-more:focus-visible {
+  background: rgba(var(--ink-rgb), 0.03);
+  color: var(--ink);
+  border-color: rgba(var(--ink-rgb), 0.28);
+  outline: none;
+}
+.daily-detail-modal-danger {
+  margin-top: 12px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(var(--ink-rgb), 0.08);
+  display: flex;
+  justify-content: flex-end;
+}
+.daily-detail-modal-delete {
+  padding: 8px 16px;
+  border: 1px solid rgba(170, 57, 57, 0.24);
+  border-radius: 999px;
+  background: transparent;
+  color: #8a2f2f;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+.daily-detail-modal-delete:hover,
+.daily-detail-modal-delete:focus-visible {
+  background: rgba(170, 57, 57, 0.08);
+  outline: none;
+}
+
 .map-card {
   padding: 22px;
 }

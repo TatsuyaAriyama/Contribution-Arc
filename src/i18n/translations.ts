@@ -1662,4 +1662,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "{summary} (合計 {total})": "{summary} ({total} total)",
   "日報を更新": "Update daily report",
   "日報を保存": "Save daily report",
+  "詳細を開く": "Open details",
+  "もっと見る ({count} 件)": "Show more ({count})",
+  "この日報を削除": "Delete this entry",
 };
