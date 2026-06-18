@@ -182,6 +182,7 @@ import { ManagerDashboard } from "./components/ManagerDashboard";
 const IS_IOS_BUILD = import.meta.env.VITE_PLATFORM === "ios";
 import { ShareToXModal } from "./components/ShareToXModal";
 import { TutorialHint } from "./components/TutorialHint";
+import { BarcodeScannerModal } from "./components/BarcodeScannerModal";
 import { ToastHost } from "./components/ToastHost";
 import { PullToRefresh } from "./components/PullToRefresh";
 import { InstallInstructionsModal } from "./components/InstallInstructionsModal";
@@ -3836,6 +3837,8 @@ function App() {
      並べ替え結果は item.order に保存され、sort mode は自動で "custom"
      に切り替わる (= 反映されたことが視覚的に分かる)。 */
   const [isReorderingLibrary, setIsReorderingLibrary] = useState(false);
+  // バーコード(ISBN)スキャンで本を追加するモーダルの開閉。
+  const [isBarcodeScanOpen, setIsBarcodeScanOpen] = useState(false);
   /* プロフィールの「This Week」棒グラフから曜日をタップして、
      その日に記録した学習項目・時間を編集できる詳細パネルを開く。
      null = 閉じている、0..6 = Mon..Sun。 */
@@ -8743,6 +8746,69 @@ function App() {
     });
   };
 
+
+  /* バーコード(ISBN)で本を登録。Google Books から書名・表紙・ページ数を
+     引き、学習項目エディタを「本」モードでプリフィルして開く(内容を確認
+     してから保存する流れ)。見つからなければ空の本として手入力に委ねる。 */
+  const handleBookIsbnDetected = async (rawIsbn: string) => {
+    const isbn = rawIsbn.replace(/[^0-9Xx]/g, "");
+    setIsBarcodeScanOpen(false);
+    if (!isbn) return;
+    setIsLearningDeleteConfirming(false);
+    const openBookEditor = (info?: {
+      title?: string;
+      authors?: string[];
+      pageCount?: number;
+      cover?: string;
+    }) => {
+      setLearningEditorState({
+        mode: "create",
+        name: info?.title || "",
+        category: "book",
+        color: studyColorOptions[0].value,
+        totalPages: info?.pageCount ? String(info.pageCount) : "",
+        currentPages: "",
+        note: Array.isArray(info?.authors) ? info!.authors.join(", ") : "",
+        photo: info?.cover || "",
+        status: "active",
+      });
+    };
+    try {
+      const res = await fetch(
+        `https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}&country=JP`,
+      );
+      const data = (await res.json()) as {
+        items?: Array<{
+          volumeInfo?: {
+            title?: string;
+            authors?: string[];
+            pageCount?: number;
+            imageLinks?: { thumbnail?: string; smallThumbnail?: string };
+          };
+        }>;
+      };
+      const info = data.items?.[0]?.volumeInfo;
+      if (info?.title) {
+        const cover = (info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || "").replace(
+          /^http:/,
+          "https:",
+        );
+        openBookEditor({
+          title: info.title,
+          authors: info.authors,
+          pageCount: info.pageCount,
+          cover,
+        });
+        showToast("本の情報を取得しました。内容を確認して保存してください", { kind: "success" });
+      } else {
+        openBookEditor();
+        showToast("該当する本が見つかりませんでした。手入力で登録してください", { kind: "error" });
+      }
+    } catch {
+      openBookEditor();
+      showToast("本の情報の取得に失敗しました。手入力で登録してください", { kind: "error" });
+    }
+  };
 
   const openLearningEditorForEdit = (item: LearningItem) => {
     setIsLearningDeleteConfirming(false);
@@ -15896,6 +15962,13 @@ function App() {
         </div>
       </motion.header>
 
+      {isBarcodeScanOpen ? (
+        <BarcodeScannerModal
+          onClose={() => setIsBarcodeScanOpen(false)}
+          onDetected={(isbn) => void handleBookIsbnDetected(isbn)}
+        />
+      ) : null}
+
       {learningEditorState ? (
         <div className="settings-modal-backdrop" role="presentation" onClick={closeLearningEditor}>
           <section
@@ -19437,9 +19510,23 @@ function App() {
                 return <p className="learning-count-summary">{parts.join(" · ")}</p>;
               })()}
             </div>
-            <button type="button" className="learning-add-button" onClick={() => openLearningEditorForCreate("")}>
-              + {t("追加")}
-            </button>
+            <div className="learning-header-actions">
+              <button
+                type="button"
+                className="learning-scan-button"
+                onClick={() => setIsBarcodeScanOpen(true)}
+                aria-label={t("バーコードで本を追加")}
+                title={t("バーコードで本を追加")}
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M3 5v14M7 5v14M11 5v14M15 5v14M19 5v14M21 5v14" />
+                </svg>
+                {t("バーコード")}
+              </button>
+              <button type="button" className="learning-add-button" onClick={() => openLearningEditorForCreate("")}>
+                + {t("追加")}
+              </button>
+            </div>
           </header>
 
           <div className="learning-controls">
@@ -19730,11 +19817,7 @@ function App() {
                           >
                             {item.photo ? (
                               <img src={item.photo} alt="" loading="lazy" />
-                            ) : (
-                              <span className="learning-card-photo-initial">
-                                {(item.name.trim().charAt(0) || "?").toUpperCase()}
-                              </span>
-                            )}
+                            ) : null}
                           </span>
                           {isBook ? (
                             <span className="learning-card-badge" aria-hidden="true">

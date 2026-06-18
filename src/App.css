@@ -23531,6 +23531,139 @@
   color: var(--muted);
 }
 
+/* ライブラリ見出しの操作群（バーコード + 追加）。 */
+.learning-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.learning-scan-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.learning-scan-button:hover {
+  background: var(--ink);
+  color: var(--surface);
+}
+.learning-scan-button svg {
+  flex: 0 0 auto;
+}
+
+/* === バーコード(ISBN)読み取りモーダル === */
+.barcode-scan-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(17, 24, 39, 0.45);
+  backdrop-filter: blur(6px);
+}
+.barcode-scan-card {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--rounded-modal, 22px);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 30px 90px rgba(26, 24, 23, 0.28);
+}
+.barcode-scan-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 15px;
+  font-weight: 800;
+}
+.barcode-scan-close {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+.barcode-scan-viewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #000;
+}
+.barcode-scan-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.barcode-scan-reticle {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 50%;
+  height: 28%;
+  transform: translateY(-50%);
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 10px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.28);
+}
+.barcode-scan-hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+  text-align: center;
+}
+.barcode-scan-manual {
+  display: flex;
+  gap: 8px;
+}
+.barcode-scan-manual input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+}
+.barcode-scan-manual button {
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  background: var(--cta-bg, #1a1817);
+  color: var(--cta-fg, #fff);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.barcode-scan-manual button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* === ライブラリのコンパクトタイル化（横 4 列の本棚）===
    作業項目を一覧で多く見せるため、各カードをサムネ + 名前 + 累計の
    小さなタイルに。時間記録 / ページ更新などの操作はタイルをタップ →
@@ -36521,20 +36654,11 @@ select:disabled {
   object-fit: cover;
   display: block;
 }
-/* 写真未設定時の fallback：光沢グラデの "ぷっくりアイコン" をやめ、
-   item color を薄く敷いたフラットなタイル + 頭文字モノグラムに。
-   Notion / 最近のアプリ風で、紙ベースのデザインにも馴染む。 */
+/* 写真未設定時の fallback：白紙（プレーンな surface + 薄い枠）。
+   余計な装飾はせず、写真を登録するまでは無地のカバーにする。 */
 .learning-card-photo.is-fallback {
-  border-color: color-mix(
-    in srgb,
-    var(--learning-thumb-color, var(--learning-card-color, var(--ink))) 24%,
-    var(--hairline)
-  );
-  background: linear-gradient(
-    155deg,
-    color-mix(in srgb, var(--learning-thumb-color, var(--learning-card-color, var(--ink))) 15%, var(--surface)) 0%,
-    color-mix(in srgb, var(--learning-thumb-color, var(--learning-card-color, var(--ink))) 34%, var(--surface)) 100%
-  );
+  border-color: var(--hairline);
+  background: var(--surface);
   box-shadow: none;
 }
 .learning-card-photo-initial {
