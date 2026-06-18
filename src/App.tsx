@@ -19730,7 +19730,11 @@ function App() {
                           >
                             {item.photo ? (
                               <img src={item.photo} alt="" loading="lazy" />
-                            ) : null}
+                            ) : (
+                              <span className="learning-card-photo-initial">
+                                {(item.name.trim().charAt(0) || "?").toUpperCase()}
+                              </span>
+                            )}
                           </span>
                           {isBook ? (
                             <span className="learning-card-badge" aria-hidden="true">

@@ -23560,6 +23560,10 @@
   aspect-ratio: 1 / 1;
   border-radius: 11px;
 }
+/* タイルでは頭文字を大きく見せる（表紙らしく）。 */
+.learning-grid .learning-card-photo-initial {
+  font-size: 30px;
+}
 .learning-grid .learning-card-head strong {
   width: 100%;
   flex: 0 0 auto;
@@ -36517,32 +36521,33 @@ select:disabled {
   object-fit: cover;
   display: block;
 }
-/* 写真未設定時の fallback：item color から派生したグラデ。
-   光沢を控えめにして "AI 生成" 感を抑え、紙のカバーに寄せた。 */
+/* 写真未設定時の fallback：光沢グラデの "ぷっくりアイコン" をやめ、
+   item color を薄く敷いたフラットなタイル + 頭文字モノグラムに。
+   Notion / 最近のアプリ風で、紙ベースのデザインにも馴染む。 */
 .learning-card-photo.is-fallback {
-  border-color: rgba(var(--ink-rgb), 0.1);
-  background:
-    radial-gradient(
-      130% 90% at 28% 18%,
-      rgba(255, 255, 255, 0.5) 0%,
-      rgba(255, 255, 255, 0) 60%
-    ),
-    linear-gradient(
-      138deg,
-      color-mix(in srgb, var(--learning-thumb-color, var(--learning-card-color, var(--ink))) 88%, #fff) 0%,
-      color-mix(in srgb, var(--learning-thumb-color, var(--learning-card-color, var(--ink))) 70%, #000) 100%
-    );
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.42),
-    inset 0 -8px 18px rgba(0, 0, 0, 0.14);
+  border-color: color-mix(
+    in srgb,
+    var(--learning-thumb-color, var(--learning-card-color, var(--ink))) 24%,
+    var(--hairline)
+  );
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--learning-thumb-color, var(--learning-card-color, var(--ink))) 15%, var(--surface)) 0%,
+    color-mix(in srgb, var(--learning-thumb-color, var(--learning-card-color, var(--ink))) 34%, var(--surface)) 100%
+  );
+  box-shadow: none;
 }
 .learning-card-photo-initial {
-  color: #fff;
-  font-size: 14px;
-  font-weight: 900;
-  letter-spacing: -0.03em;
+  color: color-mix(
+    in srgb,
+    var(--learning-thumb-color, var(--learning-card-color, var(--ink))) 76%,
+    var(--ink)
+  );
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0;
   line-height: 1;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
+  text-shadow: none;
 }
 
 /* =================================================================
