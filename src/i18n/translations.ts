@@ -1357,4 +1357,71 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "{month}月{day}日": "{month}/{day}",
   "13週合計": "13-week total",
   "学習中: {building}": "Studying: {building}",
+
+  // === Phase 4f: orphan setOrgError / setOrgAdminError messages ===
+  "組織名を入力してください。": "Please enter an organization name.",
+  "招待リンクを発行できませんでした。": "Couldn't create an invite link.",
+  "退出に失敗しました。再度お試しください。": "Failed to leave. Please try again.",
+  "メンバー一覧を読み込めませんでした。再度お試しください。":
+    "Couldn't load the member list. Please try again.",
+  "除名に失敗しました。Firestore のルール権限を確認してください。":
+    "Couldn't remove the member. Check the Firestore rule permissions.",
+  "チーム名の保存に失敗しました。": "Couldn't save the team name.",
+
+  // === Phase 4d: service files ===
+  // plans.ts — pricing / pricing table
+  "推奨": "Recommended",
+  "個人 / 小規模利用": "Personal / small use",
+  "5〜50 名のチーム": "Teams of 5–50",
+  "51 名以上 / 法務要件あり": "51+ members / legal requirements",
+  "お問い合わせ": "Contact us",
+  "/ user / 月": "/ user / month",
+  "公開ルーム参加": "Join public rooms",
+  "学習ログ・GitHub 連携": "Study log & GitHub integration",
+  "Arc 通貨でカスタマイズ": "Customize with Arc currency",
+  "組織テナント・招待リンク": "Org tenant & invite links",
+  "Admin ダッシュボード + CSV": "Admin dashboard + CSV",
+  "Slack 連携": "Slack integration",
+  "メール優先サポート": "Priority email support",
+  "SAML / SSO 認証": "SAML / SSO authentication",
+  "SCIM プロビジョニング": "SCIM provisioning",
+  "監査ログ・データレジデンシー": "Audit log & data residency",
+  "SLA・専任カスタマーサクセス": "SLA & dedicated customer success",
+
+  // shareImage.ts — share-to-X canvas + tweet body
+  "今日の作業時間": "Today's work time",
+
+  // slack.ts — Block Kit fallback / mrkdwn body strings sent to Slack
+  "*{name}* が *{room}* に入室（{task}）":
+    "*{name}* joined *{room}* ({task})",
+  "*{name}* が *{room}* を退室（滞在 {stay}）":
+    "*{name}* left *{room}* (stayed {stay})",
+  "*{name}* が *{room}* で休憩中":
+    "*{name}* is on a break in *{room}*",
+  "*{name}* が *{room}* で募集中（{task}・{duration}分・開始 {start}）":
+    "*{name}* is recruiting in *{room}* ({task} · {duration} min · starts {start})",
+  "*{name}* が記録を投稿しました":
+    "*{name}* posted an update",
+  "*{org}* の日次サマリー":
+    "Daily summary for *{org}*",
+  "メンバー *{members}* 人 · Effort *{effort}* · Output *{output}* · Contributions *{contributions}*":
+    "*{members}* members · Effort *{effort}* · Output *{output}* · Contributions *{contributions}*",
+  "{rank}. *{name}* — Effort {effort} / {streak}日連続":
+    "{rank}. *{name}* — Effort {effort} / {streak}-day streak",
+  "今日はまだ活動がありません。":
+    "No activity yet today.",
+
+  // teamDigest.ts — weekly summary posted via Slack webhook
+  "{org} 学習サマリー":
+    "{org} Learning Summary",
+  "{date} 時点":
+    "as of {date}",
+  "• チーム総学習時間: *{hours}h*":
+    "• Total team study time: *{hours}h*",
+  "• 稼働中メンバー: *{active}/{total}* 名 ({rate}%)":
+    "• Active members: *{active}/{total}* ({rate}%)",
+  "• 平均/人: *{hours}h*":
+    "• Average per person: *{hours}h*",
+  "メンバー別 学習時間 (累計上位)":
+    "Study time by member (top contributors)",
 };

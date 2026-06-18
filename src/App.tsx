@@ -1761,7 +1761,7 @@ function formatPostTime(createdAt: string) {
 // 返信のタイムスタンプ。直近(24時間以内)は「N分前 / N時間前」で相対表示し、
 // 1日以上経過したものは日時(M/D HH:mm)を出して「いつ返信されたか」が
 // 一目で分かるようにする。小さく添えるバイライン用途。
-function formatReplyTime(createdAt: string) {
+function formatReplyTime(createdAt: string, t: (k: string, vars?: Record<string, string | number>) => string) {
   const createdTime = new Date(createdAt).getTime();
   if (!Number.isFinite(createdTime)) {
     return "";
@@ -1769,13 +1769,13 @@ function formatReplyTime(createdAt: string) {
 
   const diffMinutes = Math.max(0, Math.floor((Date.now() - createdTime) / 60000));
   if (diffMinutes < 1) {
-    return "たった今";
+    return t("たった今");
   }
   if (diffMinutes < 60) {
-    return `${diffMinutes}分前`;
+    return t("{minutes}分前", { minutes: diffMinutes });
   }
   if (diffMinutes < 60 * 24) {
-    return `${Math.floor(diffMinutes / 60)}時間前`;
+    return t("{hours}時間前", { hours: Math.floor(diffMinutes / 60) });
   }
 
   return new Date(createdAt).toLocaleString("ja-JP", {
@@ -2515,12 +2515,12 @@ function createWorkspaceMember(
   };
 }
 
-function getRoomDescription(room: WorkspaceRoom) {
+function getRoomDescription(room: WorkspaceRoom, t: (k: string) => string) {
   if (room.name.toLowerCase().includes("night")) {
-    return "夜の集中作業に向いた、ゆっくり流れるビルドルーム。";
+    return t("夜の集中作業に向いた、ゆっくり流れるビルドルーム。");
   }
 
-  return "小さく集中し、積み上げを共有するための静かな空間。";
+  return t("小さく集中し、積み上げを共有するための静かな空間。");
 }
 
 
@@ -3797,7 +3797,7 @@ function App() {
   // Final onboarding step ("firstPost"): the user must write a greeting
   // AND their 決意 (resolution) before any other operation is possible.
   // Both are captured in a blocking modal; the post combines the two.
-  const [onboardingGreeting, setOnboardingGreeting] = useState("初めまして！");
+  const [onboardingGreeting, setOnboardingGreeting] = useState(t("初めまして！"));
   const [onboardingResolve, setOnboardingResolve] = useState("");
   /* Tutorial step "firstDailyPlan" の入力。firstPost 完了後にこの step
      へ遷移し、ユーザーに「今日やること」を 1〜2 行で書かせる。
@@ -11305,6 +11305,7 @@ function App() {
           { name: playerName, meta: `Lv ${levelState.level} · ${studyStreak}日連続` },
           selectedRoom.name,
           formatStayTime(stayMinutes, language),
+          language,
         ),
       );
     }
@@ -11420,6 +11421,7 @@ function App() {
             duration,
             startAtLabel,
             message,
+            language,
           ),
         );
       }
@@ -11490,6 +11492,7 @@ function App() {
         buildBreakStartedBlocks(
           { name: playerName, meta: `Lv ${levelState.level}` },
           selectedRoom.name,
+          language,
         ),
       );
     }
@@ -11874,7 +11877,7 @@ function App() {
       setOrgMembers((current) =>
         current.map((m) => (m.uid === target.uid ? { ...m, teamName: previous } : m)),
       );
-      setOrgAdminError("チーム名の保存に失敗しました。");
+      setOrgAdminError(t("チーム名の保存に失敗しました。"));
     }
   };
 
@@ -12116,7 +12119,7 @@ function App() {
     setSlackSaveState("saving");
     setSlackSaveMessage("");
     const result = await postToSlackWebhook(trimmedUrl, {
-      text: `:white_check_mark: Contribution Arc から *${currentOrganization.name}* に接続テストを送信しました。`,
+      text: `:white_check_mark: ${t("Contribution Arc から *{name}* に接続テストを送信しました。", { name: currentOrganization.name })}`,
     });
     if (result.ok) {
       setSlackSaveState("saved");
@@ -12158,6 +12161,7 @@ function App() {
           totalContributions,
         },
         topMembers,
+        language,
       ),
     );
     if (result.ok) {
@@ -12900,7 +12904,7 @@ function App() {
               className="study-log-stamp"
               style={{ ["--fill" as string]: String(focusFill) } as React.CSSProperties}
               onClick={() => handlePostAuthorOpen(post)}
-              aria-label={`${post.username}・${post.text}`}
+              aria-label={t("{username}・{text}", { username: post.username, text: post.text })}
             >
               <span className="study-log-stamp-value">{stampValue}</span>
               <span className="study-log-stamp-unit">{stampUnit}</span>
@@ -12915,7 +12919,7 @@ function App() {
                 {subject ? `『${subject}』` : post.text}
               </strong>
               <span className="study-log-byline">
-                {post.username}・{formatPostTime(post.createdAt)}
+                {t("{username}・{time}", { username: post.username, time: formatPostTime(post.createdAt) })}
               </span>
             </button>
             <button
@@ -13176,9 +13180,9 @@ function App() {
                   })()}
                   <p>
                     <strong>{reply.username}</strong>
-                    {formatReplyTime(reply.createdAt) ? (
+                    {formatReplyTime(reply.createdAt, t) ? (
                       <time className="post-reply-time" dateTime={reply.createdAt}>
-                        {formatReplyTime(reply.createdAt)}
+                        {formatReplyTime(reply.createdAt, t)}
                       </time>
                     ) : null}
                     <span>{reply.text}</span>
@@ -16519,9 +16523,9 @@ function App() {
                 <div>
                   <p className="card-kicker">Friends</p>
                   <h2 id="friends-modal-title">
-                    フレンド一覧
+                    {t("フレンド一覧")}
                     <span className="friends-modal-count">
-                      {enrichedFriends.length}人 · オンライン {onlineCount}人
+                      {t("{count}人 · オンライン {online}人", { count: enrichedFriends.length, online: onlineCount })}
                     </span>
                   </h2>
                 </div>
@@ -16538,10 +16542,10 @@ function App() {
               <p className="friends-modal-help">
                 {selectedRoom ? (
                   <>
-                    招待先の部屋: <strong>{selectedRoom.name}</strong>
+                    {t("招待先の部屋:")} <strong>{selectedRoom.name}</strong>
                   </>
                 ) : (
-                  "作業部屋を選ぶと、フレンドを招待できます。"
+                  t("作業部屋を選ぶと、フレンドを招待できます。")
                 )}
               </p>
 
@@ -16551,9 +16555,9 @@ function App() {
                   <header className="friends-leaderboard-head">
                     <div>
                       <p className="card-kicker">This week</p>
-                      <strong>今週のランキング</strong>
+                      <strong>{t("今週のランキング")}</strong>
                     </div>
-                    <span className="friends-leaderboard-myrank">あなた {selfRank}位</span>
+                    <span className="friends-leaderboard-myrank">{t("あなた {rank}位", { rank: selfRank })}</span>
                   </header>
                   <ol className="friends-leaderboard-list">
                     {weeklyLeaderboard.slice(0, 10).map((entry, index) => (
@@ -16583,7 +16587,7 @@ function App() {
                         <span className="friends-leaderboard-name">
                           {entry.name}
                           {entry.isSelf ? (
-                            <span className="friends-leaderboard-you">あなた</span>
+                            <span className="friends-leaderboard-you">{t("あなた")}</span>
                           ) : null}
                         </span>
                         <span className="friends-leaderboard-minutes">
@@ -16601,7 +16605,7 @@ function App() {
                   <input
                     type="search"
                     className="friends-modal-search"
-                    placeholder="名前・@ID で検索"
+                    placeholder={t("名前・@ID で検索")}
                     value={friendsModalQuery}
                     onChange={(event) => setFriendsModalQuery(event.target.value)}
                     aria-label={t("フレンドを検索")}
@@ -16614,11 +16618,11 @@ function App() {
                     }
                     aria-label={t("並べ替え")}
                   >
-                    <option value="online">オンライン順</option>
-                    <option value="name">名前順</option>
-                    <option value="recent">フレンド成立順</option>
-                    <option value="level">レベル順</option>
-                    <option value="streak">ストリーク順</option>
+                    <option value="online">{t("オンライン順")}</option>
+                    <option value="name">{t("名前順")}</option>
+                    <option value="recent">{t("フレンド成立順")}</option>
+                    <option value="level">{t("レベル順")}</option>
+                    <option value="streak">{t("ストリーク順")}</option>
                   </select>
                   {selectedRoom ? (
                     <button
@@ -16628,9 +16632,9 @@ function App() {
                         setFriendsBulkSelectMode((mode) => !mode);
                         setFriendsBulkSelectedUids(new Set());
                       }}
-                      title="一括招待モード"
+                      title={t("一括招待モード")}
                     >
-                      {friendsBulkSelectMode ? "✓ 一括選択中" : "□ 一括選択"}
+                      {friendsBulkSelectMode ? t("✓ 一括選択中") : t("□ 一括選択")}
                     </button>
                   ) : null}
                 </div>
@@ -16692,7 +16696,7 @@ function App() {
                             <strong>
                               {friend.name}
                               {isPinned ? <span className="friends-modal-pin-mark" aria-hidden="true">★</span> : null}
-                              {isMuted ? <span className="friends-modal-mute-mark" aria-hidden="true" title="ミュート中">M</span> : null}
+                              {isMuted ? <span className="friends-modal-mute-mark" aria-hidden="true" title={t("ミュート中")}>M</span> : null}
                             </strong>
                             {friend.userId ? <small>@{friend.userId}</small> : null}
                             <small>{friend.activity}</small>
@@ -16702,7 +16706,7 @@ function App() {
                                 {streak > 0 ? <em>🔥 {streak}d</em> : null}
                                 {friendsSinceDays !== null ? (
                                   <em title={`Friends since ${friendsSinceDays} day(s) ago`}>
-                                    {friendsSinceDays === 0 ? "今日成立" : `${friendsSinceDays}日目`}
+                                    {friendsSinceDays === 0 ? t("今日成立") : t("{days}日目", { days: friendsSinceDays })}
                                   </em>
                                 ) : null}
                                 {lastActiveDays !== null && lastActiveDays >= 14 ? (
@@ -16710,7 +16714,7 @@ function App() {
                                     className="friends-modal-stale"
                                     title={`Last active ${lastActiveDays} days ago`}
                                   >
-                                    {lastActiveDays}日前
+                                    {t("{days}日前", { days: lastActiveDays })}
                                   </em>
                                 ) : null}
                               </span>
@@ -16722,29 +16726,29 @@ function App() {
                             <button
                               type="button"
                               className={`friends-modal-encourage${encouragedToday ? " is-done" : ""}`}
-                              aria-label={encouragedToday ? "今日応援済み" : `${friend.name} を応援する`}
-                              title={encouragedToday ? "今日は応援済み" : "応援する（1日1回）"}
+                              aria-label={encouragedToday ? t("今日応援済み") : t("{name} を応援する", { name: friend.name })}
+                              title={encouragedToday ? t("今日は応援済み") : t("応援する（1日1回）")}
                               disabled={encouragedToday}
                               onClick={() =>
                                 void handleSendEncouragement({ uid: friend.uid, name: friend.name })
                               }
                             >
-                              応援
+                              {t("応援")}
                             </button>
                             <button
                               type="button"
                               className={`friends-modal-mute${isMuted ? " is-active" : ""}`}
-                              aria-label={isMuted ? "ミュート解除" : "ミュートする"}
-                              title={isMuted ? "ミュート解除" : "通知をミュート"}
+                              aria-label={isMuted ? t("ミュート解除") : t("ミュートする")}
+                              title={isMuted ? t("ミュート解除") : t("通知をミュート")}
                               onClick={() => handleToggleFriendMute(friend.uid)}
                             >
-                              {isMuted ? "通知ON" : "ミュート"}
+                              {isMuted ? t("通知ON") : t("ミュート")}
                             </button>
                             <button
                               type="button"
                               className="friends-modal-pin"
-                              aria-label={isPinned ? "ピン留めを外す" : "ピン留めする"}
-                              title={isPinned ? "ピン留めを外す" : "ピン留めする"}
+                              aria-label={isPinned ? t("ピン留めを外す") : t("ピン留めする")}
+                              title={isPinned ? t("ピン留めを外す") : t("ピン留めする")}
                               onClick={() =>
                                 setPinnedFriendUids((ids) =>
                                   isPinned
@@ -16761,7 +16765,7 @@ function App() {
                               disabled={!selectedRoom || invited}
                               onClick={() => handleSendWorkspaceInvite(friend)}
                             >
-                              {invited ? "招待済み" : "招待"}
+                              {invited ? t("招待済み") : t("招待")}
                             </button>
                             <button
                               type="button"
@@ -20475,7 +20479,7 @@ function App() {
                     })()}
                     <SilentWorkspaceRoom
                       roomName={selectedRoom.name}
-                      roomDescription={getRoomDescription(selectedRoom)}
+                      roomDescription={getRoomDescription(selectedRoom, t)}
                       onlineCount={roomOnlineCount}
                       commitLabel={roomCommits.toLocaleString()}
                       members={workspaceActors}
