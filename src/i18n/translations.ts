@@ -1665,4 +1665,11 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "詳細を開く": "Open details",
   "もっと見る ({count} 件)": "Show more ({count})",
   "この日報を削除": "Delete this entry",
+
+  // === Phase 12: Library status labels rename ===
+  "学習中": "Learning",
+  "達成済み": "Mastered",
+  "休止中": "Paused",
+  "休止を解除": "Resume",
+  "休止する": "Pause",
 };

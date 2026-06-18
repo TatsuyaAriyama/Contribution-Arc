@@ -16286,9 +16286,9 @@ function App() {
                 <div className="learning-status-segment" role="group" aria-label={t("ステータス")}>
                   {(
                     [
-                      { value: "active" as const, label: t("進行中") },
-                      { value: "done" as const, label: t("完了") },
-                      { value: "paused" as const, label: t("中断") },
+                      { value: "active" as const, label: t("学習中") },
+                      { value: "done" as const, label: t("達成済み") },
+                      { value: "paused" as const, label: t("休止中") },
                     ]
                   ).map((option) => (
                     <button
@@ -16355,8 +16355,8 @@ function App() {
                     onClick={handleLearningEditorArchiveToggle}
                   >
                     {learningItems.find((item) => item.id === learningEditorState.itemId)?.archived
-                      ? t("アーカイブ解除")
-                      : t("アーカイブ")}
+                      ? t("休止を解除")
+                      : t("休止する")}
                   </button>
                 ) : (
                   <span aria-hidden="true" />
@@ -16474,14 +16474,14 @@ function App() {
                   <h2 id="learning-detail-title">{item.name}</h2>
                   <div className="learning-detail-badges">
                     {status === "done" ? (
-                      <span className="learning-card-status is-done">{t("完了")}</span>
+                      <span className="learning-card-status is-done">{t("達成済み")}</span>
                     ) : status === "paused" ? (
-                      <span className="learning-card-status is-paused">{t("中断")}</span>
+                      <span className="learning-card-status is-paused">{t("休止中")}</span>
                     ) : (
-                      <span className="learning-card-status is-active">{t("進行中")}</span>
+                      <span className="learning-card-status is-active">{t("学習中")}</span>
                     )}
                     {item.archived ? (
-                      <span className="learning-card-archived">{t("アーカイブ")}</span>
+                      <span className="learning-card-archived">{t("休止中")}</span>
                     ) : null}
                   </div>
                 </div>
@@ -19759,9 +19759,9 @@ function App() {
               {(
                 [
                   { value: "all" as const, label: t("すべて") },
-                  { value: "active" as const, label: t("進行中") },
-                  { value: "done" as const, label: t("完了") },
-                  { value: "archived" as const, label: t("アーカイブ") },
+                  { value: "active" as const, label: t("学習中") },
+                  { value: "done" as const, label: t("達成済み") },
+                  { value: "archived" as const, label: t("休止中") },
                 ]
               ).map((tab) => (
                 <button
@@ -20051,9 +20051,9 @@ function App() {
                           ) : null}
                           <strong>{item.name}</strong>
                           {status === "done" ? (
-                            <span className="learning-card-status is-done">{t("完了")}</span>
+                            <span className="learning-card-status is-done">{t("達成済み")}</span>
                           ) : status === "paused" ? (
-                            <span className="learning-card-status is-paused">{t("中断")}</span>
+                            <span className="learning-card-status is-paused">{t("休止中")}</span>
                           ) : null}
                         </div>
                         <div className="learning-card-meta">
@@ -20065,7 +20065,7 @@ function App() {
                           >
                             {lastLabel}
                           </span>
-                          {item.archived ? <span className="learning-card-archived">{t("アーカイブ")}</span> : null}
+                          {item.archived ? <span className="learning-card-archived">{t("休止中")}</span> : null}
                         </div>
                         {sparkline && sparklineMax > 0 ? (
                           <div className="learning-card-spark" aria-hidden="true">
