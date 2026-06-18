@@ -172,6 +172,13 @@ import {
 } from "./services/roomChat";
 import { ArcPurchasePanel } from "./components/ArcPurchasePanel";
 import { ManagerDashboard } from "./components/ManagerDashboard";
+
+/* iOS App Store 提出版では Apple 以外のデジタル商品決済 (Stripe で
+   Arc コインを売る等) は guideline 3.1.1 で即リジェクトされる。
+   ビルド時に VITE_PLATFORM=ios を立てると Arc 購入パネル / Shop へ
+   の動線をすべて非表示にする (Web / Android は従来通り表示)。
+   将来 StoreKit / RevenueCat 実装を入れた時にここを外す。 */
+const IS_IOS_BUILD = import.meta.env.VITE_PLATFORM === "ios";
 import { ShareToXModal } from "./components/ShareToXModal";
 import { TutorialHint } from "./components/TutorialHint";
 import { ToastHost } from "./components/ToastHost";
@@ -15433,35 +15440,37 @@ function App() {
                   ) : null}
                 </button>
 
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setIsUserMenuOpen(false);
-                    setCurrentView("shop");
-                  }}
-                >
-                  <svg className="user-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <path
-                      d="M5 8h14l-1.1 11.2a1.6 1.6 0 0 1-1.6 1.5H7.7a1.6 1.6 0 0 1-1.6-1.5L5 8z"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M9 8V6.4a3 3 0 0 1 6 0V8"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <span>{t("ショップ")}</span>
-                  {coins > 0 ? (
-                    <span className="user-menu-badge user-menu-badge-coins">{coins.toLocaleString()}</span>
-                  ) : null}
-                </button>
+                {!IS_IOS_BUILD ? (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      setCurrentView("shop");
+                    }}
+                  >
+                    <svg className="user-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path
+                        d="M5 8h14l-1.1 11.2a1.6 1.6 0 0 1-1.6 1.5H7.7a1.6 1.6 0 0 1-1.6-1.5L5 8z"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M9 8V6.4a3 3 0 0 1 6 0V8"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <span>{t("ショップ")}</span>
+                    {coins > 0 ? (
+                      <span className="user-menu-badge user-menu-badge-coins">{coins.toLocaleString()}</span>
+                    ) : null}
+                  </button>
+                ) : null}
 
                 <button
                   type="button"
@@ -17851,6 +17860,10 @@ function App() {
                           }`}
                           onClick={() => {
                             if (isLocked) {
+                              /* iOS は Shop 動線そのものが無いので
+                                 ロック中タイルは無反応にする (将来 IAP
+                                 実装が入ったらここを差し替える)。 */
+                              if (IS_IOS_BUILD) return;
                               setIsSettingsOpen(false);
                               setCurrentView("shop");
                             } else {
@@ -19967,20 +19980,25 @@ function App() {
                       通知は専用パネル / 自動通知に依存、作業部屋は
                       bottom-nav 中央タブから直接アクセスできるため
                       プロフィール Menu からは外す。 */}
-                  <button
-                    type="button"
-                    className="profile-menu-item"
-                    onClick={() => setCurrentView("shop")}
-                  >
-                    <span className="profile-menu-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M5 9h14l-1.4 9.5a2 2 0 0 1-2 1.5H8.4a2 2 0 0 1-2-1.5z" />
-                        <path d="M9 9V6a3 3 0 0 1 6 0v3" />
-                      </svg>
-                    </span>
-                    <span className="profile-menu-label">{t("ショップ")}</span>
-                    <span className="profile-menu-arrow" aria-hidden="true">›</span>
-                  </button>
+                  {/* Shop は Apple guideline 3.1.1 で iOS 提出時に
+                      外部課金を伴うストアの導線を出せないため、iOS
+                      build では完全に非表示。 */}
+                  {!IS_IOS_BUILD ? (
+                    <button
+                      type="button"
+                      className="profile-menu-item"
+                      onClick={() => setCurrentView("shop")}
+                    >
+                      <span className="profile-menu-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M5 9h14l-1.4 9.5a2 2 0 0 1-2 1.5H8.4a2 2 0 0 1-2-1.5z" />
+                          <path d="M9 9V6a3 3 0 0 1 6 0v3" />
+                        </svg>
+                      </span>
+                      <span className="profile-menu-label">{t("ショップ")}</span>
+                      <span className="profile-menu-arrow" aria-hidden="true">›</span>
+                    </button>
+                  ) : null}
                   {currentOrganization?.ownerUid === currentUser.uid ? (
                     <button
                       type="button"
@@ -20092,21 +20110,26 @@ function App() {
             <button type="button" onClick={() => setCurrentView("home")}>
               ← {t("ホーム")}
             </button>
-            <button
-              type="button"
-              className="workspace-poker-entry"
-              onClick={() => setCurrentView("poker")}
-              title={
-                focusChips > 0
-                  ? t("Focus Chip {count}枚 — ポーカーで Arc を稼げます", { count: focusChips })
-                  : t("25分集中で Focus Chip を獲得（ポーカーで配当 ×1.5）")
-              }
-            >
-              ♠ {t("ポーカー")}
-              {focusChips > 0 ? (
-                <span className="workspace-poker-entry-focus">🔥 {focusChips}</span>
-              ) : null}
-            </button>
+            {/* Poker は Focus Chip → Arc 換金経路があるため、Apple の
+                Real-money gaming / Arc 経済の絡みで審査リスクが残る。
+                iOS build では非表示にしておく (Web/Android は従来通り)。 */}
+            {!IS_IOS_BUILD ? (
+              <button
+                type="button"
+                className="workspace-poker-entry"
+                onClick={() => setCurrentView("poker")}
+                title={
+                  focusChips > 0
+                    ? t("Focus Chip {count}枚 — ポーカーで Arc を稼げます", { count: focusChips })
+                    : t("25分集中で Focus Chip を獲得（ポーカーで配当 ×1.5）")
+                }
+              >
+                ♠ {t("ポーカー")}
+                {focusChips > 0 ? (
+                  <span className="workspace-poker-entry-focus">🔥 {focusChips}</span>
+                ) : null}
+              </button>
+            ) : null}
           </div>
 
           <section
@@ -20544,6 +20567,16 @@ function App() {
                                       }`}
                                       onClick={() => {
                                         if (isLocked) {
+                                          if (IS_IOS_BUILD) {
+                                            /* iOS は Shop 動線なし。
+                                               ロック中シルエットはタップ
+                                               不可とし、近日対応を案内。 */
+                                            showToast(
+                                              `${option.name} ${option.romaji} is coming soon.`,
+                                              { kind: "info" },
+                                            );
+                                            return;
+                                          }
                                           // ロック shape：いきなり画面遷移すると
                                           // 「シルエット変えても反映されない」と
                                           // 誤認されるので、トーストで明示してから
@@ -21167,7 +21200,7 @@ function App() {
             </button>
           </footer>
         </motion.section>
-      ) : currentView === "shop" ? (
+      ) : currentView === "shop" && !IS_IOS_BUILD ? (
         <motion.section
           className="shop-screen"
           aria-label={t("ショップ")}
