@@ -19365,39 +19365,41 @@ function App() {
                     </ul>
                   );
                 })()}
-                {/* 当日かつ Highlight が空のときだけ、その日の学習ログから
-                    一行サマリを Highlight 欄に挿入できる導線を出す。すでに
-                    書いている時には押せても上書きしてしまうと事故になる
-                    ので無効化する。 */}
-                {canEditSelectedDailyReport && selectedDailyDate === getLearnerDate() ? (
-                  <div className="reflection-autodraft-row">
-                    <button
-                      type="button"
-                      className="reflection-autodraft-btn"
-                      onClick={() => {
-                        const summary = summarizeStudyLogsForDate(
-                          studyLogs,
-                          selectedDailyDate,
-                          t,
-                          language,
-                        );
-                        if (!summary) {
-                          setDailyMessage(t("今日の学習ログがまだ無いので下書きを作れません。"));
-                          return;
-                        }
-                        setDailyReflectionPartsDraft((parts) => ({
-                          ...parts,
-                          highlight: parts.highlight
-                            ? `${summary}\n${parts.highlight}`
-                            : summary,
-                        }));
-                      }}
-                      disabled={!canEditSelectedDailyReport}
-                    >
-                      ✦ {t("今日のログから下書きを挿入")}
-                    </button>
-                  </div>
-                ) : null}
+                {/* 当日選択かつ "今日" の学習ログが 1 件以上ある時だけ、
+                    Highlight 欄に一行サマリを挿入する CTA を出す。
+                    既存内容には prepend する (上書きはしない)。
+                    ログが無い日に出しても押した瞬間にトーストが出るだけで
+                    無駄な誘導になるので、事前に non-empty を確認して出す。 */}
+                {(() => {
+                  if (!canEditSelectedDailyReport) return null;
+                  if (selectedDailyDate !== getLearnerDate()) return null;
+                  const summary = summarizeStudyLogsForDate(
+                    studyLogs,
+                    selectedDailyDate,
+                    t,
+                    language,
+                  );
+                  if (!summary) return null;
+                  return (
+                    <div className="reflection-autodraft-row">
+                      <button
+                        type="button"
+                        className="reflection-autodraft-btn"
+                        onClick={() => {
+                          setDailyReflectionPartsDraft((parts) => ({
+                            ...parts,
+                            highlight: parts.highlight
+                              ? `${summary}\n${parts.highlight}`
+                              : summary,
+                          }));
+                        }}
+                        title={summary}
+                      >
+                        ✦ {t("今日のログから下書きを挿入")}
+                      </button>
+                    </div>
+                  );
+                })()}
 
                 {REFLECTION_SECTION_KEYS.map((key) => {
                   const labelText =
