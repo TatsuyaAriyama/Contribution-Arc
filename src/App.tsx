@@ -184,7 +184,50 @@ import { ShareToXModal } from "./components/ShareToXModal";
 import { TutorialHint } from "./components/TutorialHint";
 import { BarcodeScannerModal } from "./components/BarcodeScannerModal";
 import { LearningRecordModal } from "./components/LearningRecordModal";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  rectSortingStrategy,
+  arrayMove,
+  useSortable,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import streakFlameIcon from "./assets/streak-flame.png";
+
+/* ライブラリのタイルをドラッグ&ドロップで並べ替えるためのラッパー。
+   長押し(PointerSensor の delay)で掴めるので、軽いタップは従来通り
+   記録フォームを開く。 */
+function SortableLearningTile({ id, children }: { id: string; children: ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id });
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 5 : undefined,
+    opacity: isDragging ? 0.85 : undefined,
+    touchAction: "manipulation",
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`learning-sortable${isDragging ? " is-dragging" : ""}`}
+      {...attributes}
+      {...listeners}
+    >
+      {children}
+    </div>
+  );
+}
 import { ToastHost } from "./components/ToastHost";
 import { PullToRefresh } from "./components/PullToRefresh";
 import { InstallInstructionsModal } from "./components/InstallInstructionsModal";
@@ -3891,7 +3934,13 @@ function App() {
      好きな順に並べ替えられる。モバイル前提だが PC でも有効。
      並べ替え結果は item.order に保存され、sort mode は自動で "custom"
      に切り替わる (= 反映されたことが視覚的に分かる)。 */
-  const [isReorderingLibrary, setIsReorderingLibrary] = useState(false);
+  // ライブラリのドラッグ&ドロップ並べ替え用。長押しで掴めるよう delay を
+  // 付け、軽いタップ(記録フォームを開く)と区別する。
+  const librarySortedIdsRef = useRef<string[]>([]);
+  const librarySensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { delay: 180, tolerance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
   // バーコード(ISBN)スキャンで本を追加するモーダルの開閉。
   const [isBarcodeScanOpen, setIsBarcodeScanOpen] = useState(false);
   // 「記録の入力」フォーム(時間/量/メモ/画像)の対象 learning item id。
@@ -8995,88 +9044,39 @@ function App() {
      - swap した結果の表示順を 1..N で order に再付与し、sort mode を
        "custom" に切替 (= 今後はこの順序で固定)
      - cloud sync: 影響したアイテムだけ save (差分のみ書く) */
-  const handleMoveLearningItem = (itemId: string, direction: "up" | "down") => {
+  /* ドラッグ&ドロップ後の並び順を確定する。表示順(orderedIds)に沿って
+     item.order を 1..n で再付与し、変更分だけ保存。並べ替えたら sort mode
+     は自動で "custom"(自分の順) にして、その順序が維持されるようにする。 */
+  const reorderLearningItemsByIds = (orderedIds: string[]) => {
     if (!currentUser) return;
-    const live = learningItems.filter((item) => !item.archived);
-    /* 現在の表示と同じソート順を再構築する。並べ替え前から custom 以外で
-       見ていた場合、↑↓ は「画面上の隣」と入れ替わるのが直感的。 */
-    const totalsByItem = new Map<string, number>();
-    const lastLoggedByItem = new Map<string, number>();
-    const knownIds = new Set(live.map((item) => item.id));
-    const itemIdByLowerName = new Map<string, string>();
-    live.forEach((item) => {
-      const key = item.name.trim().toLowerCase();
-      if (key && !itemIdByLowerName.has(key)) itemIdByLowerName.set(key, item.id);
-    });
-    studyLogs.forEach((log) => {
-      const targetId =
-        log.learningItemId && knownIds.has(log.learningItemId)
-          ? log.learningItemId
-          : itemIdByLowerName.get((log.subject || "").trim().toLowerCase());
-      if (!targetId) return;
-      totalsByItem.set(targetId, (totalsByItem.get(targetId) || 0) + log.minutes);
-      const ts = new Date(log.createdAt).getTime();
-      if (Number.isFinite(ts)) {
-        const prevLast = lastLoggedByItem.get(targetId) || 0;
-        if (ts > prevLast) lastLoggedByItem.set(targetId, ts);
-      }
-    });
-    const compareForCurrentMode = (a: LearningItem, b: LearningItem) => {
-      if (learningSortMode === "custom") {
-        const ao = typeof a.order === "number" ? a.order : Number.MAX_SAFE_INTEGER;
-        const bo = typeof b.order === "number" ? b.order : Number.MAX_SAFE_INTEGER;
-        if (ao !== bo) return ao - bo;
-        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      }
-      if (learningSortMode === "name") {
-        const byName = a.name.localeCompare(b.name, "ja");
-        if (byName !== 0) return byName;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      }
-      if (learningSortMode === "total") {
-        const aMin = totalsByItem.get(a.id) || 0;
-        const bMin = totalsByItem.get(b.id) || 0;
-        if (aMin !== bMin) return bMin - aMin;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      }
-      // "recent" (default)
-      const aLast = lastLoggedByItem.get(a.id) || 0;
-      const bLast = lastLoggedByItem.get(b.id) || 0;
-      if (aLast !== bLast) return bLast - aLast;
-      const aMin = totalsByItem.get(a.id) || 0;
-      const bMin = totalsByItem.get(b.id) || 0;
-      if (aMin !== bMin) return bMin - aMin;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    };
-    const ordered = live.slice().sort(compareForCurrentMode);
-    const index = ordered.findIndex((item) => item.id === itemId);
-    if (index < 0) return;
-    const swapWith = direction === "up" ? index - 1 : index + 1;
-    if (swapWith < 0 || swapWith >= ordered.length) return;
-    const next = ordered.slice();
-    [next[index], next[swapWith]] = [next[swapWith], next[index]];
     const nowIso = new Date().toISOString();
-    /* order を 1, 2, 3, ... で全件再付与 (現在の表示順をスナップショット
-       してから swap を適用した結果)。 */
     const updates = new Map<string, LearningItem>();
-    next.forEach((item, i) => {
-      const desired = i + 1;
-      if (item.order !== desired) {
-        updates.set(item.id, { ...item, order: desired, updatedAt: nowIso });
+    orderedIds.forEach((id, i) => {
+      const item = learningItems.find((it) => it.id === id);
+      if (item && item.order !== i + 1) {
+        updates.set(id, { ...item, order: i + 1, updatedAt: nowIso });
       }
     });
-    if (updates.size === 0) return;
-    setLearningItems((items) =>
-      items.map((item) => updates.get(item.id) ?? item),
-    );
     if (learningSortMode !== "custom") {
       setLearningSortMode("custom");
     }
+    if (updates.size === 0) return;
+    setLearningItems((items) => items.map((item) => updates.get(item.id) ?? item));
     updates.forEach((item) => {
       void saveLearningItemToCloud(db, item).catch((error) => {
         console.info("Learning item reorder cloud sync skipped.", error);
       });
     });
+  };
+
+  const handleLibraryDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const ids = librarySortedIdsRef.current;
+    const oldIndex = ids.indexOf(String(active.id));
+    const newIndex = ids.indexOf(String(over.id));
+    if (oldIndex < 0 || newIndex < 0) return;
+    reorderLearningItemsByIds(arrayMove(ids, oldIndex, newIndex));
   };
 
   const handleLearningEditorSave = () => {
@@ -19793,18 +19793,6 @@ function App() {
               <option value="name">{t("名前順")}</option>
               <option value="custom">{t("自分の順")}</option>
             </select>
-            {/* 並べ替えモード toggle。モバイルで主に使う想定だが、PC からも
-                同じボタンで切替できる。on の間、各カードに↑↓矢印が出る。 */}
-            <button
-              type="button"
-              className={`learning-reorder-toggle${isReorderingLibrary ? " is-active" : ""}`}
-              onClick={() => setIsReorderingLibrary((v) => !v)}
-              aria-pressed={isReorderingLibrary}
-              aria-label={isReorderingLibrary ? t("並べ替えを終える") : t("並べ替え")}
-              title={isReorderingLibrary ? t("並べ替えを終える") : t("並べ替え")}
-            >
-              {isReorderingLibrary ? t("完了") : t("並べ替え")}
-            </button>
           </div>
 
           {(() => {
@@ -19939,9 +19927,16 @@ function App() {
               );
             }
 
+            librarySortedIdsRef.current = sorted.map((it) => it.id);
             return (
-              <div className="learning-grid">
-                {sorted.map((item, sortedIndex) => {
+              <DndContext
+                sensors={librarySensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleLibraryDragEnd}
+              >
+                <SortableContext items={librarySortedIdsRef.current} strategy={rectSortingStrategy}>
+                  <div className="learning-grid">
+                    {sorted.map((item) => {
                   const minutes = totalsByItem.get(item.id) || 0;
                   const totalLabel = formatStudyTimeJa(minutes);
                   const isBook = item.category === "book";
@@ -19992,39 +19987,14 @@ function App() {
                     closeQuickLog();
                   };
                   return (
+                    <SortableLearningTile key={item.id} id={item.id}>
                     <article
-                      key={item.id}
-                      className={`learning-card${isReorderingLibrary ? " is-reordering" : ""}`}
+                      className="learning-card"
                       style={{ "--learning-card-color": item.color } as CSSProperties}
                     >
-                      {isReorderingLibrary ? (
-                        <div className="learning-card-reorder" role="group" aria-label={t("並べ替え")}>
-                          <button
-                            type="button"
-                            className="learning-card-reorder-up"
-                            onClick={() => handleMoveLearningItem(item.id, "up")}
-                            disabled={sortedIndex === 0}
-                            aria-label={t("一つ上へ")}
-                            title={t("一つ上へ")}
-                          >
-                            ↑
-                          </button>
-                          <button
-                            type="button"
-                            className="learning-card-reorder-down"
-                            onClick={() => handleMoveLearningItem(item.id, "down")}
-                            disabled={sortedIndex === sorted.length - 1}
-                            aria-label={t("一つ下へ")}
-                            title={t("一つ下へ")}
-                          >
-                            ↓
-                          </button>
-                        </div>
-                      ) : null}
                       <button
                         type="button"
                         className="learning-card-trigger"
-                        disabled={isReorderingLibrary}
                         onClick={() => setLearningRecordItemId(item.id)}
                         aria-label={t("{name}の詳細", { name: item.name })}
                       >
@@ -20261,9 +20231,12 @@ function App() {
                         )
                       ) : null}
                     </article>
+                    </SortableLearningTile>
                   );
                 })}
-              </div>
+                  </div>
+                </SortableContext>
+              </DndContext>
             );
           })()}
         </motion.section>

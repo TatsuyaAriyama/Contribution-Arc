@@ -23070,11 +23070,21 @@
 
 .learning-grid {
   display: grid;
-  /* 表紙サムネ + タイトルのみのシンプルな棚。横 3 列前後で並べる。 */
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-  column-gap: 14px;
-  row-gap: 20px;
+  /* 表紙サムネ + タイトルのみのシンプルな棚。横 4 列前後で並べる。 */
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  column-gap: 12px;
+  row-gap: 18px;
   align-items: start;
+}
+/* ドラッグ&ドロップ並べ替え：掴んでいるタイルを少し浮かせる。 */
+.learning-sortable {
+  cursor: grab;
+}
+.learning-sortable.is-dragging {
+  cursor: grabbing;
+}
+.learning-sortable.is-dragging .learning-card-photo {
+  box-shadow: 0 10px 24px rgba(var(--ink-rgb), 0.22);
 }
 
 /* Phase 10c: `<button>` から `<article>` へ. クイック記録チップを
