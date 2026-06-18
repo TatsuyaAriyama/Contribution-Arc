@@ -37,6 +37,13 @@ const FOCUS_PAYOUT_MULTIPLIER = 1.5; // Focus chip mode pays 150 % of normal.
 const FOCUS_STAKE_UNIT = 100; // 1 Focus Chip == 100 chip-equivalent of stake.
 const HOT_STREAK_THRESHOLD = 3;
 const HOT_STREAK_BONUS = 1.2;
+/* Double-up — 勝った直後だけ "倍 or ゼロ" の higher / lower ミニ
+   ゲームを提示する。ディーラ札 1 枚に対し、次の山札の値が上か下かを
+   当てる。連続で挑戦できるが、安全弁として最大 5 回 (= 最大 32 倍) で
+   強制 collect、あと累積 payout が一定額を超えたら自動 collect。
+   tie は player loss = ハウスエッジ。 */
+const DOUBLE_UP_MAX_ROUNDS = 5;
+const DOUBLE_UP_AUTO_COLLECT_CHIPS = 5000;
 
 export default function PokerView({
   onBack,
@@ -78,6 +85,17 @@ export default function PokerView({
      bonus was already applied to `lastResult.payout`. */
   const [streakConsumed, setStreakConsumed] = useState(false);
   const [exchangeOpen, setExchangeOpen] = useState(false);
+  /* Double-up state machine — only meaningful after a winning DRAW. */
+  type DoubleUpState =
+    | { kind: "idle" }
+    | { kind: "offered" }
+    | { kind: "pending"; dealer: Card; guess: "higher" | "lower" }
+    | { kind: "result"; dealer: Card; next: Card; guess: "higher" | "lower"; won: boolean };
+  const [doubleUp, setDoubleUp] = useState<DoubleUpState>({ kind: "idle" });
+  const [doubleUpCount, setDoubleUpCount] = useState(0);
+  /* 確定した payout を実際にチップ残高へ振り込むまでの中継口座。
+     double-up で wager にもなる。collect で pokerChips に流し込む。 */
+  const [pendingPayout, setPendingPayout] = useState(0);
 
   const normalBet = NORMAL_BET_STEPS[normalBetIdx];
   const focusBet = FOCUS_BET_STEPS[focusBetIdx];
@@ -92,7 +110,14 @@ export default function PokerView({
     return evaluateHand(hand);
   }, [hand]);
 
-  const canDeal = phase !== "dealt" && activeBalance >= activeBet;
+  /* double-up が pending (guess 待ち) / result (reveal 中) の間は
+     deal をブロックする。offered (collect or double up の選択待ち) は
+     handleDeal 内で auto-collect 経由で許容。 */
+  const canDeal =
+    phase !== "dealt" &&
+    activeBalance >= activeBet &&
+    doubleUp.kind !== "pending" &&
+    doubleUp.kind !== "result";
   const canDraw = phase === "dealt";
 
   /* Count-up animation for the chip balance display. When `pokerChips`
@@ -121,6 +146,16 @@ export default function PokerView({
 
   function handleDeal() {
     if (!canDeal) return;
+    /* 直前ラウンドで double-up を未 collect のまま deal を押されたら
+       「次のハンドを始めたい」意思とみなして自動 collect。途中で
+       pending を吹き飛ばさない。doubleUp が pending (guess 待ち) や
+       result (reveal 中) の場合は無視 = deal 不可。 */
+    if (doubleUp.kind === "offered" && pendingPayout > 0) {
+      setPokerChips((c) => c + pendingPayout);
+      setPendingPayout(0);
+      setDoubleUp({ kind: "idle" });
+      setDoubleUpCount(0);
+    }
     const fresh = shuffle(buildDeck());
     const newHand = fresh.slice(0, 5);
     setDeck(fresh.slice(5));
@@ -176,16 +211,98 @@ export default function PokerView({
 
     setHand(finalHand);
     setDeck(remaining);
-    setPokerChips((c) => c + payout);
     setLastResult({ evaluation, payout, hotStreakBonus });
 
     if (payout > 0) {
       setWinStreak((s) => (hotStreakBonus ? 0 : s + 1));
       if (hotStreakBonus) setStreakConsumed(true);
+      /* Focus モード時はチップ通貨が混在するので、現状の単純な
+         double-up 設計 (pokerChips = normal chip 単位) に乗らない。
+         Focus モードでは double-up はオファーせず即時 credit する。 */
+      if (mode === "normal") {
+        setPendingPayout(payout);
+        setDoubleUp({ kind: "offered" });
+        setDoubleUpCount(0);
+      } else {
+        setPokerChips((c) => c + payout);
+      }
     } else {
       setWinStreak(0);
+      setPokerChips((c) => c + payout); // payout = 0 だが将来用に通しておく
     }
     setPhase("settled");
+  }
+
+  /* 確定した payout を chip balance に振り込む。double-up を 1 回でも
+     通したら積み上がった額がここで一気に入る。
+     pendingPayout = 0 のときは no-op (loss / 既に collect 済み)。 */
+  function handleCollect() {
+    if (pendingPayout <= 0) {
+      setDoubleUp({ kind: "idle" });
+      return;
+    }
+    setPokerChips((c) => c + pendingPayout);
+    setPendingPayout(0);
+    setDoubleUp({ kind: "idle" });
+    setDoubleUpCount(0);
+  }
+
+  /* Double-up を開始する。山札から 1 枚引いてディーラの face-up カード
+     とし、player は次に出る札が "higher" か "lower" かを当てる。 */
+  function handleStartDoubleUp() {
+    if (pendingPayout <= 0) return;
+    if (deck.length < 1) {
+      handleCollect();
+      return;
+    }
+    const remaining = [...deck];
+    const dealer = remaining.shift()!;
+    setDeck(remaining);
+    setDoubleUp({ kind: "pending", dealer, guess: "higher" });
+  }
+
+  /* Higher / Lower の guess を確定して結果を出す。tie は loss
+     (ハウスエッジ)。win なら pendingPayout を倍にして、上限内なら
+     もう一度 offered に戻す。上限到達なら強制 collect。 */
+  function handleDoubleUpGuess(guess: "higher" | "lower") {
+    if (doubleUp.kind !== "pending") return;
+    const dealer = doubleUp.dealer;
+    if (deck.length < 1) {
+      // Shouldn't happen but recover by paying out the safe amount.
+      handleCollect();
+      return;
+    }
+    const remaining = [...deck];
+    const next = remaining.shift()!;
+    setDeck(remaining);
+    const won = guess === "higher" ? next.value > dealer.value : next.value < dealer.value;
+    setDoubleUp({ kind: "result", dealer, next, guess, won });
+    if (won) {
+      const doubled = pendingPayout * 2;
+      setPendingPayout(doubled);
+      const nextCount = doubleUpCount + 1;
+      setDoubleUpCount(nextCount);
+      const shouldAutoCollect =
+        nextCount >= DOUBLE_UP_MAX_ROUNDS || doubled >= DOUBLE_UP_AUTO_COLLECT_CHIPS;
+      // 1.4 秒見せてから次の状態へ (offer or 強制 collect)
+      window.setTimeout(() => {
+        if (shouldAutoCollect) {
+          setPokerChips((c) => c + doubled);
+          setPendingPayout(0);
+          setDoubleUp({ kind: "idle" });
+          setDoubleUpCount(0);
+        } else {
+          setDoubleUp({ kind: "offered" });
+        }
+      }, 1400);
+    } else {
+      // 失った reveal を 1.4 秒見せてから idle に戻す。pendingPayout=0。
+      window.setTimeout(() => {
+        setPendingPayout(0);
+        setDoubleUp({ kind: "idle" });
+        setDoubleUpCount(0);
+      }, 1400);
+    }
   }
 
   function toggleHold(idx: number) {
@@ -370,6 +487,118 @@ export default function PokerView({
               <p className="poker-result-hint">
                 {t("残したい札をタップ → ")}<strong>DRAW</strong>{t("。")}
               </p>
+            ) : doubleUp.kind === "offered" && pendingPayout > 0 ? (
+              <div className="poker-doubleup poker-doubleup-offered">
+                <p className="poker-doubleup-title">
+                  {lastResult ? lastResult.evaluation.label : ""}
+                </p>
+                <p className="poker-doubleup-pending">
+                  <span className="poker-doubleup-plus">+</span>
+                  <span className="poker-doubleup-amount">
+                    {pendingPayout.toLocaleString()}
+                  </span>
+                  <span className="poker-doubleup-unit">chip</span>
+                </p>
+                <p className="poker-doubleup-meta">
+                  {doubleUpCount > 0
+                    ? t("{n} 連続成功 → 受け取る or もう一度倍にする", { n: doubleUpCount })
+                    : t("受け取る or 2倍に挑戦")}
+                </p>
+                <div className="poker-doubleup-actions">
+                  <button
+                    type="button"
+                    className="poker-doubleup-collect"
+                    onClick={handleCollect}
+                  >
+                    {t("受け取る +{n}", { n: pendingPayout.toLocaleString() })}
+                  </button>
+                  <button
+                    type="button"
+                    className="poker-doubleup-go"
+                    onClick={handleStartDoubleUp}
+                  >
+                    {t("2× DOUBLE UP")}
+                  </button>
+                </div>
+              </div>
+            ) : doubleUp.kind === "pending" ? (
+              <div className="poker-doubleup poker-doubleup-pending">
+                <p className="poker-doubleup-title">{t("Higher or Lower?")}</p>
+                <div className="poker-doubleup-cards">
+                  <div
+                    className={`poker-doubleup-card is-dealer${
+                      doubleUp.dealer.suit === "♥" || doubleUp.dealer.suit === "♦"
+                        ? " is-red"
+                        : ""
+                    }`}
+                  >
+                    <span className="poker-doubleup-card-rank">{doubleUp.dealer.rank}</span>
+                    <span className="poker-doubleup-card-suit">{doubleUp.dealer.suit}</span>
+                  </div>
+                  <span className="poker-doubleup-vs">vs</span>
+                  <div className="poker-doubleup-card is-back">
+                    <span>?</span>
+                  </div>
+                </div>
+                <p className="poker-doubleup-meta">
+                  {t("次の札が dealer ({rank}) より高い / 低い を選ぶ。tie = 負け", {
+                    rank: doubleUp.dealer.rank,
+                  })}
+                </p>
+                <div className="poker-doubleup-actions">
+                  <button
+                    type="button"
+                    className="poker-doubleup-guess"
+                    onClick={() => handleDoubleUpGuess("lower")}
+                    disabled={doubleUp.dealer.value <= 2}
+                  >
+                    ↓ {t("Lower")}
+                  </button>
+                  <button
+                    type="button"
+                    className="poker-doubleup-guess"
+                    onClick={() => handleDoubleUpGuess("higher")}
+                    disabled={doubleUp.dealer.value >= 14}
+                  >
+                    ↑ {t("Higher")}
+                  </button>
+                </div>
+              </div>
+            ) : doubleUp.kind === "result" ? (
+              <div
+                className={`poker-doubleup poker-doubleup-reveal${
+                  doubleUp.won ? " is-win" : " is-loss"
+                }`}
+              >
+                <div className="poker-doubleup-cards">
+                  <div
+                    className={`poker-doubleup-card is-dealer${
+                      doubleUp.dealer.suit === "♥" || doubleUp.dealer.suit === "♦"
+                        ? " is-red"
+                        : ""
+                    }`}
+                  >
+                    <span className="poker-doubleup-card-rank">{doubleUp.dealer.rank}</span>
+                    <span className="poker-doubleup-card-suit">{doubleUp.dealer.suit}</span>
+                  </div>
+                  <span className="poker-doubleup-vs">
+                    {doubleUp.guess === "higher" ? "↑" : "↓"}
+                  </span>
+                  <div
+                    className={`poker-doubleup-card is-reveal${
+                      doubleUp.next.suit === "♥" || doubleUp.next.suit === "♦" ? " is-red" : ""
+                    }`}
+                  >
+                    <span className="poker-doubleup-card-rank">{doubleUp.next.rank}</span>
+                    <span className="poker-doubleup-card-suit">{doubleUp.next.suit}</span>
+                  </div>
+                </div>
+                <p className="poker-doubleup-result-text">
+                  {doubleUp.won
+                    ? t("DOUBLED! → {n} chip", { n: (pendingPayout).toLocaleString() })
+                    : t("負け。失効。")}
+                </p>
+              </div>
             ) : lastResult ? (
               <div
                 key={cardKeys.join("-")}

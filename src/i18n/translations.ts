@@ -1700,4 +1700,18 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   // === Phase 12: daily history empty state ===
   "上の入力欄から「今日やること」と「振り返り」を書くと、ここに記録が並んでいきます。":
     "Write your today's tasks and reflection in the form above — your records will start appearing here.",
+
+  // === Phase 13: Poker double-up ===
+  "受け取る +{n}": "Collect +{n}",
+  "2× DOUBLE UP": "2× DOUBLE UP",
+  "Higher or Lower?": "Higher or Lower?",
+  "次の札が dealer ({rank}) より高い / 低い を選ぶ。tie = 負け":
+    "Guess if the next card is higher or lower than the dealer's ({rank}). Tie loses.",
+  "Lower": "Lower",
+  "Higher": "Higher",
+  "DOUBLED! → {n} chip": "DOUBLED! → {n} chip",
+  "負け。失効。": "Lost. Forfeited.",
+  "{n} 連続成功 → 受け取る or もう一度倍にする":
+    "{n} in a row — collect, or push for another double",
+  "受け取る or 2倍に挑戦": "Collect, or push for 2×",
 };

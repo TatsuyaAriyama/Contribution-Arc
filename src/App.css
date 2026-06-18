@@ -36091,6 +36091,178 @@ select:disabled {
   font-weight: 600;
 }
 
+/* ── Double-up (倍プッシュ) ────────────────────────────────────────────
+   勝った直後だけ result カードの代わりに表示する。
+   ・offered : Collect / Double Up の 2 択
+   ・pending : ディーラの face-up カード + Higher / Lower のボタン
+   ・result  : 引いた札の reveal + 勝敗テキスト
+*/
+.poker-doubleup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #1d2c2a, #0f1a18);
+  color: #f6f0d8;
+  box-shadow:
+    0 22px 48px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  min-width: min(360px, 80vw);
+}
+.poker-doubleup-title {
+  margin: 0;
+  font-family: "Georgia", serif;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(246, 240, 216, 0.7);
+}
+.poker-doubleup-pending {
+  margin: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.poker-doubleup-plus {
+  font-size: 16px;
+  font-weight: 800;
+  color: #f7c95a;
+}
+.poker-doubleup-amount {
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: #f7c95a;
+}
+.poker-doubleup-unit {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  opacity: 0.65;
+}
+.poker-doubleup-meta {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: rgba(246, 240, 216, 0.6);
+  text-align: center;
+}
+.poker-doubleup-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  margin-top: 4px;
+}
+.poker-doubleup-actions > button {
+  flex: 1;
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #f6f0d8;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.12s ease, transform 0.08s ease;
+}
+.poker-doubleup-actions > button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+}
+.poker-doubleup-actions > button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.poker-doubleup-actions > button:disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+}
+.poker-doubleup-collect {
+  /* lower-key / "safe" button */
+}
+.poker-doubleup-go {
+  background: linear-gradient(180deg, #ffb24a, #f7843a) !important;
+  color: #2a0c00 !important;
+  border-color: rgba(0, 0, 0, 0.18) !important;
+}
+.poker-doubleup-cards {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 4px 0 2px;
+}
+.poker-doubleup-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 88px;
+  border-radius: 10px;
+  background: #fafaf7;
+  color: #1b1b1b;
+  font-family: "Georgia", serif;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+}
+.poker-doubleup-card.is-red {
+  color: #c63030;
+}
+.poker-doubleup-card.is-back {
+  background: linear-gradient(135deg, #2b3a37, #0d1716);
+  color: rgba(246, 240, 216, 0.45);
+  font-size: 28px;
+  font-weight: 700;
+}
+.poker-doubleup-card-rank {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1;
+}
+.poker-doubleup-card-suit {
+  font-size: 18px;
+  margin-top: 4px;
+}
+.poker-doubleup-card.is-reveal {
+  animation: poker-flip-in 0.42s ease-out;
+}
+@keyframes poker-flip-in {
+  from {
+    transform: rotateY(70deg) scale(0.92);
+    opacity: 0;
+  }
+  to {
+    transform: rotateY(0) scale(1);
+    opacity: 1;
+  }
+}
+.poker-doubleup-vs {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: rgba(246, 240, 216, 0.5);
+}
+.poker-doubleup-reveal {
+  background: linear-gradient(180deg, #1d2c2a, #0f1a18);
+}
+.poker-doubleup-reveal.is-win {
+  background: linear-gradient(180deg, #1d4030, #0e2419);
+}
+.poker-doubleup-reveal.is-loss {
+  background: linear-gradient(180deg, #401d1d, #240e0e);
+}
+.poker-doubleup-result-text {
+  margin: 2px 0 0;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
 /* side panel — flat layout, hairline dividers, no card stacking */
 .poker-side {
   display: flex;
