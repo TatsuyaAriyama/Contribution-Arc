@@ -8,6 +8,18 @@ import {
   type Card,
   type HandEval,
 } from "./engine";
+import {
+  isPokerSoundsMuted,
+  playChip,
+  playDealSequence,
+  playFlip,
+  playHold,
+  playJackpot,
+  playLose,
+  playShuffle,
+  playWin,
+  setPokerSoundsMuted,
+} from "./sounds";
 import { useTranslation } from "../i18n/LanguageContext";
 
 type Phase = "idle" | "dealt" | "settled";
@@ -96,6 +108,28 @@ export default function PokerView({
   /* 確定した payout を実際にチップ残高へ振り込むまでの中継口座。
      double-up で wager にもなる。collect で pokerChips に流し込む。 */
   const [pendingPayout, setPendingPayout] = useState(0);
+  /* サウンド mute toggle。localStorage に永続化。AudioContext の
+     ユーザーゲスチャ起動 (Safari/Chrome の制約) は、最初にクリックされる
+     deal / hold / collect 等の handler 内で発火する音で自然に通る。 */
+  const [soundsMuted, setSoundsMuted] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("ca:poker-muted") === "1";
+  });
+  useEffect(() => {
+    setPokerSoundsMuted(soundsMuted);
+    try {
+      window.localStorage.setItem("ca:poker-muted", soundsMuted ? "1" : "0");
+    } catch {
+      /* private mode 等で localStorage が使えなくても致命的でない */
+    }
+  }, [soundsMuted]);
+  /* 初期 hydrate 時に既存 setting を sounds モジュールに反映。 */
+  useEffect(() => {
+    setPokerSoundsMuted(soundsMuted);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  /* 互換: 別ファイルで isPokerSoundsMuted を読みたい場面用 (現状未使用)。 */
+  void isPokerSoundsMuted;
 
   const normalBet = NORMAL_BET_STEPS[normalBetIdx];
   const focusBet = FOCUS_BET_STEPS[focusBetIdx];
@@ -146,22 +180,18 @@ export default function PokerView({
 
   function handleDeal() {
     if (!canDeal) return;
-    /* 直前ラウンドで double-up を未 collect のまま deal を押されたら
-       「次のハンドを始めたい」意思とみなして自動 collect。途中で
-       pending を吹き飛ばさない。doubleUp が pending (guess 待ち) や
-       result (reveal 中) の場合は無視 = deal 不可。 */
     if (doubleUp.kind === "offered" && pendingPayout > 0) {
       setPokerChips((c) => c + pendingPayout);
       setPendingPayout(0);
       setDoubleUp({ kind: "idle" });
       setDoubleUpCount(0);
+      playChip();
     }
     const fresh = shuffle(buildDeck());
     const newHand = fresh.slice(0, 5);
     setDeck(fresh.slice(5));
     setHand(newHand);
     setHeld([false, false, false, false, false]);
-    // Re-key every slot so the deal-in animation fires for all five.
     setCardKeys([nextCardKey(), nextCardKey(), nextCardKey(), nextCardKey(), nextCardKey()]);
     if (mode === "normal") {
       setPokerChips((c) => c - normalBet);
@@ -171,6 +201,9 @@ export default function PokerView({
     setLastResult(null);
     setStreakConsumed(false);
     setPhase("dealt");
+    /* シャッフルの "ザザッ" → 5 枚連続 deal "コツコツコツコツコツ" */
+    playShuffle();
+    window.setTimeout(() => playDealSequence(5, 90), 280);
   }
 
   function handleDraw() {
@@ -180,9 +213,10 @@ export default function PokerView({
       if (held[idx]) return card;
       return remaining.shift() ?? card;
     });
-    // Re-key only the slots that swapped in a fresh card so HOLD cards
-    // do not jump while the drawn cards flip in.
     setCardKeys((prev) => prev.map((k, i) => (held[i] ? k : nextCardKey())));
+    /* 引いた枚数だけ flip 音を staggered で鳴らす。 */
+    const drawnCount = held.filter((h) => !h).length;
+    playDealSequence(drawnCount, 80);
     const evaluation = evaluateHand(finalHand);
 
     /* Convert the chosen stake to a per-credit base, then apply the
@@ -216,9 +250,6 @@ export default function PokerView({
     if (payout > 0) {
       setWinStreak((s) => (hotStreakBonus ? 0 : s + 1));
       if (hotStreakBonus) setStreakConsumed(true);
-      /* Focus モード時はチップ通貨が混在するので、現状の単純な
-         double-up 設計 (pokerChips = normal chip 単位) に乗らない。
-         Focus モードでは double-up はオファーせず即時 credit する。 */
       if (mode === "normal") {
         setPendingPayout(payout);
         setDoubleUp({ kind: "offered" });
@@ -226,9 +257,17 @@ export default function PokerView({
       } else {
         setPokerChips((c) => c + payout);
       }
+      /* 5 枚 reveal の後に勝ち音 → Royal/Straight Flush 級はジャックポット
+         ファンファーレ、それ以外は二段の和音。 */
+      const isJackpot =
+        evaluation.rank === "royal-flush" || evaluation.rank === "straight-flush";
+      window.setTimeout(() => {
+        if (isJackpot) playJackpot();
+        else playWin(payout >= 500 ? "big" : "small");
+      }, 520);
     } else {
       setWinStreak(0);
-      setPokerChips((c) => c + payout); // payout = 0 だが将来用に通しておく
+      window.setTimeout(() => playLose(), 520);
     }
     setPhase("settled");
   }
@@ -245,6 +284,7 @@ export default function PokerView({
     setPendingPayout(0);
     setDoubleUp({ kind: "idle" });
     setDoubleUpCount(0);
+    playChip();
   }
 
   /* Double-up を開始する。山札から 1 枚引いてディーラの face-up カード
@@ -259,6 +299,7 @@ export default function PokerView({
     const dealer = remaining.shift()!;
     setDeck(remaining);
     setDoubleUp({ kind: "pending", dealer, guess: "higher" });
+    playFlip(440, 0.06);
   }
 
   /* Higher / Lower の guess を確定して結果を出す。tie は loss
@@ -277,6 +318,9 @@ export default function PokerView({
     setDeck(remaining);
     const won = guess === "higher" ? next.value > dealer.value : next.value < dealer.value;
     setDoubleUp({ kind: "result", dealer, next, guess, won });
+    /* reveal の "コトッ" → 0.4 秒後に勝敗音 */
+    playFlip(380, 0.07);
+    window.setTimeout(() => (won ? playWin("big") : playLose()), 380);
     if (won) {
       const doubled = pendingPayout * 2;
       setPendingPayout(doubled);
@@ -308,6 +352,7 @@ export default function PokerView({
   function toggleHold(idx: number) {
     if (phase !== "dealt") return;
     setHeld((prev) => prev.map((v, i) => (i === idx ? !v : v)));
+    playHold();
   }
 
   function pickBetIdx(idx: number) {
@@ -351,6 +396,16 @@ export default function PokerView({
           <p className="poker-kicker">Video Poker · Jacks or Better (6/5)</p>
           <h1>{t("♠ Arc を増やすには集中して稼ぐ。")}</h1>
         </div>
+        <button
+          type="button"
+          className={`poker-mute-toggle${soundsMuted ? " is-muted" : ""}`}
+          onClick={() => setSoundsMuted((m) => !m)}
+          aria-pressed={soundsMuted}
+          aria-label={soundsMuted ? t("サウンドをオン") : t("サウンドをオフ")}
+          title={soundsMuted ? t("サウンドをオン") : t("サウンドをオフ")}
+        >
+          {soundsMuted ? "🔇" : "🔊"}
+        </button>
         <div className="poker-balances" aria-label={t("残高")}>
           <div className="poker-meter" title={t("Arc 残高")}>
             <span className="poker-meter-label">Arc</span>
@@ -401,7 +456,14 @@ export default function PokerView({
         <div
           className={`poker-table${
             lastResult && lastResult.payout > 0 ? " is-winning" : ""
-          }${winStreak >= HOT_STREAK_THRESHOLD ? " is-armed" : ""}`}
+          }${winStreak >= HOT_STREAK_THRESHOLD ? " is-armed" : ""}${
+            lastResult &&
+            (lastResult.evaluation.rank === "royal-flush" ||
+              lastResult.evaluation.rank === "straight-flush" ||
+              lastResult.evaluation.rank === "four-of-a-kind")
+              ? " is-jackpot"
+              : ""
+          }`}
         >
           {/* Felt highlights — pure CSS, no DOM cost beyond two layers */}
           <div className="poker-table-glow" aria-hidden="true" />

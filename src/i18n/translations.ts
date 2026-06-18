@@ -1714,4 +1714,6 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "{n} 連続成功 → 受け取る or もう一度倍にする":
     "{n} in a row — collect, or push for another double",
   "受け取る or 2倍に挑戦": "Collect, or push for 2×",
+  "サウンドをオン": "Sound on",
+  "サウンドをオフ": "Sound off",
 };
