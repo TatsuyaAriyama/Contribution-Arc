@@ -1192,4 +1192,19 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "メールフォームを閉じる": "Close email form",
   "メールで続行": "Continue with email",
   "続行するとアカウントが自動的に作成されます。": "By continuing, an account is created automatically.",
+
+  // === ManagerDashboard ===
+  "ロール": "Role",
+  "チーム": "Team",
+  "学習時間（時間）": "Study time (hours)",
+  "アウトプットEXP": "Output EXP",
+  "ストリーク（日）": "Streak (days)",
+  "コミット数": "Commits",
+  "最終同期日時": "Last synced at",
+  "学習時間が多い順": "Most study time",
+  "最近アクティブな順": "Recently active",
+  "レベルが高い順": "Highest level",
+  "アウトプットが多い順": "Most output",
+  "その他": "Other",
+  "、": ", ",
 };
