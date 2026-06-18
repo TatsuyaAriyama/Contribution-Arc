@@ -568,7 +568,7 @@ export function ManagerDashboard({
       const minutes = unassigned.reduce((s, e) => s + (e.member.effortExp || 0), 0);
       const active = unassigned.filter((e) => e.status === "active").length;
       rows.push({
-        name: "未割り当て",
+        name: "__unassigned__",
         members: unassigned.length,
         hours: Math.round(minutes / 60),
         activeRate: unassigned.length > 0 ? Math.round((active / unassigned.length) * 100) : 0,
@@ -788,7 +788,7 @@ export function ManagerDashboard({
               role="img"
               aria-label={engagement
                 .map((s) => t("{label} {n}名", { label: activityLabel(s.status), n: s.count }))
-                .join("、")}
+                .join(t("、"))}
             >
               {engagement.map((seg) =>
                 seg.count > 0 ? (
@@ -905,8 +905,8 @@ export function ManagerDashboard({
           <ul className="manager-team-list">
             {teamBreakdown.map((row) => (
               <li key={row.name} className="manager-team-row">
-                <span className="manager-team-name" title={row.name}>
-                  {row.name === "未割り当て" ? t("未割り当て") : row.name}
+                <span className="manager-team-name" title={row.name === "__unassigned__" ? t("未割り当て") : row.name}>
+                  {row.name === "__unassigned__" ? t("未割り当て") : row.name}
                 </span>
                 <span className="manager-team-meta">{t("{n} 名", { n: row.members })}</span>
                 <span className="manager-bar-track" aria-hidden="true">

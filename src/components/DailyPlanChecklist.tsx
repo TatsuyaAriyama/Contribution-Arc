@@ -323,7 +323,7 @@ export function PlanChecklistPreview({
       ))}
       {hidden > 0 ? (
         <div className="plan-checklist-preview-more">
-          {moreLabel ? moreLabel(hidden) : t("+{n}件", { n: hidden })}
+          {moreLabel ? moreLabel(hidden) : t("+{count}件", { count: hidden })}
         </div>
       ) : null}
     </div>

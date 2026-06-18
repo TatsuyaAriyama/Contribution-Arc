@@ -3366,7 +3366,7 @@ function LoginScreen() {
           </text>
         </svg>
         <p className="showcase-tagline">
-          日々のコミットが、あなたの軌跡を描く。
+          {t("日々のコミットが、あなたの軌跡を描く。")}
         </p>
 
         <div className="login-showcase-actions">
@@ -3377,7 +3377,7 @@ function LoginScreen() {
             disabled={isSubmitting}
           >
             <GitHubIcon />
-            <span>GitHubで続行</span>
+            <span>{t("GitHubで続行")}</span>
           </button>
           <button
             type="button"
@@ -3386,7 +3386,7 @@ function LoginScreen() {
             disabled={isSubmitting}
           >
             <GoogleIcon />
-            <span>Googleで続行</span>
+            <span>{t("Googleで続行")}</span>
           </button>
           <button
             type="button"
@@ -3394,7 +3394,7 @@ function LoginScreen() {
             onClick={() => setIsEmailFormOpen((prev) => !prev)}
             aria-expanded={isEmailFormOpen}
           >
-            {isEmailFormOpen ? "メールフォームを閉じる" : "メールで続行"}
+            {isEmailFormOpen ? t("メールフォームを閉じる") : t("メールで続行")}
           </button>
         </div>
 
@@ -3460,7 +3460,7 @@ function LoginScreen() {
         ) : null}
 
         <p className="login-showcase-fineprint">
-          続行するとアカウントが自動的に作成されます。
+          {t("続行するとアカウントが自動的に作成されます。")}
         </p>
       </section>
     </main>
