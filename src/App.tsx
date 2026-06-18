@@ -4758,6 +4758,14 @@ function App() {
     filename: string;
   } | null>(null);
   const [dailyMessage, setDailyMessage] = useState("");
+  /* dailyMessage は手動でクリアしないと画面に残り続けて視覚ノイズ
+     になっていた。空でない値が入ったら 4 秒後に自動で消す。同じ
+     副作用で次のメッセージが来たら前のタイマーをキャンセル。 */
+  useEffect(() => {
+    if (!dailyMessage) return;
+    const id = window.setTimeout(() => setDailyMessage(""), 4000);
+    return () => window.clearTimeout(id);
+  }, [dailyMessage]);
   const [isSavingDailyReport, setIsSavingDailyReport] = useState(false);
   /* Phase 10a: 下書きモード. When true, the next save persists locally
      only (no Firestore write). Defaulting to false keeps the published
