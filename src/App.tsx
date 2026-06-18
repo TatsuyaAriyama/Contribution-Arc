@@ -183,6 +183,7 @@ const IS_IOS_BUILD = import.meta.env.VITE_PLATFORM === "ios";
 import { ShareToXModal } from "./components/ShareToXModal";
 import { TutorialHint } from "./components/TutorialHint";
 import { BarcodeScannerModal } from "./components/BarcodeScannerModal";
+import { LearningRecordModal } from "./components/LearningRecordModal";
 import streakFlameIcon from "./assets/streak-flame.png";
 import { ToastHost } from "./components/ToastHost";
 import { PullToRefresh } from "./components/PullToRefresh";
@@ -292,6 +293,12 @@ type StudyLog = {
   createdAt: string;
   color?: string;
   learningItemId?: string;
+  /* 学習量(ページ/問題/章など) + 単位、要点メモ、画像(dataURL)。
+     ライブラリの「記録の入力」フォームで残せる任意項目。 */
+  amount?: number;
+  amountUnit?: string;
+  note?: string;
+  photo?: string;
 };
 
 type LearningCategory = "book" | "stack";
@@ -3885,6 +3892,8 @@ function App() {
   const [isReorderingLibrary, setIsReorderingLibrary] = useState(false);
   // バーコード(ISBN)スキャンで本を追加するモーダルの開閉。
   const [isBarcodeScanOpen, setIsBarcodeScanOpen] = useState(false);
+  // 「記録の入力」フォーム(時間/量/メモ/画像)の対象 learning item id。
+  const [learningRecordItemId, setLearningRecordItemId] = useState<string | null>(null);
   /* プロフィールの「This Week」棒グラフから曜日をタップして、
      その日に記録した学習項目・時間を編集できる詳細パネルを開く。
      null = 閉じている、0..6 = Mon..Sun。 */
@@ -8756,6 +8765,54 @@ function App() {
     // 学習を記録したら自動的に FEED にも流す（細長コンパクト表示）。
     // 通常の手書き投稿と違って横長 1 行で出るのでタイムラインを圧迫しない。
     // 集約は enqueueAutoPost 側で 5 分ガード。
+    void enqueueAutoPost({
+      kind: "auto-study",
+      text: `『${item.name}』を ${formatStudyTimeJa(safeMinutes)} 学習しました`,
+      studyMinutesValue: safeMinutes,
+    });
+  };
+
+  /* 「記録の入力」フォーム(時間/量/メモ/画像)からの保存。
+     handleLearningQuickLog の上位版で、学習量・メモ・画像も 1 件の
+     StudyLog として残す。本タイプで単位がページなら現在ページも進める。 */
+  const handleSaveLearningRecord = (
+    item: LearningItem,
+    values: { minutes: number; amount?: number; amountUnit?: string; note?: string; photo?: string },
+  ) => {
+    if (!currentUser) return;
+    const safeMinutes = Math.round(values.minutes);
+    if (!Number.isFinite(safeMinutes) || safeMinutes <= 0) return;
+    const nextLog: StudyLog = {
+      id: crypto.randomUUID(),
+      subject: item.name,
+      minutes: safeMinutes,
+      createdAt: new Date().toISOString(),
+      color: item.color,
+      learningItemId: item.id,
+      ...(values.amount && values.amount > 0 ? { amount: values.amount } : {}),
+      ...(values.amount && values.amount > 0 && values.amountUnit ? { amountUnit: values.amountUnit } : {}),
+      ...(values.note ? { note: values.note } : {}),
+      ...(values.photo ? { photo: values.photo } : {}),
+    };
+    setStudyLogs((logs) => [...logs, nextLog]);
+    void saveStudyLogToCloud(db, currentUser.uid, nextLog, {
+      earnedExp: Math.round(safeMinutes * 1.25),
+      source: "learning-record",
+      organizationId: currentOrganization?.id,
+    }).catch((error) => {
+      console.error("Learning record save failed.", error);
+    });
+    // 本でページ数を量として記録したら、現在ページも前進させる。
+    if (
+      item.category === "book" &&
+      values.amount &&
+      values.amount > 0 &&
+      (values.amountUnit || "").includes("ページ")
+    ) {
+      handleLearningPageUpdate(item.id, (item.currentPages || 0) + values.amount);
+    }
+    setLearningRecordItemId(null);
+    showToast(t("+{time} {name}", { time: formatStudyTimeJa(safeMinutes), name: item.name }), { kind: "success" });
     void enqueueAutoPost({
       kind: "auto-study",
       text: `『${item.name}』を ${formatStudyTimeJa(safeMinutes)} 学習しました`,
@@ -16067,6 +16124,26 @@ function App() {
         />
       ) : null}
 
+      {(() => {
+        const recordItem = learningRecordItemId
+          ? learningItems.find((it) => it.id === learningRecordItemId)
+          : null;
+        if (!recordItem) return null;
+        return (
+          <LearningRecordModal
+            itemName={recordItem.name}
+            itemColor={recordItem.color}
+            category={recordItem.category}
+            onClose={() => setLearningRecordItemId(null)}
+            onSubmit={(values) => handleSaveLearningRecord(recordItem, values)}
+            onEdit={() => {
+              setLearningRecordItemId(null);
+              setLearningDetailId(recordItem.id);
+            }}
+          />
+        );
+      })()}
+
       {learningEditorState ? (
         <div className="settings-modal-backdrop" role="presentation" onClick={closeLearningEditor}>
           <section
@@ -19901,7 +19978,7 @@ function App() {
                         type="button"
                         className="learning-card-trigger"
                         disabled={isReorderingLibrary}
-                        onClick={() => setLearningDetailId(item.id)}
+                        onClick={() => setLearningRecordItemId(item.id)}
                         aria-label={t("{name}の詳細", { name: item.name })}
                       >
                         <div className="learning-card-head">

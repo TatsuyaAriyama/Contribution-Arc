@@ -29,6 +29,10 @@ export type StudyLogRecord = {
   createdAt: string;
   color?: string;
   learningItemId?: string;
+  amount?: number;
+  amountUnit?: string;
+  note?: string;
+  photo?: string;
 };
 
 export type WorkspaceSessionRecord = {
@@ -174,6 +178,10 @@ function studyLogToCloudPayload(
     createdAt: log.createdAt,
     color: log.color || "",
     learningItemId: log.learningItemId || "",
+    ...(typeof log.amount === "number" && log.amount > 0 ? { amount: log.amount } : {}),
+    ...(log.amountUnit ? { amountUnit: log.amountUnit } : {}),
+    ...(log.note ? { note: log.note } : {}),
+    ...(log.photo ? { photo: log.photo } : {}),
     source: options.source || "manual",
     ...(options.organizationId ? { organizationId: options.organizationId } : {}),
     updatedAt: serverTimestamp(),
@@ -207,6 +215,10 @@ export function subscribeStudyLogsFromCloud(
             createdAt: readCreatedAt(data.createdAt),
             color: readString(data.color),
             learningItemId: readString(data.learningItemId) || undefined,
+            amount: readNumber(data.amount) || undefined,
+            amountUnit: readString(data.amountUnit) || undefined,
+            note: readString(data.note) || undefined,
+            photo: readString(data.photo) || undefined,
           };
         })
         .filter((log) => log.minutes > 0)

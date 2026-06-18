@@ -23664,6 +23664,205 @@
   cursor: not-allowed;
 }
 
+/* === 「記録の入力」フォーム（日報スタイル：紙 + 明朝） === */
+.learning-record-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(17, 24, 39, 0.4);
+  backdrop-filter: blur(6px);
+}
+@media (min-width: 600px) {
+  .learning-record-backdrop {
+    align-items: center;
+  }
+}
+.learning-record-card {
+  width: 100%;
+  max-width: 440px;
+  max-height: 92vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 18px calc(20px + env(safe-area-inset-bottom, 0px));
+  border: 1px solid var(--hairline, #e6e3df);
+  border-radius: 22px 22px 0 0;
+  background-color: #fbf9f2;
+  background-image: radial-gradient(rgba(26, 24, 23, 0.02) 1px, transparent 1.4px);
+  background-size: 4px 4px;
+  color: var(--ink);
+}
+@media (min-width: 600px) {
+  .learning-record-card {
+    border-radius: 20px;
+  }
+}
+.learning-record-head {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+.learning-record-close {
+  justify-self: start;
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+.learning-record-title {
+  margin: 0;
+  text-align: center;
+  font-size: 18px;
+}
+.learning-record-save {
+  justify-self: end;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 999px;
+  background: var(--green);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.learning-record-save:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.learning-record-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--learning-card-color, var(--ink));
+  border-radius: 14px;
+  background: var(--surface);
+  cursor: pointer;
+  text-align: left;
+}
+.learning-record-item-bar {
+  display: none;
+}
+.learning-record-item-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.learning-record-item-edit {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.learning-record-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.learning-record-label {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP", serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.learning-record-time,
+.learning-record-amount {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.learning-record-time input,
+.learning-record-amount input,
+.learning-record-note {
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  padding: 10px 12px;
+}
+.learning-record-time input {
+  width: 78px;
+  text-align: center;
+}
+.learning-record-time span {
+  font-size: 13px;
+  color: var(--muted);
+}
+.learning-record-amount input:first-child {
+  width: 96px;
+  text-align: center;
+}
+.learning-record-unit {
+  flex: 1;
+  min-width: 0;
+}
+.learning-record-note {
+  width: 100%;
+  resize: vertical;
+  line-height: 1.6;
+}
+.learning-record-time input:focus,
+.learning-record-amount input:focus,
+.learning-record-note:focus {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(31, 111, 74, 0.16);
+}
+.learning-record-photo-add {
+  align-self: flex-start;
+  padding: 10px 16px;
+  border: 1px dashed var(--hairline-strong, rgba(26, 24, 23, 0.2));
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.learning-record-photo {
+  position: relative;
+  align-self: flex-start;
+  max-width: 200px;
+}
+.learning-record-photo img {
+  width: 100%;
+  border-radius: 12px;
+  display: block;
+}
+.learning-record-photo button {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
 /* === ライブラリのコンパクトタイル化（横 4 列の本棚）===
    作業項目を一覧で多く見せるため、各カードをサムネ + 名前 + 累計の
    小さなタイルに。時間記録 / ページ更新などの操作はタイルをタップ →
