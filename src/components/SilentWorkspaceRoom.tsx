@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, type CSSProperties, type ChangeEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
+  renderAngelSvg,
   renderDefaultCharacterSvg,
   renderGhostSvg,
   renderOwlSvg,
+  renderRoboSvg,
 } from "./CharacterShapeSvg";
 import { useTranslation } from "../i18n/LanguageContext";
 
@@ -19,7 +21,7 @@ export type RoomActivityItem = {
 
 type RoomActorStatus = "working" | "deep-work" | "on-break";
 
-export type CharacterShape = "default" | "ghost" | "owl";
+export type CharacterShape = "default" | "ghost" | "owl" | "robo" | "angel";
 
 export type PresetLogEntry = {
   id: string;
@@ -643,7 +645,7 @@ export function SilentWorkspaceRoom({
                   /* 投稿カード avatar と統一: キャラ shape + カラーで
                       描画。avatar URL があるユーザーは写真優先、
                       それ以外は shape に応じた SVG。default / ghost /
-                      owl の 3 種をサポート。 */
+                      owl / robo / angel をサポート。 */
                   let content: ReactNode;
                   if (member.avatar) {
                     content = <img src={member.avatar} alt="" />;
@@ -653,6 +655,10 @@ export function SilentWorkspaceRoom({
                     content = renderGhostSvg(fillColor);
                   } else if (shape === "owl") {
                     content = renderOwlSvg(fillColor);
+                  } else if (shape === "robo") {
+                    content = renderRoboSvg(fillColor);
+                  } else if (shape === "angel") {
+                    content = renderAngelSvg(fillColor);
                   } else {
                     content = (
                       <span>{(member.name?.charAt(0) || "?").toUpperCase()}</span>
@@ -1177,6 +1183,12 @@ export function SilentWorkspaceRoom({
                        renderer を呼ぶ。CSS sprite 版を撤去して
                        preview / atelier / room すべてで同じ絵にする。 */
                     renderOwlSvg(member.color || "#7667a8")
+                  ) : member.characterShape === "robo" ? (
+                    /* 煌 (Kō) — 共有 SVG。固定パレットなのでカラーは無視。 */
+                    renderRoboSvg(member.color || "#7667a8")
+                  ) : member.characterShape === "angel" ? (
+                    /* 凜 (Rin) — 共有 SVG。固定パレットなのでカラーは無視。 */
+                    renderAngelSvg(member.color || "#7667a8")
                   ) : (
                     /* "default" (相 / 緑キューブ + face panel + 足):
                        preview と同じ共有 SVG を出して見た目を統一する。

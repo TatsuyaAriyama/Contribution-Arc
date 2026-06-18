@@ -235,6 +235,123 @@ export function renderOwlSvg(_color: string) {
   );
 }
 
+/** 煌 (Kō) — ネオン灯の M エンブレムを胸に灯した夜型ロボ。アンテナ +
+ *  バイザー + 黄金縁の M ロゴ + 短い 2 本脚。色は固定 (navy + gold +
+ *  neon) でユーザーの characterColor は無視する。 */
+export function renderRoboSvg(_color: string) {
+  const navyDeep = "#0f1428";
+  const navy = "#1c2444";
+  const navyLight = "#2b3666";
+  const gold = "#c7a24e";
+  const goldDim = "#7a611f";
+  const neon = "#6fa7ff";
+  return (
+    <svg
+      className="robo-svg"
+      viewBox="0 0 128 140"
+      aria-hidden="true"
+      focusable="false"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      {/* 床影 */}
+      <ellipse cx="64" cy="132" rx="34" ry="4.5" fill="#000" fillOpacity={0.22} />
+
+      {/* アンテナ + 先端 LED */}
+      <line x1="64" y1="8" x2="64" y2="22" stroke={navyLight} strokeWidth={2.4} strokeLinecap="round" />
+      <circle cx="64" cy="7" r={3.4} fill={neon} stroke={navyDeep} strokeWidth={1} />
+
+      {/* 頭部の上面 (台形 brim) */}
+      <path d="M22 30 L106 30 L114 40 L14 40 Z" fill={navyDeep} />
+
+      {/* 頭部 (ボックス) */}
+      <rect x={22} y={38} width={84} height={46} rx={10} fill={navy} />
+
+      {/* 上面のゴールドアクセント (左右) */}
+      <rect x={26} y={31} width={14} height={3} rx={1.2} fill={gold} />
+      <rect x={88} y={31} width={14} height={3} rx={1.2} fill={gold} />
+
+      {/* バイザー (黒い帯) */}
+      <rect x={28} y={46} width={72} height={14} rx={4} fill={navyDeep} opacity={0.95} />
+
+      {/* 胸 - 黒い M エンブレムパネル + 金縁 */}
+      <rect x={42} y={66} width={44} height={22} rx={6} fill="#06091a" stroke={gold} strokeWidth={2.2} />
+      <path
+        d="M50 84 L56 72 L64 80 L72 72 L78 84"
+        fill="none"
+        stroke={neon}
+        strokeWidth={3}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+
+      {/* 胴体 (M の下に続くボディプレート) */}
+      <rect x={40} y={88} width={48} height={18} rx={5} fill={navyDeep} />
+
+      {/* 脚 (2 本) */}
+      <rect x={48} y={106} width={11} height={14} rx={3} fill={goldDim} opacity={0.85} />
+      <rect x={69} y={106} width={11} height={14} rx={3} fill={goldDim} opacity={0.85} />
+      <ellipse cx="53.5" cy="122" rx="6.5" ry="1.8" fill="#000" fillOpacity={0.4} />
+      <ellipse cx="74.5" cy="122" rx="6.5" ry="1.8" fill="#000" fillOpacity={0.4} />
+    </svg>
+  );
+}
+
+/** 凜 (Rin) — 頭上に輪 (halo) を浮かべた金色キューブ。穏やかな表情の
+ *  スクリーンを胸に持ち、2 本の丸い脚で着地する。色は固定 (olive +
+ *  gold) でユーザーの characterColor は無視する。 */
+export function renderAngelSvg(_color: string) {
+  const body = "#a99440";       // olive cube body
+  const bodyDark = "#7a661a";   // right-side shadow
+  const top = "#bda752";        // top brim (lighter)
+  const screenFrame = "#7a682a";
+  const screen = "#f7e6a6";
+  const halo = "#e7c87a";
+  const haloHi = "#fff4b4";
+  const foot = "#2a2410";
+  return (
+    <svg
+      className="angel-svg"
+      viewBox="0 0 128 140"
+      aria-hidden="true"
+      focusable="false"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      {/* 床影 */}
+      <ellipse cx="64" cy="132" rx="34" ry="4.5" fill="#000" fillOpacity={0.22} />
+
+      {/* halo (輪) */}
+      <ellipse cx="64" cy="14" rx="22" ry="4" fill="none" stroke={halo} strokeWidth={3} />
+      <ellipse cx="64" cy="13" rx="22" ry="4" fill="none" stroke={haloHi} strokeWidth={1.2} opacity={0.7} />
+
+      {/* 頭/体の上面 (台形 brim) */}
+      <path d="M22 30 L106 30 L114 38 L14 38 Z" fill={top} />
+
+      {/* キューブ本体 */}
+      <rect x={22} y={36} width={84} height={70} rx={10} fill={body} />
+
+      {/* 右側面の陰影 */}
+      <path d="M106 36 L114 38 L114 102 L106 106 Z" fill={bodyDark} />
+
+      {/* 胸のスクリーン */}
+      <rect
+        x={40}
+        y={52}
+        width={48}
+        height={40}
+        rx={9}
+        fill={screenFrame}
+        stroke="#c7a24e"
+        strokeWidth={2}
+      />
+      <rect x={46} y={58} width={36} height={28} rx={7} fill={screen} />
+
+      {/* 2 本の丸い脚 (本体の下に少し覗く) */}
+      <circle cx="50" cy="118" r={9} fill={foot} />
+      <circle cx="78" cy="118" r={9} fill={foot} />
+    </svg>
+  );
+}
+
 export function renderDefaultCharacterSvg(color: string, options?: { showEdges?: boolean }) {
   const showEdges = options?.showEdges !== false; // 既定で表示 (preview)
   const front = color;

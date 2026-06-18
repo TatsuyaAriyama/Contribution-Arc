@@ -221,8 +221,10 @@ import { ContributionArcLogo } from "./components/ContributionArcLogo";
 import { GoalPickerModal } from "./components/GoalPickerModal";
 import { findGoalById } from "./data/goalCatalog";
 import {
+  renderAngelSvg,
   renderDefaultCharacterSvg,
   renderOwlSvg,
+  renderRoboSvg,
 } from "./components/CharacterShapeSvg";
 import { SettingsIcon } from "./components/icons/SettingsIcon";
 import { BellIcon } from "./components/icons/BellIcon";
@@ -466,7 +468,7 @@ type RoomUserStatus = "working" | "deep-work" | "on-break";
    (round head with ear tufts, big amber eyes, beak; ground-hops
    instead of walks; ambient ~270° head turn). New shapes can be
    added here. */
-type CharacterShape = "default" | "ghost" | "owl";
+type CharacterShape = "default" | "ghost" | "owl" | "robo" | "angel";
 
 type RoomUser = {
   id: string;
@@ -734,6 +736,20 @@ const characterShapeOptions: {
     tagline: "夜更けの番人",
     intro: "夜更けをひとり見守る、静かな番人。",
   },
+  {
+    value: "robo",
+    name: "煌",
+    romaji: "Kō",
+    tagline: "ネオンを灯す機械仕掛け",
+    intro: "深夜のスポットライトに胸の M を灯す、機械仕掛けの相棒。",
+  },
+  {
+    value: "angel",
+    name: "凜",
+    romaji: "Rin",
+    tagline: "輪をいただく金色の使い",
+    intro: "頭上にそっと輪を浮かべて佇む、金色の使い。",
+  },
 ];
 
 // Shop catalog. "default" is intentionally not listed — every account
@@ -761,6 +777,20 @@ const shapeShopCatalog: ShapeShopItem[] = [
     tagline: "夜更けの番人",
     description: "丸い頭に大きな琥珀の眼。深夜にひとり手を動かす時間のお供に。",
     price: 500,
+  },
+  {
+    shape: "angel",
+    name: "凜 Rin",
+    tagline: "輪をいただく金色の使い",
+    description: "頭上に淡い輪を浮かべた金色のキューブ。穏やかな顔のスクリーンが、静かな時間に寄り添う。",
+    price: 800,
+  },
+  {
+    shape: "robo",
+    name: "煌 Kō",
+    tagline: "ネオンを灯す機械仕掛け",
+    description: "胸にネオンの M を灯したナイトロボ。アンテナと黄金縁のエンブレムが、夜の作業を引き締める。",
+    price: 1500,
   },
 ];
 
@@ -1586,7 +1616,13 @@ function getSafeCharacterColor(color: string | undefined): string {
 /* Allow-list guard for character shape. Anything outside the known
    set (including legacy `undefined` from older profile docs) falls
    back to "default" — the original humanoid silhouette. */
-const CHARACTER_SHAPES: readonly CharacterShape[] = ["default", "ghost", "owl"];
+const CHARACTER_SHAPES: readonly CharacterShape[] = [
+  "default",
+  "ghost",
+  "owl",
+  "robo",
+  "angel",
+];
 function getSafeCharacterShape(shape: unknown): CharacterShape {
   if (typeof shape !== "string") return "default";
   /* 後方互換: 旧シルエット "frost" / "morph" は廃止 ─ どちらも
@@ -2506,16 +2542,21 @@ export const ProfileCharacterPreview = memo(function ProfileCharacterPreview({
 }) {
   const isGhost = shape === "ghost";
   const isOwl = shape === "owl";
+  const isRobo = shape === "robo";
+  const isAngel = shape === "angel";
   const isDefault = shape === "default";
-  const isCustomShape = isGhost || isOwl || isDefault;
+  const isCustomShape = isGhost || isOwl || isRobo || isAngel || isDefault;
+  const resolvedColor = color || characterColorOptions[0].value;
   return (
     <div
       className={`profile-character-preview${
         isGhost ? " is-ghost" : ""
       }${isOwl ? " is-owl" : ""}${
+        isRobo ? " is-robo" : ""
+      }${isAngel ? " is-angel" : ""}${
         isDefault ? " is-default-char" : ""
       }`}
-      style={{ "--actor-color": color || characterColorOptions[0].value } as CSSProperties}
+      style={{ "--actor-color": resolvedColor } as CSSProperties}
       aria-hidden="true"
     >
       <span className={`actor-sprite deep shape-${shape} ${isCustomShape ? "" : "is-blocky"}`}>
@@ -2523,11 +2564,15 @@ export const ProfileCharacterPreview = memo(function ProfileCharacterPreview({
           /* 宵 (Yoi) は朧と同じ line-art 語彙に統一。CSS sprite 版は
              saturated カートゥーン調で 朧 / 灯 と並んだ時にシリーズ感が
              崩れていたので、共有 renderer (clean line-art) に差し替え。 */
-          renderOwlSvg(color || characterColorOptions[0].value)
+          renderOwlSvg(resolvedColor)
+        ) : isRobo ? (
+          renderRoboSvg(resolvedColor)
+        ) : isAngel ? (
+          renderAngelSvg(resolvedColor)
         ) : isGhost ? (
           ghostSvgMarkup
         ) : isDefault ? (
-          renderDefaultCharacterSvg(color || characterColorOptions[0].value)
+          renderDefaultCharacterSvg(resolvedColor)
         ) : (
           <>
             <span className="sprite-body" />
