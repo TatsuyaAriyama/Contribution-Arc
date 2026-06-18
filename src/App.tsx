@@ -19421,26 +19421,9 @@ function App() {
           animate={{ opacity: 1, y: 0 }}
           transition={SPRING_SNAPPY}
         >
-          {currentUser ? (
-            <TutorialHint
-              uid={currentUser.uid}
-              feature="learning"
-              title={t("記録する — 学びの時間を積み上げる中心")}
-              body={t("学習対象を登録し、各カードから時間を記録。残した時間はホームのグラフと EXP に反映されます。")}
-              bullets={[
-                t("「学習対象」をジャンルと色で登録(例: React=青、英語=橙)"),
-                t("時間を入力すると、その分だけ Effort EXP が貯まります"),
-                t("ページ数を持つ本タイプは「現在ページ / 総ページ」も追えます"),
-                t("使わなくなった対象はアーカイブ。記録は残ります"),
-              ]}
-            />
-          ) : null}
-
           <header className="learning-header">
             <div>
-              <p className="card-kicker">Learning Items</p>
               <h2>{t("ライブラリ")}</h2>
-              <small>{t("学習対象をジャンルと色で登録・整理。各カードから時間を記録できます。")}</small>
               {(() => {
                 // Quiet inventory summary — counts only, no streaks or
                 // targets. Helps the user gauge library size at a glance.
