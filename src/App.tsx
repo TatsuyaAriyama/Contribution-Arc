@@ -19517,6 +19517,7 @@ function App() {
                    未フィルタ時のみ "7 日表示 → もっと見る で 50 件" の
                    ふるい分けを適用する。 */
                 const isFiltered = Boolean(dailyHistoryDateFilter || dailyHistorySearch);
+                const todayKey = getLearnerDate();
                 const visibleReports = isFiltered
                   ? filteredDailyReports.slice(0, 50)
                   : showAllMyReports
@@ -19525,14 +19526,23 @@ function App() {
                 const hasMore = !isFiltered && filteredDailyReports.length > visibleReports.length;
                 return (
                   <>
-                    {visibleReports.map((report) => (
+                    {visibleReports.map((report) => {
+                      const isToday = report.date === todayKey;
+                      return (
                       <article
                         key={report.id}
-                        className={report.date === selectedDailyDate ? "active" : ""}
+                        className={`${report.date === selectedDailyDate ? "active" : ""}${
+                          isToday ? " is-today" : ""
+                        }`.trim()}
                       >
                         <button type="button" onClick={() => handleDailyDateChange(report.date)}>
                           <strong>
                             {formatDailyDate(report.date, language)}
+                            {isToday ? (
+                              <span className="daily-history-badge is-today" aria-label={t("今日")}>
+                                {t("今日")}
+                              </span>
+                            ) : null}
                             {report.isDraft ? (
                               <span className="daily-history-badge" aria-label={t("下書き")}>
                                 {t("下書き")}
@@ -19553,7 +19563,8 @@ function App() {
                           ⋯
                         </button>
                       </article>
-                    ))}
+                      );
+                    })}
                     {hasMore ? (
                       <button
                         type="button"

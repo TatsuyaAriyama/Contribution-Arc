@@ -7255,6 +7255,15 @@
   border-color: rgba(31, 111, 74, 0.24);
   background: rgba(var(--tint-soft-rgb), 0.36);
 }
+/* 今日の行は active と別軸で目立たせる。左にアクセントバーを敷くことで
+   "今日" がリスト内でひと目で分かるようにする。 */
+.daily-history-list article.is-today > button:first-child {
+  box-shadow: inset 3px 0 0 rgba(31, 111, 74, 0.55);
+}
+.daily-history-badge.is-today {
+  background: rgba(31, 111, 74, 0.12);
+  color: rgba(31, 111, 74, 0.95);
+}
 
 .daily-history-list strong {
   color: var(--ink);
