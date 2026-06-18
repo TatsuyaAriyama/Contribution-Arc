@@ -1945,9 +1945,9 @@ function ReflectionSectionIcon({ section }: { section: ReflectionSectionKey }) {
   }
   return (
     <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-      {/* sunrise — 明日への申し送り */}
+      {/* forward arrow — 明日の最初の一歩 / next */}
       <path
-        d="M3 18h18M5 14a7 7 0 0 1 14 0M12 4v3M5 7l2 2M19 7l-2 2M2 21h20"
+        d="M5 12h14M13 5l7 7-7 7"
         fill="none"
         stroke="currentColor"
         strokeWidth="2"

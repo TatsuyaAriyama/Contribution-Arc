@@ -5714,9 +5714,11 @@
   align-items: start;
   /* 日報画面は背面の warm paper canvas を消して pure white に。
      Habit アプリ風のフラット白背景に揃える。負 margin と padding で
-     親 view-content の余白を取り消して、画面全幅に白を行き渡らせる。 */
+     親 view-content の余白を取り消して、画面全幅に白を行き渡らせる。
+     下端は固定 bottom-nav に「振り返りを更新」ボタンが被らないよう
+     セーフエリア + nav 高さ分の余白を確保する。 */
   margin: -14px;
-  padding: 14px;
+  padding: 14px 14px calc(96px + env(safe-area-inset-bottom, 0px));
   background: var(--surface);
   min-height: 100vh;
   border-radius: 0;
@@ -6634,17 +6636,32 @@
 }
 
 /* ── Phase 12: 振り返り 3 セクション ─────────────────────────────────────
-   single textarea を Highlight / Stuck / Tomorrow の 3 セクションに分割
-   したので、それぞれにラベルを付ける。アイコン + ラベルを横並びで小さく
-   見せて、本文 (textarea) は既存の daily-entry 系スタイルを継承する。 */
+   表示側 (.reflection-structured) と揃えて、編集側もカード型で
+   ・白地 + 細枠
+   ・左に色付き縦ライン (box-shadow inset)
+   ・アイコンは塗り潰し円なし、ストロークそのものに section 色を載せる
+   というルールで統一する。 */
 .reflection-section {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   margin-top: 14px;
+  padding: 12px 14px 14px 18px;
+  border-radius: 12px;
+  background: var(--surface, #fff);
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
 }
 .reflection-section:first-of-type {
   margin-top: 12px;
+}
+.reflection-section[data-section="highlight"] {
+  box-shadow: inset 4px 0 0 #7c5cff;
+}
+.reflection-section[data-section="stuck"] {
+  box-shadow: inset 4px 0 0 #e89a3c;
+}
+.reflection-section[data-section="tomorrow"] {
+  box-shadow: inset 4px 0 0 #1f6f4a;
 }
 .reflection-section-label {
   display: flex;
@@ -6653,36 +6670,33 @@
   gap: 8px;
   font-size: 11.5px;
   font-weight: 800;
-  color: var(--muted);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   line-height: 1;
+}
+.reflection-section[data-section="highlight"] .reflection-section-label {
+  color: #5b3fcf;
+}
+.reflection-section[data-section="stuck"] .reflection-section-label {
+  color: #b56a14;
+}
+.reflection-section[data-section="tomorrow"] .reflection-section-label {
+  color: #15553a;
 }
 .reflection-section-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  color: #fff;
+  width: 18px;
+  height: 18px;
+  background: transparent;
   line-height: 1;
-  background: rgba(var(--ink-rgb), 0.32);
 }
 .reflection-section-icon > svg {
   display: block;
-}
-/* 編集側のセクション別アクセント色 — 表示側 (reflection-structured)
-   と揃える。data-section 属性で識別する。 */
-.reflection-section[data-section="highlight"] .reflection-section-icon {
-  background: #7c5cff;
-}
-.reflection-section[data-section="stuck"] .reflection-section-icon {
-  background: #e89a3c;
-}
-.reflection-section[data-section="tomorrow"] .reflection-section-icon {
-  background: #1f6f4a;
+  width: 18px;
+  height: 18px;
 }
 
 /* 「今日のログから下書きを挿入」CTA。Highlight のすぐ上に小さく出す。 */
@@ -6719,9 +6733,11 @@
 }
 
 /* 表示側: 構造化された振り返り。詳細モーダル / 共有フィードで使う。
-   3 セクション (ハイライト / つまずき / 明日への申し送り) を、淡い
-   セクションカラー + 明確な SVG アイコン + ラベルで識別する。
-   border-left は丸角と当たって崩れるので不使用。 */
+   ・カード本体は白地 + 細枠
+   ・左の縦アクセントは box-shadow: inset で描画 (border-left だと
+     border-radius と当たって角がガタつくため)
+   ・アイコンは塗り潰し円ではなく、ストロークそのものを色付け
+     (テキストの色と揃えて識別しやすく) */
 .reflection-structured {
   display: flex;
   flex-direction: column;
@@ -6730,22 +6746,19 @@
 }
 .reflection-structured-section {
   position: relative;
-  padding: 12px 14px 14px 14px;
+  padding: 12px 14px 14px 18px;
   border-radius: 12px;
-  background: rgba(var(--ink-rgb), 0.04);
-  border: 1px solid transparent;
+  background: var(--surface, #fff);
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
 }
 .reflection-structured-section[data-section="highlight"] {
-  background: rgba(124, 92, 255, 0.08);
-  border-color: rgba(124, 92, 255, 0.18);
+  box-shadow: inset 4px 0 0 #7c5cff;
 }
 .reflection-structured-section[data-section="stuck"] {
-  background: rgba(232, 154, 60, 0.08);
-  border-color: rgba(232, 154, 60, 0.22);
+  box-shadow: inset 4px 0 0 #e89a3c;
 }
 .reflection-structured-section[data-section="tomorrow"] {
-  background: rgba(31, 111, 74, 0.08);
-  border-color: rgba(31, 111, 74, 0.22);
+  box-shadow: inset 4px 0 0 #1f6f4a;
 }
 .reflection-structured-label {
   display: flex !important;
@@ -6773,24 +6786,18 @@
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  color: #fff;
+  width: 18px;
+  height: 18px;
+  background: transparent;
   line-height: 1;
 }
 .reflection-structured-icon > svg {
   display: block;
+  width: 18px;
+  height: 18px;
 }
-.reflection-structured-section[data-section="highlight"] .reflection-structured-icon {
-  background: #7c5cff;
-}
-.reflection-structured-section[data-section="stuck"] .reflection-structured-icon {
-  background: #e89a3c;
-}
-.reflection-structured-section[data-section="tomorrow"] .reflection-structured-icon {
-  background: #1f6f4a;
-}
+/* アイコン色は SVG の currentColor が拾うので、親 (.reflection-structured-label)
+   から color を継承するだけで OK。 */
 .reflection-structured-name {
   display: inline-block;
   white-space: nowrap;
