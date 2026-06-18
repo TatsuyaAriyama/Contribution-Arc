@@ -5610,7 +5610,12 @@ function App() {
           });
         }
         if (typeof profile.coins === "number") {
-          const nextCoins = profile.coins;
+          /* admin (= 開発者本人) は floor を 30000 にする。realtime sync
+             で cloud の生値 (0 等) が降ってきても、admin floor を尊重
+             しないと初回ロードで grantedCoins=30000 を入れた直後に
+             0 に上書きされてしまう。 */
+          const isAdminLive = (currentUser?.email || "").toLowerCase() === "ari.initx@gmail.com";
+          const nextCoins = isAdminLive ? Math.max(profile.coins, 30000) : profile.coins;
           setCoins((current) => (current === nextCoins ? current : nextCoins));
         }
       },
