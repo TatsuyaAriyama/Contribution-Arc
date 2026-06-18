@@ -34670,6 +34670,14 @@ select:disabled {
   font-weight: 800;
   letter-spacing: 0;
 }
+/* 連続記録の炎アイコン（🔥 絵文字から差し替え）。badge は inline-flex +
+   gap:6px なので余白は親に任せ、サイズだけ指定。 */
+.daily-streak-badge .streak-flame-icon {
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
+  display: block;
+}
 
 /* 学習サマリー。Habit カードに合わせて ink 1.5px hairline + 大角丸。 */
 .daily-day-summary {

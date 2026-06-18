@@ -183,6 +183,7 @@ const IS_IOS_BUILD = import.meta.env.VITE_PLATFORM === "ios";
 import { ShareToXModal } from "./components/ShareToXModal";
 import { TutorialHint } from "./components/TutorialHint";
 import { BarcodeScannerModal } from "./components/BarcodeScannerModal";
+import streakFlameIcon from "./assets/streak-flame.png";
 import { ToastHost } from "./components/ToastHost";
 import { PullToRefresh } from "./components/PullToRefresh";
 import { InstallInstructionsModal } from "./components/InstallInstructionsModal";
@@ -19031,7 +19032,8 @@ function App() {
                     (新規ユーザーへのプレッシャーを抑制)。 */}
                 {dailyReportStreak > 0 ? (
                   <p className="daily-streak-badge" aria-label={t("{count}日連続で日報を書いています", { count: dailyReportStreak })}>
-                    🔥 {t("{count}日連続", { count: dailyReportStreak })}
+                    <img className="streak-flame-icon" src={streakFlameIcon} alt="" aria-hidden="true" />
+                    {t("{count}日連続", { count: dailyReportStreak })}
                   </p>
                 ) : null}
               </div>
