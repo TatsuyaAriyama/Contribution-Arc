@@ -5150,6 +5150,30 @@ function App() {
     const savedCharacterShape = window.localStorage.getItem(
       getAccountStorageKey(accountScope, "character-shape"),
     );
+    /* 所有 shape のローカルキャッシュ。これが無い (= 未確認) 状態で
+       characterShape が "robo" 等の有料を指していたら、ユーザーが
+       localStorage を改ざんした可能性が高いので "default" に落とす。
+       cloud 同期が後で正しい所有リストで上書きするので safe。 */
+    const savedOwnedShapesRaw = window.localStorage.getItem(
+      getAccountStorageKey(accountScope, "owned-character-shapes"),
+    );
+    const savedOwnedShapes: CharacterShape[] = (() => {
+      if (!savedOwnedShapesRaw) return ["default"];
+      try {
+        const parsed = JSON.parse(savedOwnedShapesRaw);
+        if (Array.isArray(parsed)) {
+          return Array.from(
+            new Set<CharacterShape>([
+              "default",
+              ...parsed.map((value: unknown) => getSafeCharacterShape(value)),
+            ]),
+          );
+        }
+      } catch {
+        /* corrupted — fall through */
+      }
+      return ["default"];
+    })();
     const savedFriends =
       window.localStorage.getItem(getAccountStorageKey(accountScope, "friends")) ||
       (shouldUseLegacyUserStorage ? window.localStorage.getItem(`contribution-arc-friends-${currentUser.uid}`) : null);
@@ -5233,7 +5257,14 @@ function App() {
     setGoalCustomName(savedGoalCustomName);
     setPlayerAvatar(savedAvatar || currentUser.photoURL || "");
     setPlayerCharacterColor(savedCharacterColor || characterColorOptions[0].value);
-    setPlayerCharacterShape(getSafeCharacterShape(savedCharacterShape));
+    /* 起動直後はローカル所有キャッシュ (savedOwnedShapes) を信用源にする。
+       cloud 未取得の段階で localStorage 改ざんで非所持の shape を装着
+       させない。cloud 取得後に正しい所有リストで上書きされる。 */
+    setOwnedCharacterShapes(savedOwnedShapes);
+    const hydratedShape = getSafeCharacterShape(savedCharacterShape);
+    setPlayerCharacterShape(
+      savedOwnedShapes.includes(hydratedShape) ? hydratedShape : "default",
+    );
     setCustomRooms(seededRooms);
     if (savedRoomId && seededRooms.some((room) => room.id === savedRoomId)) {
       setSelectedRoomId(savedRoomId);
@@ -5378,9 +5409,15 @@ function App() {
         // selected/purchased shape is never momentarily treated as unowned.
         const loadedOwned = profile.ownedCharacterShapes || ["default"];
         const loadedShape = getSafeCharacterShape(profile.characterShape || savedCharacterShape || "default");
-        const resolvedOwned: CharacterShape[] = isAdmin
-          ? [...CHARACTER_SHAPES]
-          : Array.from(new Set<CharacterShape>(["default", ...loadedOwned, loadedShape]));
+        /* 所有判定は purchase の事実 (= ownedCharacterShapes フィールド)
+           のみに基づく。以前は admin 自動付与 + loadedShape 自動付与で
+           実質ロック無効状態だったので、購入していない shape は
+           default に snap-back させる方針に変更。
+           admin (= 開発者本人) もテスト時に正しくロック挙動を再現できる
+           ように同じ判定を通す。coin 10k 付与だけは残して購入で確認可能に。 */
+        const resolvedOwned: CharacterShape[] = Array.from(
+          new Set<CharacterShape>(["default", ...loadedOwned]),
+        );
         const safeShape: CharacterShape = resolvedOwned.includes(loadedShape) ? loadedShape : "default";
         const grantedCoins = isAdmin ? Math.max(profile.coins || 0, 10000) : profile.coins || 0;
         setOwnedCharacterShapes(resolvedOwned);
@@ -6650,6 +6687,21 @@ function App() {
 
     safeSetLocalStorage(getAccountStorageKey(accountScope, "character-shape"), playerCharacterShape);
   }, [currentUser, playerCharacterShape, isWorkspaceLoaded, userId]);
+
+  /* 所有 shape を localStorage にもミラーする。次回起動時の即時 hydrate
+     でロック判定に使うため。cloud 側 (ownedCharacterShapes フィールド)
+     と二重管理になるが、起動直後にロックを正しく見せるためのキャッシュ
+     用途として割り切る。 */
+  useEffect(() => {
+    if (!currentUser || !isWorkspaceLoaded) {
+      return;
+    }
+    const accountScope = getAccountStorageScope(currentUser.uid, userId);
+    safeSetLocalStorage(
+      getAccountStorageKey(accountScope, "owned-character-shapes"),
+      JSON.stringify([...ownedCharacterShapes].sort()),
+    );
+  }, [currentUser, ownedCharacterShapes, isWorkspaceLoaded, userId]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
