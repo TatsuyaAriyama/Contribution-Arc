@@ -1941,10 +1941,17 @@ function renderReflectionBody(
   return (
     <div className="reflection-structured">
       {nonEmpty.map((key) => (
-        <div key={key} className="reflection-structured-section">
-          <span className="reflection-structured-label">
-            <span aria-hidden="true">{iconOf(key)}</span> {labelOf(key)}
-          </span>
+        <div
+          key={key}
+          className="reflection-structured-section"
+          data-section={key}
+        >
+          <div className="reflection-structured-label">
+            <span className="reflection-structured-icon" aria-hidden="true">
+              {iconOf(key)}
+            </span>
+            <span className="reflection-structured-name">{labelOf(key)}</span>
+          </div>
           <p>
             {renderTextWithMentions(parts[key], {
               lookup: opts.lookup,
@@ -19082,12 +19089,12 @@ function App() {
                         : t("明日まず手をつけること");
                   const icon = key === "highlight" ? "✦" : key === "stuck" ? "⌖" : "→";
                   return (
-                    <label key={key} className="reflection-section">
+                    <label key={key} className="reflection-section" data-section={key}>
                       <span className="reflection-section-label">
                         <span className="reflection-section-icon" aria-hidden="true">
                           {icon}
                         </span>
-                        {labelText}
+                        <span>{labelText}</span>
                       </span>
                       <DailyMentionTextarea
                         value={dailyReflectionPartsDraft[key]}
