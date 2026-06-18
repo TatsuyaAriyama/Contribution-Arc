@@ -1901,6 +1901,63 @@ function extractReflectionPreview(text: string): string {
   return (parts.highlight || parts.stuck || parts.tomorrow || text).trim();
 }
 
+/* 振り返り 3 セクションのアイコン。Unicode glyph (✦ / ⌖ / →) は
+ * iOS / Android / Web でレンダリングが揺れる + 小さい円の中で潰れる
+ * ので、解像度に依らず崩れない line-art SVG に差し替える。
+ * stroke="currentColor" にして親 (.reflection-icon) の color で着色。 */
+function ReflectionSectionIcon({ section }: { section: ReflectionSectionKey }) {
+  if (section === "highlight") {
+    return (
+      <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+        {/* lightbulb — 気づき / アハ */}
+        <path
+          d="M9 18h6M10 21h4M12 3a6 6 0 0 1 4 10.5c-.7.7-1 1.6-1 2.5v.5H9v-.5c0-.9-.3-1.8-1-2.5A6 6 0 0 1 12 3z"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+  if (section === "stuck") {
+    return (
+      <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+        {/* warning triangle — つまずき */}
+        <path
+          d="M12 3l10 18H2L12 3z"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M12 10v5"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          fill="none"
+        />
+        <circle cx="12" cy="18" r="1" fill="currentColor" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+      {/* sunrise — 明日への申し送り */}
+      <path
+        d="M3 18h18M5 14a7 7 0 0 1 14 0M12 4v3M5 7l2 2M19 7l-2 2M2 21h20"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 /* 振り返りをモーダル / 詳細セクションでレンダリングするヘルパー。
  * 構造化マーカー (### highlight 等) があればセクション見出し付きの
  * カード型レイアウトに、無ければ単一の段落にフォールバックする。
@@ -1934,8 +1991,6 @@ function renderReflectionBody(
       : key === "stuck"
         ? opts.t("つまずき")
         : opts.t("明日の最初の一歩");
-  const iconOf = (key: ReflectionSectionKey) =>
-    key === "highlight" ? "✦" : key === "stuck" ? "⌖" : "→";
   const nonEmpty = REFLECTION_SECTION_KEYS.filter((key) => parts[key].trim());
   if (nonEmpty.length === 0) return null;
   return (
@@ -1948,7 +2003,7 @@ function renderReflectionBody(
         >
           <div className="reflection-structured-label">
             <span className="reflection-structured-icon" aria-hidden="true">
-              {iconOf(key)}
+              <ReflectionSectionIcon section={key} />
             </span>
             <span className="reflection-structured-name">{labelOf(key)}</span>
           </div>
@@ -19087,12 +19142,11 @@ function App() {
                       : key === "stuck"
                         ? t("詰まったところ・分からなかったところ")
                         : t("明日まず手をつけること");
-                  const icon = key === "highlight" ? "✦" : key === "stuck" ? "⌖" : "→";
                   return (
                     <label key={key} className="reflection-section" data-section={key}>
                       <span className="reflection-section-label">
                         <span className="reflection-section-icon" aria-hidden="true">
-                          {icon}
+                          <ReflectionSectionIcon section={key} />
                         </span>
                         <span>{labelText}</span>
                       </span>

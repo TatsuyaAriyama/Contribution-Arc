@@ -6663,13 +6663,15 @@
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   border-radius: 999px;
-  font-size: 11px;
   color: #fff;
   line-height: 1;
   background: rgba(var(--ink-rgb), 0.32);
+}
+.reflection-section-icon > svg {
+  display: block;
 }
 /* 編集側のセクション別アクセント色 — 表示側 (reflection-structured)
    と揃える。data-section 属性で識別する。 */
@@ -6717,8 +6719,9 @@
 }
 
 /* 表示側: 構造化された振り返り。詳細モーダル / 共有フィードで使う。
-   カード型に切り直し、左ボーダーをセクション別に色分けして 3 要素
-   (ハイライト / つまずき / 明日) を一目で区別できるようにする。 */
+   3 セクション (ハイライト / つまずき / 明日への申し送り) を、淡い
+   セクションカラー + 明確な SVG アイコン + ラベルで識別する。
+   border-left は丸角と当たって崩れるので不使用。 */
 .reflection-structured {
   display: flex;
   flex-direction: column;
@@ -6727,44 +6730,57 @@
 }
 .reflection-structured-section {
   position: relative;
-  padding: 10px 14px 12px 14px;
+  padding: 12px 14px 14px 14px;
   border-radius: 12px;
   background: rgba(var(--ink-rgb), 0.04);
-  border-left: 3px solid rgba(var(--ink-rgb), 0.2);
+  border: 1px solid transparent;
 }
 .reflection-structured-section[data-section="highlight"] {
-  border-left-color: #7c5cff; /* 紫 — ハイライト */
+  background: rgba(124, 92, 255, 0.08);
+  border-color: rgba(124, 92, 255, 0.18);
 }
 .reflection-structured-section[data-section="stuck"] {
-  border-left-color: #e89a3c; /* オレンジ — つまずき */
+  background: rgba(232, 154, 60, 0.08);
+  border-color: rgba(232, 154, 60, 0.22);
 }
 .reflection-structured-section[data-section="tomorrow"] {
-  border-left-color: #1f6f4a; /* 緑 — 明日への申し送り */
+  background: rgba(31, 111, 74, 0.08);
+  border-color: rgba(31, 111, 74, 0.22);
 }
 .reflection-structured-label {
   display: flex !important;
   flex-direction: row !important;
   align-items: center;
   gap: 8px;
-  margin: 0 0 6px 0;
-  font-size: 11px;
+  margin: 0 0 8px 0;
+  font-size: 11.5px;
   font-weight: 800;
-  color: var(--muted);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   line-height: 1;
+}
+.reflection-structured-section[data-section="highlight"] .reflection-structured-label {
+  color: #5b3fcf;
+}
+.reflection-structured-section[data-section="stuck"] .reflection-structured-label {
+  color: #b56a14;
+}
+.reflection-structured-section[data-section="tomorrow"] .reflection-structured-label {
+  color: #15553a;
 }
 .reflection-structured-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   border-radius: 999px;
-  font-size: 11px;
-  line-height: 1;
   color: #fff;
+  line-height: 1;
+}
+.reflection-structured-icon > svg {
+  display: block;
 }
 .reflection-structured-section[data-section="highlight"] .reflection-structured-icon {
   background: #7c5cff;
