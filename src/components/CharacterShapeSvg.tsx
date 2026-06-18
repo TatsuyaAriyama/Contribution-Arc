@@ -296,9 +296,10 @@ export function renderRoboSvg(_color: string) {
   );
 }
 
-/** 凜 (Rin) — 頭上に輪 (halo) を浮かべた金色キューブ。穏やかな表情の
- *  スクリーンを胸に持ち、2 本の丸い脚で着地する。色は固定 (olive +
- *  gold) でユーザーの characterColor は無視する。 */
+/** 環 (Tamaki) — 頭上に輪 (halo) を浮かべた金色キューブ。穏やかな
+ *  表情のスクリーンを胸に持ち、2 本の丸い脚で着地する。色は固定
+ *  (olive + gold) でユーザーの characterColor は無視する。
+ *  名前は "天使の輪" (halo) からの由来で「環」。 */
 export function renderAngelSvg(_color: string) {
   const body = "#a99440";       // olive cube body
   const bodyDark = "#7a661a";   // right-side shadow

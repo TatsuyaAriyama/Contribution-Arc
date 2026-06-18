@@ -1319,9 +1319,9 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "丸い頭に大きな琥珀の眼。深夜にひとり手を動かす時間のお供に。":
     "A round head with large amber eyes — your companion for the quiet hours of working alone late at night.",
 
-  // === 煌 Kō / 凜 Rin ===
+  // === 煌 Kō / 環 Tamaki ===
   "煌": "Kō",
-  "凜": "Rin",
+  "環": "Tamaki",
   "ネオンを灯す機械仕掛け": "A machine glowing with neon",
   "輪をいただく金色の使い": "A golden envoy crowned with a halo",
   "深夜のスポットライトに胸の M を灯す、機械仕掛けの相棒。":
@@ -1329,7 +1329,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "頭上にそっと輪を浮かべて佇む、金色の使い。":
     "A golden envoy standing quietly with a halo floating overhead.",
   "煌 Kō": "Kō",
-  "凜 Rin": "Rin",
+  "環 Tamaki": "Tamaki",
   "胸にネオンの M を灯したナイトロボ。アンテナと黄金縁のエンブレムが、夜の作業を引き締める。":
     "A night robot with a neon M lit on its chest. The antenna and gold-trimmed emblem sharpen your late hours.",
   "頭上に淡い輪を浮かべた金色のキューブ。穏やかな顔のスクリーンが、静かな時間に寄り添う。":

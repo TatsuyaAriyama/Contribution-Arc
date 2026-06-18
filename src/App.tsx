@@ -753,8 +753,8 @@ const characterShapeOptions: {
   },
   {
     value: "angel",
-    name: "凜",
-    romaji: "Rin",
+    name: "環",
+    romaji: "Tamaki",
     tagline: "輪をいただく金色の使い",
     intro: "頭上にそっと輪を浮かべて佇む、金色の使い。",
   },
@@ -788,7 +788,7 @@ const shapeShopCatalog: ShapeShopItem[] = [
   },
   {
     shape: "angel",
-    name: "凜 Rin",
+    name: "環 Tamaki",
     tagline: "輪をいただく金色の使い",
     description: "頭上に淡い輪を浮かべた金色のキューブ。穏やかな顔のスクリーンが、静かな時間に寄り添う。",
     price: 800,
