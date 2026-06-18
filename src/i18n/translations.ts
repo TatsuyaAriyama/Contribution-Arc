@@ -1610,4 +1610,13 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "チーム / 企業で使う": "Use with your team / company",
   "組織限定ルーム・Admin ダッシュボード・Slack 連携": "Org-only rooms · Admin dashboard · Slack integration",
   "はじめる": "Get started",
+
+  // === Phase 4k: post/save/search permission errors ===
+  "ログをローカルに保存しました。クラウドへ再同期します。": "Saved log locally. We'll re-sync to the cloud.",
+  "ログをクラウド保存する権限がまだ有効ではありません。ローカルには保存されています。":
+    "Cloud-save permission for logs isn't active yet. Saved locally for now.",
+  "{room}で{building}を進めています。": "Working on {building} in {room}.",
+  "ユーザー検索に失敗しました。": "User search failed.",
+  "ユーザー検索の権限が有効になっていません。少し時間を置いて再度お試しください。":
+    "User search permission isn't active yet. Please try again in a moment.",
 };

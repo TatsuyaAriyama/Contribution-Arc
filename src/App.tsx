@@ -8963,8 +8963,8 @@ function App() {
       setPostError(
         getFirestoreErrorMessage(
           error,
-          "ログをローカルに保存しました。クラウドへ再同期します。",
-          "ログをクラウド保存する権限がまだ有効ではありません。ローカルには保存されています。",
+          t("ログをローカルに保存しました。クラウドへ再同期します。"),
+          t("ログをクラウド保存する権限がまだ有効ではありません。ローカルには保存されています。"),
         ),
       );
       const pendingPost: ContributionPostRecord = {
@@ -9697,7 +9697,7 @@ function App() {
 
   const useRoomPresenceAsPost = () => {
     const currentPostRoom = activeRoom || selectedRoom;
-    setPostDraft(`${currentPostRoom?.name || "作業部屋"}で${currentBuilding}を進めています。`);
+    setPostDraft(t("{room}で{building}を進めています。", { room: currentPostRoom?.name || t("作業部屋"), building: currentBuilding }));
   };
 
   const handleSettingsOpen = () => {
@@ -10116,8 +10116,8 @@ function App() {
           setSettingsError(
             getFirestoreErrorMessage(
               error,
-              "ユーザーIDを保存できませんでした。",
-              "ユーザーIDの保存権限が有効になっていません。少し時間を置いて再度お試しください。",
+              t("ユーザーIDを保存できませんでした。"),
+              t("ユーザーIDの保存権限が有効になっていません。少し時間を置いて再度お試しください。"),
             ),
           );
           return;
@@ -10140,7 +10140,7 @@ function App() {
         setSettingsError(
           error instanceof Error
             ? error.message
-            : "プロフィールをこのブラウザに保存できませんでした。ブラウザのストレージ設定を確認してください。",
+            : t("プロフィールをこのブラウザに保存できませんでした。ブラウザのストレージ設定を確認してください。"),
         );
         return;
       }
@@ -10205,8 +10205,8 @@ function App() {
       setSearchError(
         getFirestoreErrorMessage(
           error,
-          "ユーザー検索に失敗しました。",
-          "ユーザー検索の権限が有効になっていません。少し時間を置いて再度お試しください。",
+          t("ユーザー検索に失敗しました。"),
+          t("ユーザー検索の権限が有効になっていません。少し時間を置いて再度お試しください。"),
         ),
       );
     } finally {
