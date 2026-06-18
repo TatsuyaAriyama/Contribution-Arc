@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import { BarcodeFormat, DecodeHintType } from "@zxing/library";
+import { useTranslation } from "../i18n/LanguageContext";
 
 /**
  * 本 / 教本のバーコード (ISBN = EAN-13) をカメラで読み取るモーダル。
@@ -34,6 +35,7 @@ export function BarcodeScannerModal({ onClose, onDetected }: Props) {
 
   const [status, setStatus] = useState<ScanStatus>("starting");
   const [manual, setManual] = useState("");
+  const { t } = useTranslation();
 
   useEffect(() => {
     let cancelled = false;
@@ -163,17 +165,17 @@ export function BarcodeScannerModal({ onClose, onDetected }: Props) {
       className="barcode-scan-backdrop"
       role="dialog"
       aria-modal="true"
-      aria-label="バーコードで本を追加"
+      aria-label={t("バーコードで本を追加")}
       onClick={onClose}
     >
       <div className="barcode-scan-card" onClick={(event) => event.stopPropagation()}>
         <div className="barcode-scan-head">
-          <strong>バーコードで本を追加</strong>
+          <strong>{t("バーコードで本を追加")}</strong>
           <button
             type="button"
             className="barcode-scan-close"
             onClick={onClose}
-            aria-label="閉じる"
+            aria-label={t("閉じる")}
           >
             ×
           </button>
@@ -188,19 +190,19 @@ export function BarcodeScannerModal({ onClose, onDetected }: Props) {
 
         <p className="barcode-scan-hint">
           {status === "scanning"
-            ? "本の裏表紙にあるバーコード (ISBN) を枠に合わせてください"
+            ? t("本の裏表紙にあるバーコード (ISBN) を枠に合わせてください")
             : status === "starting"
-              ? "カメラを起動中…"
+              ? t("カメラを起動中…")
               : status === "unsupported"
-                ? "このブラウザはカメラを利用できません。ISBN を手入力してください。"
-                : "カメラを起動できませんでした。権限を許可するか、ISBN を手入力してください。"}
+                ? t("このブラウザはカメラを利用できません。ISBN を手入力してください。")
+                : t("カメラを起動できませんでした。権限を許可するか、ISBN を手入力してください。")}
         </p>
 
         <div className="barcode-scan-manual">
           <input
             type="text"
             inputMode="numeric"
-            placeholder="ISBN を手入力 (例: 9784…)"
+            placeholder={t("ISBN を手入力 (例: 9784…)")}
             value={manual}
             onChange={(event) => setManual(event.target.value)}
             onKeyDown={(event) => {
@@ -211,7 +213,7 @@ export function BarcodeScannerModal({ onClose, onDetected }: Props) {
             }}
           />
           <button type="button" onClick={submitManual} disabled={!sanitizeIsbn(manual)}>
-            検索
+            {t("検索")}
           </button>
         </div>
       </div>

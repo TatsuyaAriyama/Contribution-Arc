@@ -8806,13 +8806,9 @@ function App() {
     }).catch((error) => {
       console.error("Learning record save failed.", error);
     });
-    // 本でページ数を量として記録したら、現在ページも前進させる。
-    if (
-      item.category === "book" &&
-      values.amount &&
-      values.amount > 0 &&
-      (values.amountUnit || "").includes("ページ")
-    ) {
+    // 本で学習量(ページ)を記録したら、現在ページも前進させる
+    // (単位の文字列に依存しない＝多言語でも動く)。
+    if (item.category === "book" && values.amount && values.amount > 0) {
       handleLearningPageUpdate(item.id, (item.currentPages || 0) + values.amount);
     }
     setLearningRecordItemId(null);
@@ -8934,7 +8930,7 @@ function App() {
     };
     try {
       const res = await fetch(
-        `https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}&country=JP`,
+        `https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}&country=${language === "ja" ? "JP" : "US"}`,
       );
       const data = (await res.json()) as {
         items?: Array<{
@@ -8958,14 +8954,14 @@ function App() {
           pageCount: info.pageCount,
           cover,
         });
-        showToast("本の情報を取得しました。内容を確認して保存してください", { kind: "success" });
+        showToast(t("本の情報を取得しました。内容を確認して保存してください"), { kind: "success" });
       } else {
         openBookEditor();
-        showToast("該当する本が見つかりませんでした。手入力で登録してください", { kind: "error" });
+        showToast(t("該当する本が見つかりませんでした。手入力で登録してください"), { kind: "error" });
       }
     } catch {
       openBookEditor();
-      showToast("本の情報の取得に失敗しました。手入力で登録してください", { kind: "error" });
+      showToast(t("本の情報の取得に失敗しました。手入力で登録してください"), { kind: "error" });
     }
   };
 

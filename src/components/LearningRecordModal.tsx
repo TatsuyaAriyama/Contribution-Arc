@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useTranslation } from "../i18n/LanguageContext";
 
 /**
  * ライブラリの学習対象から開く「記録の入力」フォーム。
@@ -64,10 +65,11 @@ export function LearningRecordModal({
   onSubmit,
   onEdit,
 }: Props) {
+  const { t } = useTranslation();
   const [hours, setHours] = useState("");
   const [minutes, setMinutes] = useState("");
   const [amount, setAmount] = useState("");
-  const [unit, setUnit] = useState(category === "book" ? "ページ" : "");
+  const [unit, setUnit] = useState(category === "book" ? t("ページ") : "");
   const [note, setNote] = useState("");
   const [photo, setPhoto] = useState("");
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -103,7 +105,7 @@ export function LearningRecordModal({
       className="learning-record-backdrop"
       role="dialog"
       aria-modal="true"
-      aria-label="記録の入力"
+      aria-label={t("記録の入力")}
       onClick={onClose}
     >
       <section
@@ -115,18 +117,18 @@ export function LearningRecordModal({
             type="button"
             className="learning-record-close"
             onClick={onClose}
-            aria-label="閉じる"
+            aria-label={t("閉じる")}
           >
             ×
           </button>
-          <h2 className="learning-record-title daily-editor-title">記録の入力</h2>
+          <h2 className="learning-record-title daily-editor-title">{t("記録の入力")}</h2>
           <button
             type="button"
             className="learning-record-save"
             onClick={submit}
             disabled={!canSubmit}
           >
-            記録
+            {t("記録する")}
           </button>
         </header>
 
@@ -138,11 +140,11 @@ export function LearningRecordModal({
         >
           <span className="learning-record-item-bar" aria-hidden="true" />
           <span className="learning-record-item-name">{itemName}</span>
-          <span className="learning-record-item-edit">詳細・編集 ›</span>
+          <span className="learning-record-item-edit">{t("詳細・編集")} ›</span>
         </button>
 
         <div className="learning-record-field">
-          <span className="learning-record-label">学習時間</span>
+          <span className="learning-record-label">{t("学習時間")}</span>
           <div className="learning-record-time">
             <input
               type="number"
@@ -151,9 +153,9 @@ export function LearningRecordModal({
               placeholder="0"
               value={hours}
               onChange={(event) => setHours(event.target.value)}
-              aria-label="時間"
+              aria-label={t("時間")}
             />
-            <span>時間</span>
+            <span>{t("時間")}</span>
             <input
               type="number"
               inputMode="numeric"
@@ -162,14 +164,14 @@ export function LearningRecordModal({
               placeholder="0"
               value={minutes}
               onChange={(event) => setMinutes(event.target.value)}
-              aria-label="分"
+              aria-label={t("分")}
             />
-            <span>分</span>
+            <span>{t("分")}</span>
           </div>
         </div>
 
         <div className="learning-record-field">
-          <span className="learning-record-label">学習量（任意）</span>
+          <span className="learning-record-label">{t("学習量（任意）")}</span>
           <div className="learning-record-amount">
             <input
               type="number"
@@ -178,36 +180,36 @@ export function LearningRecordModal({
               placeholder="0"
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
-              aria-label="学習量"
+              aria-label={t("学習量")}
             />
             <input
               type="text"
               className="learning-record-unit"
-              placeholder={category === "book" ? "ページ" : "問題 / 章 など"}
+              placeholder={category === "book" ? t("ページ") : t("問題 / 章 など")}
               value={unit}
               onChange={(event) => setUnit(event.target.value)}
-              aria-label="単位"
+              aria-label={t("単位")}
             />
           </div>
         </div>
 
         <div className="learning-record-field">
-          <span className="learning-record-label">要点・ひとことメモ（任意）</span>
+          <span className="learning-record-label">{t("要点・ひとことメモ（任意）")}</span>
           <textarea
             className="learning-record-note"
             rows={3}
-            placeholder="今日やったこと / 気づき"
+            placeholder={t("今日やったこと / 気づき")}
             value={note}
             onChange={(event) => setNote(event.target.value)}
           />
         </div>
 
         <div className="learning-record-field">
-          <span className="learning-record-label">画像（任意）</span>
+          <span className="learning-record-label">{t("画像（任意）")}</span>
           {photo ? (
             <div className="learning-record-photo">
               <img src={photo} alt="" />
-              <button type="button" onClick={() => setPhoto("")} aria-label="画像を削除">
+              <button type="button" onClick={() => setPhoto("")} aria-label={t("画像を削除")}>
                 ×
               </button>
             </div>
@@ -217,7 +219,7 @@ export function LearningRecordModal({
               className="learning-record-photo-add"
               onClick={() => fileRef.current?.click()}
             >
-              ＋ 画像を追加
+              ＋ {t("画像を追加")}
             </button>
           )}
           <input
