@@ -1644,4 +1644,6 @@ export const EN_TRANSLATIONS: Record<string, string> = {
     "No study log for today yet — can't generate a draft.",
   "{subject} {time}": "{subject} {time}",
   "{summary} (合計 {total})": "{summary} ({total} total)",
+  "日報を更新": "Update daily report",
+  "日報を保存": "Save daily report",
 };

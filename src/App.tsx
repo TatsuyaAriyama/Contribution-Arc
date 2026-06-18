@@ -9730,7 +9730,12 @@ function App() {
       setDailyMessage(t("{section}を入力してください。", { section: sectionLabel }));
       return;
     }
-    if (section === "reflection" && !reflectionText) {
+    /* Phase 12: plan-only save も許可する。reflection が空でも plan items
+       の更新だけは Firestore に流したい — Plan セクションの明示的な
+       save ボタンを廃止した結果、reflection 送信が唯一のクラウド同期
+       トリガになっているため。plan も reflection も両方空のときだけ
+       中止する。 */
+    if (section === "reflection" && !reflectionText && trimmedPlanItems.length === 0) {
       setDailyMessage(t("{section}を入力してください。", { section: sectionLabel }));
       return;
     }
@@ -19025,18 +19030,6 @@ function App() {
                     commentAriaLabel: t("完了メモ"),
                   }}
                 />
-
-                <div className="daily-editor-actions">
-                  <button type="submit" disabled={isSavingDailyReport || !canEditSelectedDailyReport}>
-                    {isSavingDailyReport
-                      ? t("保存中")
-                      : dailyIsDraftDraft
-                        ? t("下書きで保存")
-                        : selectedDailyReport?.planItems?.length || selectedDailyReport?.plan
-                          ? t("今日やることを更新")
-                          : t("今日やることを送信")}
-                  </button>
-                </div>
               </form>
 
               <form
@@ -19171,9 +19164,9 @@ function App() {
                       ? t("保存中")
                       : dailyIsDraftDraft
                         ? t("下書きで保存")
-                        : selectedDailyReport?.reflection
-                          ? t("振り返りを更新")
-                          : t("振り返りを送信")}
+                        : selectedDailyReport
+                          ? t("日報を更新")
+                          : t("日報を保存")}
                   </button>
                 </div>
               </form>
