@@ -5,6 +5,7 @@ import {
   markTutorialSeen,
   type TutorialFeature,
 } from "../services/tutorial";
+import { useTranslation } from "../i18n/LanguageContext";
 
 type Props = {
   /** Firebase uid — scopes the seen-flag so different accounts get their own tutorials. */
@@ -27,6 +28,7 @@ type Props = {
  * Linear / GitHub use for in-app hints.
  */
 export function TutorialHint({ uid, feature, title, body, bullets }: Props) {
+  const { t } = useTranslation();
   // Initial value is read once on mount. Subsequent dismissals are
   // local state — `isTutorialSeen` running on every render would
   // thrash localStorage and cause re-mounts to flicker.
@@ -51,12 +53,12 @@ export function TutorialHint({ uid, feature, title, body, bullets }: Props) {
           transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
         >
           <div className="tutorial-hint-head">
-            <span className="tutorial-hint-badge">はじめてのヒント</span>
+            <span className="tutorial-hint-badge">{t("はじめてのヒント")}</span>
             <button
               type="button"
               className="tutorial-hint-close"
               onClick={handleDismiss}
-              aria-label="閉じる"
+              aria-label={t("閉じる")}
             >
               ×
             </button>
@@ -77,7 +79,7 @@ export function TutorialHint({ uid, feature, title, body, bullets }: Props) {
             className="tutorial-hint-ok"
             onClick={handleDismiss}
           >
-            わかった
+            {t("わかった")}
           </button>
         </motion.section>
       ) : null}

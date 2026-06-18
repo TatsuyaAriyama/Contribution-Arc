@@ -6,6 +6,7 @@ import {
   subscribeToasts,
   type Toast,
 } from "../services/toast";
+import { useTranslation } from "../i18n/LanguageContext";
 
 /**
  * Renders the active toast queue, anchored to the bottom of the
@@ -40,6 +41,7 @@ import {
 const MAX_VISIBLE = 4;
 
 export function ToastHost() {
+  const { t } = useTranslation();
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   useEffect(() => {
@@ -71,7 +73,7 @@ export function ToastHost() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.96 }}
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            aria-label={`通知: ${toast.message} (タップで閉じる)`}
+            aria-label={t("通知: {message} (タップで閉じる)", { message: toast.message })}
           >
             <span className="toast-icon" aria-hidden="true">
               {toast.kind === "success" ? "✓" : toast.kind === "error" ? "!" : "•"}

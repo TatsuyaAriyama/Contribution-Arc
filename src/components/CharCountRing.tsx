@@ -1,6 +1,9 @@
+import { useTranslation } from "../i18n/LanguageContext";
+
 export // Visual char counter — circular ring that fills as you type and
 // switches to a remaining-count number in the danger zone.
 function CharCountRing({ value, max }: { value: number; max: number }) {
+  const { t } = useTranslation();
   const radius = 9;
   const circumference = 2 * Math.PI * radius;
   const progress = Math.min(1, value / max);
@@ -13,7 +16,7 @@ function CharCountRing({ value, max }: { value: number; max: number }) {
     ? "#c8a95b"
     : "var(--green, #1f6f4a)";
   return (
-    <span className="char-count-ring" aria-label={`${value} / ${max} 文字`}>
+    <span className="char-count-ring" aria-label={t("{value} / {max} 文字", { value, max })}>
       <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
         <circle
           cx="12"

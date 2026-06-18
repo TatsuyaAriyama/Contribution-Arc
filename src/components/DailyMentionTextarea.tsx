@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import { getActiveMentionQuery } from "../services/dailyMentions";
+import { useTranslation } from "../i18n/LanguageContext";
 
 /**
  * Textarea wrapper that surfaces a small `@mention` autocomplete menu
@@ -58,6 +59,7 @@ export const DailyMentionTextarea = forwardRef<
   { value, onChange, placeholder, rows = 7, disabled = false, ariaLabel, candidates, id },
   ref,
 ) {
+  const { t } = useTranslation();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [menuQuery, setMenuQuery] = useState<{ start: number; query: string } | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -175,7 +177,7 @@ export const DailyMentionTextarea = forwardRef<
       />
 
       {menuQuery && filteredCandidates.length > 0 ? (
-        <div className="mention-popup" role="listbox" aria-label="メンション候補">
+        <div className="mention-popup" role="listbox" aria-label={t("メンション候補")}>
           {filteredCandidates.map((candidate, index) => (
             <button
               key={candidate.userId}

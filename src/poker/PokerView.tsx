@@ -8,6 +8,7 @@ import {
   type Card,
   type HandEval,
 } from "./engine";
+import { useTranslation } from "../i18n/LanguageContext";
 
 type Phase = "idle" | "dealt" | "settled";
 type BetMode = "normal" | "focus";
@@ -47,6 +48,7 @@ export default function PokerView({
   setFocusChips,
   onOpenShop,
 }: PokerViewProps) {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<BetMode>("normal");
   const [normalBetIdx, setNormalBetIdx] = useState(0);
   const [focusBetIdx, setFocusBetIdx] = useState(0);
@@ -226,26 +228,26 @@ export default function PokerView({
     <div className="poker-root">
       <div className="poker-topbar">
         <button type="button" onClick={onBack} className="poker-back">
-          ← 作業部屋に戻る
+          {t("← 作業部屋に戻る")}
         </button>
         <div className="poker-title">
           <p className="poker-kicker">Video Poker · Jacks or Better (6/5)</p>
-          <h1>♠ Arc を増やすには集中して稼ぐ。</h1>
+          <h1>{t("♠ Arc を増やすには集中して稼ぐ。")}</h1>
         </div>
-        <div className="poker-balances" aria-label="残高">
-          <div className="poker-meter" title="Arc 残高">
+        <div className="poker-balances" aria-label={t("残高")}>
+          <div className="poker-meter" title={t("Arc 残高")}>
             <span className="poker-meter-label">Arc</span>
             <span className="poker-meter-value">{arcBalance.toLocaleString()}</span>
           </div>
           <span className="poker-meter-sep" aria-hidden="true" />
-          <div className="poker-meter" title="ポーカーチップ残高">
+          <div className="poker-meter" title={t("ポーカーチップ残高")}>
             <span className="poker-meter-label">Chip</span>
             <span className="poker-meter-value">{displayChips.toLocaleString()}</span>
           </div>
           <span className="poker-meter-sep" aria-hidden="true" />
           <div
             className={`poker-meter is-focus${focusChips > 0 ? " has-charge" : ""}`}
-            title="今日のFocus Chip残高（集中作業で獲得）"
+            title={t("今日のFocus Chip残高（集中作業で獲得）")}
           >
             <span className="poker-meter-label">
               <span className="poker-meter-dot" aria-hidden="true" />
@@ -257,7 +259,7 @@ export default function PokerView({
       </div>
 
       <section className="poker-stage">
-        <div className="poker-paytable" aria-label="ペイテーブル">
+        <div className="poker-paytable" aria-label={t("ペイテーブル")}>
           <p className="poker-paytable-title">Paytable (×bet)</p>
           <ul>
             {PAYTABLE.map((row) => {
@@ -274,8 +276,8 @@ export default function PokerView({
             })}
           </ul>
           <p className="poker-paytable-note">
-            Royal Flush は MAX BET 時 800×bet。<br />
-            Focus Chip モードは全配当 ×1.5、HOT STREAK は次の当たり配当 +20%。
+            {t("Royal Flush は MAX BET 時 800×bet。")}<br />
+            {t("Focus Chip モードは全配当 ×1.5、HOT STREAK は次の当たり配当 +20%。")}
           </p>
         </div>
 
@@ -293,7 +295,7 @@ export default function PokerView({
               className={`poker-streak${
                 winStreak >= HOT_STREAK_THRESHOLD ? " is-armed" : ""
               }`}
-              aria-label="連勝カウンタ"
+              aria-label={t("連勝カウンタ")}
             >
               {winStreak >= HOT_STREAK_THRESHOLD ? (
                 <>
@@ -362,11 +364,11 @@ export default function PokerView({
           <div className="poker-result" aria-live="polite">
             {phase === "idle" ? (
               <p className="poker-result-hint">
-                ベットを決めて <strong>DEAL</strong>。
+                {t("ベットを決めて ")}<strong>DEAL</strong>{t("。")}
               </p>
             ) : phase === "dealt" ? (
               <p className="poker-result-hint">
-                残したい札をタップ → <strong>DRAW</strong>。
+                {t("残したい札をタップ → ")}<strong>DRAW</strong>{t("。")}
               </p>
             ) : lastResult ? (
               <div
@@ -389,7 +391,7 @@ export default function PokerView({
                       ) : null}
                     </>
                   ) : (
-                    <span className="poker-result-zero">ノーペイ</span>
+                    <span className="poker-result-zero">{t("ノーペイ")}</span>
                   )}
                 </p>
               </div>
@@ -408,7 +410,7 @@ export default function PokerView({
               onClick={() => switchMode("normal")}
               disabled={phase === "dealt"}
             >
-              通常チップ
+              {t("通常チップ")}
             </button>
             <button
               type="button"
@@ -421,8 +423,8 @@ export default function PokerView({
               disabled={phase === "dealt" || focusChips === 0}
               title={
                 focusChips === 0
-                  ? "作業部屋に25分滞在で Focus Chip を獲得（1日8枚まで）"
-                  : "配当 ×1.5"
+                  ? t("作業部屋に25分滞在で Focus Chip を獲得（1日8枚まで）")
+                  : t("配当 ×1.5")
               }
             >
               <span className="poker-mode-tab-text">Focus</span>
@@ -441,7 +443,7 @@ export default function PokerView({
                 </span>
               </span>
             </div>
-            <div className="poker-bet-chips" role="group" aria-label="ベット額">
+            <div className="poker-bet-chips" role="group" aria-label={t("ベット額")}>
               {(mode === "normal" ? NORMAL_BET_STEPS : FOCUS_BET_STEPS).map((step, i) => {
                 const activeIdx = mode === "normal" ? normalBetIdx : focusBetIdx;
                 return (
@@ -460,8 +462,8 @@ export default function PokerView({
             </div>
             <p className="poker-bet-note">
               {mode === "normal"
-                ? "RTP 95% — 長くやると確率的に負け越す"
-                : "配当 ×1.5 — 集中で稼いだ Focus でだけ勝ち越せる"}
+                ? t("RTP 95% — 長くやると確率的に負け越す")
+                : t("配当 ×1.5 — 集中で稼いだ Focus でだけ勝ち越せる")}
             </p>
           </div>
 
@@ -473,7 +475,7 @@ export default function PokerView({
               onClick={handleDraw}
             >
               <span className="poker-cta-label">Draw</span>
-              <span className="poker-cta-sub">残してない札を交換</span>
+              <span className="poker-cta-sub">{t("残してない札を交換")}</span>
             </button>
           ) : (
             <button
@@ -483,12 +485,12 @@ export default function PokerView({
               disabled={!canDeal}
             >
               <span className="poker-cta-label">
-                {canDeal ? "Deal" : mode === "normal" ? "チップ不足" : "Focus 不足"}
+                {canDeal ? "Deal" : mode === "normal" ? t("チップ不足") : t("Focus 不足")}
               </span>
               <span className="poker-cta-sub">
                 {canDeal
                   ? `−${activeBet} ${mode === "normal" ? "chip" : "focus"}`
-                  : "両替が必要です"}
+                  : t("両替が必要です")}
               </span>
             </button>
           )}
@@ -499,7 +501,7 @@ export default function PokerView({
             onClick={() => setExchangeOpen((v) => !v)}
             disabled={phase === "dealt"}
           >
-            {exchangeOpen ? "両替を閉じる" : "Arc ⇄ チップ 両替"}
+            {exchangeOpen ? t("両替を閉じる") : t("Arc ⇄ チップ 両替")}
           </button>
         </div>
       </section>
@@ -507,17 +509,20 @@ export default function PokerView({
       {exchangeOpen && phase !== "dealt" ? (
         <section className="poker-exchange">
           <header>
-            <h2>両替・換金</h2>
+            <h2>{t("両替・換金")}</h2>
             <p>
-              Arc → チップは 1 Arc = {NORMAL_CHIP_PER_ARC} chip。
-              チップ → Arc は {CASHOUT_CHIP_UNIT} chip = {CASHOUT_ARC_RATE} Arc。
+              {t("Arc → チップは 1 Arc = {chip} chip。チップ → Arc は {cashout} chip = {arc} Arc。", {
+                chip: NORMAL_CHIP_PER_ARC,
+                cashout: CASHOUT_CHIP_UNIT,
+                arc: CASHOUT_ARC_RATE,
+              })}
             </p>
           </header>
           <div className="poker-exchange-grid">
             <div className="poker-exchange-card">
               <p className="poker-exchange-card-title">Arc → chip</p>
               <p className="poker-exchange-card-sub">
-                所持 Arc: {arcBalance.toLocaleString()}
+                {t("所持 Arc: {n}", { n: arcBalance.toLocaleString() })}
               </p>
               <div className="poker-exchange-buttons">
                 {[1, 5, 10, 50].map((amt) => (
@@ -527,8 +532,8 @@ export default function PokerView({
                     disabled={amt > arcBalance}
                     onClick={() => buyChipsWithArc(amt)}
                   >
-                    {amt} Arc<br />
-                    <span>→ {(amt * NORMAL_CHIP_PER_ARC).toLocaleString()} chip</span>
+                    {t("{amt} Arc", { amt })}<br />
+                    <span>{t("→ {n} chip", { n: (amt * NORMAL_CHIP_PER_ARC).toLocaleString() })}</span>
                   </button>
                 ))}
               </div>
@@ -538,14 +543,14 @@ export default function PokerView({
                   className="poker-buy-arc"
                   onClick={onOpenShop}
                 >
-                  Arc が足りません → ショップへ
+                  {t("Arc が足りません → ショップへ")}
                 </button>
               ) : null}
             </div>
             <div className="poker-exchange-card">
               <p className="poker-exchange-card-title">chip → Arc</p>
               <p className="poker-exchange-card-sub">
-                所持 chip: {pokerChips.toLocaleString()}
+                {t("所持 chip: {n}", { n: pokerChips.toLocaleString() })}
               </p>
               <div className="poker-exchange-buttons">
                 {[1000, 5000, 10000, 50000].map((amt) => (
@@ -563,7 +568,7 @@ export default function PokerView({
                 ))}
               </div>
               <p className="poker-exchange-tip">
-                換金レートは購入レートより辛口。たくさん勝ってまとめて換金しよう。
+                {t("換金レートは購入レートより辛口。たくさん勝ってまとめて換金しよう。")}
               </p>
             </div>
           </div>

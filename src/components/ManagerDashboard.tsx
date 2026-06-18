@@ -46,21 +46,25 @@ function csvCell(value: string | number): string {
   return s;
 }
 
-/** Build the CSV body for a given member list. Headers are Japanese
- *  so the file lands readable in Excel without manual relabeling for
- *  L&D reports — the target user is the HR/manager, not engineers. */
-function buildMembersCsv(members: OrganizationMemberRecord[]): string {
+/** Build the CSV body for a given member list. Headers are localized
+ *  via the caller-supplied translator so the file lands readable in
+ *  the manager's chosen language without manual relabeling for L&D
+ *  reports — the target user is the HR/manager, not engineers. */
+function buildMembersCsv(
+  members: OrganizationMemberRecord[],
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string {
   const header = [
-    "表示名",
-    "ユーザーID",
-    "ロール",
-    "チーム",
-    "レベル",
-    "学習時間（時間）",
-    "アウトプットEXP",
-    "ストリーク（日）",
-    "コミット数",
-    "最終同期日時",
+    t("表示名"),
+    t("ユーザーID"),
+    t("ロール"),
+    t("チーム"),
+    t("レベル"),
+    t("学習時間（時間）"),
+    t("アウトプットEXP"),
+    t("ストリーク（日）"),
+    t("コミット数"),
+    t("最終同期日時"),
   ];
 
   const rows = members.map((m) => [
@@ -191,10 +195,11 @@ type SubjectRow = { subject: string; color: string; minutes: number; pct: number
 function subjectBreakdown(
   logs: LogLike[],
   topN: number,
+  fallbackSubject: string,
 ): { rows: SubjectRow[]; otherCount: number; otherMinutes: number } {
   const map = new Map<string, { subject: string; color: string; minutes: number }>();
   for (const log of logs) {
-    const subject = log.subject || "その他";
+    const subject = log.subject || fallbackSubject;
     const cur = map.get(subject) || { subject, color: log.color || "", minutes: 0 };
     cur.minutes += log.minutes;
     if (!cur.color && log.color) cur.color = log.color;
@@ -231,12 +236,7 @@ function shortDateJa(iso: string): string {
 
 type SortKey = "effort" | "recent" | "level" | "output";
 
-const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: "effort", label: "学習時間が多い順" },
-  { key: "recent", label: "最近アクティブな順" },
-  { key: "level", label: "レベルが高い順" },
-  { key: "output", label: "アウトプットが多い順" },
-];
+const SORT_KEYS: SortKey[] = ["effort", "recent", "level", "output"];
 
 /* How far back the team-insight window reaches. 12 weeks ≈ a quarter —
    long enough to show a trend, short enough to keep the windowed read
@@ -271,6 +271,12 @@ export function ManagerDashboard({
     if (status === "active") return t("アクティブ");
     if (status === "slowing") return t("停滞ぎみ");
     return t("休眠");
+  };
+  const sortLabel = (key: SortKey): string => {
+    if (key === "effort") return t("学習時間が多い順");
+    if (key === "recent") return t("最近アクティブな順");
+    if (key === "level") return t("レベルが高い順");
+    return t("アウトプットが多い順");
   };
   const [searchQuery, setSearchQuery] = useState("");
   /* Team filter. Empty string means "all teams"; the sentinel
@@ -356,7 +362,7 @@ export function ManagerDashboard({
       .replace(/\s+/g, "-")
       .slice(0, 40) || "team";
     const filename = `contribution-arc-${slug}-${today}.csv`;
-    const csv = buildMembersCsv(teamMembers);
+    const csv = buildMembersCsv(teamMembers, t);
     downloadCsv(filename, csv);
   };
 
@@ -416,7 +422,7 @@ export function ManagerDashboard({
     const thisWeek = trend[trend.length - 1] || 0;
     const lastWeek = trend[trend.length - 2] || 0;
     const contributors = new Set(orgLogs.map((l) => l.userId)).size;
-    const { rows, otherCount, otherMinutes } = subjectBreakdown(orgLogs, 6);
+    const { rows, otherCount, otherMinutes } = subjectBreakdown(orgLogs, 6, t("その他"));
     return {
       trend: trend.map((minutes, i) => ({
         minutes,
@@ -435,7 +441,7 @@ export function ManagerDashboard({
       otherMinutes,
       isEmpty: windowMinutes === 0,
     };
-  }, [orgLogs, now]);
+  }, [orgLogs, now, t]);
 
   // Engagement segmentation for the team-health bar.
   const engagement = useMemo(() => {
@@ -933,9 +939,9 @@ export function ManagerDashboard({
           onChange={(e) => setSortKey(e.target.value as SortKey)}
           aria-label={t("並び替え")}
         >
-          {SORT_OPTIONS.map((opt) => (
-            <option key={opt.key} value={opt.key}>
-              {t(opt.label)}
+          {SORT_KEYS.map((key) => (
+            <option key={key} value={key}>
+              {sortLabel(key)}
             </option>
           ))}
         </select>
@@ -1113,7 +1119,7 @@ function MemberDetailPanel({
     const heatmap = dailyHeatmap(logs, MEMBER_HEATMAP_DAYS, now);
     const trend = weeklyTrend(logs, MEMBER_TREND_WEEKS, now);
     const maxWeek = Math.max(1, ...trend);
-    const { rows, otherCount } = subjectBreakdown(logs, 5);
+    const { rows, otherCount } = subjectBreakdown(logs, 5, t("その他"));
     const windowMinutes = heatmap.reduce((s, c) => s + c.minutes, 0);
     const activeDays = heatmap.filter((c) => c.minutes > 0).length;
     const recent = [...logs]
@@ -1130,7 +1136,7 @@ function MemberDetailPanel({
       recent,
       hasData: windowMinutes > 0,
     };
-  }, [logs, now]);
+  }, [logs, now, t]);
 
   const snapshotHours = Math.round((member.effortExp || 0) / 60);
 

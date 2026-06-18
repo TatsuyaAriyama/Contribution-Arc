@@ -955,6 +955,129 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "組織から退出しました": "Left the organization",
   "請求ポータルを開けませんでした。": "Couldn't open the billing portal.",
 
+  // === Phase 4: missing keys discovered by audit ===
+  "今週 {time}": "This week {time}",
+  "連続 {days}日": "{days}-day streak",
+  "{hours}時間 学習": "{hours} h studied",
+  "直近13週": "Last 13 weeks",
+  "{days}日学習": "{days} days studied",
+  "日コミット": "daily commits",
+  "先週比 {diff}": "vs last week {diff}",
+  "連続して記録した最長期間": "Longest streak ever logged",
+  "最長連続": "Longest streak",
+  "合計 {minutes}": "Total {minutes}",
+  "最も学んだ月": "Most studied month",
+  "直近13週: {days}日学習{commit}": "Last 13 weeks: {days} days studied{commit}",
+  "曜": "",
+  "ほか {count} 件": "{count} more",
+  "記録なし": "No records",
+  "コミット": "Commits",
+  "クイック記録 — 今日 {duration} 学習": "Quick log — {duration} studied today",
+  "クイック記録": "Quick log",
+  "今日 {duration}": "Today {duration}",
+  "平日連続記録 {n}日(土日は対象外)": "Weekday streak {n} day(s) (weekends excluded)",
+  "平日連続記録 {n}日 — 今日も記録済み": "Weekday streak {n} — logged today too",
+  "平日連続記録 {n}日 — 今日はまだ記録なし": "Weekday streak {n} — no log yet today",
+  "平日連続記録 {n}日": "Weekday streak {n}",
+  "フォロー機能を使うには、設定から自分のユーザーIDを登録してください。":
+    "To use following, set your user ID in Settings.",
+  "管理": "Manage",
+  "教科書の表紙などを撮ると、ライブラリでアイコンとして表示されます。":
+    "Snap a textbook cover and it becomes the icon in your library.",
+  "書籍": "Book",
+  "累計": "Total",
+  "時間を指定して記録": "Log specific time",
+  "時間数": "Hours",
+  "時間": "Hours",
+  "分数": "Minutes",
+  "作業部屋を5分以上利用したり、本のページが進んだら自動でタイムラインに流れます。仲間の積み上げが見えるようになり、お互いを応援しやすくなります。":
+    "When you spend 5+ minutes in a workroom or make progress in a book, it flows into the timeline automatically. You'll see your peers' progress and can cheer each other on.",
+  "スマホアプリ": "Mobile app",
+  "ホーム画面 / Dock に追加すると、ブラウザを開かずに 1 タップで起動できます。iPhone / Android どちらも対応。アイコンを更新したい場合もここから手順を確認できます。":
+    "Add to your home screen / Dock for one-tap launch without opening a browser. Works on both iPhone and Android. You can also re-check the steps to refresh the icon here.",
+  "ダウンロード": "Download",
+  "運営からのお知らせ": "Announcements",
+  "要望を書く": "Write feedback",
+  "追加してほしい機能や不具合など、お気軽にお寄せください。今後の開発の参考にさせていただきます。":
+    "Share feature requests, bugs, or anything else. We'll use it to guide future development.",
+  "例: 日報にタグを付けられるようにしてほしい / ○○の画面で△△が起きる":
+    "e.g. I'd like tags on daily reports / On screen XX, YY happens",
+  "下書き": "Draft",
+  "記録する — 学びの時間を積み上げる中心":
+    "Log — the home of your learning hours",
+  "学習対象を登録し、各カードから時間を記録。残した時間はホームのグラフと EXP に反映されます。":
+    "Register learning subjects and log time from each card. Logged time feeds your home graph and EXP.",
+  "時間を入力すると、その分だけ Effort EXP が貯まります":
+    "Entering time grows your Effort EXP",
+  "ページ数を持つ本タイプは「現在ページ / 総ページ」も追えます":
+    "Books with page counts also track current / total pages",
+  "学習対象をジャンルと色で登録・整理。各カードから時間を記録できます。":
+    "Register and organize learning subjects by category and color. Log time directly from each card.",
+  "記録する時間数": "Hours to log",
+  "記録する分数": "Minutes to log",
+  "他の時間を指定して記録": "Log a different amount of time",
+  "記録中": "Logging…",
+  "積み上げの累計と、見た目・連携の設定をここでまとめます。":
+    "Cumulative progress plus appearance and integration settings all live here.",
+  "キャラクターの色を変えて、作業部屋での自分を識別しやすく":
+    "Change your character color so others spot you in workrooms",
+  "「決意」欄に短い宣言を書いておくと、毎日の起動時に思い出せます":
+    "Write a short \"resolve\" so you see it every time you launch",
+  "あなたのユーザーID (@xxx) は他の人があなたを検索する手掛かり":
+    "Your user ID (@xxx) is how others find you",
+  "「今やってること」を入力 → 入室すると 2D 部屋にあなたのキャラが現れます":
+    "Type \"what I'm doing\" and enter — your character appears in the 2D room",
+  "「募集する」で同じ時間に集まる仲間を呼べます":
+    "Use \"Recruit\" to call peers to work at the same time",
+  "退室すると今回の作業時間が記録され、EXP として加算されます":
+    "Leaving the room logs your session time and adds to your EXP",
+  "通話も雑談も主役にしない。同じ時間に手を動かしている気配だけを共有します。":
+    "No calls, no chatter. Just the quiet presence of people working at the same time.",
+  "部屋を作る": "Create room",
+  "作業部屋を作成": "Create workroom",
+  "公開範囲": "Visibility",
+  "公開": "Public",
+  "のみ": "only",
+  "一覧を更新": "Refresh list",
+  "組織限定": "Org only",
+  "組織限定ルーム": "Org-only room",
+  "まだ部屋がありません。上の「+ 部屋を作る」から作成しましょう。":
+    "No rooms yet. Tap \"+ Create room\" above to make one.",
+  "すべて見る": "View all",
+  "いまは新しいお知らせはありません。": "No new announcements right now.",
+  "積み上げの全体像と、いま仲間が何をしているかをまとめて見られます。":
+    "See your overall progress and what your peers are doing at a glance.",
+  "13週間のコントリビューショングラフで毎日の取り組みを可視化":
+    "Visualize daily effort with a 13-week contribution graph",
+  "GitHub を連携すると commit もこのグラフに合流します":
+    "Link GitHub and your commits join the same graph",
+  "今日の予定を立てる": "Plan today",
+  "おはよう。今日は何をやる？": "Good morning. What's on the plate today?",
+  "今日は書かずに進む": "Skip and start the day",
+  "スキップ": "Skip",
+  "例: DDIA Ch.7 を読み切る": "e.g. Finish DDIA Ch.7",
+  "日報の「今日やること」として保存される。短くてもOK。":
+    "Saved as today's plan in your daily report. Short is fine.",
+  "今日を始める": "Start the day",
+  "投稿を閉じる": "Close post",
+  "投稿を開く": "Open post",
+  "作業部屋 — 現在 {count} 人が作業中": "Workroom — {count} people working now",
+  "今すぐ記録": "Log now",
+  "学習対象がまだありません。1つ登録すると、ここから時間を記録できます。":
+    "No learning subjects yet. Add one to start logging time here.",
+  "学習対象を管理": "Manage learning subjects",
+
+  // === Phase 4b: AppErrorBoundary / ToastHost / misc components ===
+  "画面の復帰が必要です。": "We need to restore the screen.",
+  "データの読み込み中に表示が止まりました。再読み込みすると直前の状態から復帰します。":
+    "The display froze while loading data. Reloading will restore the previous state.",
+  "エラー詳細": "Error details",
+  "通知: {message} (タップで閉じる)": "Notification: {message} (tap to dismiss)",
+  "{value} / {max} 文字": "{value} / {max} characters",
+  "メンション候補": "Mention suggestions",
+  "はじめてのヒント": "First-time hint",
+  "わかった": "Got it",
+
   "13週合計に戻す": "Back to 13-week total",
   "Contribution Arc の世界": "Contribution Arc's world",
   "Roomタイトル": "Room title",
@@ -999,4 +1122,32 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "開始タイミング": "Start timing",
   "開発ログタイムライン": "Dev log timeline",
   "集計": "Aggregate",
+  // === WorkspaceRecruitmentFeedCard ===
+  "まもなく": "Soon",
+  "あと{minutes}分": "{minutes} min left",
+  "あと{hours}時間{rest}分": "{hours}h {rest}m left",
+  "あと{hours}時間": "{hours}h left",
+  "今日 {hh}:{mm}": "Today {hh}:{mm}",
+  "たった今": "Just now",
+  "{minutes}分前": "{minutes} min ago",
+  "{hours}時間前": "{hours} h ago",
+  "{days}日前": "{days} d ago",
+  "残り {hours}時間{rest}分": "{hours}h {rest}m left",
+  "残り {hours}時間": "{hours}h left",
+  "残り {minutes}分": "{minutes} min left",
+  "残り {minutes}:{seconds}": "{minutes}:{seconds} left",
+  "🗓 予定": "🗓 Scheduled",
+  "募集中": "Open",
+  "終了": "Ended",
+  "{start} 開始 · {relative}": "Starts {start} · {relative}",
+  "終了しました": "Ended",
+  "作業": "Task",
+  "参加": "Joined",
+  "人": " people",
+  "取り消す": "Cancel",
+  "参加中": "Joined",
+  "参加する": "Join",
+  "参加予定": "Going",
+  "参加予定にする": "RSVP",
+  "この募集は終了しました": "This recruitment has ended",
 };

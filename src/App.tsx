@@ -18108,7 +18108,7 @@ function App() {
                       onClick={() => {
                         if (currentOrganization?.ownerUid === currentUser?.uid) {
                           window.alert(
-                            "オーナーは削除できません。Admin ダッシュボードからオーナーを譲渡してから削除してください。",
+                            t("オーナーは削除できません。Admin ダッシュボードからオーナーを譲渡してから削除してください。"),
                           );
                           return;
                         }
@@ -18117,9 +18117,21 @@ function App() {
                         setDeleteError("");
                       }}
                     >
-                      アカウントを削除
+                      {t("アカウントを削除")}
                     </button>
                   </div>
+                  {/* App Store / Google Play 提出には Privacy Policy への
+                      アプリ内からのアクセスが必要。言語に合わせて HTML を
+                      切替 (en → privacy.html / ja → privacy.ja.html)。 */}
+                  <p className="settings-data-legal">
+                    <a
+                      href={`${import.meta.env.BASE_URL}${language === "ja" ? "privacy.ja.html" : "privacy.html"}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {t("プライバシーポリシー")}
+                    </a>
+                  </p>
                 </div>
               ) : null}
 

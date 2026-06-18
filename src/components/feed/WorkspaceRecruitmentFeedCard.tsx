@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { WorkspaceRecruitmentRecord } from "../../services/workspaceRecruitments";
+import { useTranslation } from "../../i18n/LanguageContext";
 
 export type RecruitmentAuthor = {
   userId: string;
@@ -19,17 +20,19 @@ type WorkspaceRecruitmentFeedCardProps = {
   onAuthorOpen?: (author: RecruitmentAuthor) => void;
 };
 
-function formatRelativeFuture(diffMs: number) {
-  if (diffMs <= 0) return "まもなく";
+type TranslateFn = (jaText: string, vars?: Record<string, string | number>) => string;
+
+function formatRelativeFuture(diffMs: number, t: TranslateFn) {
+  if (diffMs <= 0) return t("まもなく");
   const minutes = Math.floor(diffMs / 60000);
-  if (minutes < 60) return `あと${minutes}分`;
+  if (minutes < 60) return t("あと{minutes}分", { minutes });
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
-  if (rest > 0) return `あと${hours}時間${rest}分`;
-  return `あと${hours}時間`;
+  if (rest > 0) return t("あと{hours}時間{rest}分", { hours, rest });
+  return t("あと{hours}時間", { hours });
 }
 
-function formatStartTime(iso: string) {
+function formatStartTime(iso: string, t: TranslateFn) {
   const date = new Date(iso);
   const today = new Date();
   const isToday =
@@ -38,35 +41,38 @@ function formatStartTime(iso: string) {
     date.getDate() === today.getDate();
   const hh = date.getHours().toString().padStart(2, "0");
   const mm = date.getMinutes().toString().padStart(2, "0");
-  if (isToday) return `今日 ${hh}:${mm}`;
+  if (isToday) return t("今日 {hh}:{mm}", { hh, mm });
   return `${date.getMonth() + 1}/${date.getDate()} ${hh}:${mm}`;
 }
 
-function formatPostedAgo(createdAtIso: string, now: number) {
+function formatPostedAgo(createdAtIso: string, now: number, t: TranslateFn) {
   const diff = now - new Date(createdAtIso).getTime();
   const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return "たった今";
-  if (minutes < 60) return `${minutes}分前`;
+  if (minutes < 1) return t("たった今");
+  if (minutes < 60) return t("{minutes}分前", { minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}時間前`;
+  if (hours < 24) return t("{hours}時間前", { hours });
   const days = Math.floor(hours / 24);
-  return `${days}日前`;
+  return t("{days}日前", { days });
 }
 
-function formatRemaining(msLeft: number) {
+function formatRemaining(msLeft: number, t: TranslateFn) {
   const totalSeconds = Math.max(0, Math.floor(msLeft / 1000));
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   if (minutes >= 60) {
     const hours = Math.floor(minutes / 60);
     const rest = minutes % 60;
-    return rest > 0 ? `残り ${hours}時間${rest}分` : `残り ${hours}時間`;
+    return rest > 0
+      ? t("残り {hours}時間{rest}分", { hours, rest })
+      : t("残り {hours}時間", { hours });
   }
   if (minutes >= 5) {
-    return `残り ${minutes}分`;
+    return t("残り {minutes}分", { minutes });
   }
   // Show seconds in the final 5 minutes so the card feels alive.
-  return `残り ${minutes}:${seconds.toString().padStart(2, "0")}`;
+  const ss = seconds.toString().padStart(2, "0");
+  return t("残り {minutes}:{seconds}", { minutes, seconds: ss });
 }
 
 const ROLL_SPRING = { type: "spring" as const, stiffness: 420, damping: 32, mass: 0.6 };
@@ -80,6 +86,7 @@ export function WorkspaceRecruitmentFeedCard({
   onCancel,
   onAuthorOpen,
 }: WorkspaceRecruitmentFeedCardProps) {
+  const { t } = useTranslation();
   const startAtMs = new Date(recruitment.startAt).getTime();
   const expiresAtMs = new Date(recruitment.expiresAt).getTime();
 
@@ -112,14 +119,17 @@ export function WorkspaceRecruitmentFeedCard({
   const avatarLetter = displayName.slice(0, 1).toUpperCase();
   const accentColor = author?.characterColor || "#1f6f4a";
 
-  const stateLabel = isUpcoming ? "🗓 予定" : isActive ? "募集中" : "終了";
+  const stateLabel = isUpcoming ? t("🗓 予定") : isActive ? t("募集中") : t("終了");
   const stateClassName = isUpcoming ? "state-upcoming" : isActive ? "state-active" : "state-ended";
 
   const timeInfo = isUpcoming
-    ? `${formatStartTime(recruitment.startAt)} 開始 · ${formatRelativeFuture(startAtMs - now)}`
+    ? t("{start} 開始 · {relative}", {
+        start: formatStartTime(recruitment.startAt, t),
+        relative: formatRelativeFuture(startAtMs - now, t),
+      })
     : isActive
-    ? formatRemaining(expiresAtMs - now)
-    : "終了しました";
+    ? formatRemaining(expiresAtMs - now, t)
+    : t("終了しました");
 
   return (
     <article className={`feed-card recruitment-card ${stateClassName}`}>
@@ -135,7 +145,7 @@ export function WorkspaceRecruitmentFeedCard({
           </span>
           <span>
             <strong>{displayName}</strong>
-            <small>{formatPostedAgo(recruitment.createdAt, now)}</small>
+            <small>{formatPostedAgo(recruitment.createdAt, now, t)}</small>
           </span>
         </button>
         <span className={`recruitment-state-badge ${stateClassName}`}>
@@ -148,15 +158,15 @@ export function WorkspaceRecruitmentFeedCard({
 
       <dl className="recruitment-meta">
         <div>
-          <dt>作業</dt>
-          <dd>{recruitment.task || "未設定"}</dd>
+          <dt>{t("作業")}</dt>
+          <dd>{recruitment.task || t("未設定")}</dd>
         </div>
         <div>
-          <dt>時間</dt>
+          <dt>{t("時間")}</dt>
           <dd>{timeInfo}</dd>
         </div>
         <div>
-          <dt>参加</dt>
+          <dt>{t("参加")}</dt>
           <dd className="recruitment-join-count">
             <AnimatePresence mode="popLayout" initial={false}>
               <motion.span
@@ -169,7 +179,7 @@ export function WorkspaceRecruitmentFeedCard({
                 {joinedCount}
               </motion.span>
             </AnimatePresence>
-            <span aria-hidden="true">人</span>
+            <span aria-hidden="true">{t("人")}</span>
           </dd>
         </div>
       </dl>
@@ -177,7 +187,7 @@ export function WorkspaceRecruitmentFeedCard({
       <footer className="recruitment-card-actions">
         {isOwner ? (
           <button type="button" className="recruitment-cancel" onClick={() => onCancel(recruitment)}>
-            取り消す
+            {t("取り消す")}
           </button>
         ) : isActive ? (
           <button
@@ -186,7 +196,7 @@ export function WorkspaceRecruitmentFeedCard({
             onClick={() => onJoin(recruitment)}
             disabled={hasJoined}
           >
-            {hasJoined ? "参加中" : "参加する"}
+            {hasJoined ? t("参加中") : t("参加する")}
           </button>
         ) : isUpcoming ? (
           <button
@@ -195,10 +205,10 @@ export function WorkspaceRecruitmentFeedCard({
             onClick={() => onJoin(recruitment)}
             disabled={hasJoined}
           >
-            {hasJoined ? "参加予定" : "参加予定にする"}
+            {hasJoined ? t("参加予定") : t("参加予定にする")}
           </button>
         ) : (
-          <span className="recruitment-ended-note">この募集は終了しました</span>
+          <span className="recruitment-ended-note">{t("この募集は終了しました")}</span>
         )}
       </footer>
     </article>

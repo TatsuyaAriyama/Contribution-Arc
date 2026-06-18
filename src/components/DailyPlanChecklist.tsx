@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { makePlanItem, type PlanItem } from "../services/dailyPlanItems";
+import { useTranslation } from "../i18n/LanguageContext";
 
 /**
  * Phase 10b — plan-as-checklist editor.
@@ -45,15 +46,6 @@ type DailyPlanChecklistProps = {
   };
 };
 
-const DEFAULT_LABELS = {
-  addItem: "項目を追加",
-  placeholderText: "やることを1行で",
-  placeholderComment: "完了メモ(任意) — 何をやったか / 何で詰まったか",
-  carriedFrom: "←前日から",
-  remove: "削除",
-  commentAriaLabel: "完了メモ",
-} as const;
-
 export function DailyPlanChecklist({
   items,
   onChange,
@@ -61,6 +53,15 @@ export function DailyPlanChecklist({
   ariaLabel,
   labels,
 }: DailyPlanChecklistProps) {
+  const { t } = useTranslation();
+  const DEFAULT_LABELS = {
+    addItem: t("項目を追加"),
+    placeholderText: t("やることを1行で"),
+    placeholderComment: t("完了メモ(任意) — 何をやったか / 何で詰まったか"),
+    carriedFrom: t("←前日から"),
+    remove: t("削除"),
+    commentAriaLabel: t("完了メモ"),
+  };
   const l = { ...DEFAULT_LABELS, ...labels };
 
   /* Phase 11b：通常時は 1 行 ellipsis の読み取り表示、タップで textarea
@@ -294,6 +295,7 @@ export function PlanChecklistPreview({
   moreLabel,
   emptyItemText,
 }: PlanChecklistPreviewProps) {
+  const { t } = useTranslation();
   if (items.length === 0) {
     return emptyText ? <span className="plan-checklist-preview-empty">{emptyText}</span> : null;
   }
@@ -314,14 +316,14 @@ export function PlanChecklistPreview({
             {item.done ? "✓" : "・"}
           </span>
           <span className="plan-checklist-preview-text">
-            {item.text || emptyItemText || "(空)"}
+            {item.text || emptyItemText || t("(空)")}
             {item.comment ? <small> — {item.comment}</small> : null}
           </span>
         </div>
       ))}
       {hidden > 0 ? (
         <div className="plan-checklist-preview-more">
-          {moreLabel ? moreLabel(hidden) : `+${hidden}件`}
+          {moreLabel ? moreLabel(hidden) : t("+{n}件", { n: hidden })}
         </div>
       ) : null}
     </div>
