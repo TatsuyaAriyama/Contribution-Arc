@@ -11,6 +11,7 @@ import {
   type CSSProperties,
   type FormEvent,
   type MouseEvent as ReactMouseEvent,
+  type ReactNode,
 } from "react";
 import {
   createUserWithEmailAndPassword,
@@ -1812,6 +1813,183 @@ function getDailyDateAgeInDays(date: string) {
 function canEditDailyReportDate(date: string) {
   const ageInDays = getDailyDateAgeInDays(date);
   return ageInDays >= 0 && ageInDays <= 1;
+}
+
+/* Phase 12: 振り返り (reflection) を 3 セクション構造に分割する。
+ *
+ *   ### highlight     ← 今日のハイライト
+ *   本文…
+ *
+ *   ### stuck         ← つまずき
+ *   本文…
+ *
+ *   ### tomorrow      ← 明日の最初の一歩
+ *   本文…
+ *
+ * データ層は引き続き reflection: string の単一カラム。マーカーは
+ * 言語非依存 (lowercase ASCII) にして round-trip を安定させる。
+ * マーカーが無い既存レポートは highlight に全文を入れる。
+ */
+const REFLECTION_SECTION_KEYS = ["highlight", "stuck", "tomorrow"] as const;
+type ReflectionSectionKey = (typeof REFLECTION_SECTION_KEYS)[number];
+type ReflectionParts = Record<ReflectionSectionKey, string>;
+const REFLECTION_SECTION_LINE = /^###\s+(highlight|stuck|tomorrow)\s*$/i;
+
+function makeEmptyReflectionParts(): ReflectionParts {
+  return { highlight: "", stuck: "", tomorrow: "" };
+}
+
+function parseReflectionParts(raw: string): ReflectionParts {
+  const parts = makeEmptyReflectionParts();
+  if (!raw) return parts;
+  const lines = raw.replace(/\r\n/g, "\n").split("\n");
+  let firstMarker = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (REFLECTION_SECTION_LINE.test(lines[i])) {
+      firstMarker = i;
+      break;
+    }
+  }
+  if (firstMarker === -1) {
+    parts.highlight = raw.trim();
+    return parts;
+  }
+  if (firstMarker > 0) {
+    const preamble = lines.slice(0, firstMarker).join("\n").trim();
+    if (preamble) parts.highlight = preamble;
+  }
+  const buf: Record<ReflectionSectionKey, string[]> = {
+    highlight: [],
+    stuck: [],
+    tomorrow: [],
+  };
+  let current: ReflectionSectionKey = "highlight";
+  for (let i = firstMarker; i < lines.length; i++) {
+    const m = REFLECTION_SECTION_LINE.exec(lines[i]);
+    if (m) {
+      current = m[1].toLowerCase() as ReflectionSectionKey;
+      continue;
+    }
+    buf[current].push(lines[i]);
+  }
+  for (const key of REFLECTION_SECTION_KEYS) {
+    const joined = buf[key].join("\n").replace(/^\n+|\n+$/g, "");
+    if (!joined) continue;
+    if (key === "highlight" && parts.highlight) {
+      parts.highlight = `${parts.highlight}\n${joined}`.trim();
+    } else {
+      parts[key] = joined;
+    }
+  }
+  return parts;
+}
+
+function serializeReflectionParts(parts: ReflectionParts): string {
+  const segments: string[] = [];
+  for (const key of REFLECTION_SECTION_KEYS) {
+    const v = parts[key].trim();
+    if (v) segments.push(`### ${key}\n${v}`);
+  }
+  return segments.join("\n\n");
+}
+
+/* Notification / preview 系で reflection を 1 行に圧縮するときに使う。
+ * 構造化されていれば一番上のセクション本文だけ、なければ全体を返す。 */
+function extractReflectionPreview(text: string): string {
+  if (!text) return "";
+  const parts = parseReflectionParts(text);
+  return (parts.highlight || parts.stuck || parts.tomorrow || text).trim();
+}
+
+/* 振り返りをモーダル / 詳細セクションでレンダリングするヘルパー。
+ * 構造化マーカー (### highlight 等) があればセクション見出し付きの
+ * カード型レイアウトに、無ければ単一の段落にフォールバックする。
+ * 既存の reflection を上書きしないので、旧データはそのまま自然に表示。 */
+function renderReflectionBody(
+  text: string,
+  opts: {
+    t: (key: string, vars?: Record<string, string | number>) => string;
+    lookup?: (userId: string) => string | undefined;
+    onClickMention?: (userId: string) => void;
+    keyPrefix: string;
+  },
+): ReactNode {
+  if (!text || !text.trim()) return null;
+  const hasMarker = REFLECTION_SECTION_LINE.test(text) || /### (highlight|stuck|tomorrow)/i.test(text);
+  if (!hasMarker) {
+    return (
+      <p>
+        {renderTextWithMentions(text, {
+          lookup: opts.lookup,
+          onClickMention: opts.onClickMention,
+          keyPrefix: opts.keyPrefix,
+        })}
+      </p>
+    );
+  }
+  const parts = parseReflectionParts(text);
+  const labelOf = (key: ReflectionSectionKey) =>
+    key === "highlight"
+      ? opts.t("今日のハイライト")
+      : key === "stuck"
+        ? opts.t("つまずき")
+        : opts.t("明日の最初の一歩");
+  const iconOf = (key: ReflectionSectionKey) =>
+    key === "highlight" ? "✦" : key === "stuck" ? "⌖" : "→";
+  const nonEmpty = REFLECTION_SECTION_KEYS.filter((key) => parts[key].trim());
+  if (nonEmpty.length === 0) return null;
+  return (
+    <div className="reflection-structured">
+      {nonEmpty.map((key) => (
+        <div key={key} className="reflection-structured-section">
+          <span className="reflection-structured-label">
+            <span aria-hidden="true">{iconOf(key)}</span> {labelOf(key)}
+          </span>
+          <p>
+            {renderTextWithMentions(parts[key], {
+              lookup: opts.lookup,
+              onClickMention: opts.onClickMention,
+              keyPrefix: `${opts.keyPrefix}-${key}`,
+            })}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* "今日のログから下書きを挿入" 用のサマリ。selectedDailyDate と同じ
+ * 学習日に属する studyLogs を subject 別に集計し、1 行の自然文に整形。
+ * ログが無ければ空文字を返し、呼び出し側でトーストを出す。 */
+function summarizeStudyLogsForDate(
+  logs: StudyLog[],
+  date: string,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+  language: Language,
+): string {
+  const todays = logs.filter((log) => {
+    if (!log.createdAt) return false;
+    const parsed = new Date(log.createdAt);
+    if (Number.isNaN(parsed.getTime())) return false;
+    return getLearnerDate(parsed) === date;
+  });
+  if (todays.length === 0) return "";
+  const bySubject = new Map<string, number>();
+  let totalMinutes = 0;
+  for (const log of todays) {
+    const subject = (log.subject || "").trim() || t("学習");
+    bySubject.set(subject, (bySubject.get(subject) || 0) + log.minutes);
+    totalMinutes += log.minutes;
+  }
+  const sorted = [...bySubject.entries()].sort((a, b) => b[1] - a[1]);
+  const segments = sorted.map(([subject, minutes]) =>
+    t("{subject} {time}", { subject, time: formatStayTime(minutes, language) }),
+  );
+  const joiner = language === "en" ? ", " : "、";
+  return t("{summary} (合計 {total})", {
+    summary: segments.join(joiner),
+    total: formatStayTime(totalMinutes, language),
+  });
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
@@ -4430,7 +4608,9 @@ function App() {
   const [sharedDailyLoadError, setSharedDailyLoadError] = useState("");
   const [selectedDailyDate, setSelectedDailyDate] = useState(getLearnerDate());
   const [dailyPlanItemsDraft, setDailyPlanItemsDraft] = useState<PlanItem[]>([]);
-  const [dailyReflectionDraft, setDailyReflectionDraft] = useState("");
+  const [dailyReflectionPartsDraft, setDailyReflectionPartsDraft] = useState<ReflectionParts>(
+    makeEmptyReflectionParts,
+  );
   const [dailyHistoryDateFilter, setDailyHistoryDateFilter] = useState("");
   const [dailyHistorySearch, setDailyHistorySearch] = useState("");
   // 右パネルのセグメントタブ: "mine" = 自分の過去日報 / "team" = みんなの日報。
@@ -4759,7 +4939,7 @@ function App() {
       setSharedDailyLoadError("");
       setSelectedDailyDate(getLearnerDate());
       setDailyPlanItemsDraft([]);
-      setDailyReflectionDraft("");
+      setDailyReflectionPartsDraft(makeEmptyReflectionParts());
       setDailyHistoryDateFilter("");
       setDailyHistorySearch("");
       setDailyMessage("");
@@ -6112,23 +6292,27 @@ function App() {
     setDailyPlanItemsDraft(nextPlanItems);
 
     if (typeof localDraft?.reflection === "string") {
-      setDailyReflectionDraft(localDraft.reflection);
+      setDailyReflectionPartsDraft(parseReflectionParts(localDraft.reflection));
     } else {
-      setDailyReflectionDraft(nextReport?.reflection || "");
+      setDailyReflectionPartsDraft(parseReflectionParts(nextReport?.reflection || ""));
     }
     setDailyIsDraftDraft(nextReport?.isDraft === true);
   }, [dailyReports, selectedDailyDate]);
 
   /* Phase 11: 入力中の plan / reflection を localStorage に同期。
      送信前のテキストがリロード / 日付切替で消えないようにする。
-     書き込みは debounce せず毎回行う (localStorage は十分速い)。 */
+     書き込みは debounce せず毎回行う (localStorage は十分速い)。
+     reflection は内部表現 (parts) を serialize 後の string 形式で保存し、
+     旧 string のローカルドラフトとフォーマットを互換に保つ。 */
   useEffect(() => {
     writeLocalDailyDraft(selectedDailyDate, { planItems: dailyPlanItemsDraft });
   }, [dailyPlanItemsDraft, selectedDailyDate]);
 
   useEffect(() => {
-    writeLocalDailyDraft(selectedDailyDate, { reflection: dailyReflectionDraft });
-  }, [dailyReflectionDraft, selectedDailyDate]);
+    writeLocalDailyDraft(selectedDailyDate, {
+      reflection: serializeReflectionParts(dailyReflectionPartsDraft),
+    });
+  }, [dailyReflectionPartsDraft, selectedDailyDate]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
@@ -7805,7 +7989,8 @@ function App() {
     const planItems = sourceItems
       .map((item) => ({ text: item.text, done: item.done }))
       .filter((item) => item.text.trim());
-    const reflection = (dailyReflectionDraft || selectedDailyReport?.reflection || "").trim();
+    const reflectionFromDraft = serializeReflectionParts(dailyReflectionPartsDraft);
+    const reflection = (reflectionFromDraft || selectedDailyReport?.reflection || "").trim();
     if (planItems.length === 0 && !reflection) {
       setDailyMessage(t("共有できる内容がまだありません。"));
       return;
@@ -8131,7 +8316,11 @@ function App() {
           id: notificationId,
           type: "dailyLog",
           title: t("{name}の日報", { name: report.userName || "Developer" }),
-          body: (report.reflection || report.plan || t("日報が更新されました。")).slice(0, 120),
+          body: (
+            extractReflectionPreview(report.reflection) ||
+            report.plan ||
+            t("日報が更新されました。")
+          ).slice(0, 120),
           createdAt,
           read: false,
           sourceUserId,
@@ -9193,7 +9382,7 @@ function App() {
 
     if (selectedDailyDate === report.date) {
       setDailyPlanItemsDraft([]);
-      setDailyReflectionDraft("");
+      setDailyReflectionPartsDraft(makeEmptyReflectionParts());
       setDailyMessage(t("日報を削除しました。"));
     }
 
@@ -9378,9 +9567,9 @@ function App() {
     setDailyPlanItemsDraft(nextPlanItems);
 
     if (typeof localDraft?.reflection === "string") {
-      setDailyReflectionDraft(localDraft.reflection);
+      setDailyReflectionPartsDraft(parseReflectionParts(localDraft.reflection));
     } else {
-      setDailyReflectionDraft(nextReport?.reflection || "");
+      setDailyReflectionPartsDraft(parseReflectionParts(nextReport?.reflection || ""));
     }
     // Carry the saved draft flag forward so reopening an in-progress
     // draft doesn't accidentally publish it on the next save.
@@ -9469,7 +9658,10 @@ function App() {
       }))
       .filter((item) => item.text.length > 0);
     const planTextFromItems = derivePlanText(trimmedPlanItems);
-    const reflectionText = dailyReflectionDraft.trim();
+    /* 3 セクション draft を 1 本の string に serialize してから保存する。
+       空セクションは省かれるので、片方しか書いてない場合も最小限の
+       text しか残らない。 */
+    const reflectionText = serializeReflectionParts(dailyReflectionPartsDraft).trim();
     const sectionLabel = section === "plan" ? t("今日やること") : t("振り返り");
 
     if (section === "plan" && trimmedPlanItems.length === 0) {
@@ -16197,7 +16389,11 @@ function App() {
               {report.reflection ? (
                 <section className="daily-detail-modal-section">
                   <h3>{t("振り返り")}</h3>
-                  <p>{renderTextWithMentions(report.reflection, { lookup: dailyMentionLookup, keyPrefix: `refl-${report.id}` })}</p>
+                  {renderReflectionBody(report.reflection, {
+                    t,
+                    lookup: dailyMentionLookup,
+                    keyPrefix: `refl-${report.id}`,
+                  })}
                 </section>
               ) : null}
 
@@ -18837,17 +19033,76 @@ function App() {
                     </ul>
                   );
                 })()}
-                <label>
-                  <DailyMentionTextarea
-                    value={dailyReflectionDraft}
-                    onChange={setDailyReflectionDraft}
-                    placeholder={t("できたこと、詰まったこと、明日に回すことなど")}
-                    rows={7}
-                    disabled={!canEditSelectedDailyReport}
-                    candidates={dailyMentionCandidates}
-                    ariaLabel={t("振り返り")}
-                  />
-                </label>
+                {/* 当日かつ Highlight が空のときだけ、その日の学習ログから
+                    一行サマリを Highlight 欄に挿入できる導線を出す。すでに
+                    書いている時には押せても上書きしてしまうと事故になる
+                    ので無効化する。 */}
+                {canEditSelectedDailyReport && selectedDailyDate === getLearnerDate() ? (
+                  <div className="reflection-autodraft-row">
+                    <button
+                      type="button"
+                      className="reflection-autodraft-btn"
+                      onClick={() => {
+                        const summary = summarizeStudyLogsForDate(
+                          studyLogs,
+                          selectedDailyDate,
+                          t,
+                          language,
+                        );
+                        if (!summary) {
+                          setDailyMessage(t("今日の学習ログがまだ無いので下書きを作れません。"));
+                          return;
+                        }
+                        setDailyReflectionPartsDraft((parts) => ({
+                          ...parts,
+                          highlight: parts.highlight
+                            ? `${summary}\n${parts.highlight}`
+                            : summary,
+                        }));
+                      }}
+                      disabled={!canEditSelectedDailyReport}
+                    >
+                      ✦ {t("今日のログから下書きを挿入")}
+                    </button>
+                  </div>
+                ) : null}
+
+                {REFLECTION_SECTION_KEYS.map((key) => {
+                  const labelText =
+                    key === "highlight"
+                      ? t("今日のハイライト")
+                      : key === "stuck"
+                        ? t("つまずき")
+                        : t("明日の最初の一歩");
+                  const placeholder =
+                    key === "highlight"
+                      ? t("いちばん進んだこと・気づき")
+                      : key === "stuck"
+                        ? t("詰まったところ・分からなかったところ")
+                        : t("明日まず手をつけること");
+                  const icon = key === "highlight" ? "✦" : key === "stuck" ? "⌖" : "→";
+                  return (
+                    <label key={key} className="reflection-section">
+                      <span className="reflection-section-label">
+                        <span className="reflection-section-icon" aria-hidden="true">
+                          {icon}
+                        </span>
+                        {labelText}
+                      </span>
+                      <DailyMentionTextarea
+                        value={dailyReflectionPartsDraft[key]}
+                        onChange={(value) =>
+                          setDailyReflectionPartsDraft((parts) => ({ ...parts, [key]: value }))
+                        }
+                        placeholder={placeholder}
+                        rows={3}
+                        disabled={!canEditSelectedDailyReport}
+                        candidates={dailyMentionCandidates}
+                        ariaLabel={labelText}
+                      />
+                    </label>
+                  );
+                })}
 
                 <div className="daily-editor-actions">
                   <button type="submit" disabled={isSavingDailyReport || !canEditSelectedDailyReport}>
@@ -19060,15 +19315,14 @@ function App() {
                             </p>
                           ) : null}
                           {report.reflection ? (
-                            <p className="daily-shared-section">
+                            <div className="daily-shared-section">
                               <strong>{t("振り返り")}</strong>
-                              <span>
-                                {renderTextWithMentions(report.reflection, {
-                                  lookup: dailyMentionLookup,
-                                  keyPrefix: `feed-refl-${report.id}`,
-                                })}
-                              </span>
-                            </p>
+                              {renderReflectionBody(report.reflection, {
+                                t,
+                                lookup: dailyMentionLookup,
+                                keyPrefix: `feed-refl-${report.id}`,
+                              })}
+                            </div>
                           ) : null}
                         </button>
                         {isMine ? (

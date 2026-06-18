@@ -1631,4 +1631,17 @@ export const EN_TRANSLATIONS: Record<string, string> = {
     "e.g. Get into MIT / Pass CFA L1 / Build a SaaS",
   "同じ目標を持つ人があなたを見つけられます。":
     "Others working toward the same goal can find you.",
+
+  // === Phase 12: 振り返り 3 セクション + auto-draft ===
+  "今日のハイライト": "Highlight",
+  "つまずき": "Stuck on",
+  "明日の最初の一歩": "Tomorrow's first step",
+  "いちばん進んだこと・気づき": "What moved the most, what you noticed",
+  "詰まったところ・分からなかったところ": "What got stuck, what you didn't get",
+  "明日まず手をつけること": "What to pick up first tomorrow",
+  "今日のログから下書きを挿入": "Insert draft from today's log",
+  "今日の学習ログがまだ無いので下書きを作れません。":
+    "No study log for today yet — can't generate a draft.",
+  "{subject} {time}": "{subject} {time}",
+  "{summary} (合計 {total})": "{summary} ({total} total)",
 };
