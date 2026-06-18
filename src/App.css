@@ -22999,8 +22999,9 @@
 
 .learning-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
-  gap: 16px;
+  /* 横 4 列くらいで作業項目を一覧。本棚のサムネタイルとして多く見せる。 */
+  grid-template-columns: repeat(auto-fill, minmax(82px, 1fr));
+  gap: 10px;
 }
 
 /* Phase 10c: `<button>` から `<article>` へ. クイック記録チップを
@@ -23528,6 +23529,71 @@
   top: 8px;
   font-size: 10px;
   color: var(--muted);
+}
+
+/* === ライブラリのコンパクトタイル化（横 4 列の本棚）===
+   作業項目を一覧で多く見せるため、各カードをサムネ + 名前 + 累計の
+   小さなタイルに。時間記録 / ページ更新などの操作はタイルをタップ →
+   詳細パネルで行う（タイルではかさばる UI を隠す）。
+   detail 等で共有されるクラスもあるため、必ず .learning-grid 配下に限定。 */
+.learning-grid .learning-card-trigger {
+  padding: 8px 8px 9px;
+  gap: 6px;
+  align-items: center;
+}
+/* head を縦積み: 写真を大きく上に、名前を下に中央寄せ */
+.learning-grid .learning-card-head {
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+.learning-grid .learning-card-photo {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  border-radius: 11px;
+}
+.learning-grid .learning-card-head strong {
+  font-size: 12px;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  max-height: 2.5em;
+}
+/* 累計だけ中央に小さく残す。最終記録 / アーカイブ等の副次メタは隠す */
+.learning-grid .learning-card-meta {
+  justify-content: center;
+  gap: 0;
+  font-size: 10px;
+}
+.learning-grid .learning-card-meta > span:not(:first-child) {
+  display: none;
+}
+/* status は小さく、中央に */
+.learning-grid .learning-card-status {
+  margin: 0;
+  padding: 1px 6px;
+  font-size: 9px;
+}
+/* book progress は細く残しつつ、数字ラベルは省く */
+.learning-grid .learning-card-progress {
+  margin-top: 2px;
+}
+.learning-grid .learning-card-progress small {
+  display: none;
+}
+/* タイルではかさばる要素を隠す（記録・ページ更新・スパークライン・メモ・
+   書籍バッジ）。これらの操作はタイルをタップした詳細パネルで行う。 */
+.learning-grid .learning-card-spark,
+.learning-grid .learning-card-note,
+.learning-grid .learning-card-quicklog,
+.learning-grid .learning-card-pageedit,
+.learning-grid .learning-card-badge {
+  display: none;
 }
 
 .learning-empty {
