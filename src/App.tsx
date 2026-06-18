@@ -19759,8 +19759,8 @@ function App() {
                 const archivedCount = learningItems.length - live.length;
                 if (learningItems.length === 0) return null;
                 const parts = [t("{count}件", { count: live.length })];
-                if (doneCount > 0) parts.push(t("完了{count}", { count: doneCount }));
-                if (archivedCount > 0) parts.push(t("アーカイブ{count}", { count: archivedCount }));
+                if (doneCount > 0) parts.push(t("達成済み{count}", { count: doneCount }));
+                if (archivedCount > 0) parts.push(t("休止中{count}", { count: archivedCount }));
                 return <p className="learning-count-summary">{parts.join(" · ")}</p>;
               })()}
             </div>

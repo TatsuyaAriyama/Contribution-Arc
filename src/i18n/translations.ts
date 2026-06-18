@@ -1694,6 +1694,8 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "休止中": "Paused",
   "休止を解除": "Resume",
   "休止する": "Pause",
+  "達成済み{count}": "{count} mastered",
+  "休止中{count}": "{count} paused",
 
   // === Phase 12: daily history empty state ===
   "上の入力欄から「今日やること」と「振り返り」を書くと、ここに記録が並んでいきます。":
