@@ -3807,11 +3807,12 @@ function writeLocalDailyDraft(date: string, patch: LocalDailyDraft) {
 }
 
 /* ===============================================================
-   ライブラリの写真アイコン：File → 正方形 cover crop → 144px JPEG
-   data URL に圧縮する。Firebase Storage 未導入のため Firestore doc に
-   直接保存する前提で、サイズを強く絞る (typ. 10-25KB)。
+   ライブラリの表紙写真：File → アスペクト比を保ったまま長辺 480px に
+   縮小して JPEG data URL 化する。表紙(縦長)をそのまま高画質で見せたいので
+   正方形 crop はしない。Firebase Storage 未導入のため Firestore doc に直接
+   保存する前提で、長辺と画質で ~200KB 未満に収める。
    =============================================================== */
-const LEARNING_PHOTO_SIZE = 144;
+const LEARNING_PHOTO_MAX = 480;
 async function fileToLearningPhotoDataUrl(file: File): Promise<string> {
   const objectUrl = URL.createObjectURL(file);
   try {
@@ -3821,16 +3822,17 @@ async function fileToLearningPhotoDataUrl(file: File): Promise<string> {
       img.onerror = () => reject(new Error("image-load-failed"));
       img.src = objectUrl;
     });
-    const side = Math.min(image.naturalWidth, image.naturalHeight);
-    const sx = (image.naturalWidth - side) / 2;
-    const sy = (image.naturalHeight - side) / 2;
+    const longest = Math.max(image.naturalWidth, image.naturalHeight) || 1;
+    const scale = Math.min(1, LEARNING_PHOTO_MAX / longest);
+    const cw = Math.max(1, Math.round(image.naturalWidth * scale));
+    const ch = Math.max(1, Math.round(image.naturalHeight * scale));
     const canvas = document.createElement("canvas");
-    canvas.width = LEARNING_PHOTO_SIZE;
-    canvas.height = LEARNING_PHOTO_SIZE;
+    canvas.width = cw;
+    canvas.height = ch;
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("canvas-2d-unavailable");
-    ctx.drawImage(image, sx, sy, side, side, 0, 0, LEARNING_PHOTO_SIZE, LEARNING_PHOTO_SIZE);
-    return canvas.toDataURL("image/jpeg", 0.8);
+    ctx.drawImage(image, 0, 0, cw, ch);
+    return canvas.toDataURL("image/jpeg", 0.82);
   } finally {
     URL.revokeObjectURL(objectUrl);
   }

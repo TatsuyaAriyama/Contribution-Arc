@@ -23070,9 +23070,11 @@
 
 .learning-grid {
   display: grid;
-  /* 横 4 列くらいで作業項目を一覧。本棚のサムネタイルとして多く見せる。 */
-  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
-  gap: 10px;
+  /* 表紙サムネ + タイトルのみのシンプルな棚。横 3 列前後で並べる。 */
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  column-gap: 14px;
+  row-gap: 20px;
+  align-items: start;
 }
 
 /* Phase 10c: `<button>` から `<article>` へ. クイック記録チップを
@@ -23934,82 +23936,85 @@
   cursor: pointer;
 }
 
-/* === ライブラリのコンパクトタイル化（横 4 列の本棚）===
-   作業項目を一覧で多く見せるため、各カードをサムネ + 名前 + 累計の
-   小さなタイルに。時間記録 / ページ更新などの操作はタイルをタップ →
-   詳細パネルで行う（タイルではかさばる UI を隠す）。
+/* === ライブラリ = 表紙サムネ + タイトルのみのシンプル棚 ===
+   余計な装飾(枠・影・色バー・累計・傾き等)を排除し、表紙画像を
+   アスペクト比そのままに高画質で見せる。タップで記録フォームへ。
    detail 等で共有されるクラスもあるため、必ず .learning-grid 配下に限定。 */
+.learning-grid .learning-card {
+  border: none;
+  border-left: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+.learning-grid .learning-card:hover {
+  transform: none;
+  box-shadow: none;
+}
 .learning-grid .learning-card-trigger {
-  /* upstream は trigger を 56px|1fr の 2 カラム grid にしているが、
-     狭いタイルでは本文カラムが潰れて 1 文字ずつ折り返す。compact では
-     grid をやめて縦スタックにし、写真→名前→累計を順に積む。 */
+  /* upstream の 2 カラム grid をやめ、画像 → タイトルの縦スタックに。 */
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 8px 9px;
+  align-items: stretch;
+  gap: 8px;
+  padding: 0;
 }
-/* head（写真を内包）を縦積み・中央寄せに。 */
 .learning-grid .learning-card-head {
   flex-direction: column;
-  align-items: center;
-  gap: 6px;
+  align-items: stretch;
+  gap: 8px;
   width: 100%;
 }
+/* 表紙サムネ：画像のアスペクト比を保ったまま等倍表示(高画質)。 */
 .learning-grid .learning-card-photo {
   width: 100%;
-  max-width: 72px;
   height: auto;
-  aspect-ratio: 1 / 1;
-  border-radius: 11px;
+  max-width: none;
+  aspect-ratio: auto;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: var(--surface);
+  overflow: hidden;
 }
-/* タイルでは頭文字を大きく見せる（表紙らしく）。 */
-.learning-grid .learning-card-photo-initial {
-  font-size: 30px;
+.learning-grid .learning-card-photo img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  display: block;
 }
+/* 写真未設定は白紙(本の比率)。 */
+.learning-grid .learning-card-photo.is-fallback {
+  aspect-ratio: 3 / 4;
+  background: var(--surface);
+}
+/* タイトルのみ。中央・小さめ・2 行で省略。 */
 .learning-grid .learning-card-head strong {
   width: 100%;
   flex: 0 0 auto;
   font-size: 12px;
-  line-height: 1.25;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--ink);
   text-align: center;
   white-space: normal;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  max-height: 2.5em;
   overflow: hidden;
 }
-/* 累計だけ中央に小さく残す。最終記録 / アーカイブ等の副次メタは隠す */
-.learning-grid .learning-card-meta {
-  width: 100%;
-  justify-content: center;
-  gap: 0;
-  font-size: 10px;
-}
-.learning-grid .learning-card-meta > span:not(:first-child) {
-  display: none;
-}
-/* status は小さく、中央に */
-.learning-grid .learning-card-status {
-  margin: 0;
-  padding: 1px 6px;
-  font-size: 9px;
-}
-/* book progress は細く残しつつ、数字ラベルは省く */
-.learning-grid .learning-card-progress {
-  margin-top: 2px;
-}
-.learning-grid .learning-card-progress small {
-  display: none;
-}
-/* タイルではかさばる要素を隠す（記録・ページ更新・スパークライン・メモ・
-   書籍バッジ）。これらの操作はタイルをタップした詳細パネルで行う。 */
-.learning-grid .learning-card-spark,
+/* 表紙＋タイトル以外はすべて隠す(累計/最終記録/状態/進捗/バッジ/メモ/
+   スパークライン/クイック記録/ページ更新/頭文字)。 */
+.learning-grid .learning-card-meta,
+.learning-grid .learning-card-status,
+.learning-grid .learning-card-progress,
+.learning-grid .learning-card-badge,
 .learning-grid .learning-card-note,
+.learning-grid .learning-card-spark,
 .learning-grid .learning-card-quicklog,
 .learning-grid .learning-card-pageedit,
-.learning-grid .learning-card-badge {
+.learning-grid .learning-card-photo-initial {
   display: none;
 }
 
