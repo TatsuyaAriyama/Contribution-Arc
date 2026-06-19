@@ -13591,25 +13591,39 @@ function App() {
           </span>
         </button>
 
-        <p>{post.text}</p>
-
+        {/* 画像 (任意) は本文と横並びの小サムネで配置する。1 投稿で
+            画面を占有しないよう Studyplus 風のコンパクト inset に。 */}
         {post.photo ? (
-          /* ライブラリ「記録の入力」から添付した画像。tap で拡大は将来 — */
-          <img
-            className="log-post-photo"
-            src={post.photo}
-            alt=""
-            loading="lazy"
-          />
-        ) : null}
-
-        {hasMeta ? (
-          <div className="log-post-meta">
-            {studyLabel ? <span>{studyLabel}</span> : null}
-            {contributionLabel ? <span>{contributionLabel}</span> : null}
-            {roomLabel ? <span>{roomLabel}</span> : null}
+          <div className="log-post-body-row">
+            <img
+              className="log-post-photo"
+              src={post.photo}
+              alt=""
+              loading="lazy"
+            />
+            <div className="log-post-body-text">
+              <p>{post.text}</p>
+              {hasMeta ? (
+                <div className="log-post-meta">
+                  {studyLabel ? <span>{studyLabel}</span> : null}
+                  {contributionLabel ? <span>{contributionLabel}</span> : null}
+                  {roomLabel ? <span>{roomLabel}</span> : null}
+                </div>
+              ) : null}
+            </div>
           </div>
-        ) : null}
+        ) : (
+          <>
+            <p>{post.text}</p>
+            {hasMeta ? (
+              <div className="log-post-meta">
+                {studyLabel ? <span>{studyLabel}</span> : null}
+                {contributionLabel ? <span>{contributionLabel}</span> : null}
+                {roomLabel ? <span>{roomLabel}</span> : null}
+              </div>
+            ) : null}
+          </>
+        )}
 
         <div className="log-post-actions">
           <motion.button
