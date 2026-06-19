@@ -566,6 +566,26 @@ export async function saveUserGoalToCloud(
   );
 }
 
+/**
+ * 管理者(開発者)向け: user doc の coins を最低 floor まで引き上げる。
+ * 現在値を読み、floor 未満のときだけ floor を merge 書き込みして永続化する
+ * (リアルタイム購読が即座に上書きしても、cloud 自体が floor 以上なので
+ * 0 に戻らない)。戻り値は適用後の coins。
+ */
+export async function grantCoinsFloorToCloud(
+  db: Firestore,
+  uid: string,
+  floor: number,
+): Promise<number> {
+  if (!uid) return 0;
+  const ref = doc(db, "users", uid);
+  const snap = await getDoc(ref);
+  const current = snap.exists() ? readNumber((snap.data() as Record<string, unknown>).coins) : 0;
+  if (current >= floor) return current;
+  await setDoc(ref, { coins: floor, lastSyncedAt: new Date().toISOString() }, { merge: true });
+  return floor;
+}
+
 export async function saveGithubActivitySummary(db: Firestore, summary: GitHubActivitySummary) {
   if (!summary.userId || !summary.githubId) {
     return;

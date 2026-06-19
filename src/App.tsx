@@ -65,6 +65,7 @@ import {
   deleteStudyLogFromCloud,
   saveUserProgressToCloud,
   saveUserGoalToCloud,
+  grantCoinsFloorToCloud,
   saveWorkspaceSessionToCloud,
   subscribeStudyLogsFromCloud,
   transferOrganizationOwnership,
@@ -4541,6 +4542,29 @@ function App() {
     writeCharacterChoiceStamp();
   }, [writeCharacterChoiceStamp]);
   const [coins, setCoins] = useState<number>(0);
+  /* 開発者(ADMIN_EMAIL)アカウントへ Arc を一度だけ実クラウド付与する。
+     hydrate の floor だけだと realtime 購読が cloud(=0) で上書きして 0 に
+     戻るため、cloud 側の coins を直接 30000 まで引き上げる(不足時のみ)。
+     端末ごとの localStorage フラグで一度だけ実行し、以後の購入で減らせる。 */
+  useEffect(() => {
+    if (!currentUser || !isProfileHydrated) return;
+    if ((currentUser.email || "").toLowerCase() !== "ari.initx@gmail.com") return;
+    const flag = `ca:admin-arc-grant-30000:${currentUser.uid}`;
+    if (window.localStorage.getItem(flag)) return;
+    let cancelled = false;
+    void grantCoinsFloorToCloud(db, currentUser.uid, 30000)
+      .then((coinsNow) => {
+        if (cancelled) return;
+        safeSetLocalStorage(flag, "1");
+        setCoins((c) => Math.max(c, coinsNow));
+      })
+      .catch((error) => {
+        console.info("Admin Arc grant skipped.", error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser, isProfileHydrated]);
   /* Daily feed-post Arc reward bookkeeping. Both fields are mirrored
      to the user profile doc so a second device sees the same gate.
      The lifetime cap is enforced against `feedRewardArcEarned` (not
