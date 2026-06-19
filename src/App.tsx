@@ -5439,7 +5439,7 @@ function App() {
            実質ロック無効状態だったので、購入していない shape は
            default に snap-back させる方針に変更。
            admin (= 開発者本人) もテスト時に正しくロック挙動を再現できる
-           ように同じ判定を通す。coin 10k 付与だけは残して購入で確認可能に。 */
+           ように同じ判定を通す。coin 30k 付与だけは残して購入で確認可能に。 */
         const resolvedOwned: CharacterShape[] = Array.from(
           new Set<CharacterShape>(["default", ...loadedOwned]),
         );
