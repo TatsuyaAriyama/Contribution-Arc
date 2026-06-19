@@ -393,13 +393,11 @@ export function SilentWorkspaceRoom({
   // overlay starts collapsed to a single-line pill (room name + meta)
   // and expands to show the task input + actions when ⋯ is tapped.
   const [isOverlayExpanded, setIsOverlayExpanded] = useState(false);
-  /* モバイル専用：作業部屋を「ルーム(眺める) / みんな(在室一覧) /
-     自分(操作)」の 3 タブに分割するための選択状態。小画面で四方に
-     散らばっていた情報を 3 つの目的に整理する。PC ではタブ UI を
-     CSS で隠し、この値は "room" 固定のまま従来の 2D ステージを使う。 */
-  /* "room" タブは廃止。モバイルは「みんな (people)」「自分 (me)」の
-     2 タブ構成で、デフォルトは people (= 在室者一覧)。 */
-  const [mobileTab, setMobileTab] = useState<"people" | "me">("people");
+  /* 旧 2 タブ構成 (みんな / 自分) は廃止。みんな (people) パネルに
+     "自分の状態ストリップ" を融合して 1 画面構成にした。
+     mobileTab 自体は CSS の data-mobile-tab="people" ルール (モバイル
+     で 2D ステージを隠す) と互換を保つため "people" 固定で残す。 */
+  const mobileTab: "people" = "people";
   /* スマホ幅かどうか。ルームタブの「ポケ森風 箱庭レイアウト」を出す
      判定に使う。PC では false のまま従来の俯瞰 2D を使う。 */
   const [isPhone, setIsPhone] = useState(() => {
@@ -746,28 +744,6 @@ export function SilentWorkspaceRoom({
       className={`workspace-2d-shell ${isFocusPresentation ? "focus-presentation" : ""}`}
       data-mobile-tab={mobileTab}
     >
-      {/* モバイル専用のタブバー。PC では CSS で display:none。 */}
-      <nav className="workspace-mobile-tabs" role="tablist" aria-label={t("作業部屋の表示")}>
-        <button
-          type="button"
-          role="tab"
-          className={`workspace-mobile-tab${mobileTab === "people" ? " is-active" : ""}`}
-          aria-selected={mobileTab === "people"}
-          onClick={() => setMobileTab("people")}
-        >
-          {t("みんな")}
-          <span className="workspace-mobile-tab-count">{members.length}</span>
-        </button>
-        <button
-          type="button"
-          role="tab"
-          className={`workspace-mobile-tab${mobileTab === "me" ? " is-active" : ""}`}
-          aria-selected={mobileTab === "me"}
-          onClick={() => setMobileTab("me")}
-        >
-          {t("自分")}
-        </button>
-      </nav>
       <div className="workspace-2d-main">
         <div
           className="workspace-stage"
@@ -1405,10 +1381,94 @@ export function SilentWorkspaceRoom({
             : null}
         </div>
 
-        {/* モバイル「みんな」タブ：在室者を縦カードで一覧。誰が何を
-            しているかを座標配置ではなくリストで即把握できる。タップで
-            既存のプロフィール popover を開く。PC では CSS で非表示。 */}
+        {/* モバイル「みんな」パネル：在室者を縦カードで一覧。
+            Phase 13: 旧 "自分タブ" を廃止し、その中身を上部の
+            "自分の状態ストリップ" として埋め込んだ。誰が何をしているか
+            (リスト) と自分の操作 (集中/休憩切替・今やってること・募集・退出)
+            が 1 画面で完結する。PC では CSS で非表示。 */}
         <div className="workspace-mobile-panel workspace-mobile-people" role="tabpanel" aria-label={t("在室者")}>
+          {/* === 自分の状態ストリップ === */}
+          {isJoined ? (
+            <div className="workspace-me-strip">
+              <div className="workspace-me-strip-status-row">
+                <div className="workspace-me-strip-status-text">
+                  <span
+                    className={`workspace-me-status-label${
+                      isCurrentUserOnBreak ? " is-break" : ""
+                    }`}
+                  >
+                    {isCurrentUserOnBreak ? t("休憩中") : t("集中中")}
+                  </span>
+                  <span className="workspace-me-status-stay">
+                    {joinedAtLabel}〜 {currentStayLabel}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className={`workspace-me-break${isCurrentUserOnBreak ? " is-active" : ""}`}
+                  onClick={() =>
+                    onPresetMessage(isCurrentUserOnBreak ? "集中します" : "休憩します")
+                  }
+                  aria-pressed={isCurrentUserOnBreak}
+                >
+                  {isCurrentUserOnBreak ? t("集中に戻る") : t("休憩する")}
+                </button>
+              </div>
+
+              <label className="workspace-me-strip-task">
+                <input
+                  value={taskValue}
+                  onChange={handleTaskChange}
+                  placeholder={t("今やってること")}
+                  maxLength={48}
+                  aria-label={t("今やってること")}
+                />
+              </label>
+              {showGhostHint ? (
+                <button
+                  type="button"
+                  className="workspace-me-ghost-hint"
+                  onClick={() => onLearningItemRegister?.(trimmedTask)}
+                >
+                  {t("+ 「{task}」を記録に追加", { task: trimmedTask })}
+                </button>
+              ) : null}
+
+              {activeRecruitmentSummary ? (
+                <div className="workspace-me-recruitment" role="status">
+                  <span>
+                    {activeRecruitmentSummary.stateLabel}
+                    {t("（{count}人）", { count: activeRecruitmentSummary.joinedCount })}
+                  </span>
+                  <button type="button" onClick={activeRecruitmentSummary.onCancel}>
+                    {t("取消")}
+                  </button>
+                </div>
+              ) : null}
+
+              <div className="workspace-me-strip-actions">
+                {onOpenRecruitmentModal && !activeRecruitmentSummary ? (
+                  <button
+                    type="button"
+                    className="workspace-me-strip-recruit"
+                    onClick={onOpenRecruitmentModal}
+                    aria-label={t("募集")}
+                    title={t("募集")}
+                  >
+                    <span aria-hidden="true">📣</span> {t("募集")}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="workspace-me-strip-leave"
+                  onClick={onLeave}
+                >
+                  {t("退出する")}
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           <div className="workspace-mobile-panel-head">
             <strong>{roomName}</strong>
             <span>{members.length > 0 ? t("{count}人が作業中", { count: members.length }) : t("まだ誰もいません")}</span>
@@ -1485,105 +1545,7 @@ export function SilentWorkspaceRoom({
           ) : null}
         </div>
 
-        {/* モバイル「自分」タブ：操作をここに一元化。状態切替・今やって
-            ること・定型文・置き手紙・着替え・募集・退出。散らばっていた
-            導線を 1 画面にまとめて迷わないようにする。PC では非表示。 */}
-        <div className="workspace-mobile-panel workspace-mobile-me" role="tabpanel" aria-label={t("自分の操作")}>
-          <div className="workspace-me-status">
-            <div className="workspace-me-status-text">
-              <span className={`workspace-me-status-label${isCurrentUserOnBreak ? " is-break" : ""}`}>
-                {isJoined ? (isCurrentUserOnBreak ? t("休憩中") : t("集中中")) : t("未入室")}
-              </span>
-              <span className="workspace-me-status-stay">
-                {isJoined ? `${joinedAtLabel}〜 ${currentStayLabel}` : roomName}
-              </span>
-            </div>
-            {isJoined ? (
-              <button
-                type="button"
-                className={`workspace-me-break${isCurrentUserOnBreak ? " is-active" : ""}`}
-                onClick={() => onPresetMessage(isCurrentUserOnBreak ? "集中します" : "休憩します")}
-                aria-pressed={isCurrentUserOnBreak}
-              >
-                {isCurrentUserOnBreak ? t("集中に戻る") : t("休憩する")}
-              </button>
-            ) : null}
-          </div>
 
-          <label className="workspace-me-task">
-            <span className="workspace-me-section-label">{t("今やってること")}</span>
-            <input
-              value={taskValue}
-              onChange={handleTaskChange}
-              placeholder={t("今やってること")}
-              maxLength={48}
-              aria-label={t("今やってること")}
-            />
-            {showGhostHint ? (
-              <button
-                type="button"
-                className="workspace-me-ghost-hint"
-                onClick={() => onLearningItemRegister?.(trimmedTask)}
-              >
-                {t("+ 「{task}」を記録に追加", { task: trimmedTask })}
-              </button>
-            ) : null}
-          </label>
-
-          {visiblePresetMessages.length > 0 && isJoined ? (
-            <div className="workspace-me-presets">
-              <span className="workspace-me-section-label">{t("ひとこと送る")}</span>
-              <div className="workspace-me-preset-grid">
-                {visiblePresetMessages.map((message, index) => (
-                  <button
-                    key={index}
-                    type="button"
-                    onClick={() => onPresetMessage(message)}
-                  >
-                    {t(message)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          {isJoined ? (
-            <div className="workspace-me-actions">
-              {canDropFloorNote && onComposeFloorNote ? (
-                <button type="button" onClick={onComposeFloorNote}>
-                  <span aria-hidden="true">✉</span> {t("置き手紙")}
-                </button>
-              ) : null}
-              {onComposeAppearance ? (
-                <button type="button" onClick={onComposeAppearance}>
-                  <span aria-hidden="true">✦</span> {t("着替え")}
-                </button>
-              ) : null}
-              {onOpenRecruitmentModal && !activeRecruitmentSummary ? (
-                <button type="button" onClick={onOpenRecruitmentModal}>
-                  <span aria-hidden="true">📣</span> {t("募集")}
-                </button>
-              ) : null}
-            </div>
-          ) : null}
-
-          {activeRecruitmentSummary ? (
-            <div className="workspace-me-recruitment" role="status">
-              <span>
-                {activeRecruitmentSummary.stateLabel}{t("（{count}人）", { count: activeRecruitmentSummary.joinedCount })}
-              </span>
-              <button type="button" onClick={activeRecruitmentSummary.onCancel}>
-                {t("取消")}
-              </button>
-            </div>
-          ) : null}
-
-          {isJoined ? (
-            <button type="button" className="workspace-me-leave" onClick={onLeave}>
-              {t("退出する")}
-            </button>
-          ) : null}
-        </div>
 
         {/* 下部 HUD：FAB スピードダイヤル + 定型文トレイ。
             通常時は右下に "+" 1 つだけ。タップで「定型文・置き手紙・着替え」

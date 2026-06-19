@@ -37255,11 +37255,129 @@ select:disabled {
    3 つの目的に分割する。PC (>720px) ではタブ UI とパネルを隠し、
    従来の 2D ステージをそのまま使う（mobileTab は "room" 固定）。
    ================================================================= */
+/* Phase 13: タブシステム廃止 (みんな/自分の 2 タブ → 1 画面化)。
+   旧 .workspace-mobile-tabs は JSX から消したがクラス検索の保険として
+   残し常時非表示。 */
 .workspace-mobile-tabs {
   display: none;
 }
 .workspace-mobile-panel {
   display: none;
+}
+
+/* === Phase 13: 自分の状態ストリップ ===
+   モバイルの「みんな」パネル冒頭に表示される、コンパクトな
+   自分の状態 + 操作ブロック。タブを廃止して 1 画面構成にした。 */
+.workspace-me-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 12px 14px 14px;
+  border-radius: 14px;
+  background: var(--surface, #fff);
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
+  box-shadow: 0 6px 18px rgba(var(--ink-rgb), 0.04);
+}
+.workspace-me-strip-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.workspace-me-strip-status-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.workspace-me-strip-status-text .workspace-me-status-label {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--green, #1f6f4a);
+}
+.workspace-me-strip-status-text .workspace-me-status-label.is-break {
+  color: var(--accent-warm, #b56a14);
+}
+.workspace-me-strip-status-text .workspace-me-status-stay {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: rgba(var(--ink-rgb), 0.55);
+  font-variant-numeric: tabular-nums;
+}
+.workspace-me-strip .workspace-me-break {
+  flex: 0 0 auto;
+  padding: 7px 14px;
+  border: 1px solid rgba(var(--ink-rgb), 0.14);
+  border-radius: 999px;
+  background: rgba(var(--ink-rgb), 0.03);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.14s ease, border-color 0.14s ease;
+}
+.workspace-me-strip .workspace-me-break:hover {
+  background: rgba(var(--ink-rgb), 0.06);
+}
+.workspace-me-strip .workspace-me-break.is-active {
+  background: rgba(232, 154, 60, 0.12);
+  border-color: rgba(232, 154, 60, 0.36);
+  color: #b56a14;
+}
+.workspace-me-strip-task {
+  display: block;
+}
+.workspace-me-strip-task input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(var(--ink-rgb), 0.12);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  outline: none;
+  transition: border-color 0.14s ease;
+}
+.workspace-me-strip-task input:focus {
+  border-color: rgba(var(--ink-rgb), 0.35);
+}
+.workspace-me-strip-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.workspace-me-strip-recruit {
+  flex: 1 1 auto;
+  padding: 8px 12px;
+  border: 1px solid rgba(var(--ink-rgb), 0.12);
+  border-radius: 999px;
+  background: rgba(var(--ink-rgb), 0.03);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.14s ease;
+}
+.workspace-me-strip-recruit:hover {
+  background: rgba(var(--ink-rgb), 0.06);
+}
+.workspace-me-strip-leave {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  border: 1px solid rgba(170, 57, 57, 0.22);
+  border-radius: 999px;
+  background: transparent;
+  color: #8a2f2f;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.14s ease;
+}
+.workspace-me-strip-leave:hover {
+  background: rgba(170, 57, 57, 0.08);
 }
 /* モバイルで「みんな/自分」タブのときは body portal の FAB を隠す
    （PC は room 固定なのでこのクラスは付かない）。 */
@@ -37314,14 +37432,12 @@ select:disabled {
     text-align: center;
   }
 
-  /* 「みんな/自分」タブ表示中は 2D ステージだけ隠す。
-     パネルは stage の兄弟なので main は表示のまま。 */
-  .workspace-2d-shell[data-mobile-tab="people"] .workspace-stage,
-  .workspace-2d-shell[data-mobile-tab="me"] .workspace-stage {
+  /* モバイルは「みんな」パネル 1 画面 (mobileTab="people" 固定)。
+     2D ステージは隠して縦リストに切替える。 */
+  .workspace-2d-shell[data-mobile-tab="people"] .workspace-stage {
     display: none;
   }
-  .workspace-2d-shell[data-mobile-tab="people"] .workspace-mobile-people,
-  .workspace-2d-shell[data-mobile-tab="me"] .workspace-mobile-me {
+  .workspace-2d-shell[data-mobile-tab="people"] .workspace-mobile-people {
     display: flex;
     flex-direction: column;
   }
