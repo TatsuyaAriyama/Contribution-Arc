@@ -4786,6 +4786,8 @@ function App() {
   // view in the Team Daily feed. Stores the full report; we look up
   // study/commit data for that date on the fly when rendering.
   const [expandedDailyReport, setExpandedDailyReport] = useState<DailyReport | null>(null);
+  /* 投稿の詳細モーダル。フィードカードの本文をタップで開く。 */
+  const [expandedPost, setExpandedPost] = useState<ContributionPostRecord | null>(null);
   // PC など Web Share(ファイル)非対応環境で「画像で共有」を押したときの
   // プレビューモーダル。生成済み PNG を保存 / クリップボードにコピーできる。
   const [dailySharePreview, setDailySharePreview] = useState<{
@@ -13597,60 +13599,62 @@ function App() {
           </span>
         </button>
 
-        {/* 学習記録 (subject 付き) は Studyplus 風のサブカードで描画:
-            [item.photo サムネ] [subject 見出し + 時間] が gray inset に。
-            それ以外は通常の本文 + meta 表示。
-            ユーザー添付の写真 (post.photo) は別枠で下に置く。 */}
-        {post.subject ? (
-          <div className="log-post-study-inset">
-            {post.itemPhoto ? (
-              <img
-                className="log-post-study-cover"
-                src={post.itemPhoto}
-                alt=""
-                loading="lazy"
-              />
-            ) : (
-              <div
-                className="log-post-study-cover is-empty"
-                style={{ background: post.characterColor || "rgba(0,0,0,0.06)" }}
-                aria-hidden="true"
-              >
-                {post.subject.slice(0, 1)}
+        {/* 本文ブロック: タップで詳細モーダルを開く。アクション (いいね /
+            返信 / 削除) は外側にあるので不用意に発火しない。 */}
+        <button
+          type="button"
+          className="log-post-body-button"
+          onClick={() => setExpandedPost(post)}
+          aria-label={t("投稿の詳細を見る")}
+        >
+          {post.subject ? (
+            <div className="log-post-study-inset">
+              {post.itemPhoto ? (
+                <img
+                  className="log-post-study-cover"
+                  src={post.itemPhoto}
+                  alt=""
+                  loading="lazy"
+                />
+              ) : (
+                <div
+                  className="log-post-study-cover is-empty"
+                  style={{ background: post.characterColor || "rgba(0,0,0,0.06)" }}
+                  aria-hidden="true"
+                >
+                  {post.subject.slice(0, 1)}
+                </div>
+              )}
+              <div className="log-post-study-meta">
+                <strong className="log-post-study-subject">{post.subject}</strong>
+                <span className="log-post-study-time">
+                  {formatStayTime(post.studyMinutes || 0, language)}
+                </span>
               </div>
-            )}
-            <div className="log-post-study-meta">
-              <strong className="log-post-study-subject">{post.subject}</strong>
-              <span className="log-post-study-time">
-                {formatStayTime(post.studyMinutes || 0, language)}
-              </span>
             </div>
-          </div>
-        ) : null}
+          ) : null}
 
-        {/* メモ / 本文。学習記録の場合は subject inset の下に。 */}
-        {post.text && post.text.trim() && post.text.trim() !== post.subject ? (
-          <p>{post.text}</p>
-        ) : null}
+          {post.text && post.text.trim() && post.text.trim() !== post.subject ? (
+            <p>{post.text}</p>
+          ) : null}
 
-        {/* ユーザー添付写真 (任意) は別フレームに。学習項目の cover とは別。 */}
-        {post.photo ? (
-          <img
-            className="log-post-photo"
-            src={post.photo}
-            alt=""
-            loading="lazy"
-          />
-        ) : null}
+          {post.photo ? (
+            <img
+              className="log-post-photo"
+              src={post.photo}
+              alt=""
+              loading="lazy"
+            />
+          ) : null}
 
-        {/* meta は subject inset で時間を表示済みなら省略する */}
-        {hasMeta && !post.subject ? (
-          <div className="log-post-meta">
-            {studyLabel ? <span>{studyLabel}</span> : null}
-            {contributionLabel ? <span>{contributionLabel}</span> : null}
-            {roomLabel ? <span>{roomLabel}</span> : null}
-          </div>
-        ) : null}
+          {hasMeta && !post.subject ? (
+            <div className="log-post-meta">
+              {studyLabel ? <span>{studyLabel}</span> : null}
+              {contributionLabel ? <span>{contributionLabel}</span> : null}
+              {roomLabel ? <span>{roomLabel}</span> : null}
+            </div>
+          ) : null}
+        </button>
 
         <div className="log-post-actions">
           <motion.button
@@ -16754,6 +16758,151 @@ function App() {
                   {t("編集")}
                 </button>
               </div>
+            </section>
+          </div>
+        );
+      })() : null}
+
+      {/* === 投稿の詳細モーダル === */}
+      {expandedPost ? (() => {
+        const post = expandedPost;
+        const isOwn = post.userId === currentUserUid;
+        const replies = postReplies
+          .filter((reply) => reply.postId === post.id)
+          .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        const draftKey = post.id;
+        const replyDraft = replyDrafts[draftKey] || "";
+        return (
+          <div
+            className="post-detail-modal-backdrop"
+            role="presentation"
+            onClick={() => setExpandedPost(null)}
+          >
+            <section
+              className="post-detail-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="post-detail-modal-title"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <header className="post-detail-modal-head">
+                <button
+                  type="button"
+                  className="post-detail-modal-back"
+                  onClick={() => setExpandedPost(null)}
+                  aria-label={t("閉じる")}
+                >
+                  ‹
+                </button>
+                <h2 id="post-detail-modal-title">{t("投稿")}</h2>
+                {isOwn ? (
+                  <button
+                    type="button"
+                    className="post-detail-modal-overflow"
+                    onClick={() => {
+                      handlePostDelete(post);
+                      setExpandedPost(null);
+                    }}
+                    aria-label={t("投稿を削除")}
+                    title={t("削除")}
+                  >
+                    ⋯
+                  </button>
+                ) : (
+                  <span aria-hidden="true" />
+                )}
+              </header>
+
+              <div className="post-detail-modal-body">
+                <div className="post-detail-author">
+                  {(() => {
+                    const look = resolveAuthorAppearance(
+                      post.userId,
+                      post.characterColor,
+                      post.characterShape,
+                    );
+                    return <ProfileCharacterPreview color={look.color} shape={look.shape} />;
+                  })()}
+                  <span>
+                    <strong>{post.username}</strong>
+                    <small>{formatPostTime(post.createdAt)}</small>
+                  </span>
+                </div>
+
+                {post.subject ? (
+                  <div className="log-post-study-inset">
+                    {post.itemPhoto ? (
+                      <img
+                        className="log-post-study-cover"
+                        src={post.itemPhoto}
+                        alt=""
+                      />
+                    ) : (
+                      <div
+                        className="log-post-study-cover is-empty"
+                        style={{ background: post.characterColor || "rgba(0,0,0,0.06)" }}
+                        aria-hidden="true"
+                      >
+                        {post.subject.slice(0, 1)}
+                      </div>
+                    )}
+                    <div className="log-post-study-meta">
+                      <strong className="log-post-study-subject">{post.subject}</strong>
+                      <span className="log-post-study-time">
+                        {formatStayTime(post.studyMinutes || 0, language)}
+                      </span>
+                    </div>
+                  </div>
+                ) : null}
+
+                {post.text && post.text.trim() && post.text.trim() !== post.subject ? (
+                  <p className="post-detail-text">{post.text}</p>
+                ) : null}
+
+                {post.photo ? (
+                  <img className="log-post-photo" src={post.photo} alt="" />
+                ) : null}
+
+                {/* コメント一覧 (全件) */}
+                {replies.length > 0 ? (
+                  <div className="post-detail-replies">
+                    {replies.map((reply) => (
+                      <article key={reply.id} className="post-detail-reply">
+                        <strong>{reply.username}</strong>
+                        <p>{reply.text}</p>
+                        <time dateTime={reply.createdAt}>
+                          {formatPostTime(reply.createdAt)}
+                        </time>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="post-detail-empty">{t("まだ返信はありません。")}</p>
+                )}
+              </div>
+
+              {/* コメント入力 */}
+              <form
+                className="post-detail-reply-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (!replyDraft.trim()) return;
+                  void handlePostReplySubmit(post);
+                }}
+              >
+                <input
+                  value={replyDraft}
+                  onChange={(event) =>
+                    setReplyDrafts((drafts) => ({ ...drafts, [draftKey]: event.target.value }))
+                  }
+                  placeholder={t("コメントを入力")}
+                  maxLength={280}
+                  aria-label={t("コメント")}
+                />
+                <button type="submit" disabled={!replyDraft.trim()}>
+                  {t("送信")}
+                </button>
+              </form>
             </section>
           </div>
         );

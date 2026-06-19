@@ -5313,6 +5313,222 @@
   background: rgba(var(--ink-rgb), 0.04);
 }
 
+/* 本文タップで詳細モーダルを開くための透明ボタン。視覚的には div 同等。 */
+.log-post-body-button {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.log-post-body-button > p {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--ink);
+  line-height: 1.55;
+}
+
+/* ── 投稿詳細モーダル ──────────────────────────────────────── */
+.post-detail-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  background: rgba(0, 0, 0, 0.36);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 0;
+  overflow-y: auto;
+  animation: post-detail-fade-in 0.18s ease-out;
+}
+@keyframes post-detail-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.post-detail-modal {
+  width: 100%;
+  max-width: 640px;
+  min-height: 100%;
+  background: var(--surface, #fff);
+  display: flex;
+  flex-direction: column;
+}
+.post-detail-modal-head {
+  display: grid;
+  grid-template-columns: 36px 1fr 36px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(var(--ink-rgb), 0.08);
+  position: sticky;
+  top: 0;
+  background: var(--surface, #fff);
+  z-index: 2;
+}
+.post-detail-modal-back {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 26px;
+  font-weight: 300;
+  line-height: 1;
+  cursor: pointer;
+}
+.post-detail-modal-head h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink);
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+.post-detail-modal-overflow {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: rgba(var(--ink-rgb), 0.55);
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.post-detail-modal-overflow:hover {
+  color: var(--ink);
+}
+.post-detail-modal-body {
+  padding: 14px 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1 1 auto;
+}
+.post-detail-author {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.post-detail-author .profile-character-preview {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+}
+.post-detail-author > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.post-detail-author strong {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.post-detail-author small {
+  font-size: 11.5px;
+  color: rgba(var(--ink-rgb), 0.55);
+  font-variant-numeric: tabular-nums;
+}
+.post-detail-text {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.post-detail-replies {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid rgba(var(--ink-rgb), 0.06);
+  padding-top: 10px;
+}
+.post-detail-reply {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(var(--ink-rgb), 0.03);
+}
+.post-detail-reply strong {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.post-detail-reply p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+.post-detail-reply time {
+  font-size: 10.5px;
+  color: rgba(var(--ink-rgb), 0.5);
+  font-variant-numeric: tabular-nums;
+}
+.post-detail-empty {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: rgba(var(--ink-rgb), 0.5);
+  text-align: center;
+  padding: 14px 0;
+  border-top: 1px solid rgba(var(--ink-rgb), 0.06);
+}
+.post-detail-reply-form {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px max(14px, env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(var(--ink-rgb), 0.08);
+  background: var(--surface, #fff);
+  position: sticky;
+  bottom: 0;
+}
+.post-detail-reply-form input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1px solid rgba(var(--ink-rgb), 0.14);
+  border-radius: 999px;
+  background: var(--surface, #fff);
+  color: var(--ink);
+  font-size: 14px;
+  outline: none;
+}
+.post-detail-reply-form input:focus {
+  border-color: rgba(var(--ink-rgb), 0.4);
+}
+.post-detail-reply-form button {
+  flex: 0 0 auto;
+  padding: 0 16px;
+  min-height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--surface, #fff);
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.post-detail-reply-form button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* 削除ボタンは目立たせない overflow "⋯" として右端に配置する。 */
 .log-post-overflow {
   margin-left: auto;
