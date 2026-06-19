@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type ChangeEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   renderAngelSvg,
@@ -660,6 +660,28 @@ export function SilentWorkspaceRoom({
   const pomoProgress = 1 - pomoRemaining / pomoTotal;
   const pomoMM = String(Math.floor(pomoRemaining / 60)).padStart(2, "0");
   const pomoSS = String(pomoRemaining % 60).padStart(2, "0");
+
+  /* 部屋名 inline rename (作成者のみ)。window.prompt は browser の
+     URL バー (例: github.io) を表示してしまうので、in-app の input に
+     差し替える。 */
+  const [isEditingRoomName, setIsEditingRoomName] = useState(false);
+  const [roomNameDraft, setRoomNameDraft] = useState("");
+  const handleStartRenameRoom = () => {
+    setRoomNameDraft(roomName);
+    setIsEditingRoomName(true);
+  };
+  const handleSubmitRenameRoom = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const next = roomNameDraft.trim().slice(0, 32);
+    setIsEditingRoomName(false);
+    if (next && next !== roomName && onRenameRoom) {
+      onRenameRoom(next);
+    }
+  };
+  const handleCancelRenameRoom = () => {
+    setIsEditingRoomName(false);
+    setRoomNameDraft("");
+  };
 
   const handleTaskChange = (event: ChangeEvent<HTMLInputElement>) => {
     onTaskChange(event.target.value);
@@ -1472,36 +1494,58 @@ export function SilentWorkspaceRoom({
             自分の状態 / 操作は「自分」タブに分離。 */}
         <div className="workspace-mobile-panel workspace-mobile-people" role="tabpanel" aria-label={t("在室者")}>
           <div className="workspace-mobile-panel-head">
-            <div className="workspace-mobile-panel-head-title">
-              <strong>{roomName}</strong>
-              {canRenameRoom && onRenameRoom ? (
+            {isEditingRoomName && canRenameRoom && onRenameRoom ? (
+              <form
+                className="workspace-room-rename-form"
+                onSubmit={handleSubmitRenameRoom}
+              >
+                <input
+                  autoFocus
+                  value={roomNameDraft}
+                  onChange={(event) => setRoomNameDraft(event.target.value)}
+                  maxLength={32}
+                  aria-label={t("新しい部屋名を入力")}
+                  placeholder={t("新しい部屋名を入力")}
+                />
+                <button type="submit" className="workspace-room-rename-save">
+                  {t("保存")}
+                </button>
                 <button
                   type="button"
-                  className="workspace-room-rename-btn"
-                  onClick={() => {
-                    const next = window.prompt(t("新しい部屋名を入力"), roomName) || "";
-                    const trimmed = next.trim();
-                    if (trimmed && trimmed !== roomName) {
-                      onRenameRoom(trimmed.slice(0, 32));
-                    }
-                  }}
-                  aria-label={t("部屋名を変更")}
-                  title={t("部屋名を変更")}
+                  className="workspace-room-rename-cancel"
+                  onClick={handleCancelRenameRoom}
                 >
-                  <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-                    <path
-                      d="M4 20h4l10-10-4-4L4 16v4Z M14 6l4 4"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                  {t("取消")}
                 </button>
-              ) : null}
-            </div>
-            <span>{members.length > 0 ? t("{count}人が作業中", { count: members.length }) : t("まだ誰もいません")}</span>
+              </form>
+            ) : (
+              <>
+                <div className="workspace-mobile-panel-head-title">
+                  <strong>{roomName}</strong>
+                  {canRenameRoom && onRenameRoom ? (
+                    <button
+                      type="button"
+                      className="workspace-room-rename-btn"
+                      onClick={handleStartRenameRoom}
+                      aria-label={t("部屋名を変更")}
+                      title={t("部屋名を変更")}
+                    >
+                      <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                        <path
+                          d="M4 20h4l10-10-4-4L4 16v4Z M14 6l4 4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+                  ) : null}
+                </div>
+                <span>{members.length > 0 ? t("{count}人が作業中", { count: members.length }) : t("まだ誰もいません")}</span>
+              </>
+            )}
           </div>
           <ul className="workspace-people-list">
             {members.length === 0 ? (
