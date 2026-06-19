@@ -9331,7 +9331,11 @@ function App() {
     skipCooldown?: boolean;
   }) => {
     if (!currentUser) return;
-    if (!isAutoPostEnabled) return;
+    /* auto-post 設定は「作業部屋退室」など暗黙の積み上げ通知を黙らせる
+       ためのもの。skipCooldown=true (= ユーザーが「記録の入力」フォーム
+       から明示保存) のときは、ユーザーが投稿を意図しているとみなして
+       設定を上書きする (報告: 設定 OFF で何度記録しても流れない症状)。 */
+    if (!skipCooldown && !isAutoPostEnabled) return;
     const trimmed = text.trim();
     if (!trimmed) return;
 
