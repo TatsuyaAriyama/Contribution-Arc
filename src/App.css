@@ -37798,6 +37798,12 @@ select:disabled {
     gap: 8px;
     padding: 2px 2px 6px;
   }
+  .workspace-mobile-panel-head-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
   .workspace-mobile-panel-head strong {
     font-size: 15px;
     font-weight: 850;
@@ -37808,6 +37814,26 @@ select:disabled {
     font-weight: 700;
     color: var(--green);
     white-space: nowrap;
+  }
+  /* 部屋名 inline 編集ボタン (作成者のみ表示)。 */
+  .workspace-room-rename-btn {
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(var(--ink-rgb), 0.1);
+    border-radius: 999px;
+    background: transparent;
+    color: rgba(var(--ink-rgb), 0.55);
+    cursor: pointer;
+    transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+  }
+  .workspace-room-rename-btn:hover {
+    background: rgba(var(--ink-rgb), 0.05);
+    color: var(--ink);
+    border-color: rgba(var(--ink-rgb), 0.2);
   }
 
   /* ── みんな（在室者リスト）─────────────────────────── */

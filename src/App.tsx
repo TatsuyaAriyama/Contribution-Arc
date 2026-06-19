@@ -12881,42 +12881,32 @@ function App() {
 
   const handleRoomTitleSave = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
     const nextName = editingRoomName.trim();
-    if (!nextName) {
-      return;
-    }
-
     const targetId = editingRoomId;
     setEditingRoomId("");
     setEditingRoomName("");
+    persistRoomRename(targetId, nextName);
+  };
 
-    const target = customRooms.find((room) => room.id === targetId);
-    if (!target || target.name === nextName) {
-      return;
-    }
+  /* `editingRoom*` state を介さずに直接 rename を発火させる API。
+     モバイル workspace の「名前変更」UI から window.prompt 経由で
+     呼ぶ。デスクトップの inline-form は handleRoomTitleSave 経由のまま。 */
+  const persistRoomRename = (targetRoomId: string, rawName: string) => {
+    const nextName = rawName.trim();
+    if (!nextName || !targetRoomId) return;
+    const target = customRooms.find((room) => room.id === targetRoomId);
+    if (!target || target.name === nextName) return;
     /* save 経路でも作成者チェックを通す (UI を経由しない直接呼び出しの保険)。 */
     if (currentUser && target.createdBy !== currentUser.uid && !isDeveloperAccount) {
       showToast(t("名前を変更できるのは作成者だけです。"), { kind: "error" });
       return;
     }
-
     const nextRoom = normalizeWorkspaceRoom({ ...target, name: nextName });
-    // Register the optimistic rename so the active-room onSnapshot merge
-    // (applyRemoteRooms) doesn't snap the name back to the remote copy that
-    // still has the old value before our write lands. Every other
-    // room-mutating handler does this; rename was the only one missing it,
-    // which is why renames flickered / reverted.
     pendingWorkspaceRoomsRef.current.set(nextRoom.id, nextRoom);
     setCustomRooms((rooms) =>
       rooms.map((room) => (room.id === nextRoom.id ? nextRoom : room)),
     );
-
     if (currentUser) {
-      // Persist immediately rather than leaning on the generic customRooms
-      // write effect — that effect can be suppressed (isApplyingRemoteRoomsRef)
-      // when a presence snapshot interleaves, which would silently drop the
-      // rename.
       void saveWorkspaceRoomToCloud(nextRoom, currentUser.uid)
         .then(() => {
           pendingWorkspaceRoomsRef.current.delete(nextRoom.id);
@@ -21496,6 +21486,11 @@ function App() {
                         .map((item) => ({ id: item.id, name: item.name, color: item.color }))}
                       onLearningItemRegister={(presetName) => openLearningEditorForCreate(presetName)}
                       onOpenRecruitmentModal={handleOpenRecruitmentModal}
+                      canRenameRoom={
+                        Boolean(currentUser) &&
+                        (selectedRoom.createdBy === currentUser?.uid || isDeveloperAccount)
+                      }
+                      onRenameRoom={(nextName) => persistRoomRename(selectedRoom.id, nextName)}
                       activeRecruitmentSummary={(() => {
                         if (!selectedRoom || !currentUser) return null;
                         const mine = workspaceRecruitments.find(

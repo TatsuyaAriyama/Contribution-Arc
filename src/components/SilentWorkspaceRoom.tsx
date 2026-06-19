@@ -184,6 +184,10 @@ type SilentWorkspaceRoomProps = {
   onLearningItemRegister?: (presetName: string) => void;
   onOpenRecruitmentModal?: () => void;
   activeRecruitmentSummary?: ActiveRecruitmentSummary | null;
+  /** 部屋名変更 UI を出すかどうか (作成者 + dev のみ true)。 */
+  canRenameRoom?: boolean;
+  /** 部屋名変更の確定コールバック。trim 済み name を受け取る。 */
+  onRenameRoom?: (newName: string) => void;
   /* Mobile overlay menu actions. The parent owns the rename form +
      delete confirmation; this component just surfaces the buttons
      inside the in-stage overlay so mobile users have a single
@@ -386,6 +390,8 @@ export function SilentWorkspaceRoom({
   onLearningItemRegister,
   onOpenRecruitmentModal,
   activeRecruitmentSummary = null,
+  canRenameRoom = false,
+  onRenameRoom,
   onRoomRename,
   onRoomDelete,
   canDeleteRoom = false,
@@ -1466,7 +1472,35 @@ export function SilentWorkspaceRoom({
             自分の状態 / 操作は「自分」タブに分離。 */}
         <div className="workspace-mobile-panel workspace-mobile-people" role="tabpanel" aria-label={t("在室者")}>
           <div className="workspace-mobile-panel-head">
-            <strong>{roomName}</strong>
+            <div className="workspace-mobile-panel-head-title">
+              <strong>{roomName}</strong>
+              {canRenameRoom && onRenameRoom ? (
+                <button
+                  type="button"
+                  className="workspace-room-rename-btn"
+                  onClick={() => {
+                    const next = window.prompt(t("新しい部屋名を入力"), roomName) || "";
+                    const trimmed = next.trim();
+                    if (trimmed && trimmed !== roomName) {
+                      onRenameRoom(trimmed.slice(0, 32));
+                    }
+                  }}
+                  aria-label={t("部屋名を変更")}
+                  title={t("部屋名を変更")}
+                >
+                  <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                    <path
+                      d="M4 20h4l10-10-4-4L4 16v4Z M14 6l4 4"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              ) : null}
+            </div>
             <span>{members.length > 0 ? t("{count}人が作業中", { count: members.length }) : t("まだ誰もいません")}</span>
           </div>
           <ul className="workspace-people-list">

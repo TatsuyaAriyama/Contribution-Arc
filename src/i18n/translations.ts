@@ -1733,4 +1733,6 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "今やってることに共感する人を呼ぶ": "Invite anyone working on the same thing",
   "同じ作業に共感する人を呼ぶ": "Invite anyone into the same work",
   "入室": "Joined",
+  "新しい部屋名を入力": "Enter a new room name",
+  "部屋名を変更": "Rename room",
 };
