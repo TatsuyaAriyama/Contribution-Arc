@@ -41,6 +41,8 @@ export type ContributionPostRecord = {
   // 積み上げ通知」で、UI 側でバッジを出して通常の手書き投稿と見分けられるよう
   // にする。未設定 (legacy) は manual 扱い。
   postType?: ContributionPostType;
+  /** ライブラリの「記録の入力」フォームから添付された画像 (dataURL)。 */
+  photo?: string;
   syncStatus?: "synced" | "pending";
   syncError?: string;
 };
@@ -123,6 +125,7 @@ export function subscribePostsFromCloud(
           likesCount: readNumber(data.likesCount),
           likedUserIds: readStringList(data.likedUserIds),
           postType: readPostType(data.postType),
+          photo: typeof data.photo === "string" ? data.photo : undefined,
           syncStatus: "synced" as const,
         };
       });

@@ -8872,10 +8872,25 @@ function App() {
     }
     setLearningRecordItemId(null);
     showToast(t("+{time} {name}", { time: formatStudyTimeJa(safeMinutes), name: item.name }), { kind: "success" });
+    /* ユーザーが「記録の入力」フォームから明示的に保存したケースは、
+       時間 + 学習量 + メモ + 画像 をひとつの投稿としてホームのフィードに
+       流す。 quick-tap (+1m/+10m) と違って意図的な行動なので 5 分の
+       cooldown はスキップ。 */
+    const lines: string[] = [];
+    lines.push(`『${item.name}』を ${formatStudyTimeJa(safeMinutes)} 学習しました`);
+    if (values.amount && values.amount > 0) {
+      const unit = values.amountUnit?.trim();
+      lines.push(unit ? `${values.amount} ${unit}` : `${values.amount}`);
+    }
+    if (values.note) {
+      lines.push(values.note);
+    }
     void enqueueAutoPost({
       kind: "auto-study",
-      text: `『${item.name}』を ${formatStudyTimeJa(safeMinutes)} 学習しました`,
+      text: lines.join("\n"),
       studyMinutesValue: safeMinutes,
+      photo: values.photo,
+      skipCooldown: true,
     });
   };
 
@@ -9301,12 +9316,19 @@ function App() {
     studyMinutesValue = 0,
     roomIdValue = "",
     roomNameValue = "",
+    photo,
+    skipCooldown = false,
   }: {
     kind: "auto-study" | "auto-workspace";
     text: string;
     studyMinutesValue?: number;
     roomIdValue?: string;
     roomNameValue?: string;
+    /** 画像 (dataURL)。学習記録フォームで添付されたものをそのまま投稿に流す。 */
+    photo?: string;
+    /** 5 分クールダウンを無視する (= ユーザーが明示的に投稿したいケース)。
+     *  ライブラリの「記録の入力」から保存した場合は意図的な行動なので true。 */
+    skipCooldown?: boolean;
   }) => {
     if (!currentUser) return;
     if (!isAutoPostEnabled) return;
@@ -9314,11 +9336,13 @@ function App() {
     if (!trimmed) return;
 
     const now = Date.now();
-    const lastAt = lastAutoPostAtRef.current[kind] || 0;
-    // 5 分以内に同じ kind を出していたら集約してスキップ。通常の手書き投稿
-    // と違い auto-* はコンパクト 1 行カードで表示されるためタイムラインを
-    // 圧迫しない設計。連続記録で 1 件ずつ流しても許容範囲。
-    if (now - lastAt < 5 * 60 * 1000) return;
+    if (!skipCooldown) {
+      const lastAt = lastAutoPostAtRef.current[kind] || 0;
+      // 5 分以内に同じ kind を出していたら集約してスキップ。通常の手書き投稿
+      // と違い auto-* はコンパクト 1 行カードで表示されるためタイムラインを
+      // 圧迫しない設計。連続記録で 1 件ずつ流しても許容範囲。
+      if (now - lastAt < 5 * 60 * 1000) return;
+    }
     lastAutoPostAtRef.current[kind] = now;
 
     const autoPost: ContributionPostRecord = {
@@ -9339,6 +9363,7 @@ function App() {
       likesCount: 0,
       likedUserIds: [],
       postType: kind,
+      ...(photo ? { photo } : {}),
       syncStatus: "pending",
       syncError: "",
     };
@@ -13558,6 +13583,16 @@ function App() {
         </button>
 
         <p>{post.text}</p>
+
+        {post.photo ? (
+          /* ライブラリ「記録の入力」から添付した画像。tap で拡大は将来 — */
+          <img
+            className="log-post-photo"
+            src={post.photo}
+            alt=""
+            loading="lazy"
+          />
+        ) : null}
 
         {hasMeta ? (
           <div className="log-post-meta">
