@@ -39906,6 +39906,7 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
+  gap: 8px;
 }
 .atelier-chat-title {
   font-size: 12px;
@@ -39918,6 +39919,15 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   font-size: 11px;
   font-weight: 700;
   color: var(--muted);
+  margin-right: auto;
+  margin-left: 6px;
+}
+/* TTL 説明: "12時間で消えます" を hint として head 末尾に。 */
+.atelier-chat-ttl-hint {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: rgba(var(--ink-rgb), 0.45);
+  letter-spacing: 0.03em;
 }
 .atelier-chat-list {
   list-style: none;
@@ -39965,6 +39975,15 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   border-radius: 999px;
   background: var(--ink);
   color: var(--surface);
+}
+/* 投稿時刻 (HH:mm / 昨日 HH:mm)。author 右に subtle に。 */
+.atelier-chat-msg-time {
+  margin-left: auto;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: rgba(var(--ink-rgb), 0.45);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
 }
 .atelier-chat-msg-text {
   font-size: 13px;

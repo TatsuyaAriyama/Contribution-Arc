@@ -37,7 +37,15 @@ export type RoomChatMessage = {
   characterShape?: string;
   text: string;
   createdAt: string;
+  /** ISO 文字列。この時刻を過ぎたメッセージはクライアントで非表示 +
+   *  Firestore TTL ポリシーで物理削除される (要 console 設定)。 */
+  expiresAt?: string;
 };
+
+/** チャットの "その場限り" 時間 — この時間を過ぎたら表示から消す + TTL 対象。
+ *  作業セッション 1 つ分よりやや長くして、午後の会話が夜まで残る程度。 */
+export const CHAT_TTL_HOURS = 12;
+export const CHAT_TTL_MS = CHAT_TTL_HOURS * 60 * 60 * 1000;
 
 const MESSAGES_LIMIT = 50;
 
@@ -69,6 +77,7 @@ export function subscribeRoomChat(
           text: typeof data.text === "string" ? data.text : "",
           createdAt:
             typeof data.createdAt === "string" ? data.createdAt : new Date().toISOString(),
+          expiresAt: typeof data.expiresAt === "string" ? data.expiresAt : undefined,
         };
       });
       // newest → oldest で取得しているので表示用に逆順にする
@@ -80,20 +89,40 @@ export function subscribeRoomChat(
 
 export async function sendRoomChatMessage(
   db: Firestore,
-  message: Omit<RoomChatMessage, "id" | "createdAt"> & { id?: string },
+  message: Omit<RoomChatMessage, "id" | "createdAt" | "expiresAt"> & { id?: string },
 ): Promise<void> {
   const id = message.id ?? (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `m-${Date.now()}`);
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + CHAT_TTL_MS);
   const ref = doc(db, ROOMS_COLLECTION, message.roomId, "chat", id);
   await setDoc(
     ref,
     {
       ...message,
       id,
-      createdAt: new Date().toISOString(),
+      createdAt: now.toISOString(),
+      /* Firestore TTL ポリシーを expiresAt フィールドに設定すると
+         この時刻を過ぎた doc は自動削除される (一度だけ console で
+         有効化が必要)。 設定前でもクライアント側 filter で非表示には
+         なる。 */
+      expiresAt: expiresAt.toISOString(),
       serverCreatedAt: serverTimestamp(),
     },
     { merge: false },
   );
+}
+
+/** メッセージが TTL を過ぎているか判定。expiresAt が無い旧 doc は
+ *  createdAt + CHAT_TTL_MS で算出してフォールバックする。 */
+export function isRoomChatMessageExpired(
+  message: Pick<RoomChatMessage, "createdAt" | "expiresAt">,
+  now: number = Date.now(),
+): boolean {
+  const expire = message.expiresAt
+    ? Date.parse(message.expiresAt)
+    : Date.parse(message.createdAt) + CHAT_TTL_MS;
+  if (!Number.isFinite(expire)) return false;
+  return now >= expire;
 }
 
 /**

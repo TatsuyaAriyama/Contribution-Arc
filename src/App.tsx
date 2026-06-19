@@ -170,6 +170,7 @@ import {
   subscribeRoomChat,
   sendRoomChatMessage,
   containsBlockedWord,
+  isRoomChatMessageExpired,
   type RoomChatMessage,
 } from "./services/roomChat";
 import { ArcPurchasePanel } from "./components/ArcPurchasePanel";
@@ -4469,6 +4470,19 @@ function App() {
      変わるたびに購読を張り替える。最大 50 件を表示。 */
   const [roomChatMessages, setRoomChatMessages] = useState<RoomChatMessage[]>([]);
   const [roomChatError, setRoomChatError] = useState("");
+  /* チャットは "その場限り" を演出するため、CHAT_TTL_HOURS を過ぎた
+     メッセージは表示から落とす。Firestore TTL ポリシーが効くまでの
+     遷移期間でも client filter で見た目を統一する。1 分ごとに tick
+     して expire したものが自然に消えるようにする。 */
+  const [chatExpiryTick, setChatExpiryTick] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setChatExpiryTick(Date.now()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const liveRoomChatMessages = useMemo(
+    () => roomChatMessages.filter((msg) => !isRoomChatMessageExpired(msg, chatExpiryTick)),
+    [roomChatMessages, chatExpiryTick],
+  );
   // Floor notes (置き手紙) + monuments (記念碑) popover state.
   const [floorNotes, setFloorNotes] = useState<FloorNoteRecord[]>([]);
   /* 置き手紙の既読 ID 集合。以前は uid scope の無い "ca:read-floor-notes"
@@ -21361,7 +21375,7 @@ function App() {
                           </article>
                         ) : null
                       }
-                      chatMessages={roomChatMessages}
+                      chatMessages={liveRoomChatMessages}
                       chatError={roomChatError}
                       onChatSend={handleRoomChatSend}
                       floorNotes={floorNoteMarkers}

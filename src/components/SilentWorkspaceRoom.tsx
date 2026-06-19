@@ -262,6 +262,21 @@ function getActorFocusRing(member: RoomActor) {
 /* ルームチャット小型 panel。最大 50 件の messages を表示 + 入力欄。
    - 親 (App.tsx) で NG word チェック + Firestore 書き込み
    - 送信成功 (resolve true) で入力欄をクリア、失敗時は残す */
+/** チャット 1 件の "{author} ・ 今日 20:26" を作る整形関数。
+ *  今日 → "HH:mm"、昨日 → "昨日 HH:mm"、それ以前 → "M/D HH:mm"。
+ *  TTL が 12 時間なので普通は「今日」「昨日」しか出ない。 */
+function formatChatTimestamp(iso: string, now: Date = new Date()): string {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return "";
+  const hm = `${String(at.getHours()).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")}`;
+  const sameDay = at.toDateString() === now.toDateString();
+  if (sameDay) return hm;
+  const y = new Date(now);
+  y.setDate(y.getDate() - 1);
+  if (at.toDateString() === y.toDateString()) return `昨日 ${hm}`;
+  return `${at.getMonth() + 1}/${at.getDate()} ${hm}`;
+}
+
 function RoomChatPanel({
   messages,
   error,
@@ -282,6 +297,14 @@ function RoomChatPanel({
   const { t } = useTranslation();
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
+  /* 1 分ごとに timestamp 表示を再描画する (= "20:26" の分が変わる、
+     12 時間で expire するメッセージが視覚的に消える)。 */
+  const [tickNow, setTickNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setTickNow(Date.now()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const nowDate = new Date(tickNow);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -300,6 +323,9 @@ function RoomChatPanel({
       <header className="atelier-chat-head">
         <span className="atelier-chat-title">{t("チャット")}</span>
         <span className="atelier-chat-count">{messages.length}</span>
+        <span className="atelier-chat-ttl-hint">
+          {t("{n}時間で消えます", { n: 12 })}
+        </span>
       </header>
       <ol className="atelier-chat-list">
         {messages.length === 0 ? (
@@ -307,6 +333,7 @@ function RoomChatPanel({
         ) : (
           messages.map((m) => {
             const isSelf = m.userId === currentUserId;
+            const timeLabel = formatChatTimestamp(m.createdAt, nowDate);
             return (
               <li
                 key={m.id}
@@ -315,6 +342,9 @@ function RoomChatPanel({
                 <span className="atelier-chat-msg-author">
                   {m.userName}
                   {isSelf ? <em>YOU</em> : null}
+                  <time className="atelier-chat-msg-time" dateTime={m.createdAt}>
+                    {timeLabel}
+                  </time>
                 </span>
                 <span className="atelier-chat-msg-text">{m.text}</span>
               </li>
