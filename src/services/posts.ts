@@ -43,6 +43,11 @@ export type ContributionPostRecord = {
   postType?: ContributionPostType;
   /** ライブラリの「記録の入力」フォームから添付された画像 (dataURL)。 */
   photo?: string;
+  /** 学習記録の場合: ライブラリ項目の photo (本の表紙 / 自分で設定したアイコン)。
+   *  Studyplus 風の inset サブカードに表示される thumbnail。 */
+  itemPhoto?: string;
+  /** 学習記録の場合: 対象項目名 (例: "速読英熟語")。inset の見出し。 */
+  subject?: string;
   syncStatus?: "synced" | "pending";
   syncError?: string;
 };
@@ -126,6 +131,8 @@ export function subscribePostsFromCloud(
           likedUserIds: readStringList(data.likedUserIds),
           postType: readPostType(data.postType),
           photo: typeof data.photo === "string" ? data.photo : undefined,
+          itemPhoto: typeof data.itemPhoto === "string" ? data.itemPhoto : undefined,
+          subject: typeof data.subject === "string" ? data.subject : undefined,
           syncStatus: "synced" as const,
         };
       });

@@ -5252,41 +5252,65 @@
 
 /* ライブラリ「記録の入力」から添付された画像。投稿カード内に角丸 + 控えめ
    な影で乗せる。dataURL なので圧縮済み (~1024px / JPEG 0.7)。 */
-/* 画像 + 本文を横並びにする inset カード型レイアウト。
-   1 投稿が画面を占有しないよう、Studyplus 風に sub-card にまとめる。 */
-.log-post-body-row {
+/* Studyplus 風の学習記録サブカード: 学習項目の cover + 名前 + 時間。
+   ホームフィードで 1 投稿が画面を占有しないよう slim な inset に。 */
+.log-post-study-inset {
   display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  padding: 8px 10px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
   border-radius: 10px;
   background: rgba(var(--ink-rgb), 0.04);
 }
-.log-post-body-text {
+.log-post-study-cover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: rgba(var(--ink-rgb), 0.06);
+  color: rgba(var(--ink-rgb), 0.7);
+  font-weight: 800;
+  font-size: 18px;
+}
+.log-post-study-cover.is-empty {
+  color: #fff;
+}
+.log-post-study-meta {
   display: flex;
   flex-direction: column;
   gap: 4px;
   min-width: 0;
   flex: 1 1 auto;
 }
-.log-post-body-text > p {
-  margin: 0;
+.log-post-study-subject {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.log-post-study-time {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
 }
 
+/* ユーザー添付写真 (任意): 学習項目 cover と別の独立フレームに表示。
+   フィード上では幅いっぱい・高さ 160px までに抑える。 */
 .log-post-photo {
   display: block;
-  flex: 0 0 auto;
-  width: 64px;
-  height: 64px;
-  border-radius: 8px;
-  object-fit: cover;
-  background: rgba(var(--ink-rgb), 0.06);
-}
-/* 画像が単独 (body-row の外で旧位置に出るレガシー経路) の場合のフォールバック */
-.log-post-card > img.log-post-photo {
   width: 100%;
-  max-height: 120px;
-  margin-top: 4px;
+  max-height: 160px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: rgba(var(--ink-rgb), 0.04);
 }
 
 .log-post-meta {

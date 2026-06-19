@@ -8873,23 +8873,24 @@ function App() {
     setLearningRecordItemId(null);
     showToast(t("+{time} {name}", { time: formatStudyTimeJa(safeMinutes), name: item.name }), { kind: "success" });
     /* ユーザーが「記録の入力」フォームから明示的に保存したケースは、
-       時間 + 学習量 + メモ + 画像 をひとつの投稿としてホームのフィードに
-       流す。 quick-tap (+1m/+10m) と違って意図的な行動なので 5 分の
-       cooldown はスキップ。 */
-    const lines: string[] = [];
-    lines.push(`『${item.name}』を ${formatStudyTimeJa(safeMinutes)} 学習しました`);
+       時間 + 学習量 + メモ + 画像 を Studyplus 風のサブカード型投稿として
+       ホームのフィードに流す。本文 (text) はユーザーが書いたメモのみに
+       絞り、subject/itemPhoto/studyMinutes でカードを描画する。 */
+    const noteLines: string[] = [];
     if (values.amount && values.amount > 0) {
       const unit = values.amountUnit?.trim();
-      lines.push(unit ? `${values.amount} ${unit}` : `${values.amount}`);
+      noteLines.push(unit ? `${values.amount} ${unit}` : `${values.amount}`);
     }
     if (values.note) {
-      lines.push(values.note);
+      noteLines.push(values.note);
     }
     void enqueueAutoPost({
       kind: "auto-study",
-      text: lines.join("\n"),
+      text: noteLines.join("\n") || `${item.name}`, // 空テキストは弾かれるので最低限 subject を fallback
       studyMinutesValue: safeMinutes,
       photo: values.photo,
+      itemPhoto: item.photo,
+      subject: item.name,
       skipCooldown: true,
     });
   };
@@ -9317,6 +9318,8 @@ function App() {
     roomIdValue = "",
     roomNameValue = "",
     photo,
+    itemPhoto,
+    subject,
     skipCooldown = false,
   }: {
     kind: "auto-study" | "auto-workspace";
@@ -9324,8 +9327,12 @@ function App() {
     studyMinutesValue?: number;
     roomIdValue?: string;
     roomNameValue?: string;
-    /** 画像 (dataURL)。学習記録フォームで添付されたものをそのまま投稿に流す。 */
+    /** ユーザーが学習記録フォームで添付した画像 (dataURL)。 */
     photo?: string;
+    /** ライブラリ項目の photo (本の表紙等)。 inset サムネに使う。 */
+    itemPhoto?: string;
+    /** 対象項目名 (例: "速読英熟語")。 inset の見出しに使う。 */
+    subject?: string;
     /** 5 分クールダウンを無視する (= ユーザーが明示的に投稿したいケース)。
      *  ライブラリの「記録の入力」から保存した場合は意図的な行動なので true。 */
     skipCooldown?: boolean;
@@ -9373,6 +9380,8 @@ function App() {
          デフォルトの "posts" タブに流す。 */
       postType: skipCooldown ? "manual" : kind,
       ...(photo ? { photo } : {}),
+      ...(itemPhoto ? { itemPhoto } : {}),
+      ...(subject ? { subject } : {}),
       syncStatus: "pending",
       syncError: "",
     };
@@ -13591,39 +13600,60 @@ function App() {
           </span>
         </button>
 
-        {/* 画像 (任意) は本文と横並びの小サムネで配置する。1 投稿で
-            画面を占有しないよう Studyplus 風のコンパクト inset に。 */}
-        {post.photo ? (
-          <div className="log-post-body-row">
-            <img
-              className="log-post-photo"
-              src={post.photo}
-              alt=""
-              loading="lazy"
-            />
-            <div className="log-post-body-text">
-              <p>{post.text}</p>
-              {hasMeta ? (
-                <div className="log-post-meta">
-                  {studyLabel ? <span>{studyLabel}</span> : null}
-                  {contributionLabel ? <span>{contributionLabel}</span> : null}
-                  {roomLabel ? <span>{roomLabel}</span> : null}
-                </div>
-              ) : null}
+        {/* 学習記録 (subject 付き) は Studyplus 風のサブカードで描画:
+            [item.photo サムネ] [subject 見出し + 時間] が gray inset に。
+            それ以外は通常の本文 + meta 表示。
+            ユーザー添付の写真 (post.photo) は別枠で下に置く。 */}
+        {post.subject ? (
+          <div className="log-post-study-inset">
+            {post.itemPhoto ? (
+              <img
+                className="log-post-study-cover"
+                src={post.itemPhoto}
+                alt=""
+                loading="lazy"
+              />
+            ) : (
+              <div
+                className="log-post-study-cover is-empty"
+                style={{ background: post.characterColor || "rgba(0,0,0,0.06)" }}
+                aria-hidden="true"
+              >
+                {post.subject.slice(0, 1)}
+              </div>
+            )}
+            <div className="log-post-study-meta">
+              <strong className="log-post-study-subject">{post.subject}</strong>
+              <span className="log-post-study-time">
+                {formatStayTime(post.studyMinutes || 0, language)}
+              </span>
             </div>
           </div>
-        ) : (
-          <>
-            <p>{post.text}</p>
-            {hasMeta ? (
-              <div className="log-post-meta">
-                {studyLabel ? <span>{studyLabel}</span> : null}
-                {contributionLabel ? <span>{contributionLabel}</span> : null}
-                {roomLabel ? <span>{roomLabel}</span> : null}
-              </div>
-            ) : null}
-          </>
-        )}
+        ) : null}
+
+        {/* メモ / 本文。学習記録の場合は subject inset の下に。 */}
+        {post.text && post.text.trim() && post.text.trim() !== post.subject ? (
+          <p>{post.text}</p>
+        ) : null}
+
+        {/* ユーザー添付写真 (任意) は別フレームに。学習項目の cover とは別。 */}
+        {post.photo ? (
+          <img
+            className="log-post-photo"
+            src={post.photo}
+            alt=""
+            loading="lazy"
+          />
+        ) : null}
+
+        {/* meta は subject inset で時間を表示済みなら省略する */}
+        {hasMeta && !post.subject ? (
+          <div className="log-post-meta">
+            {studyLabel ? <span>{studyLabel}</span> : null}
+            {contributionLabel ? <span>{contributionLabel}</span> : null}
+            {roomLabel ? <span>{roomLabel}</span> : null}
+          </div>
+        ) : null}
 
         <div className="log-post-actions">
           <motion.button
