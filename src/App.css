@@ -37432,12 +37432,13 @@ select:disabled {
     text-align: center;
   }
 
-  /* モバイルは「みんな」パネル 1 画面 (mobileTab="people" 固定)。
-     2D ステージは隠して縦リストに切替える。 */
-  .workspace-2d-shell[data-mobile-tab="people"] .workspace-stage {
+  /* 「みんな/自分」タブ表示中は 2D ステージを隠して縦リストに切替える。 */
+  .workspace-2d-shell[data-mobile-tab="people"] .workspace-stage,
+  .workspace-2d-shell[data-mobile-tab="me"] .workspace-stage {
     display: none;
   }
-  .workspace-2d-shell[data-mobile-tab="people"] .workspace-mobile-people {
+  .workspace-2d-shell[data-mobile-tab="people"] .workspace-mobile-people,
+  .workspace-2d-shell[data-mobile-tab="me"] .workspace-mobile-me {
     display: flex;
     flex-direction: column;
   }
