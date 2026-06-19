@@ -596,6 +596,49 @@ export function SilentWorkspaceRoom({
   const currentMember = members.find((member) => member.userId === currentUserId);
   const isCurrentUserOnBreak = currentMember?.status === "on-break";
 
+  /* === Pomodoro mini-timer (自分タブ専用) ===
+     25 分集中 → 5 分休息 を 1 セットとして自動サイクルする視覚的な
+     タイマー。Firestore とは独立した client-side state。タブ間の
+     移動では DOM が消えない (display:none) ので state は維持される。
+     入室していない時は非表示 (= 動かさない)。 */
+  type PomoMode = "work" | "break";
+  const POMO_WORK_SECS = 25 * 60;
+  const POMO_BREAK_SECS = 5 * 60;
+  const [pomoMode, setPomoMode] = useState<PomoMode>("work");
+  const [pomoRemaining, setPomoRemaining] = useState(POMO_WORK_SECS);
+  const [pomoRunning, setPomoRunning] = useState(false);
+  const [pomoSet, setPomoSet] = useState(1);
+  useEffect(() => {
+    if (!pomoRunning) return;
+    const id = window.setInterval(() => {
+      setPomoRemaining((rem) => {
+        if (rem <= 1) {
+          // セット切替
+          setPomoMode((mode) => {
+            const next: PomoMode = mode === "work" ? "break" : "work";
+            setPomoRemaining(next === "work" ? POMO_WORK_SECS : POMO_BREAK_SECS);
+            if (next === "work") setPomoSet((n) => n + 1);
+            return next;
+          });
+          return 0;
+        }
+        return rem - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [pomoRunning]);
+  const handlePomoToggle = () => setPomoRunning((r) => !r);
+  const handlePomoReset = () => {
+    setPomoRunning(false);
+    setPomoMode("work");
+    setPomoRemaining(POMO_WORK_SECS);
+    setPomoSet(1);
+  };
+  const pomoTotal = pomoMode === "work" ? POMO_WORK_SECS : POMO_BREAK_SECS;
+  const pomoProgress = 1 - pomoRemaining / pomoTotal;
+  const pomoMM = String(Math.floor(pomoRemaining / 60)).padStart(2, "0");
+  const pomoSS = String(pomoRemaining % 60).padStart(2, "0");
+
   const handleTaskChange = (event: ChangeEvent<HTMLInputElement>) => {
     onTaskChange(event.target.value);
   };
@@ -1482,27 +1525,37 @@ export function SilentWorkspaceRoom({
           ) : null}
         </div>
 
-        {/* モバイル「自分」タブ (スリム版)：自分の状態 + 操作のみ。
-            旧設計の定型文 / 置き手紙 / 着替えは削除した。
-            残るのは: 集中/休憩トグル, 今やってること, 募集, 退出。 */}
+        {/* モバイル「自分」タブ。大人らしい集中空間として再設計。
+            上から: 在室時計 (display) → 取り組み入力 → ポモドーロ →
+            募集ステータス/CTA → 退出。アイコンは絵文字を使わず line-art SVG。 */}
         <div className="workspace-mobile-panel workspace-mobile-me" role="tabpanel" aria-label={t("自分の操作")}>
-          <div className="workspace-me-status">
-            <div className="workspace-me-status-text">
-              <span
-                className={`workspace-me-status-label${
-                  isCurrentUserOnBreak ? " is-break" : ""
-                }`}
-              >
-                {isJoined ? (isCurrentUserOnBreak ? t("休憩中") : t("集中中")) : t("未入室")}
+          {/* ── 在室時計カード ───────────────────────────────────── */}
+          <div className="me-card me-card--clock" data-state={isCurrentUserOnBreak ? "break" : isJoined ? "focus" : "idle"}>
+            <div className="me-card-head">
+              <span className="me-card-eyebrow">{roomName}</span>
+              <span className={`me-status-pill${isCurrentUserOnBreak ? " is-break" : ""}`}>
+                <span className="me-status-pill-dot" aria-hidden="true" />
+                {isJoined
+                  ? isCurrentUserOnBreak
+                    ? t("休憩中")
+                    : t("集中中")
+                  : t("未入室")}
               </span>
-              <span className="workspace-me-status-stay">
-                {isJoined ? `${joinedAtLabel}〜 ${currentStayLabel}` : roomName}
+            </div>
+            <div className="me-clock-main">
+              <span className="me-clock-time">
+                {isJoined ? currentStayLabel : "—"}
               </span>
+              {isJoined ? (
+                <span className="me-clock-from">
+                  {t("入室")} {joinedAtLabel}
+                </span>
+              ) : null}
             </div>
             {isJoined ? (
               <button
                 type="button"
-                className={`workspace-me-break${isCurrentUserOnBreak ? " is-active" : ""}`}
+                className={`me-pill-button${isCurrentUserOnBreak ? " is-active" : ""}`}
                 onClick={() =>
                   onPresetMessage(isCurrentUserOnBreak ? "集中します" : "休憩します")
                 }
@@ -1513,48 +1566,129 @@ export function SilentWorkspaceRoom({
             ) : null}
           </div>
 
-          <label className="workspace-me-task">
-            <span className="workspace-me-section-label">{t("今やってること")}</span>
-            <input
-              value={taskValue}
-              onChange={handleTaskChange}
-              placeholder={t("今やってること")}
-              maxLength={48}
-              aria-label={t("今やってること")}
-            />
+          {/* ── 取り組みカード ───────────────────────────────────── */}
+          <div className="me-card">
+            <label className="me-field">
+              <span className="me-card-eyebrow">{t("今、取り組んでいること")}</span>
+              <input
+                className="me-field-input"
+                value={taskValue}
+                onChange={handleTaskChange}
+                placeholder={t("例: 認可ロジックの設計")}
+                maxLength={48}
+                aria-label={t("今やってること")}
+              />
+            </label>
             {showGhostHint ? (
               <button
                 type="button"
-                className="workspace-me-ghost-hint"
+                className="me-ghost-hint"
                 onClick={() => onLearningItemRegister?.(trimmedTask)}
               >
-                {t("+ 「{task}」を記録に追加", { task: trimmedTask })}
+                {t("「{task}」を記録に追加", { task: trimmedTask })}
               </button>
             ) : null}
-          </label>
+          </div>
 
+          {/* ── ポモドーロカード ────────────────────────────────── */}
+          {isJoined ? (
+            <div className="me-card me-card--pomo" data-pomo-mode={pomoMode}>
+              <div className="me-card-head">
+                <span className="me-card-eyebrow">{t("ポモドーロ")}</span>
+                <span className="me-pomo-meta">
+                  {pomoMode === "work" ? t("集中フェーズ") : t("休息フェーズ")} · {t("{n}周目", { n: pomoSet })}
+                </span>
+              </div>
+              <div className="me-pomo-main">
+                <svg className="me-pomo-ring" viewBox="0 0 100 100" aria-hidden="true">
+                  <circle
+                    className="me-pomo-ring-track"
+                    cx="50"
+                    cy="50"
+                    r="44"
+                  />
+                  <circle
+                    className="me-pomo-ring-fill"
+                    cx="50"
+                    cy="50"
+                    r="44"
+                    style={{
+                      strokeDasharray: `${2 * Math.PI * 44}`,
+                      strokeDashoffset: `${2 * Math.PI * 44 * (1 - pomoProgress)}`,
+                    }}
+                  />
+                </svg>
+                <div className="me-pomo-time">
+                  <span>{pomoMM}</span>
+                  <span className="me-pomo-time-sep">:</span>
+                  <span>{pomoSS}</span>
+                </div>
+              </div>
+              <div className="me-pomo-actions">
+                <button
+                  type="button"
+                  className="me-pill-button me-pill-button--primary"
+                  onClick={handlePomoToggle}
+                >
+                  {pomoRunning ? t("一時停止") : t("開始")}
+                </button>
+                <button
+                  type="button"
+                  className="me-pill-button me-pill-button--ghost"
+                  onClick={handlePomoReset}
+                >
+                  {t("リセット")}
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {/* ── 募集 ─────────────────────────────────────────────── */}
           {activeRecruitmentSummary ? (
-            <div className="workspace-me-recruitment" role="status">
-              <span>
-                {activeRecruitmentSummary.stateLabel}
-                {t("（{count}人）", { count: activeRecruitmentSummary.joinedCount })}
-              </span>
-              <button type="button" onClick={activeRecruitmentSummary.onCancel}>
+            <div className="me-card me-card--recruit-active" role="status">
+              <div className="me-recruit-head">
+                <span className="me-card-eyebrow">{t("募集中")}</span>
+                <span className="me-recruit-count">
+                  {t("{count}人", { count: activeRecruitmentSummary.joinedCount })}
+                </span>
+              </div>
+              <p className="me-recruit-state">{activeRecruitmentSummary.stateLabel}</p>
+              <button
+                type="button"
+                className="me-pill-button me-pill-button--ghost"
+                onClick={activeRecruitmentSummary.onCancel}
+              >
                 {t("取消")}
               </button>
             </div>
+          ) : isJoined && onOpenRecruitmentModal ? (
+            <button
+              type="button"
+              className="me-card me-card--recruit-cta"
+              onClick={onOpenRecruitmentModal}
+            >
+              <span className="me-recruit-cta-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20">
+                  <path
+                    d="M3 11v2l11-4v8L3 13Zm0 0V13M14 17l4 2M19 6v12"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+              <span className="me-recruit-cta-text">
+                <strong>{t("仲間を募集")}</strong>
+                <small>{t("今やってることに共感する人を呼ぶ")}</small>
+              </span>
+            </button>
           ) : null}
 
-          {isJoined && onOpenRecruitmentModal && !activeRecruitmentSummary ? (
-            <div className="workspace-me-actions">
-              <button type="button" onClick={onOpenRecruitmentModal}>
-                <span aria-hidden="true">📣</span> {t("募集")}
-              </button>
-            </div>
-          ) : null}
-
+          {/* ── 退出 (subtle) ───────────────────────────────────── */}
           {isJoined ? (
-            <button type="button" className="workspace-me-leave" onClick={onLeave}>
+            <button type="button" className="me-leave-ghost" onClick={onLeave}>
               {t("退出する")}
             </button>
           ) : null}

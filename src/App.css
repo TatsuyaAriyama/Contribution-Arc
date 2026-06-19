@@ -37379,6 +37379,317 @@ select:disabled {
 .workspace-me-strip-leave:hover {
   background: rgba(170, 57, 57, 0.08);
 }
+
+/* ═════════════════════════════════════════════════════════════════════
+   Phase 13b: 自分タブの再設計 — 大人らしい集中空間
+   ・ベース: 紙質オフホワイトに細枠 + ほぼ無影
+   ・タイポ: 数字は serif display (Georgia/EB Garamond)
+   ・絵文字なし、アイコンは line-art SVG
+   ・状態は文字色 + 小さい dot で示す
+   ═════════════════════════════════════════════════════════════════════ */
+.workspace-mobile-me {
+  gap: 12px;
+}
+.me-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 18px 16px;
+  background: var(--surface, #fff);
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
+  border-radius: 14px;
+  box-shadow: 0 1px 0 rgba(var(--ink-rgb), 0.02);
+}
+.me-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.me-card-eyebrow {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(var(--ink-rgb), 0.45);
+}
+
+/* —— 在室時計カード —— */
+.me-card--clock {
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(31, 111, 74, 0.05), transparent 60%),
+    var(--surface, #fff);
+}
+.me-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(31, 111, 74, 0.08);
+  color: #1f6f4a;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.me-status-pill.is-break {
+  background: rgba(181, 106, 20, 0.1);
+  color: #b56a14;
+}
+.me-status-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  animation: me-status-pulse 2.4s ease-in-out infinite;
+}
+@keyframes me-status-pulse {
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 1; }
+}
+.me-clock-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0 2px;
+}
+.me-clock-time {
+  font-family: "EB Garamond", "Georgia", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: 56px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.me-clock-from {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgba(var(--ink-rgb), 0.5);
+  font-variant-numeric: tabular-nums;
+}
+
+/* —— 共通ピルボタン —— */
+.me-pill-button {
+  align-self: flex-end;
+  padding: 9px 18px;
+  border: 1px solid rgba(var(--ink-rgb), 0.16);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.14s ease, border-color 0.14s ease, transform 0.08s ease;
+}
+.me-pill-button:hover {
+  background: rgba(var(--ink-rgb), 0.04);
+  border-color: rgba(var(--ink-rgb), 0.3);
+}
+.me-pill-button:active {
+  transform: scale(0.98);
+}
+.me-pill-button.is-active {
+  background: rgba(181, 106, 20, 0.1);
+  border-color: rgba(181, 106, 20, 0.4);
+  color: #b56a14;
+}
+.me-pill-button--primary {
+  background: var(--ink);
+  color: var(--surface, #fff);
+  border-color: var(--ink);
+}
+.me-pill-button--primary:hover {
+  background: rgba(var(--ink-rgb), 0.85);
+  border-color: rgba(var(--ink-rgb), 0.85);
+}
+.me-pill-button--ghost {
+  color: rgba(var(--ink-rgb), 0.65);
+  border-color: rgba(var(--ink-rgb), 0.12);
+}
+
+/* —— 取り組み入力 —— */
+.me-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.me-field-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(var(--ink-rgb), 0.12);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  outline: none;
+  transition: border-color 0.14s ease;
+}
+.me-field-input:focus {
+  border-color: rgba(var(--ink-rgb), 0.45);
+}
+.me-ghost-hint {
+  align-self: flex-start;
+  padding: 6px 12px;
+  border: 1px dashed rgba(var(--ink-rgb), 0.22);
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(var(--ink-rgb), 0.6);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+.me-ghost-hint:hover {
+  background: rgba(var(--ink-rgb), 0.04);
+  color: var(--ink);
+}
+
+/* —— ポモドーロカード —— */
+.me-pomo-meta {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgba(var(--ink-rgb), 0.5);
+}
+.me-pomo-main {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  margin: 4px 0;
+}
+.me-pomo-ring {
+  width: 160px;
+  height: 160px;
+  transform: rotate(-90deg);
+}
+.me-pomo-ring-track {
+  fill: none;
+  stroke: rgba(var(--ink-rgb), 0.08);
+  stroke-width: 4;
+}
+.me-pomo-ring-fill {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 4;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.5s linear, stroke 0.3s ease;
+}
+.me-card--pomo[data-pomo-mode="break"] .me-pomo-ring-fill {
+  stroke: #b56a14;
+}
+.me-pomo-time {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "EB Garamond", "Georgia", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: 42px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.me-pomo-time-sep {
+  margin: 0 4px;
+  opacity: 0.4;
+}
+.me-pomo-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.me-pomo-actions .me-pill-button {
+  align-self: auto;
+}
+
+/* —— 募集 —— */
+.me-card--recruit-cta {
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.14s ease, border-color 0.14s ease;
+}
+.me-card--recruit-cta:hover {
+  background: rgba(var(--ink-rgb), 0.02);
+  border-color: rgba(var(--ink-rgb), 0.18);
+}
+.me-recruit-cta-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(var(--ink-rgb), 0.05);
+  color: var(--ink);
+}
+.me-recruit-cta-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.me-recruit-cta-text strong {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+.me-recruit-cta-text small {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: rgba(var(--ink-rgb), 0.55);
+  letter-spacing: 0.02em;
+}
+.me-card--recruit-active {
+  background: rgba(31, 111, 74, 0.04);
+  border-color: rgba(31, 111, 74, 0.2);
+}
+.me-recruit-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.me-recruit-count {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1f6f4a;
+  font-variant-numeric: tabular-nums;
+}
+.me-recruit-state {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* —— 退出 (subtle ghost) —— */
+.me-leave-ghost {
+  align-self: center;
+  padding: 10px 22px;
+  border: 1px solid rgba(170, 57, 57, 0.2);
+  border-radius: 999px;
+  background: transparent;
+  color: #8a2f2f;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background 0.14s ease;
+  margin-top: 4px;
+}
+.me-leave-ghost:hover {
+  background: rgba(170, 57, 57, 0.06);
+}
 /* モバイルで「みんな/自分」タブのときは body portal の FAB を隠す
    （PC は room 固定なのでこのクラスは付かない）。 */
 .preset-message-panel.is-hidden-by-tab {

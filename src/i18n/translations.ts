@@ -1716,4 +1716,19 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "受け取る or 2倍に挑戦": "Collect, or push for 2×",
   "サウンドをオン": "Sound on",
   "サウンドをオフ": "Sound off",
+
+  // === Phase 13b: 自分タブ再設計 ===
+  "今、取り組んでいること": "What you're working on",
+  "例: 認可ロジックの設計": "e.g. Designing the auth flow",
+  "「{task}」を記録に追加": "Add \"{task}\" to your library",
+  "ポモドーロ": "Pomodoro",
+  "{n}周目": "Round {n}",
+  "集中フェーズ": "Focus phase",
+  "休息フェーズ": "Rest phase",
+  "一時停止": "Pause",
+  "開始": "Start",
+  "リセット": "Reset",
+  "仲間を募集": "Gather others",
+  "今やってることに共感する人を呼ぶ": "Invite anyone working on the same thing",
+  "入室": "Joined",
 };
