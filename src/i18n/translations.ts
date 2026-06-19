@@ -1736,4 +1736,5 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "新しい部屋名を入力": "Enter a new room name",
   "部屋名を変更": "Rename room",
   "{n}時間で消えます": "Disappears in {n}h",
+  "学習を記録": "Log study",
 };

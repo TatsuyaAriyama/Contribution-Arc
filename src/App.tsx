@@ -9366,7 +9366,12 @@ function App() {
       studyMinutes: studyMinutesValue,
       likesCount: 0,
       likedUserIds: [],
-      postType: kind,
+      /* skipCooldown=true は「ライブラリの記録の入力フォームから明示
+         保存」した時に立つ。 home feed の kind フィルタ ("posts" / "study")
+         で auto-study は別タブに隔離されてしまい、明示記録が見えない
+         症状の根本原因だったため、明示保存は postType を "manual" にして
+         デフォルトの "posts" タブに流す。 */
+      postType: skipCooldown ? "manual" : kind,
       ...(photo ? { photo } : {}),
       syncStatus: "pending",
       syncError: "",
@@ -15310,6 +15315,41 @@ function App() {
               />
               <div className="log-composer-footer">
                 <div className="log-compose-shortcuts">
+                  {/* ホームから 1 タップで学習記録フォームを開く動線。
+                      直近に記録した項目があればそれを quick-pick、無ければ
+                      アクティブな最新項目、それも無ければライブラリ画面へ
+                      誘導する。記録すれば本タブの投稿として流れる。 */}
+                  <button
+                    type="button"
+                    className="log-compose-record-cta"
+                    onClick={() => {
+                      const sortedLogs = [...studyLogs].sort(
+                        (a, b) =>
+                          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+                      );
+                      const recentItemId =
+                        sortedLogs.find((log) =>
+                          learningItems.some(
+                            (item) => item.id === log.learningItemId && !item.archived,
+                          ),
+                        )?.learningItemId || "";
+                      const fallbackItem = [...learningItems]
+                        .filter((item) => !item.archived)
+                        .sort(
+                          (a, b) =>
+                            new Date(b.updatedAt || b.createdAt).getTime() -
+                            new Date(a.updatedAt || a.createdAt).getTime(),
+                        )[0];
+                      const targetId = recentItemId || fallbackItem?.id;
+                      if (targetId) {
+                        setLearningRecordItemId(targetId);
+                      } else {
+                        setCurrentView("learning");
+                      }
+                    }}
+                  >
+                    {t("学習を記録")}
+                  </button>
                   <button type="button" onClick={useRoomPresenceAsPost}>
                     {t("Roomから作成")}
                   </button>

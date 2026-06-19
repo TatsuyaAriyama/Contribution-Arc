@@ -4812,6 +4812,20 @@
   gap: 6px;
 }
 
+/* "学習を記録" CTA: home から 1 タップで学習記録モーダルを開く動線。
+   他のショートカットと違って "主役" として目立たせる ─ inverted 配色。 */
+.log-compose-shortcuts .log-compose-record-cta {
+  background: var(--ink, #1B1B2E) !important;
+  color: var(--surface, #fff) !important;
+  border-color: var(--ink, #1B1B2E) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.02em;
+}
+.log-compose-shortcuts .log-compose-record-cta:hover {
+  background: rgba(var(--ink-rgb), 0.85) !important;
+  color: var(--surface, #fff) !important;
+}
+
 .log-composer-footer button,
 .profile-log-head button,
 .room-log-strip button {
