@@ -22811,7 +22811,9 @@ function App() {
               入口に変更。記録はライブラリ側の +1m/+10m… で完結するため、
               中央は仲間と静かに作業する場所への動線にした。在室者がいる
               ときは黒丸の右上に人数バッジを出して「今、誰かが居る」気配を
-              そっと添える。 */}
+              そっと添える。中央アイコンは Contribution Arc 公式 PWA
+              icon-512.png を使い、ブラウザがダウンスケールしてくれる
+              ので 30px 表示でも高画質になる。 */}
           <button
             type="button"
             className={`is-cta${currentView === "workspace" ? " is-active" : ""}${activeMembers.length > 0 ? " has-presence" : ""}`}
@@ -22823,19 +22825,14 @@ function App() {
             }
             aria-pressed={currentView === "workspace"}
           >
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              {/* 作業部屋の CTA はサービスの brand mark (Contribution Arc の
-                  8 ブロック昇順アーク) をそのまま縮約。中央 CTA の黒丸
-                  背景にちょうど映え、ブランド = 居場所 を示す。 */}
-              <rect x="2"    y="16.35" width="2.4" height="2.4" rx="0.6" fill="currentColor" />
-              <rect x="4.7"  y="15.75" width="2.4" height="2.4" rx="0.6" fill="currentColor" />
-              <rect x="7.4"  y="14.7"  width="2.4" height="2.4" rx="0.6" fill="currentColor" />
-              <rect x="10.1" y="13.2"  width="2.4" height="2.4" rx="0.6" fill="currentColor" />
-              <rect x="12.8" y="11.4"  width="2.4" height="2.4" rx="0.6" fill="currentColor" />
-              <rect x="15.5" y="9.45"  width="2.4" height="2.4" rx="0.6" fill="currentColor" />
-              <rect x="18.2" y="7.65"  width="2.4" height="2.4" rx="0.6" fill="currentColor" />
-              <rect x="20.9" y="6.3"   width="2.4" height="2.4" rx="0.6" fill="currentColor" />
-            </svg>
+            <img
+              src={`${import.meta.env.BASE_URL}icon-512.png`}
+              alt=""
+              aria-hidden="true"
+              width="36"
+              height="36"
+              decoding="async"
+            />
             {activeMembers.length > 0 ? (
               <span className="mobile-cta-presence" aria-hidden="true">{activeMembers.length}</span>
             ) : null}

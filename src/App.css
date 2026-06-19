@@ -26168,6 +26168,20 @@ select:focus-visible,
     height: 30px;
     box-shadow: 0 8px 22px rgba(var(--ink-rgb), 0.18);
   }
+  /* 作業部屋 (中央 CTA) は SVG ではなく公式 PWA アイコン (icon-512.png)
+     を <img> で表示する。アイコン自体が背景込みで完成しているので、
+     SVG 用の黒丸背景は当てず、iOS 風の角丸 + 控えめな影だけ載せる。
+     高画質源 (512px) を 36px に downscale するので Retina でも鮮明。 */
+  .mobile-bottom-nav button.is-cta img {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    box-shadow:
+      0 10px 26px rgba(var(--ink-rgb), 0.22),
+      0 1px 0 rgba(255, 255, 255, 0.18) inset;
+    object-fit: cover;
+    display: block;
+  }
 
   .mobile-bottom-nav button.is-cta {
     position: relative;
