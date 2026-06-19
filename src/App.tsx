@@ -15293,7 +15293,13 @@ function App() {
       | { kind: "recruitment"; id: string; createdAt: string; recruitment: WorkspaceRecruitmentRecord };
 
     const allEntries: FeedEntry[] = [
-      ...posts.map((post) => ({ kind: "post" as const, id: post.id, createdAt: post.createdAt, post })),
+      ...posts
+        /* 旧スタイル「学習の記録」カード (postType === "auto-study" の
+           subject 無しレガシー) はもう描画しない。新しい学習記録は
+           postType="manual" + subject で Studyplus 風 inset で出る。
+           subject が付いている新型の auto-study は念のため残す。 */
+        .filter((post) => !(post.postType === "auto-study" && !post.subject))
+        .map((post) => ({ kind: "post" as const, id: post.id, createdAt: post.createdAt, post })),
       ...workspaceRecruitments.map((recruitment) => ({
         kind: "recruitment" as const,
         id: recruitment.id,
