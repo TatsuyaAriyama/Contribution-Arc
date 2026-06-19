@@ -37609,67 +37609,86 @@ select:disabled {
   align-self: auto;
 }
 
-/* —— 募集 —— */
-.me-card--recruit-cta {
-  flex-direction: row;
+/* —— 募集 (タスクカード内 slim row) —— */
+.me-recruit-row {
+  display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(var(--ink-rgb), 0.1);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
   text-align: left;
   cursor: pointer;
   transition: background 0.14s ease, border-color 0.14s ease;
 }
-.me-card--recruit-cta:hover {
-  background: rgba(var(--ink-rgb), 0.02);
+.me-recruit-row:hover {
+  background: rgba(var(--ink-rgb), 0.03);
   border-color: rgba(var(--ink-rgb), 0.18);
 }
-.me-recruit-cta-icon {
+.me-recruit-row-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
   background: rgba(var(--ink-rgb), 0.05);
   color: var(--ink);
 }
-.me-recruit-cta-text {
+.me-recruit-row-text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
-.me-recruit-cta-text strong {
-  font-size: 14px;
+.me-recruit-row-text strong {
+  font-size: 13px;
   font-weight: 800;
-  letter-spacing: 0.02em;
   color: var(--ink);
+  letter-spacing: 0.01em;
 }
-.me-recruit-cta-text small {
-  font-size: 11.5px;
+.me-recruit-row-text small {
+  font-size: 11px;
   font-weight: 600;
   color: rgba(var(--ink-rgb), 0.55);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
 }
-.me-card--recruit-active {
-  background: rgba(31, 111, 74, 0.04);
-  border-color: rgba(31, 111, 74, 0.2);
-}
-.me-recruit-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-}
-.me-recruit-count {
-  font-size: 18px;
-  font-weight: 800;
-  color: #1f6f4a;
-  font-variant-numeric: tabular-nums;
-}
-.me-recruit-state {
-  margin: 0;
-  font-size: 13px;
+.me-recruit-row-arrow {
+  flex: 0 0 auto;
+  font-size: 14px;
   font-weight: 700;
-  color: var(--ink);
+  color: rgba(var(--ink-rgb), 0.4);
+}
+.me-recruit-row--active {
+  background: rgba(31, 111, 74, 0.04);
+  border-color: rgba(31, 111, 74, 0.22);
+}
+.me-recruit-row--active .me-recruit-row-icon {
+  background: rgba(31, 111, 74, 0.1);
+  color: #1f6f4a;
+}
+.me-recruit-row--active .me-recruit-row-text strong {
+  color: #1f6f4a;
+}
+.me-recruit-row-cancel {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  border: 1px solid rgba(var(--ink-rgb), 0.14);
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(var(--ink-rgb), 0.65);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.me-recruit-row-cancel:hover {
+  background: rgba(var(--ink-rgb), 0.04);
 }
 
 /* —— 退出 (subtle ghost) —— */

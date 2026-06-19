@@ -9,6 +9,22 @@ import {
 } from "./CharacterShapeSvg";
 import { useTranslation } from "../i18n/LanguageContext";
 
+/* 自分タブの "仲間を募集" 行に使う 2 人シルエットの line-art アイコン。
+   旧 megaphone SVG はパスが複雑で潰れて見えていたので、意図 (= 人を
+   集める) がより直感的に伝わる小柄なアイコンに差し替え。 */
+function PeopleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="9" cy="8" r="3" />
+        <circle cx="17" cy="9" r="2.4" />
+        <path d="M3 19c0-2.8 2.7-5 6-5s6 2.2 6 5" />
+        <path d="M14 19c0-2 1.5-3.6 3-3.6S20 17 20 19" />
+      </g>
+    </svg>
+  );
+}
+
 export type RoomActivityItem = {
   id: string;
   userId: string;
@@ -1502,7 +1518,7 @@ export function SilentWorkspaceRoom({
                       </span>
                       <span className="workspace-people-meta">
                         <span className={`workspace-people-status${onBreak ? " is-break" : ""}`}>
-                          {onBreak ? t("休憩中") : t("集中中")}
+                          {onBreak ? t("休憩中") : t("集中")}
                         </span>
                         <span className="workspace-people-stay">{getActorStayLabel(member, t)}</span>
                       </span>
@@ -1538,7 +1554,7 @@ export function SilentWorkspaceRoom({
                 {isJoined
                   ? isCurrentUserOnBreak
                     ? t("休憩中")
-                    : t("集中中")
+                    : t("集中")
                   : t("未入室")}
               </span>
             </div>
@@ -1586,6 +1602,46 @@ export function SilentWorkspaceRoom({
                 onClick={() => onLearningItemRegister?.(trimmedTask)}
               >
                 {t("「{task}」を記録に追加", { task: trimmedTask })}
+              </button>
+            ) : null}
+
+            {/* 募集 — タスクカードの中に sub-action として埋める。
+                タスクと意味的に近い (今やってる事に共感する人を呼ぶ) ので
+                ここが自然な置き場所。slim な row 1 行で重さを出さない。 */}
+            {activeRecruitmentSummary ? (
+              <div className="me-recruit-row me-recruit-row--active" role="status">
+                <span className="me-recruit-row-icon" aria-hidden="true">
+                  <PeopleIcon />
+                </span>
+                <span className="me-recruit-row-text">
+                  <strong>{t("募集中")}</strong>
+                  <small>
+                    {activeRecruitmentSummary.stateLabel} ·{" "}
+                    {t("{count}人", { count: activeRecruitmentSummary.joinedCount })}
+                  </small>
+                </span>
+                <button
+                  type="button"
+                  className="me-recruit-row-cancel"
+                  onClick={activeRecruitmentSummary.onCancel}
+                >
+                  {t("取消")}
+                </button>
+              </div>
+            ) : isJoined && onOpenRecruitmentModal ? (
+              <button
+                type="button"
+                className="me-recruit-row"
+                onClick={onOpenRecruitmentModal}
+              >
+                <span className="me-recruit-row-icon" aria-hidden="true">
+                  <PeopleIcon />
+                </span>
+                <span className="me-recruit-row-text">
+                  <strong>{t("仲間を募集")}</strong>
+                  <small>{t("同じ作業に共感する人を呼ぶ")}</small>
+                </span>
+                <span className="me-recruit-row-arrow" aria-hidden="true">→</span>
               </button>
             ) : null}
           </div>
@@ -1641,49 +1697,6 @@ export function SilentWorkspaceRoom({
                 </button>
               </div>
             </div>
-          ) : null}
-
-          {/* ── 募集 ─────────────────────────────────────────────── */}
-          {activeRecruitmentSummary ? (
-            <div className="me-card me-card--recruit-active" role="status">
-              <div className="me-recruit-head">
-                <span className="me-card-eyebrow">{t("募集中")}</span>
-                <span className="me-recruit-count">
-                  {t("{count}人", { count: activeRecruitmentSummary.joinedCount })}
-                </span>
-              </div>
-              <p className="me-recruit-state">{activeRecruitmentSummary.stateLabel}</p>
-              <button
-                type="button"
-                className="me-pill-button me-pill-button--ghost"
-                onClick={activeRecruitmentSummary.onCancel}
-              >
-                {t("取消")}
-              </button>
-            </div>
-          ) : isJoined && onOpenRecruitmentModal ? (
-            <button
-              type="button"
-              className="me-card me-card--recruit-cta"
-              onClick={onOpenRecruitmentModal}
-            >
-              <span className="me-recruit-cta-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="20" height="20">
-                  <path
-                    d="M3 11v2l11-4v8L3 13Zm0 0V13M14 17l4 2M19 6v12"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </span>
-              <span className="me-recruit-cta-text">
-                <strong>{t("仲間を募集")}</strong>
-                <small>{t("今やってることに共感する人を呼ぶ")}</small>
-              </span>
-            </button>
           ) : null}
 
           {/* ── 退出 (subtle) ───────────────────────────────────── */}

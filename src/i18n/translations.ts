@@ -676,6 +676,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "みんな":                     "Everyone",
   "自分":                       "You",
   "集中中":                     "Focused",
+  "集中":                       "Focused",
   "休憩中":                     "On break",
   "今ルームに居るメンバー":     "Members currently in this room",
   "ルームチャット":             "Room chat",
@@ -1730,5 +1731,6 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "リセット": "Reset",
   "仲間を募集": "Gather others",
   "今やってることに共感する人を呼ぶ": "Invite anyone working on the same thing",
+  "同じ作業に共感する人を呼ぶ": "Invite anyone into the same work",
   "入室": "Joined",
 };
