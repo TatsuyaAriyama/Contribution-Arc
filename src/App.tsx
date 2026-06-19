@@ -4735,11 +4735,8 @@ function App() {
   const [isPosting, setIsPosting] = useState(false);
   const [timelineFilter, setTimelineFilter] = useState<"following" | "all">("all");
   /* ホームフィードの種別フィルタ。範囲 (Following/All) と直交する軸。
-     - "posts": 人の声 (手動投稿) + 仲間募集。学習記録の自動投稿は隠す
-     - "study": 学習の記録 (auto-study) だけ
-     デフォルトは "posts"。学習記録がフィードを埋めて「ごちゃつく」
-     のを避け、別軸で見られるようにする。 */
-  const [feedKindFilter, setFeedKindFilter] = useState<"posts" | "study">("posts");
+     旧設計: 「投稿 / 学習の記録」の 2 軸セグメントだったが、全部 1 つの
+     フィードに統合する方針に変更。 setFeedKindFilter は未使用化。 */
   const [workspaceRecruitments, setWorkspaceRecruitments] = useState<WorkspaceRecruitmentRecord[]>([]);
   const [incomingInvites, setIncomingInvites] = useState<WorkspaceInviteRecord[]>([]);
   const [feedNowTick, setFeedNowTick] = useState(() => Date.now());
@@ -13753,27 +13750,18 @@ function App() {
             <small className="log-action-label">{isReplyOpen ? t("閉じる") : t("返信")}</small>
           </button>
 
+          {/* 削除はメインアクションから外し、控えめな "⋯" overflow に移動。
+              本人のみ表示し、タップで window.confirm を経由するので
+              誤発火しにくい。 */}
           {post.userId === currentUserUid ? (
             <button
               type="button"
-              className="log-delete-button"
+              className="log-post-overflow"
               onClick={() => handlePostDelete(post)}
               aria-label={t("投稿を削除")}
-              data-tooltip={t("削除")}
+              title={t("削除")}
             >
-              <span className="log-delete-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="16" height="16">
-                  <path
-                    d="M5 7h14M9 7V5.5c0-.83.67-1.5 1.5-1.5h3c.83 0 1.5.67 1.5 1.5V7M7.5 7l.7 11.6c.05.85.76 1.4 1.6 1.4h4.4c.84 0 1.55-.55 1.6-1.4L16.5 7"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.7"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </span>
-              <small className="log-action-label">{t("削除")}</small>
+              ⋯
             </button>
           ) : null}
         </div>
@@ -15317,14 +15305,9 @@ function App() {
           )
         : allEntries;
 
-    /* 種別フィルタ:
-       - "study": 学習記録 (auto-study) の post のみ
-       - "posts": 学習記録以外 = 手動投稿 + 作業部屋積み上げ (auto-workspace)
-                  + 仲間募集 (recruitment) */
-    const filtered = scopeFiltered.filter((entry) => {
-      const isStudyLog = entry.kind === "post" && entry.post.postType === "auto-study";
-      return feedKindFilter === "study" ? isStudyLog : !isStudyLog;
-    });
+    /* 種別フィルタは廃止 — 全部 1 つのフィードに流す方針に変更。
+       手動 / auto-study / auto-workspace / recruitment 全て表示。 */
+    const filtered = scopeFiltered;
 
     const sorted = filtered.sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
@@ -15411,28 +15394,7 @@ function App() {
           </form>
         </section>
 
-        {/* 種別セグメント: 投稿 (人の声 + 募集) / 学習の記録。
-            学習記録を別軸に分離してフィードのごちゃつきを解消する。 */}
-        <div className="feed-kind-segment" role="tablist" aria-label={t("フィードの種類")}>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={feedKindFilter === "posts"}
-            className={`feed-kind-tab${feedKindFilter === "posts" ? " is-active" : ""}`}
-            onClick={() => setFeedKindFilter("posts")}
-          >
-            {t("投稿")}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={feedKindFilter === "study"}
-            className={`feed-kind-tab${feedKindFilter === "study" ? " is-active" : ""}`}
-            onClick={() => setFeedKindFilter("study")}
-          >
-            {t("学習の記録")}
-          </button>
-        </div>
+        {/* 旧「投稿 / 学習の記録」種別セグメントは廃止。全て 1 つのフィードに統合。 */}
 
         <div className="timeline-filter-tabs" role="tablist" aria-label={t("フィードの表示範囲")}>
           <button
@@ -15487,23 +15449,17 @@ function App() {
           ) : (
             <article className="log-empty-card">
               <p className="card-kicker">
-                {feedKindFilter === "study" ? "Study Logs" : timelineFilter === "following" ? "Following" : "Quiet Progress"}
+                {timelineFilter === "following" ? "Following" : "Quiet Progress"}
               </p>
               <strong>
-                {feedKindFilter === "study"
-                  ? timelineFilter === "following"
-                    ? t("フォロー中の学習記録はまだありません。")
-                    : t("まだ学習記録はありません。")
-                  : timelineFilter === "following"
-                    ? t("フォロー中の投稿はまだありません。")
-                    : t("まだ投稿はありません。")}
+                {timelineFilter === "following"
+                  ? t("フォロー中の投稿はまだありません。")
+                  : t("まだ投稿はありません。")}
               </strong>
               <span>
-                {feedKindFilter === "study"
-                  ? t("ライブラリの各カードから学習時間を記録すると、ここに流れます。")
-                  : timelineFilter === "following"
-                    ? t("気になるエンジニアをフォローすると、ここに学びと作業部屋の募集が流れます。")
-                    : t("今日作っているもの、学んだこと、作業部屋の募集が静かに流れます。")}
+                {timelineFilter === "following"
+                  ? t("気になるエンジニアをフォローすると、ここに学びと作業部屋の募集が流れます。")
+                  : t("今日作っているもの、学んだこと、作業部屋の募集が静かに流れます。")}
               </span>
             </article>
           )}
