@@ -20795,10 +20795,17 @@ function App() {
                     <button
                       type="button"
                       className="profile-nondo-corner-btn"
-                      onClick={() => setIsUserMenuOpen((open) => !open)}
+                      onClick={() => {
+                        /* メニューパネルは sticky site-header の右端に
+                           anchor されるので、プロフィール画面で scroll
+                           されていると視野外で開いて「何も起きない」と
+                           誤認される。一度トップへスクロールしてから
+                           開く。 */
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                        setIsUserMenuOpen(true);
+                      }}
                       aria-label={t("メニュー")}
                       title={t("メニュー")}
-                      aria-expanded={isUserMenuOpen}
                     >
                       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <rect x="4" y="6" width="14" height="14" rx="2.2" />
