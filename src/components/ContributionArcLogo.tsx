@@ -8,25 +8,25 @@ export function ContributionArcLogo() {
         aria-labelledby="contribution-arc-logo-title"
       >
         <title id="contribution-arc-logo-title">Contribution Arc</title>
-        <defs>
-          <linearGradient id="logo-border-gradient" x1="22" y1="134" x2="138" y2="24">
-            <stop offset="0" stopColor="#103d2a" />
-            <stop offset="0.48" stopColor="#1f6f4a" />
-            <stop offset="1" stopColor="#a7c978" />
-          </linearGradient>
-        </defs>
-        <rect className="logo-icon-base" x="10" y="10" width="140" height="140" rx="35" />
-        <rect className="logo-icon-border" x="13" y="13" width="134" height="134" rx="32" />
-        <rect className="logo-icon-inner-border" x="25" y="25" width="110" height="110" rx="27" />
-        <g className="logo-contribution-arc" aria-hidden="true">
-          <rect className="arc-block block-1" x="34" y="109" width="10" height="10" rx="2.4" />
-          <rect className="arc-block block-2" x="46" y="105" width="10" height="10" rx="2.4" />
-          <rect className="arc-block block-3" x="58" y="98" width="10" height="10" rx="2.4" />
-          <rect className="arc-block block-4" x="70" y="88" width="10" height="10" rx="2.4" />
-          <rect className="arc-block block-5" x="82" y="76" width="10" height="10" rx="2.4" />
-          <rect className="arc-block block-6" x="94" y="63" width="10" height="10" rx="2.4" />
-          <rect className="arc-block block-7" x="106" y="51" width="10" height="10" rx="2.4" />
-          <rect className="arc-block block-8" x="118" y="42" width="10" height="10" rx="2.4" />
+        {/* 3 層に積層された緑のひし形 (isometric) のサービスアイコン。
+            上から: 薄緑 → 中緑 → 濃緑。 ふわっと浮いた階層感を出すため
+            各層を縦に少しずつ重ねる。 */}
+        <g aria-hidden="true">
+          {/* Bottom layer (濃緑) */}
+          <polygon
+            points="80,90 138,116 80,142 22,116"
+            fill="#1f4a32"
+          />
+          {/* Middle layer (中緑) */}
+          <polygon
+            points="80,60 138,86 80,112 22,86"
+            fill="#3fa15c"
+          />
+          {/* Top layer (薄緑) */}
+          <polygon
+            points="80,30 138,56 80,82 22,56"
+            fill="#8fcfa7"
+          />
         </g>
       </svg>
     </div>
