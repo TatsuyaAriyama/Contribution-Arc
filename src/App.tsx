@@ -20164,12 +20164,21 @@ function App() {
                         ["--learning-card-color" as string]: item.color,
                         touchAction: dragLibraryItemId ? "none" : undefined,
                       } as CSSProperties}
+                      onContextMenu={(event) => {
+                        /* ブラウザ標準の長押しコンテキストメニュー
+                           (画像をコピー / 共有 / Chrome で開く 等) を抑制。
+                           ドラッグ並べ替えと競合するため。 */
+                        event.preventDefault();
+                      }}
                       onPointerDown={(event) => {
-                        /* インタラクティブ child (button / a) の直接タップは
-                           それ自体のクリック動作を維持。長押しドラッグは
-                           card の余白 / 画像領域でだけ起動する。 */
+                        /* card-trigger ボタン内 (= カードの大部分) でも
+                           長押しドラッグを起動できるようにする。 通常タップ
+                           は 450ms 以内に release されるので button click が
+                           正しく発火。 長押し成立後の click は
+                           dragWasCommittedRef + onClickCapture で抑制。
+                           入力フォーム (input/textarea/a) は対象外。 */
                         const tgt = event.target as HTMLElement;
-                        if (tgt.closest("button, a, input, textarea")) return;
+                        if (tgt.closest("a, input, textarea")) return;
                         longPressStartYRef.current = event.clientY;
                         longPressStartXRef.current = event.clientX;
                         longPressStartIndexRef.current = sortedIndex;

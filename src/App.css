@@ -23488,6 +23488,11 @@
   display: flex;
   flex-direction: column;
   gap: 0;
+  /* 長押しドラッグ並べ替えを load する関係で、ブラウザの画像/テキスト
+     長押し UI (画像をコピー / 共有 / Chrome で開く 等) は全部抑制する。 */
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
   border: 1px solid rgba(var(--ink-rgb), 0.08);
   border-radius: 16px;
   background:
@@ -37581,6 +37586,14 @@ select:disabled {
   height: 100%;
   object-fit: cover;
   display: block;
+  /* 画像長押しの "画像をコピー / ダウンロード / 共有 / Chrome で開く"
+     コンテキストメニューを iOS / Chrome の両方で抑制する。
+     長押しドラッグ並べ替えと競合するため。
+     pointer-events は外す (= 抑制しない) のでドラッグ判定は親 article
+     の onPointerDown に届く。 */
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-select: none;
 }
 /* 写真未設定時の fallback：白紙（プレーンな surface + 薄い枠）。
    余計な装飾はせず、写真を登録するまでは無地のカバーにする。 */
