@@ -23408,18 +23408,73 @@
   position: relative;
 }
 
-/* === 長押し → ドラッグ並べ替えの視覚状態 === */
-.learning-card.is-dragging {
-  opacity: 0.55;
-  transform: scale(1.04);
-  box-shadow:
-    0 12px 32px rgba(var(--ink-rgb), 0.18),
-    0 2px 8px rgba(var(--ink-rgb), 0.08);
-  z-index: 5;
+/* === 長押し → ドラッグ並べ替えの視覚状態 ===
+
+   3 段階の演出で「掴める / 掴んだ / 落とせる」を視覚化する：
+
+   1. is-pressing: pointerdown 直後の前駆フィードバック。
+      400ms かけて「沈み込み → ふわっと浮き上がる」keyframes が走り、
+      長押し成立タイマーと同期する。ユーザーは指の下で進捗を感じる。
+   2. is-dragging: 長押し成立後の浮遊状態。
+      --drag-offset-y で指に追従し、強い影 + 軽い傾き + 拡大で
+      「物理的に持ち上がってる」感を出す。半透明化はしない
+      (透けると "消えかけ" に見えて掴んだ感が無くなる)。
+   3. is-drop-target: 挿入予定位置のスロット表示。 */
+
+.learning-card.is-pressing {
+  animation: learning-card-press 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  z-index: 2;
 }
+@keyframes learning-card-press {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 2px 6px rgba(var(--ink-rgb), 0.05);
+  }
+  18% {
+    transform: scale(0.965);
+    box-shadow: 0 1px 3px rgba(var(--ink-rgb), 0.08);
+  }
+  100% {
+    transform: scale(1.035);
+    box-shadow:
+      0 10px 22px rgba(var(--ink-rgb), 0.16),
+      0 2px 6px rgba(var(--ink-rgb), 0.08);
+  }
+}
+
+.learning-card.is-dragging {
+  /* translateY で指に追従。 scale + 微小な傾きで「持ち上げた」演出。
+     transition は box-shadow だけにして、translate は inline 値で
+     即座に反映 (滑らかに追従させる)。 */
+  transform:
+    translateY(var(--drag-offset-y, 0px))
+    scale(1.06)
+    rotate(-1.4deg);
+  box-shadow:
+    0 24px 44px rgba(var(--ink-rgb), 0.28),
+    0 6px 14px rgba(var(--ink-rgb), 0.14);
+  z-index: 20;
+  opacity: 1;
+  /* transition は drag 開始時の "ふわっと浮き上がる" 補間にだけ使う。
+     translate は handler で連続更新するので transition 対象から除外。 */
+  transition:
+    box-shadow 0.18s ease,
+    scale 0.18s ease,
+    rotate 0.18s ease;
+  /* 影が隣カードに切られないように */
+  will-change: transform;
+}
+
 .learning-card.is-drop-target {
-  outline: 2px dashed rgba(var(--ink-rgb), 0.3);
+  outline: 2px dashed rgba(var(--ink-rgb), 0.32);
   outline-offset: -2px;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--learning-card-color, var(--ink)) 10%, transparent) 0%,
+      color-mix(in srgb, var(--learning-card-color, var(--ink)) 2%, transparent) 100%
+    );
+  transition: outline-color 0.14s ease, background 0.14s ease;
 }
 .learning-card-reorder {
   position: absolute;

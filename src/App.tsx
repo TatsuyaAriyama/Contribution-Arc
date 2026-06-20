@@ -3855,6 +3855,10 @@ function App() {
   const [dragLibraryItemId, setDragLibraryItemId] = useState<string | null>(null);
   const [dragLibraryOverIndex, setDragLibraryOverIndex] = useState<number | null>(null);
   const [dragOffsetY, setDragOffsetY] = useState(0);
+  /* 長押し成立前 (0〜400ms) の前駆フィードバック対象。視覚的に「掴めて
+     いる途中」のヒントを出さないと、ユーザーは何も起きていないように
+     感じる。 */
+  const [pressingLibraryItemId, setPressingLibraryItemId] = useState<string | null>(null);
   const longPressTimerRef = useRef<number | null>(null);
   const longPressStartYRef = useRef(0);
   const longPressStartXRef = useRef(0);
@@ -20157,6 +20161,7 @@ function App() {
                     closeQuickLog();
                   };
                   const isDragging = dragLibraryItemId === item.id;
+                  const isPressing = pressingLibraryItemId === item.id && !isDragging;
                   const isDragTarget =
                     dragLibraryItemId !== null &&
                     dragLibraryItemId !== item.id &&
@@ -20170,7 +20175,9 @@ function App() {
                       }}
                       className={`learning-card${
                         isDragging ? " is-dragging" : ""
-                      }${isDragTarget ? " is-drop-target" : ""}`}
+                      }${isPressing ? " is-pressing" : ""}${
+                        isDragTarget ? " is-drop-target" : ""
+                      }`}
                       style={{
                         ["--learning-card-color" as string]: item.color,
                         ["--drag-offset-y" as string]: isDragging ? `${dragOffsetY}px` : "0px",
@@ -20196,6 +20203,12 @@ function App() {
                           window.clearTimeout(longPressTimerRef.current);
                         }
 
+                        /* 即座に「押されてる」フィードバックを出す。CSS の
+                           is-pressing アニメーションが 400ms かけて「沈み込み
+                           →浮き上がり」を演出し、長押し成立の閾値と一致する
+                           ので、ユーザーは "今ちょうど掴めた" を視覚で掴める。 */
+                        setPressingLibraryItemId(item.id);
+
                         /* document handler (drag 中はカードを跨いで指が
                            動いても確実にイベントが届くようにする)。 */
                         const onDocPointerMove = (e: PointerEvent) => {
@@ -20207,6 +20220,7 @@ function App() {
                             if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
                               window.clearTimeout(longPressTimerRef.current);
                               longPressTimerRef.current = null;
+                              setPressingLibraryItemId(null);
                               cleanupDragListeners();
                             }
                             return;
@@ -20260,6 +20274,7 @@ function App() {
                           setDragLibraryItemId(null);
                           setDragLibraryOverIndex(null);
                           setDragOffsetY(0);
+                          setPressingLibraryItemId(null);
                           cleanupDragListeners();
                         };
 
@@ -20292,10 +20307,11 @@ function App() {
                         /* 400ms 静止で drag モード成立。 */
                         longPressTimerRef.current = window.setTimeout(() => {
                           longPressTimerRef.current = null;
+                          setPressingLibraryItemId(null);
                           setDragLibraryItemId(item.id);
                           setDragLibraryOverIndex(sortedIndex);
                           dragWasCommittedRef.current = true;
-                          if (navigator.vibrate) navigator.vibrate(20);
+                          if (navigator.vibrate) navigator.vibrate([15, 30, 25]);
                           /* 対象 article に pointer capture を当てて、
                              以後の pointer event を確実に受け取らせる。 */
                           try {
