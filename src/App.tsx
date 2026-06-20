@@ -9342,36 +9342,6 @@ function App() {
     setLearningEditorState(null);
   };
 
-  const handleLearningEditorArchiveToggle = () => {
-    if (!learningEditorState || !learningEditorState.itemId) {
-      return;
-    }
-    const existing = learningItems.find((item) => item.id === learningEditorState.itemId);
-    if (!existing) {
-      return;
-    }
-    /* 旧実装: archived flag を立てて一覧から消す = ユーザーから
-       「消えちゃった」と報告された動作。
-       新実装: status を paused ↔ active で切替えるだけ。 一覧には
-       残り、休止中バッジが付く。 archived flag は触らない (互換のため
-       読みはするが書きはしない)。 */
-    const nextStatus: LearningStatus =
-      (existing.status ?? "active") === "paused" ? "active" : "paused";
-    const updated: LearningItem = {
-      ...existing,
-      status: nextStatus,
-      /* 旧 archived の項目はここで自動的に外し、二重表現を解消する。 */
-      archived: false,
-      updatedAt: new Date().toISOString(),
-    };
-    setLearningItems((items) => items.map((item) => (item.id === updated.id ? updated : item)));
-    void saveLearningItemToCloud(db, updated).catch((error) => {
-      console.info("Learning item cloud save skipped.", error);
-    });
-    setIsLearningDeleteConfirming(false);
-    setLearningEditorState(null);
-  };
-
   const handleLearningEditorDelete = () => {
     if (!learningEditorState || !learningEditorState.itemId) {
       return;
@@ -16546,29 +16516,6 @@ function App() {
                 })()}
               </div>
 
-              <div className="learning-status-field">
-                <span>{t("ステータス")}</span>
-                <div className="learning-status-segment" role="group" aria-label={t("ステータス")}>
-                  {(
-                    [
-                      { value: "active" as const, label: t("学習中") },
-                      { value: "done" as const, label: t("達成済み") },
-                      { value: "paused" as const, label: t("休止中") },
-                    ]
-                  ).map((option) => (
-                    <button
-                      type="button"
-                      key={option.value}
-                      className={learningEditorState.status === option.value ? "active" : ""}
-                      onClick={() =>
-                        setLearningEditorState((state) => (state ? { ...state, status: option.value } : state))
-                      }
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
 
               {learningEditorState.category === "book" ? (
                 <div className="learning-book-fields">
@@ -16613,22 +16560,7 @@ function App() {
               </label>
 
               <div className="learning-modal-actions">
-                {learningEditorState.mode === "edit" ? (
-                  <button
-                    type="button"
-                    className="learning-archive-button"
-                    onClick={handleLearningEditorArchiveToggle}
-                  >
-                    {(() => {
-                      const it = learningItems.find((x) => x.id === learningEditorState.itemId);
-                      const isPaused =
-                        it?.status === "paused" || it?.archived === true;
-                      return isPaused ? t("休止を解除") : t("休止する");
-                    })()}
-                  </button>
-                ) : (
-                  <span aria-hidden="true" />
-                )}
+                <span aria-hidden="true" />
                 <div className="learning-modal-actions-right">
                   <button type="button" className="learning-cancel-button" onClick={closeLearningEditor}>
                     {t("キャンセル")}
@@ -16714,7 +16646,6 @@ function App() {
         });
         const lastTs = itemLogs.length ? new Date(itemLogs[0].createdAt).getTime() : undefined;
         const lastLabel = formatLearningLastLogged(lastTs, today.getTime(), dayMsLocal, language);
-        const status = item.status ?? "active";
         const isBook = item.category === "book";
         const hasProgress = isBook && typeof item.totalPages === "number" && item.totalPages > 0;
         const progressPercent = hasProgress
@@ -16740,18 +16671,6 @@ function App() {
                 <div>
                   <p className="card-kicker">{isBook ? t("書籍") : "Learning Item"}</p>
                   <h2 id="learning-detail-title">{item.name}</h2>
-                  <div className="learning-detail-badges">
-                    {status === "done" ? (
-                      <span className="learning-card-status is-done">{t("達成済み")}</span>
-                    ) : status === "paused" ? (
-                      <span className="learning-card-status is-paused">{t("休止中")}</span>
-                    ) : (
-                      <span className="learning-card-status is-active">{t("学習中")}</span>
-                    )}
-                    {item.archived ? (
-                      <span className="learning-card-archived">{t("休止中")}</span>
-                    ) : null}
-                  </div>
                 </div>
                 <button
                   type="button"
@@ -20359,7 +20278,6 @@ function App() {
                   const progressPercent = hasProgress
                     ? Math.min(100, Math.round(((item.currentPages || 0) / (item.totalPages || 1)) * 100))
                     : 0;
-                  const status = item.status ?? "active";
                   const noteText = item.note?.trim() || "";
                   const isPageEditOpen = learningPageEditId === item.id;
                   const lastTs = lastLoggedByItem.get(item.id);
@@ -20492,11 +20410,6 @@ function App() {
                             </span>
                           ) : null}
                           <strong>{item.name}</strong>
-                          {status === "done" ? (
-                            <span className="learning-card-status is-done">{t("達成済み")}</span>
-                          ) : status === "paused" ? (
-                            <span className="learning-card-status is-paused">{t("休止中")}</span>
-                          ) : null}
                         </div>
                         <div className="learning-card-meta">
                           <span>{t("累計")} {totalLabel}</span>
@@ -20507,7 +20420,6 @@ function App() {
                           >
                             {lastLabel}
                           </span>
-                          {item.archived ? <span className="learning-card-archived">{t("休止中")}</span> : null}
                         </div>
                         {sparkline && sparklineMax > 0 ? (
                           <div className="learning-card-spark" aria-hidden="true">
