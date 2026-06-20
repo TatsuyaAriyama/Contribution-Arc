@@ -2434,56 +2434,6 @@ function getNotificationSourceText(type: NotificationItem["type"], t: (k: string
   return t("フレンド申請");
 }
 
-function getStudyLogPostVerb(subject: string, t: (k: string) => string) {
-  const normalizedSubject = subject.toLowerCase();
-  const workKeywords = [
-    "実装",
-    "開発",
-    "作業",
-    "修正",
-    "改善",
-    "対応",
-    "構築",
-    "整理",
-    "設計",
-    "デプロイ",
-    "リファクタ",
-    "build",
-    "develop",
-    "fix",
-    "debug",
-    "deploy",
-    "release",
-    "refactor",
-    "implement",
-  ];
-  const studyKeywords = [
-    "学習",
-    "勉強",
-    "復習",
-    "読書",
-    "講座",
-    "資格",
-    "試験",
-    "silver",
-    "gold",
-    "learn",
-    "study",
-    "course",
-    "book",
-  ];
-
-  if (workKeywords.some((keyword) => normalizedSubject.includes(keyword))) {
-    return t("作業しました");
-  }
-
-  if (studyKeywords.some((keyword) => normalizedSubject.includes(keyword))) {
-    return t("学習しました");
-  }
-
-  return t("学習しました");
-}
-
 // Shared ghost (朧 / Oboro) artwork. Drawn once as an inline SVG so the
 // dark line-art outline + draped tail-curl stay crisp at any size, and
 // 「相 Sou」(morph) のシルエット — 縁取り金線つきの立方体。
