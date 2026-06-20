@@ -38833,15 +38833,12 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   );
 }
 
-/* タイムライン = 机に重ねた / ボードに留めたメモの束。
-   手書き投稿・学習ログ(チケット)・作業ログを同じ scrapbook に揃える。
-   傾きは ±2° まで大胆に散らし、hover / tap で水平に戻して読む。
-   傾きは rotate 個別プロパティに持たせ、舞い込みアニメ（transform）
-   と合成しても喧嘩しないようにする。紙の重なりは強めの多層影で出す。 */
+/* タイムラインの傾きは廃止。 ユーザー要望で水平 (--tilt: 0) に固定。
+   舞い込みアニメや tape 等の装飾は活かしつつ、配置だけまっすぐに。 */
 .home-feed-section
   .home-feed-list
   :is(.log-post-card, .log-post-card-compact, .study-log-card) {
-  --tilt: -1.6deg;
+  --tilt: 0deg;
   position: relative;
   rotate: var(--tilt);
   box-shadow:
@@ -38859,17 +38856,17 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
 .home-feed-section
   .home-feed-list
   :is(.log-post-card, .log-post-card-compact, .study-log-card):nth-child(4n + 2) {
-  --tilt: 1.8deg;
+  --tilt: 0deg;
 }
 .home-feed-section
   .home-feed-list
   :is(.log-post-card, .log-post-card-compact, .study-log-card):nth-child(4n + 3) {
-  --tilt: -1.2deg;
+  --tilt: 0deg;
 }
 .home-feed-section
   .home-feed-list
   :is(.log-post-card, .log-post-card-compact, .study-log-card):nth-child(4n + 4) {
-  --tilt: 2deg;
+  --tilt: 0deg;
 }
 .home-feed-section
   .home-feed-list
@@ -38887,15 +38884,17 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
     0 14px 32px -12px rgba(var(--ink-rgb), 0.24);
 }
 
-/* 舞い込み：下からひらりと落ちて、ふわっと一拍置いて着地する。 */
+/* 舞い込み：下から滑らかに上がってくる素直なフェードイン。
+   元は紙吹雪風に小さく回転していたが、タイムラインの "斜め置き"
+   廃止に合わせて回転成分も削除。 */
 @keyframes feed-flutter-in {
   0% {
     opacity: 0;
-    transform: translateY(26px) rotate(-2.2deg);
+    transform: translateY(26px);
   }
   62% {
     opacity: 1;
-    transform: translateY(-5px) rotate(1deg);
+    transform: translateY(-3px);
   }
   100% {
     opacity: 1;
