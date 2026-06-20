@@ -3809,6 +3809,9 @@ function App() {
     photo: string;
     status: LearningStatus;
   } | null>(null);
+  /* カラーピッカー: 初期状態は閉じて選択中の 1 色だけ表示。
+     タップで全色グリッドを展開、選ぶと閉じる。 */
+  const [learningColorPickerOpen, setLearningColorPickerOpen] = useState(false);
   // タブ UI は撤去したが、フィルタ判定で参照するため "all" 固定で保持。
   const [learningCategoryTab] = useState<"all" | "active" | "done" | "archived">("all");
   const [learningSearchQuery, setLearningSearchQuery] = useState("");
@@ -8937,6 +8940,7 @@ function App() {
 
   const openLearningEditorForCreate = (presetName = "") => {
     setIsLearningDeleteConfirming(false);
+    setLearningColorPickerOpen(false);
     setLearningEditorState({
       mode: "create",
       name: presetName,
@@ -9016,6 +9020,7 @@ function App() {
 
   const openLearningEditorForEdit = (item: LearningItem) => {
     setIsLearningDeleteConfirming(false);
+    setLearningColorPickerOpen(false);
     setLearningEditorState({
       mode: "edit",
       itemId: item.id,
@@ -16471,25 +16476,65 @@ function App() {
                 </span>
               </label>
 
+              {/* カラー: デフォルトは選択中の色だけ表示。タップで全色を展開し、
+                  選択するとまた閉じる。編集画面を開いた瞬間に12色が一斉に
+                  並ぶと圧迫感があるので初期状態は閉じる。 */}
               <div className="learning-color-panel">
                 <span>{t("カラー")}</span>
-                <div className="character-color-grid compact" aria-label={t("カラー")}>
-                  {studyColorOptions.map((color) => (
-                    <button
-                      type="button"
-                      key={color.value}
-                      className={learningEditorState.color === color.value ? "active" : ""}
-                      onClick={() =>
-                        setLearningEditorState((state) => (state ? { ...state, color: color.value } : state))
-                      }
-                      title={color.name}
-                      aria-label={t("{name}を選択", { name: color.name })}
+                {(() => {
+                  const current =
+                    studyColorOptions.find((c) => c.value === learningEditorState.color) ??
+                    studyColorOptions[0];
+                  if (!learningColorPickerOpen) {
+                    return (
+                      <button
+                        type="button"
+                        className="learning-color-current"
+                        onClick={() => setLearningColorPickerOpen(true)}
+                        aria-label={t("カラーを変更")}
+                        aria-expanded="false"
+                      >
+                        <span
+                          className="learning-color-current-swatch"
+                          style={{ background: current.value }}
+                          aria-hidden="true"
+                        />
+                        <span className="learning-color-current-name">{current.name}</span>
+                        <span className="learning-color-current-caret" aria-hidden="true">
+                          ▾
+                        </span>
+                      </button>
+                    );
+                  }
+                  return (
+                    <div
+                      className="character-color-grid compact"
+                      aria-label={t("カラー")}
+                      role="radiogroup"
                     >
-                      <span style={{ background: color.value }} />
-                      <small>{color.name}</small>
-                    </button>
-                  ))}
-                </div>
+                      {studyColorOptions.map((color) => (
+                        <button
+                          type="button"
+                          key={color.value}
+                          className={learningEditorState.color === color.value ? "active" : ""}
+                          onClick={() => {
+                            setLearningEditorState((state) =>
+                              state ? { ...state, color: color.value } : state,
+                            );
+                            setLearningColorPickerOpen(false);
+                          }}
+                          title={color.name}
+                          aria-label={t("{name}を選択", { name: color.name })}
+                          role="radio"
+                          aria-checked={learningEditorState.color === color.value}
+                        >
+                          <span style={{ background: color.value }} />
+                          <small>{color.name}</small>
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="learning-status-field">
