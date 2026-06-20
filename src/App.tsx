@@ -9350,9 +9350,18 @@ function App() {
     if (!existing) {
       return;
     }
+    /* 旧実装: archived flag を立てて一覧から消す = ユーザーから
+       「消えちゃった」と報告された動作。
+       新実装: status を paused ↔ active で切替えるだけ。 一覧には
+       残り、休止中バッジが付く。 archived flag は触らない (互換のため
+       読みはするが書きはしない)。 */
+    const nextStatus: LearningStatus =
+      (existing.status ?? "active") === "paused" ? "active" : "paused";
     const updated: LearningItem = {
       ...existing,
-      archived: !existing.archived,
+      status: nextStatus,
+      /* 旧 archived の項目はここで自動的に外し、二重表現を解消する。 */
+      archived: false,
       updatedAt: new Date().toISOString(),
     };
     setLearningItems((items) => items.map((item) => (item.id === updated.id ? updated : item)));
@@ -16610,9 +16619,12 @@ function App() {
                     className="learning-archive-button"
                     onClick={handleLearningEditorArchiveToggle}
                   >
-                    {learningItems.find((item) => item.id === learningEditorState.itemId)?.archived
-                      ? t("休止を解除")
-                      : t("休止する")}
+                    {(() => {
+                      const it = learningItems.find((x) => x.id === learningEditorState.itemId);
+                      const isPaused =
+                        it?.status === "paused" || it?.archived === true;
+                      return isPaused ? t("休止を解除") : t("休止する");
+                    })()}
                   </button>
                 ) : (
                   <span aria-hidden="true" />
@@ -20207,13 +20219,14 @@ function App() {
             const lowerQuery = learningSearchQuery.trim().toLowerCase();
             const filtered = learningItems
               .filter((item) => {
+                /* "休止" は status バッジで区別する設計に変更したので、
+                   archived flag が立っていてもライブラリ一覧から消さない。
+                   旧 UI で休止 (archived=true) にして消えてしまった項目を
+                   復活させるための互換。 */
                 if (learningCategoryTab === "archived") {
                   return item.archived;
                 }
-                if (item.archived) return false;
                 const status = item.status ?? "active";
-                // "進行中" groups active + paused (i.e. not finished); the
-                // card badge still distinguishes 中断. "完了" is done-only.
                 if (learningCategoryTab === "active") return status !== "done";
                 if (learningCategoryTab === "done") return status === "done";
                 return true;
