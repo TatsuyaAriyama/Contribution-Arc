@@ -14283,7 +14283,14 @@ function App() {
                       <span className="player-level-badge">Lv.{liveLevel}</span>
                     ) : null}
                   </h2>
-                  <small>@{memberProfile.userId}</small>
+                  {/* workspaceMemberToProfile は member.userId (= Firebase Auth
+                      UID) をそのまま userId にしていて、ユーザーが登録した
+                      ハンドル ("ari" 等) と別物が表示されていた。 cloud の
+                      実 profile (workspaceProfiles[uid]) の userId を優先。
+                      未取得 / NPC で取得できないときは @ 行ごと隠す。 */}
+                  {liveProfile?.userId ? (
+                    <small>@{liveProfile.userId}</small>
+                  ) : null}
                   <div className="member-profile-chips">
                     <span className={`member-profile-status-chip ${connectionState}`}>
                       <i />
@@ -14442,7 +14449,10 @@ function App() {
                 <span className="player-level-badge">Lv.{liveLevel}</span>
               ) : null}
             </h3>
-            <small>@{memberProfile.userId}</small>
+            {/* cloud の実 profile userId を優先 (Auth UID 表示を防ぐ)。 */}
+            {liveProfile?.userId ? (
+              <small>@{liveProfile.userId}</small>
+            ) : null}
             <div className="room-member-card-chips">
               <span className={`room-member-card-status ${connectionState}`}>
                 <i />
