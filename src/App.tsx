@@ -3844,18 +3844,29 @@ function App() {
      好きな順に並べ替えられる。モバイル前提だが PC でも有効。
      並べ替え結果は item.order に保存され、sort mode は自動で "custom"
      に切り替わる (= 反映されたことが視覚的に分かる)。 */
-  /* === 長押し → ドラッグ並べ替え ===
-     ・各 learning-card に pointer event を載せ、450ms 静止で drag モード
-     ・drag 中は dragOverIndex を更新して、release で commit
-     ・ref は時間追跡 + start 座標、wasDragged フラグ (button click 抑止) */
+  /* === 長押し → ドラッグ並べ替え (徹底改修版) ===
+     ・各カードの onPointerDown で 400ms 静止判定
+     ・成立したら document に直接 pointermove / pointerup を貼る
+       (= 指がどのカードを跨いでも追跡できる)
+     ・drag 中は touchAction: none + setPointerCapture でブラウザの
+       スクロール介入を遮断
+     ・指の Y delta を CSS 変数で渡してドラッグ中カードを実際に動かす
+     ・drop index は全カードの中点との比較で連続的に更新 */
   const [dragLibraryItemId, setDragLibraryItemId] = useState<string | null>(null);
   const [dragLibraryOverIndex, setDragLibraryOverIndex] = useState<number | null>(null);
+  const [dragOffsetY, setDragOffsetY] = useState(0);
   const longPressTimerRef = useRef<number | null>(null);
   const longPressStartYRef = useRef(0);
   const longPressStartXRef = useRef(0);
   const longPressStartIndexRef = useRef(0);
   const dragWasCommittedRef = useRef(false);
   const cardRectsRef = useRef<Map<string, HTMLElement>>(new Map());
+  /* drag 中の最新 sorted 順を保持する ref。 commit は callback 経由なので
+     クロージャ古値を避けるため。 */
+  const dragSortedRef = useRef<LearningItem[]>([]);
+  /* document に貼る handler 参照を覚えて detach する。 */
+  const dragMoveHandlerRef = useRef<((e: PointerEvent) => void) | null>(null);
+  const dragUpHandlerRef = useRef<((e: PointerEvent) => void) | null>(null);
   // バーコード(ISBN)スキャンで本を追加するモーダルの開閉。
   const [isBarcodeScanOpen, setIsBarcodeScanOpen] = useState(false);
   // 「記録の入力」フォーム(時間/量/メモ/画像)の対象 learning item id。
@@ -20162,96 +20173,140 @@ function App() {
                       }${isDragTarget ? " is-drop-target" : ""}`}
                       style={{
                         ["--learning-card-color" as string]: item.color,
+                        ["--drag-offset-y" as string]: isDragging ? `${dragOffsetY}px` : "0px",
                         touchAction: dragLibraryItemId ? "none" : undefined,
                       } as CSSProperties}
                       onContextMenu={(event) => {
-                        /* ブラウザ標準の長押しコンテキストメニュー
-                           (画像をコピー / 共有 / Chrome で開く 等) を抑制。
-                           ドラッグ並べ替えと競合するため。 */
                         event.preventDefault();
                       }}
                       onPointerDown={(event) => {
-                        /* card-trigger ボタン内 (= カードの大部分) でも
-                           長押しドラッグを起動できるようにする。 通常タップ
-                           は 450ms 以内に release されるので button click が
-                           正しく発火。 長押し成立後の click は
-                           dragWasCommittedRef + onClickCapture で抑制。
-                           入力フォーム (input/textarea/a) は対象外。 */
+                        /* 入力フォーム / リンクは drag 対象外 (タップ動作を維持)。 */
                         const tgt = event.target as HTMLElement;
                         if (tgt.closest("a, input, textarea")) return;
+                        /* マウスの場合は左クリックのみ */
+                        if (event.pointerType === "mouse" && event.button !== 0) return;
+
                         longPressStartYRef.current = event.clientY;
                         longPressStartXRef.current = event.clientX;
                         longPressStartIndexRef.current = sortedIndex;
                         dragWasCommittedRef.current = false;
+                        dragSortedRef.current = sorted;
+
                         if (longPressTimerRef.current) {
                           window.clearTimeout(longPressTimerRef.current);
                         }
-                        longPressTimerRef.current = window.setTimeout(() => {
-                          setDragLibraryItemId(item.id);
-                          setDragLibraryOverIndex(sortedIndex);
-                          dragWasCommittedRef.current = true;
-                          if (navigator.vibrate) navigator.vibrate(20);
-                        }, 450);
-                      }}
-                      onPointerMove={(event) => {
-                        /* 長押し待機中: 8px 以上動いたら scroll とみなして
-                           タイマーをキャンセル。 */
-                        if (longPressTimerRef.current && !dragLibraryItemId) {
-                          const dx = event.clientX - longPressStartXRef.current;
-                          const dy = event.clientY - longPressStartYRef.current;
-                          if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
-                            window.clearTimeout(longPressTimerRef.current);
-                            longPressTimerRef.current = null;
+
+                        /* document handler (drag 中はカードを跨いで指が
+                           動いても確実にイベントが届くようにする)。 */
+                        const onDocPointerMove = (e: PointerEvent) => {
+                          /* 長押し成立前: 8px 動いたら scroll とみなして
+                             タイマーをキャンセル。 */
+                          if (longPressTimerRef.current) {
+                            const dx = e.clientX - longPressStartXRef.current;
+                            const dy = e.clientY - longPressStartYRef.current;
+                            if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+                              window.clearTimeout(longPressTimerRef.current);
+                              longPressTimerRef.current = null;
+                              cleanupDragListeners();
+                            }
+                            return;
                           }
-                          return;
-                        }
-                        /* ドラッグ中: 指 Y に対して挿入位置を計算。
-                           全カードの bounding rect の中点と比較。 */
-                        if (dragLibraryItemId) {
-                          const clientY = event.clientY;
-                          let newIndex = sorted.length - 1;
-                          for (let i = 0; i < sorted.length; i++) {
-                            const el = cardRectsRef.current.get(sorted[i].id);
+                          /* drag 中: Y delta を CSS 変数に反映してカードを
+                             指に追従させる + 挿入位置を計算。 */
+                          const dy = e.clientY - longPressStartYRef.current;
+                          setDragOffsetY(dy);
+                          /* preventDefault で iOS の elastic scroll 等を遮断 */
+                          if (e.cancelable) e.preventDefault();
+
+                          const live = dragSortedRef.current;
+                          let newIndex = live.length - 1;
+                          for (let i = 0; i < live.length; i++) {
+                            const el = cardRectsRef.current.get(live[i].id);
                             if (!el) continue;
                             const rect = el.getBoundingClientRect();
                             const mid = rect.top + rect.height / 2;
-                            if (clientY < mid) {
+                            if (e.clientY < mid) {
                               newIndex = i;
                               break;
                             }
                           }
-                          if (newIndex !== dragLibraryOverIndex) {
-                            setDragLibraryOverIndex(newIndex);
+                          setDragLibraryOverIndex(newIndex);
+                        };
+
+                        const onDocPointerUp = (e: PointerEvent) => {
+                          if (longPressTimerRef.current) {
+                            window.clearTimeout(longPressTimerRef.current);
+                            longPressTimerRef.current = null;
                           }
+                          /* drag が成立していたら commit。 */
+                          const live = dragSortedRef.current;
+                          const dropIdx = (() => {
+                            let idx = live.length - 1;
+                            for (let i = 0; i < live.length; i++) {
+                              const el = cardRectsRef.current.get(live[i].id);
+                              if (!el) continue;
+                              const rect = el.getBoundingClientRect();
+                              const mid = rect.top + rect.height / 2;
+                              if (e.clientY < mid) {
+                                idx = i;
+                                break;
+                              }
+                            }
+                            return idx;
+                          })();
+                          if (dragWasCommittedRef.current && dropIdx !== longPressStartIndexRef.current) {
+                            commitLearningDragReorder(live, item.id, dropIdx);
+                          }
+                          setDragLibraryItemId(null);
+                          setDragLibraryOverIndex(null);
+                          setDragOffsetY(0);
+                          cleanupDragListeners();
+                        };
+
+                        const cleanupDragListeners = () => {
+                          if (dragMoveHandlerRef.current) {
+                            document.removeEventListener("pointermove", dragMoveHandlerRef.current);
+                            dragMoveHandlerRef.current = null;
+                          }
+                          if (dragUpHandlerRef.current) {
+                            document.removeEventListener("pointerup", dragUpHandlerRef.current);
+                            document.removeEventListener("pointercancel", dragUpHandlerRef.current);
+                            dragUpHandlerRef.current = null;
+                          }
+                        };
+
+                        /* 古い handler を片付けてから登録。重複防止。 */
+                        if (dragMoveHandlerRef.current) {
+                          document.removeEventListener("pointermove", dragMoveHandlerRef.current);
                         }
-                      }}
-                      onPointerUp={() => {
-                        if (longPressTimerRef.current) {
-                          window.clearTimeout(longPressTimerRef.current);
+                        if (dragUpHandlerRef.current) {
+                          document.removeEventListener("pointerup", dragUpHandlerRef.current);
+                          document.removeEventListener("pointercancel", dragUpHandlerRef.current);
+                        }
+                        dragMoveHandlerRef.current = onDocPointerMove;
+                        dragUpHandlerRef.current = onDocPointerUp;
+                        document.addEventListener("pointermove", onDocPointerMove, { passive: false });
+                        document.addEventListener("pointerup", onDocPointerUp);
+                        document.addEventListener("pointercancel", onDocPointerUp);
+
+                        /* 400ms 静止で drag モード成立。 */
+                        longPressTimerRef.current = window.setTimeout(() => {
                           longPressTimerRef.current = null;
-                        }
-                        if (dragLibraryItemId && dragLibraryOverIndex !== null) {
-                          commitLearningDragReorder(
-                            sorted,
-                            dragLibraryItemId,
-                            dragLibraryOverIndex,
-                          );
-                        }
-                        setDragLibraryItemId(null);
-                        setDragLibraryOverIndex(null);
-                      }}
-                      onPointerCancel={() => {
-                        if (longPressTimerRef.current) {
-                          window.clearTimeout(longPressTimerRef.current);
-                          longPressTimerRef.current = null;
-                        }
-                        setDragLibraryItemId(null);
-                        setDragLibraryOverIndex(null);
+                          setDragLibraryItemId(item.id);
+                          setDragLibraryOverIndex(sortedIndex);
+                          dragWasCommittedRef.current = true;
+                          if (navigator.vibrate) navigator.vibrate(20);
+                          /* 対象 article に pointer capture を当てて、
+                             以後の pointer event を確実に受け取らせる。 */
+                          try {
+                            (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+                          } catch {
+                            /* iOS Safari 等で稀に失敗するが致命的でない */
+                          }
+                        }, 400);
                       }}
                       onClickCapture={(event) => {
-                        /* ドラッグが成立した直後の click を抑止
-                           (PC マウスで release 時に発火する click を
-                           card-trigger に流さない)。 */
+                        /* drag 成立後の release で発火する click を抑止 */
                         if (dragWasCommittedRef.current) {
                           dragWasCommittedRef.current = false;
                           event.stopPropagation();
