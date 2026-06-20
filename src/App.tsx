@@ -13601,7 +13601,25 @@ function App() {
         <button
           type="button"
           className="log-post-body-button"
-          onClick={() => setExpandedPost(post)}
+          /* スクロール中の release が click と誤判定されて詳細モーダルが
+             開いてしまい "途中で止まる" と認識されていた。 pointer の
+             移動量を見て、ほぼ移動していない時だけ真のタップとして発火。 */
+          onPointerDown={(event) => {
+            (event.currentTarget as HTMLButtonElement & { _ptr?: { x: number; y: number } })._ptr =
+              { x: event.clientX, y: event.clientY };
+          }}
+          onPointerUp={(event) => {
+            const target = event.currentTarget as HTMLButtonElement & {
+              _ptr?: { x: number; y: number };
+            };
+            const start = target._ptr;
+            target._ptr = undefined;
+            if (!start) return;
+            const dx = event.clientX - start.x;
+            const dy = event.clientY - start.y;
+            if (Math.sqrt(dx * dx + dy * dy) > 10) return;
+            setExpandedPost(post);
+          }}
           aria-label={t("投稿の詳細を見る")}
         >
           {post.subject ? (
