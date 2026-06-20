@@ -10257,23 +10257,8 @@ function App() {
     setCurrentView("profile");
   };
 
-  const useLatestStudyLogAsPost = () => {
-    const latestLog = [...studyLogs]
-      .filter((log) => !log.id.startsWith("seed-"))
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-
-    if (!latestLog) {
-      setPostDraft(t("今日の積み上げを静かに記録中。"));
-      return;
-    }
-
-    setPostDraft(t("{subject}を{duration}{verb}。", { subject: latestLog.subject, duration: formatStudyTimeJa(latestLog.minutes), verb: getStudyLogPostVerb(latestLog.subject, t) }));
-  };
-
-  const useRoomPresenceAsPost = () => {
-    const currentPostRoom = activeRoom || selectedRoom;
-    setPostDraft(t("{room}で{building}を進めています。", { room: currentPostRoom?.name || t("作業部屋"), building: currentBuilding }));
-  };
+  /* 旧 quick-fill ヘルパー (useLatestStudyLogAsPost / useRoomPresenceAsPost)
+     は対応する composer shortcut ボタンと一緒に撤去。 */
 
   const handleSettingsOpen = () => {
     setDraftUserName(playerName);
@@ -15376,49 +15361,8 @@ function App() {
                 rows={1}
               />
               <div className="log-composer-footer">
-                <div className="log-compose-shortcuts">
-                  {/* ホームから 1 タップで学習記録フォームを開く動線。
-                      直近に記録した項目があればそれを quick-pick、無ければ
-                      アクティブな最新項目、それも無ければライブラリ画面へ
-                      誘導する。記録すれば本タブの投稿として流れる。 */}
-                  <button
-                    type="button"
-                    className="log-compose-record-cta"
-                    onClick={() => {
-                      const sortedLogs = [...studyLogs].sort(
-                        (a, b) =>
-                          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-                      );
-                      const recentItemId =
-                        sortedLogs.find((log) =>
-                          learningItems.some(
-                            (item) => item.id === log.learningItemId && !item.archived,
-                          ),
-                        )?.learningItemId || "";
-                      const fallbackItem = [...learningItems]
-                        .filter((item) => !item.archived)
-                        .sort(
-                          (a, b) =>
-                            new Date(b.updatedAt || b.createdAt).getTime() -
-                            new Date(a.updatedAt || a.createdAt).getTime(),
-                        )[0];
-                      const targetId = recentItemId || fallbackItem?.id;
-                      if (targetId) {
-                        setLearningRecordItemId(targetId);
-                      } else {
-                        setCurrentView("learning");
-                      }
-                    }}
-                  >
-                    {t("学習を記録")}
-                  </button>
-                  <button type="button" onClick={useRoomPresenceAsPost}>
-                    {t("Roomから作成")}
-                  </button>
-                  <button type="button" onClick={useLatestStudyLogAsPost}>
-                    {t("学習ログから作成")}
-                  </button>
-                </div>
+                {/* 旧 shortcuts (学習を記録 / Roomから作成 / 学習ログから作成)
+                    はユーザー要望で撤去。投稿は自由入力 + 「投稿」ボタンのみで完結。 */}
                 <CharCountRing value={postDraft.length} max={280} />
                 <button type="submit" disabled={isPosting || !postDraft.trim()}>
                   {isPosting ? t("Posting") : t("投稿")}
@@ -20651,14 +20595,6 @@ function App() {
                   rows={4}
                 />
                 <div className="log-composer-footer">
-                  <div className="log-compose-shortcuts">
-                    <button type="button" onClick={useRoomPresenceAsPost}>
-                      {t("Roomから作成")}
-                    </button>
-                    <button type="button" onClick={useLatestStudyLogAsPost}>
-                      {t("学習ログから作成")}
-                    </button>
-                  </div>
                   <span>{postDraft.length}/280</span>
                   <button type="submit" disabled={isPosting || !postDraft.trim()}>
                     {isPosting ? t("Posting") : t("投稿")}
