@@ -105,7 +105,11 @@ export function subscribePostsFromCloud(
   onChange: (posts: ContributionPostRecord[]) => void,
   onError: (error: unknown) => void,
 ): Unsubscribe {
-  const postsQuery = query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(40));
+  /* 旧 40 件は「下に行けない」報告で実質 1〜2 日分しか遡れなかった。
+     200 件まで取得して数週間スクロールできるように。Firestore の
+     1MB doc サイズ制限と 50 read/snapshot コストは photo 添付の
+     dataURL があっても許容範囲。さらに古い post は将来 paginate で。 */
+  const postsQuery = query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(200));
 
   return onSnapshot(
     postsQuery,
