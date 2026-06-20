@@ -16392,7 +16392,6 @@ function App() {
                   }
                   placeholder={t("DDIA / Go言語 など")}
                   maxLength={60}
-                  autoFocus
                   required
                 />
               </label>
