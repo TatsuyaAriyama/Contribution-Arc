@@ -23493,19 +23493,9 @@
     box-shadow 0.22s ease,
     border-color 0.18s ease;
 }
-.learning-card::before {
-  /* 左端の細いアクセント線。旧 4px ボーダーより薄く、内側に
-     収めることで角丸と完全に調和する。 */
-  content: "";
-  position: absolute;
-  top: 14px;
-  bottom: 14px;
-  left: 0;
-  width: 3px;
-  border-radius: 0 3px 3px 0;
-  background: var(--learning-card-color, var(--ink));
-  opacity: 0.78;
-}
+/* 旧: 左端の細いアクセント線 (::before の 3px バー) があったが、
+   ユーザー要望で撤去。背景の ウォッシュ (linear-gradient) だけで
+   各項目の "気配" は残る。 */
 
 .learning-card:hover {
   transform: translateY(-2px);
