@@ -25,7 +25,15 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  // Pure passthrough — no cache reads or writes. Required only so a
-  // fetch handler is present for installability.
-  event.respondWith(fetch(event.request));
+  const request = event.request;
+  // For navigation (HTML) requests, bypass the browser HTTP cache so a
+  // fresh deploy is picked up on the very next visit instead of waiting
+  // for the default GitHub Pages max-age=600 to expire. Hashed assets
+  // (JS/CSS) keep their default caching — their filenames change on
+  // every deploy, so they're safe to cache aggressively.
+  if (request.mode === "navigate" || request.destination === "document") {
+    event.respondWith(fetch(request, { cache: "no-store" }));
+    return;
+  }
+  event.respondWith(fetch(request));
 });
