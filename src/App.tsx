@@ -13569,13 +13569,6 @@ function App() {
       <article
         className={`log-post-card ${variant === "compact" ? "compact" : ""}${post.userId === currentUserUid ? " is-own" : ""}`}
         key={post.id}
-        onClick={(event) => {
-          /* article 全体を tap → 詳細モーダル。 内側の button/a 内クリック
-             は本人 e.stopPropagation で抜けてくるので発火しない。 */
-          if ((event.target as HTMLElement).closest("button, a")) return;
-          setExpandedPost(post);
-        }}
-        style={{ cursor: "pointer" }}
       >
         <button type="button" className="log-post-author" onClick={() => handlePostAuthorOpen(post)}>
           {(() => {
