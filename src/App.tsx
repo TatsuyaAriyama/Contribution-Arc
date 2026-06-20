@@ -3844,7 +3844,6 @@ function App() {
      好きな順に並べ替えられる。モバイル前提だが PC でも有効。
      並べ替え結果は item.order に保存され、sort mode は自動で "custom"
      に切り替わる (= 反映されたことが視覚的に分かる)。 */
-  const [isReorderingLibrary, setIsReorderingLibrary] = useState(false);
   /* === 長押し → ドラッグ並べ替え ===
      ・各 learning-card に pointer event を載せ、450ms 静止で drag モード
      ・drag 中は dragOverIndex を更新して、release で commit
@@ -9026,89 +9025,6 @@ function App() {
      - swap した結果の表示順を 1..N で order に再付与し、sort mode を
        "custom" に切替 (= 今後はこの順序で固定)
      - cloud sync: 影響したアイテムだけ save (差分のみ書く) */
-  const handleMoveLearningItem = (itemId: string, direction: "up" | "down") => {
-    if (!currentUser) return;
-    const live = learningItems.filter((item) => !item.archived);
-    /* 現在の表示と同じソート順を再構築する。並べ替え前から custom 以外で
-       見ていた場合、↑↓ は「画面上の隣」と入れ替わるのが直感的。 */
-    const totalsByItem = new Map<string, number>();
-    const lastLoggedByItem = new Map<string, number>();
-    const knownIds = new Set(live.map((item) => item.id));
-    const itemIdByLowerName = new Map<string, string>();
-    live.forEach((item) => {
-      const key = item.name.trim().toLowerCase();
-      if (key && !itemIdByLowerName.has(key)) itemIdByLowerName.set(key, item.id);
-    });
-    studyLogs.forEach((log) => {
-      const targetId =
-        log.learningItemId && knownIds.has(log.learningItemId)
-          ? log.learningItemId
-          : itemIdByLowerName.get((log.subject || "").trim().toLowerCase());
-      if (!targetId) return;
-      totalsByItem.set(targetId, (totalsByItem.get(targetId) || 0) + log.minutes);
-      const ts = new Date(log.createdAt).getTime();
-      if (Number.isFinite(ts)) {
-        const prevLast = lastLoggedByItem.get(targetId) || 0;
-        if (ts > prevLast) lastLoggedByItem.set(targetId, ts);
-      }
-    });
-    const compareForCurrentMode = (a: LearningItem, b: LearningItem) => {
-      if (learningSortMode === "custom") {
-        const ao = typeof a.order === "number" ? a.order : Number.MAX_SAFE_INTEGER;
-        const bo = typeof b.order === "number" ? b.order : Number.MAX_SAFE_INTEGER;
-        if (ao !== bo) return ao - bo;
-        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      }
-      if (learningSortMode === "name") {
-        const byName = a.name.localeCompare(b.name, "ja");
-        if (byName !== 0) return byName;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      }
-      if (learningSortMode === "total") {
-        const aMin = totalsByItem.get(a.id) || 0;
-        const bMin = totalsByItem.get(b.id) || 0;
-        if (aMin !== bMin) return bMin - aMin;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      }
-      // "recent" (default)
-      const aLast = lastLoggedByItem.get(a.id) || 0;
-      const bLast = lastLoggedByItem.get(b.id) || 0;
-      if (aLast !== bLast) return bLast - aLast;
-      const aMin = totalsByItem.get(a.id) || 0;
-      const bMin = totalsByItem.get(b.id) || 0;
-      if (aMin !== bMin) return bMin - aMin;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    };
-    const ordered = live.slice().sort(compareForCurrentMode);
-    const index = ordered.findIndex((item) => item.id === itemId);
-    if (index < 0) return;
-    const swapWith = direction === "up" ? index - 1 : index + 1;
-    if (swapWith < 0 || swapWith >= ordered.length) return;
-    const next = ordered.slice();
-    [next[index], next[swapWith]] = [next[swapWith], next[index]];
-    const nowIso = new Date().toISOString();
-    /* order を 1, 2, 3, ... で全件再付与 (現在の表示順をスナップショット
-       してから swap を適用した結果)。 */
-    const updates = new Map<string, LearningItem>();
-    next.forEach((item, i) => {
-      const desired = i + 1;
-      if (item.order !== desired) {
-        updates.set(item.id, { ...item, order: desired, updatedAt: nowIso });
-      }
-    });
-    if (updates.size === 0) return;
-    setLearningItems((items) =>
-      items.map((item) => updates.get(item.id) ?? item),
-    );
-    if (learningSortMode !== "custom") {
-      setLearningSortMode("custom");
-    }
-    updates.forEach((item) => {
-      void saveLearningItemToCloud(db, item).catch((error) => {
-        console.info("Learning item reorder cloud sync skipped.", error);
-      });
-    });
-  };
 
   /* === ドラッグ並べ替えの commit ロジック ===
      orderedItems: 現在の表示順 (sorted)
@@ -20041,18 +19957,8 @@ function App() {
               <option value="name">{t("名前順")}</option>
               <option value="custom">{t("自分の順")}</option>
             </select>
-            {/* 並べ替えモード toggle。モバイルで主に使う想定だが、PC からも
-                同じボタンで切替できる。on の間、各カードに↑↓矢印が出る。 */}
-            <button
-              type="button"
-              className={`learning-reorder-toggle${isReorderingLibrary ? " is-active" : ""}`}
-              onClick={() => setIsReorderingLibrary((v) => !v)}
-              aria-pressed={isReorderingLibrary}
-              aria-label={isReorderingLibrary ? t("並べ替えを終える") : t("並べ替え")}
-              title={isReorderingLibrary ? t("並べ替えを終える") : t("並べ替え")}
-            >
-              {isReorderingLibrary ? t("並べ替えを終える") : t("並べ替え")}
-            </button>
+            {/* 旧 "並べ替えモード" トグル + ↑↓ UI はユーザー要望で廃止。
+                並べ替えは長押し → ドラッグだけで完結する。 */}
           </div>
 
           {(() => {
@@ -20251,7 +20157,7 @@ function App() {
                         if (el) cardRectsRef.current.set(item.id, el);
                         else cardRectsRef.current.delete(item.id);
                       }}
-                      className={`learning-card${isReorderingLibrary ? " is-reordering" : ""}${
+                      className={`learning-card${
                         isDragging ? " is-dragging" : ""
                       }${isDragTarget ? " is-drop-target" : ""}`}
                       style={{
@@ -20259,8 +20165,6 @@ function App() {
                         touchAction: dragLibraryItemId ? "none" : undefined,
                       } as CSSProperties}
                       onPointerDown={(event) => {
-                        /* 編集モード (↑↓ 表示中) はドラッグ無効 — 既存 UI を尊重。 */
-                        if (isReorderingLibrary) return;
                         /* インタラクティブ child (button / a) の直接タップは
                            それ自体のクリック動作を維持。長押しドラッグは
                            card の余白 / 画像領域でだけ起動する。 */
@@ -20346,34 +20250,9 @@ function App() {
                         }
                       }}
                     >
-                      {isReorderingLibrary ? (
-                        <div className="learning-card-reorder" role="group" aria-label={t("並べ替え")}>
-                          <button
-                            type="button"
-                            className="learning-card-reorder-up"
-                            onClick={() => handleMoveLearningItem(item.id, "up")}
-                            disabled={sortedIndex === 0}
-                            aria-label={t("一つ上へ")}
-                            title={t("一つ上へ")}
-                          >
-                            ↑
-                          </button>
-                          <button
-                            type="button"
-                            className="learning-card-reorder-down"
-                            onClick={() => handleMoveLearningItem(item.id, "down")}
-                            disabled={sortedIndex === sorted.length - 1}
-                            aria-label={t("一つ下へ")}
-                            title={t("一つ下へ")}
-                          >
-                            ↓
-                          </button>
-                        </div>
-                      ) : null}
                       <button
                         type="button"
                         className="learning-card-trigger"
-                        disabled={isReorderingLibrary}
                         onClick={() => setLearningRecordItemId(item.id)}
                         aria-label={t("{name}の詳細", { name: item.name })}
                       >
