@@ -3854,7 +3854,6 @@ function App() {
      ・drop index は全カードの中点との比較で連続的に更新 */
   const [dragLibraryItemId, setDragLibraryItemId] = useState<string | null>(null);
   const [dragLibraryOverIndex, setDragLibraryOverIndex] = useState<number | null>(null);
-  const [dragOffsetY, setDragOffsetY] = useState(0);
   /* 長押し成立前 (0〜400ms) の前駆フィードバック対象。視覚的に「掴めて
      いる途中」のヒントを出さないと、ユーザーは何も起きていないように
      感じる。 */
@@ -20180,7 +20179,10 @@ function App() {
                       }`}
                       style={{
                         ["--learning-card-color" as string]: item.color,
-                        ["--drag-offset-y" as string]: isDragging ? `${dragOffsetY}px` : "0px",
+                        /* --drag-offset-y は drag 中だけ move handler が
+                           直接 DOM に setProperty する。 React state を介さ
+                           ないことで指追従が安定。 drag 終了時に下記の
+                           cleanup で 0px に戻す。 */
                       } as CSSProperties}
                       onContextMenu={(event) => {
                         event.preventDefault();
@@ -20307,11 +20309,18 @@ function App() {
                           /* drag 中: Y delta を CSS 変数に反映してカードを
                              指に追従させる + 挿入位置を計算。 */
                           const dy = e.clientY - longPressStartYRef.current;
-                          setDragOffsetY(dy);
+                          /* CSS var は React state を経由せず DOM に直接書く。
+                             React の再 render を 60fps 流すと iOS Safari で
+                             pointermove イベント間に間に合わず追従しないことが
+                             あった。直接 setProperty で次の paint に確実に
+                             反映させる。 */
+                          articleEl.style.setProperty("--drag-offset-y", `${dy}px`);
                           /* preventDefault で iOS の elastic scroll 等を遮断 */
                           if (e.cancelable) e.preventDefault();
 
                           const { hoverIdx } = computeDropTarget(e.clientX, e.clientY);
+                          /* hover index は state 経由 (視覚 outline 用)。低頻度
+                             変化なので React 経由でも問題ない。 */
                           setDragLibraryOverIndex(hoverIdx);
                         };
 
@@ -20332,8 +20341,11 @@ function App() {
                           }
                           setDragLibraryItemId(null);
                           setDragLibraryOverIndex(null);
-                          setDragOffsetY(0);
                           setPressingLibraryItemId(null);
+                          /* CSS var を直接 0 に戻す。 transition で滑らかに
+                             着地。 React state ではないので render を待たずに
+                             即時反映できる。 */
+                          articleEl.style.setProperty("--drag-offset-y", "0px");
                           articleEl.style.touchAction = "";
                           try {
                             articleEl.releasePointerCapture(pointerId);
