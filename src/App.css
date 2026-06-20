@@ -23422,46 +23422,46 @@
    3. is-drop-target: 挿入予定位置のスロット表示。 */
 
 .learning-card.is-pressing {
+  /* 押された瞬間から「ふわっ」と持ち上がる。沈み込みは入れない (沈むと
+     "拒否された" 感に見える)。長押し閾値の 400ms に合わせてフェードさせ、
+     最後はそのまま浮いた状態でキープ (forwards) →直後に is-dragging が
+     引き継ぐので、視覚的にシームレス。 */
   animation: learning-card-press 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
   z-index: 2;
+  will-change: transform;
 }
 @keyframes learning-card-press {
   0% {
-    transform: scale(1);
+    transform: scale(1) translateY(0);
     box-shadow: 0 2px 6px rgba(var(--ink-rgb), 0.05);
   }
-  18% {
-    transform: scale(0.965);
-    box-shadow: 0 1px 3px rgba(var(--ink-rgb), 0.08);
-  }
   100% {
-    transform: scale(1.035);
+    transform: scale(1.04) translateY(-6px);
     box-shadow:
-      0 10px 22px rgba(var(--ink-rgb), 0.16),
-      0 2px 6px rgba(var(--ink-rgb), 0.08);
+      0 14px 28px rgba(var(--ink-rgb), 0.20),
+      0 4px 10px rgba(var(--ink-rgb), 0.10);
   }
 }
 
 .learning-card.is-dragging {
-  /* translateY で指に追従。 scale + 微小な傾きで「持ち上げた」演出。
-     transition は box-shadow だけにして、translate は inline 値で
-     即座に反映 (滑らかに追従させる)。 */
+  /* drag 中はベースで 10px 持ち上げて常に "浮いている" 状態をキープ。
+     translateY(--drag-offset-y) で指に追従。 scale + 軽い傾きで物理的に
+     持ち上がった感を出す。半透明化はしない (透けると掴んだ感が消える)。 */
   transform:
-    translateY(var(--drag-offset-y, 0px))
+    translateY(calc(var(--drag-offset-y, 0px) - 10px))
     scale(1.06)
     rotate(-1.4deg);
   box-shadow:
-    0 24px 44px rgba(var(--ink-rgb), 0.28),
+    0 24px 44px rgba(var(--ink-rgb), 0.30),
     0 6px 14px rgba(var(--ink-rgb), 0.14);
   z-index: 20;
   opacity: 1;
-  /* transition は drag 開始時の "ふわっと浮き上がる" 補間にだけ使う。
-     translate は handler で連続更新するので transition 対象から除外。 */
+  /* translate は handler で連続更新するので transition から除外。
+     scale/rotate/box-shadow だけ滑らかに補間して "ふわっ" を演出。 */
   transition:
     box-shadow 0.18s ease,
     scale 0.18s ease,
     rotate 0.18s ease;
-  /* 影が隣カードに切られないように */
   will-change: transform;
 }
 

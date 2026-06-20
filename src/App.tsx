@@ -20209,6 +20209,60 @@ function App() {
                            ので、ユーザーは "今ちょうど掴めた" を視覚で掴める。 */
                         setPressingLibraryItemId(item.id);
 
+                        /* 2D ヒットテスト: 指の真下にあるカードと、その左右どちら
+                           側に乗っているかから挿入位置を計算する。
+                           4 カラムのグリッドなので Y 軸の中点比較だけだと
+                           「同じ行の左右の別カード」を区別できなかった。
+                           - elementsFromPoint(x, y): カーソル下に積まれた要素群を
+                             top→bottom 順に返す。drag 中のカードは z-index で上に
+                             乗っているのでスキップし、その下にある実際の hover
+                             候補カードを取り出す。
+                           - hover カードの矩形中央 X と pointer X を比較し、左半分
+                             →「このカードの前に挿入」、右半分→「後に挿入」と
+                             する。
+                           返り値: { hoverIdx, targetIdx }
+                             hoverIdx — 視覚的 drop マーカー用 (sorted 配列上の index)
+                             targetIdx — commit に渡す「除去後の挿入位置」
+                           hover カードが見つからない / 自分自身しか居ない場合は
+                           現在位置 (= 動かさない) を返す。 */
+                        const computeDropTarget = (
+                          clientX: number,
+                          clientY: number,
+                        ): { hoverIdx: number; targetIdx: number } => {
+                          const live = dragSortedRef.current;
+                          const fromIdx = live.findIndex((x) => x.id === item.id);
+                          const fallback = { hoverIdx: fromIdx, targetIdx: fromIdx };
+                          const stack = document.elementsFromPoint(clientX, clientY);
+                          for (const node of stack) {
+                            const article = (node as HTMLElement).closest?.(".learning-card") as
+                              | HTMLElement
+                              | null;
+                            if (!article) continue;
+                            let hoverId: string | null = null;
+                            for (const [id, el] of cardRectsRef.current) {
+                              if (el === article) {
+                                hoverId = id;
+                                break;
+                              }
+                            }
+                            if (!hoverId || hoverId === item.id) continue;
+                            const i = live.findIndex((x) => x.id === hoverId);
+                            if (i < 0) continue;
+                            const rect = article.getBoundingClientRect();
+                            const midX = rect.left + rect.width / 2;
+                            const insertBefore = clientX < midX;
+                            /* 配列から自分を取り除いた後の index に変換。 */
+                            let targetIdx: number;
+                            if (insertBefore) {
+                              targetIdx = i < fromIdx ? i : i - 1;
+                            } else {
+                              targetIdx = i < fromIdx ? i + 1 : i;
+                            }
+                            return { hoverIdx: i, targetIdx };
+                          }
+                          return fallback;
+                        };
+
                         /* document handler (drag 中はカードを跨いで指が
                            動いても確実にイベントが届くようにする)。 */
                         const onDocPointerMove = (e: PointerEvent) => {
@@ -20232,19 +20286,8 @@ function App() {
                           /* preventDefault で iOS の elastic scroll 等を遮断 */
                           if (e.cancelable) e.preventDefault();
 
-                          const live = dragSortedRef.current;
-                          let newIndex = live.length - 1;
-                          for (let i = 0; i < live.length; i++) {
-                            const el = cardRectsRef.current.get(live[i].id);
-                            if (!el) continue;
-                            const rect = el.getBoundingClientRect();
-                            const mid = rect.top + rect.height / 2;
-                            if (e.clientY < mid) {
-                              newIndex = i;
-                              break;
-                            }
-                          }
-                          setDragLibraryOverIndex(newIndex);
+                          const { hoverIdx } = computeDropTarget(e.clientX, e.clientY);
+                          setDragLibraryOverIndex(hoverIdx);
                         };
 
                         const onDocPointerUp = (e: PointerEvent) => {
@@ -20254,22 +20297,13 @@ function App() {
                           }
                           /* drag が成立していたら commit。 */
                           const live = dragSortedRef.current;
-                          const dropIdx = (() => {
-                            let idx = live.length - 1;
-                            for (let i = 0; i < live.length; i++) {
-                              const el = cardRectsRef.current.get(live[i].id);
-                              if (!el) continue;
-                              const rect = el.getBoundingClientRect();
-                              const mid = rect.top + rect.height / 2;
-                              if (e.clientY < mid) {
-                                idx = i;
-                                break;
-                              }
-                            }
-                            return idx;
-                          })();
-                          if (dragWasCommittedRef.current && dropIdx !== longPressStartIndexRef.current) {
-                            commitLearningDragReorder(live, item.id, dropIdx);
+                          const { targetIdx } = computeDropTarget(e.clientX, e.clientY);
+                          if (
+                            dragWasCommittedRef.current &&
+                            targetIdx >= 0 &&
+                            targetIdx !== longPressStartIndexRef.current
+                          ) {
+                            commitLearningDragReorder(live, item.id, targetIdx);
                           }
                           setDragLibraryItemId(null);
                           setDragLibraryOverIndex(null);
