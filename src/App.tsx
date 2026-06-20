@@ -44,7 +44,7 @@ import {
   where,
 } from "firebase/firestore";
 import { AnimatePresence, MotionConfig, motion } from "framer-motion";
-import { auth, db, githubProvider, googleProvider } from "./firebase";
+import { appleProvider, auth, db, githubProvider, googleProvider } from "./firebase";
 import {
   acceptOrganizationInvite,
   backfillStudyLogOrganizationId,
@@ -3484,7 +3484,7 @@ function LoginScreen() {
     }
   };
 
-  const handleProviderLogin = async (provider: "google" | "github") => {
+  const handleProviderLogin = async (provider: "google" | "github" | "apple") => {
     const localhostUrl = getLocalhostUrl();
     if (localhostUrl) {
       window.location.replace(localhostUrl);
@@ -3507,7 +3507,12 @@ function LoginScreen() {
     // Modern iOS Safari / Chrome allow popups opened from a user
     // gesture (which this is — the user just tapped the button), so
     // popup works in practice on the platforms where redirect breaks.
-    const oauthProvider = provider === "google" ? googleProvider : githubProvider;
+    const oauthProvider =
+      provider === "google"
+        ? googleProvider
+        : provider === "apple"
+          ? appleProvider
+          : githubProvider;
 
     try {
       const result = await signInWithPopup(auth, oauthProvider);

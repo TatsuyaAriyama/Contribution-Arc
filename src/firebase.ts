@@ -4,6 +4,7 @@ import {
   getAuth,
   GithubAuthProvider,
   GoogleAuthProvider,
+  OAuthProvider,
   setPersistence,
 } from "firebase/auth";
 import { initializeFirestore } from "firebase/firestore";
@@ -31,6 +32,16 @@ export const db = initializeFirestore(app, { ignoreUndefinedProperties: true });
 export const functions = getFunctions(app, "us-central1");
 export const googleProvider = new GoogleAuthProvider();
 export const githubProvider = new GithubAuthProvider();
+
+// Sign in with Apple. Required by App Store Review Guideline 4.8 whenever
+// the app offers a third-party social login (Google) on iOS. Apple only
+// returns name/email on the *first* authorization, so request both scopes
+// up front. Works on web/Electron once Apple is enabled as a Firebase
+// sign-in provider; on the native iOS shell it routes through the
+// Capacitor Firebase Authentication plugin (added separately).
+export const appleProvider = new OAuthProvider("apple.com");
+appleProvider.addScope("email");
+appleProvider.addScope("name");
 
 // Force Google's account picker so the user can verify which account
 // they're signing into — prevents accidentally using a different
