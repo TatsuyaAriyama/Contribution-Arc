@@ -3845,6 +3845,18 @@ function App() {
      並べ替え結果は item.order に保存され、sort mode は自動で "custom"
      に切り替わる (= 反映されたことが視覚的に分かる)。 */
   const [isReorderingLibrary, setIsReorderingLibrary] = useState(false);
+  /* === 長押し → ドラッグ並べ替え ===
+     ・各 learning-card に pointer event を載せ、450ms 静止で drag モード
+     ・drag 中は dragOverIndex を更新して、release で commit
+     ・ref は時間追跡 + start 座標、wasDragged フラグ (button click 抑止) */
+  const [dragLibraryItemId, setDragLibraryItemId] = useState<string | null>(null);
+  const [dragLibraryOverIndex, setDragLibraryOverIndex] = useState<number | null>(null);
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressStartYRef = useRef(0);
+  const longPressStartXRef = useRef(0);
+  const longPressStartIndexRef = useRef(0);
+  const dragWasCommittedRef = useRef(false);
+  const cardRectsRef = useRef<Map<string, HTMLElement>>(new Map());
   // バーコード(ISBN)スキャンで本を追加するモーダルの開閉。
   const [isBarcodeScanOpen, setIsBarcodeScanOpen] = useState(false);
   // 「記録の入力」フォーム(時間/量/メモ/画像)の対象 learning item id。
@@ -9094,6 +9106,42 @@ function App() {
     updates.forEach((item) => {
       void saveLearningItemToCloud(db, item).catch((error) => {
         console.info("Learning item reorder cloud sync skipped.", error);
+      });
+    });
+  };
+
+  /* === ドラッグ並べ替えの commit ロジック ===
+     orderedItems: 現在の表示順 (sorted)
+     itemId: 動かす対象
+     targetIndex: 移動先の表示順 index
+     handleMoveLearningItem と同じ pattern で order を 1..N で再付与し、
+     custom sort モードに切替えてクラウド sync する。 */
+  const commitLearningDragReorder = (
+    orderedItems: LearningItem[],
+    itemId: string,
+    targetIndex: number,
+  ) => {
+    if (!currentUser) return;
+    const fromIdx = orderedItems.findIndex((it) => it.id === itemId);
+    if (fromIdx < 0 || fromIdx === targetIndex) return;
+    const next = orderedItems.slice();
+    const [moved] = next.splice(fromIdx, 1);
+    const clampedTarget = Math.max(0, Math.min(next.length, targetIndex));
+    next.splice(clampedTarget, 0, moved);
+    const nowIso = new Date().toISOString();
+    const updates = new Map<string, LearningItem>();
+    next.forEach((item, i) => {
+      const desired = i + 1;
+      if (item.order !== desired) {
+        updates.set(item.id, { ...item, order: desired, updatedAt: nowIso });
+      }
+    });
+    if (updates.size === 0) return;
+    setLearningItems((items) => items.map((it) => updates.get(it.id) ?? it));
+    if (learningSortMode !== "custom") setLearningSortMode("custom");
+    updates.forEach((item) => {
+      void saveLearningItemToCloud(db, item).catch((error) => {
+        console.info("Learning item drag reorder cloud sync skipped.", error);
       });
     });
   };
@@ -20191,11 +20239,112 @@ function App() {
                     handleLearningQuickLog(item, customMinutesValue);
                     closeQuickLog();
                   };
+                  const isDragging = dragLibraryItemId === item.id;
+                  const isDragTarget =
+                    dragLibraryItemId !== null &&
+                    dragLibraryItemId !== item.id &&
+                    dragLibraryOverIndex === sortedIndex;
                   return (
                     <article
                       key={item.id}
-                      className={`learning-card${isReorderingLibrary ? " is-reordering" : ""}`}
-                      style={{ "--learning-card-color": item.color } as CSSProperties}
+                      ref={(el) => {
+                        if (el) cardRectsRef.current.set(item.id, el);
+                        else cardRectsRef.current.delete(item.id);
+                      }}
+                      className={`learning-card${isReorderingLibrary ? " is-reordering" : ""}${
+                        isDragging ? " is-dragging" : ""
+                      }${isDragTarget ? " is-drop-target" : ""}`}
+                      style={{
+                        ["--learning-card-color" as string]: item.color,
+                        touchAction: dragLibraryItemId ? "none" : undefined,
+                      } as CSSProperties}
+                      onPointerDown={(event) => {
+                        /* 編集モード (↑↓ 表示中) はドラッグ無効 — 既存 UI を尊重。 */
+                        if (isReorderingLibrary) return;
+                        /* インタラクティブ child (button / a) の直接タップは
+                           それ自体のクリック動作を維持。長押しドラッグは
+                           card の余白 / 画像領域でだけ起動する。 */
+                        const tgt = event.target as HTMLElement;
+                        if (tgt.closest("button, a, input, textarea")) return;
+                        longPressStartYRef.current = event.clientY;
+                        longPressStartXRef.current = event.clientX;
+                        longPressStartIndexRef.current = sortedIndex;
+                        dragWasCommittedRef.current = false;
+                        if (longPressTimerRef.current) {
+                          window.clearTimeout(longPressTimerRef.current);
+                        }
+                        longPressTimerRef.current = window.setTimeout(() => {
+                          setDragLibraryItemId(item.id);
+                          setDragLibraryOverIndex(sortedIndex);
+                          dragWasCommittedRef.current = true;
+                          if (navigator.vibrate) navigator.vibrate(20);
+                        }, 450);
+                      }}
+                      onPointerMove={(event) => {
+                        /* 長押し待機中: 8px 以上動いたら scroll とみなして
+                           タイマーをキャンセル。 */
+                        if (longPressTimerRef.current && !dragLibraryItemId) {
+                          const dx = event.clientX - longPressStartXRef.current;
+                          const dy = event.clientY - longPressStartYRef.current;
+                          if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+                            window.clearTimeout(longPressTimerRef.current);
+                            longPressTimerRef.current = null;
+                          }
+                          return;
+                        }
+                        /* ドラッグ中: 指 Y に対して挿入位置を計算。
+                           全カードの bounding rect の中点と比較。 */
+                        if (dragLibraryItemId) {
+                          const clientY = event.clientY;
+                          let newIndex = sorted.length - 1;
+                          for (let i = 0; i < sorted.length; i++) {
+                            const el = cardRectsRef.current.get(sorted[i].id);
+                            if (!el) continue;
+                            const rect = el.getBoundingClientRect();
+                            const mid = rect.top + rect.height / 2;
+                            if (clientY < mid) {
+                              newIndex = i;
+                              break;
+                            }
+                          }
+                          if (newIndex !== dragLibraryOverIndex) {
+                            setDragLibraryOverIndex(newIndex);
+                          }
+                        }
+                      }}
+                      onPointerUp={() => {
+                        if (longPressTimerRef.current) {
+                          window.clearTimeout(longPressTimerRef.current);
+                          longPressTimerRef.current = null;
+                        }
+                        if (dragLibraryItemId && dragLibraryOverIndex !== null) {
+                          commitLearningDragReorder(
+                            sorted,
+                            dragLibraryItemId,
+                            dragLibraryOverIndex,
+                          );
+                        }
+                        setDragLibraryItemId(null);
+                        setDragLibraryOverIndex(null);
+                      }}
+                      onPointerCancel={() => {
+                        if (longPressTimerRef.current) {
+                          window.clearTimeout(longPressTimerRef.current);
+                          longPressTimerRef.current = null;
+                        }
+                        setDragLibraryItemId(null);
+                        setDragLibraryOverIndex(null);
+                      }}
+                      onClickCapture={(event) => {
+                        /* ドラッグが成立した直後の click を抑止
+                           (PC マウスで release 時に発火する click を
+                           card-trigger に流さない)。 */
+                        if (dragWasCommittedRef.current) {
+                          dragWasCommittedRef.current = false;
+                          event.stopPropagation();
+                          event.preventDefault();
+                        }
+                      }}
                     >
                       {isReorderingLibrary ? (
                         <div className="learning-card-reorder" role="group" aria-label={t("並べ替え")}>

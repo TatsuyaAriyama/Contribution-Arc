@@ -23407,6 +23407,20 @@
 .learning-card.is-reordering {
   position: relative;
 }
+
+/* === 長押し → ドラッグ並べ替えの視覚状態 === */
+.learning-card.is-dragging {
+  opacity: 0.55;
+  transform: scale(1.04);
+  box-shadow:
+    0 12px 32px rgba(var(--ink-rgb), 0.18),
+    0 2px 8px rgba(var(--ink-rgb), 0.08);
+  z-index: 5;
+}
+.learning-card.is-drop-target {
+  outline: 2px dashed rgba(var(--ink-rgb), 0.3);
+  outline-offset: -2px;
+}
 .learning-card-reorder {
   position: absolute;
   top: 10px;
