@@ -20181,7 +20181,6 @@ function App() {
                       style={{
                         ["--learning-card-color" as string]: item.color,
                         ["--drag-offset-y" as string]: isDragging ? `${dragOffsetY}px` : "0px",
-                        touchAction: dragLibraryItemId ? "none" : undefined,
                       } as CSSProperties}
                       onContextMenu={(event) => {
                         event.preventDefault();
@@ -20193,6 +20192,11 @@ function App() {
                         /* マウスの場合は左クリックのみ */
                         if (event.pointerType === "mouse" && event.button !== 0) return;
 
+                        /* React の SyntheticEvent が後の callback (setTimeout)
+                           まで生存する保証がないので、必要なものを早めにキャプチャ。 */
+                        const articleEl = event.currentTarget as HTMLElement;
+                        const pointerId = event.pointerId;
+
                         longPressStartYRef.current = event.clientY;
                         longPressStartXRef.current = event.clientX;
                         longPressStartIndexRef.current = sortedIndex;
@@ -20203,10 +20207,24 @@ function App() {
                           window.clearTimeout(longPressTimerRef.current);
                         }
 
-                        /* 即座に「押されてる」フィードバックを出す。CSS の
-                           is-pressing アニメーションが 400ms かけて「沈み込み
-                           →浮き上がり」を演出し、長押し成立の閾値と一致する
-                           ので、ユーザーは "今ちょうど掴めた" を視覚で掴める。 */
+                        /* iOS / Android が touch を scroll/swipe と判断する前
+                           に touch-action: none を物理的に DOM へ適用する。
+                           React state 経由だと再 render を待つ間にブラウザが
+                           「これは scroll だ」と決定して pointercancel を投げて
+                           しまい、長押しが一瞬で死んだ。 */
+                        articleEl.style.touchAction = "none";
+
+                        /* pointer capture を即時付与。後で 400ms 待つ間に
+                           他要素にカーソルが移っても確実に pointermove を
+                           受け取れる。 (drag が成立しなかった場合は up で
+                           自動 release されるので副作用ナシ。) */
+                        try {
+                          articleEl.setPointerCapture(pointerId);
+                        } catch {
+                          /* 一部 Safari で稀に投げる */
+                        }
+
+                        /* 即座に「押されてる」フィードバックを出す。 */
                         setPressingLibraryItemId(item.id);
 
                         /* 2D ヒットテスト: 指の真下にあるカードと、その左右どちら
@@ -20266,15 +20284,22 @@ function App() {
                         /* document handler (drag 中はカードを跨いで指が
                            動いても確実にイベントが届くようにする)。 */
                         const onDocPointerMove = (e: PointerEvent) => {
-                          /* 長押し成立前: 8px 動いたら scroll とみなして
-                             タイマーをキャンセル。 */
+                          /* 長押し成立前: 一定以上動いたら scroll とみなして
+                             タイマーをキャンセル。指の生理的なブレを越える
+                             しきい値 (16px) に設定。 8px だとタッチパネルの
+                             jitter で簡単に超えてしまい「一瞬浮かんで戻る」
+                             バグの原因になっていた。 */
                           if (longPressTimerRef.current) {
                             const dx = e.clientX - longPressStartXRef.current;
                             const dy = e.clientY - longPressStartYRef.current;
-                            if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+                            if (Math.abs(dx) > 16 || Math.abs(dy) > 16) {
                               window.clearTimeout(longPressTimerRef.current);
                               longPressTimerRef.current = null;
                               setPressingLibraryItemId(null);
+                              articleEl.style.touchAction = "";
+                              try {
+                                articleEl.releasePointerCapture(pointerId);
+                              } catch {}
                               cleanupDragListeners();
                             }
                             return;
@@ -20309,6 +20334,10 @@ function App() {
                           setDragLibraryOverIndex(null);
                           setDragOffsetY(0);
                           setPressingLibraryItemId(null);
+                          articleEl.style.touchAction = "";
+                          try {
+                            articleEl.releasePointerCapture(pointerId);
+                          } catch {}
                           cleanupDragListeners();
                         };
 
@@ -20338,7 +20367,8 @@ function App() {
                         document.addEventListener("pointerup", onDocPointerUp);
                         document.addEventListener("pointercancel", onDocPointerUp);
 
-                        /* 400ms 静止で drag モード成立。 */
+                        /* 400ms 静止で drag モード成立。pointer capture と
+                           touch-action は既に pointerdown 時点で適用済み。 */
                         longPressTimerRef.current = window.setTimeout(() => {
                           longPressTimerRef.current = null;
                           setPressingLibraryItemId(null);
@@ -20346,13 +20376,6 @@ function App() {
                           setDragLibraryOverIndex(sortedIndex);
                           dragWasCommittedRef.current = true;
                           if (navigator.vibrate) navigator.vibrate([15, 30, 25]);
-                          /* 対象 article に pointer capture を当てて、
-                             以後の pointer event を確実に受け取らせる。 */
-                          try {
-                            (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-                          } catch {
-                            /* iOS Safari 等で稀に失敗するが致命的でない */
-                          }
                         }, 400);
                       }}
                       onClickCapture={(event) => {

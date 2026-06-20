@@ -23410,59 +23410,46 @@
 
 /* === 長押し → ドラッグ並べ替えの視覚状態 ===
 
-   3 段階の演出で「掴める / 掴んだ / 落とせる」を視覚化する：
-
-   1. is-pressing: pointerdown 直後の前駆フィードバック。
-      400ms かけて「沈み込み → ふわっと浮き上がる」keyframes が走り、
-      長押し成立タイマーと同期する。ユーザーは指の下で進捗を感じる。
-   2. is-dragging: 長押し成立後の浮遊状態。
-      --drag-offset-y で指に追従し、強い影 + 軽い傾き + 拡大で
-      「物理的に持ち上がってる」感を出す。半透明化はしない
-      (透けると "消えかけ" に見えて掴んだ感が無くなる)。
-   3. is-drop-target: 挿入予定位置のスロット表示。 */
+   設計方針:
+   - CSS keyframes animation は使わない。class 切替えと同時に animation を
+     付け外しすると forwards の維持が壊れて「1 フレーム素の状態に戻る」
+     ことがあるため (= 旧実装で「一瞬浮かんで戻る」原因)。
+   - 個別 transform プロパティ (translate / scale / rotate) を使い、
+     translate は transition の対象から外して指に即追従させつつ、
+     scale/rotate/box-shadow は transition で滑らかに補間する。
+   - is-pressing → is-dragging の class 遷移は同 frame で行われ、両方とも
+     "リフトした" 状態を保持するので視覚的に途切れない。 */
 
 .learning-card.is-pressing {
-  /* 押された瞬間から「ふわっ」と持ち上がる。沈み込みは入れない (沈むと
-     "拒否された" 感に見える)。長押し閾値の 400ms に合わせてフェードさせ、
-     最後はそのまま浮いた状態でキープ (forwards) →直後に is-dragging が
-     引き継ぐので、視覚的にシームレス。 */
-  animation: learning-card-press 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  /* 0〜400ms の前駆フィードバック。class 切替えだけで .learning-card 本体
+     の transition 0.18s が効いて「ふわっ」と浮き上がる。 */
+  translate: 0 -8px;
+  scale: 1.04;
+  box-shadow:
+    0 16px 30px rgba(var(--ink-rgb), 0.20),
+    0 4px 10px rgba(var(--ink-rgb), 0.10);
   z-index: 2;
-  will-change: transform;
-}
-@keyframes learning-card-press {
-  0% {
-    transform: scale(1) translateY(0);
-    box-shadow: 0 2px 6px rgba(var(--ink-rgb), 0.05);
-  }
-  100% {
-    transform: scale(1.04) translateY(-6px);
-    box-shadow:
-      0 14px 28px rgba(var(--ink-rgb), 0.20),
-      0 4px 10px rgba(var(--ink-rgb), 0.10);
-  }
+  will-change: translate, scale;
 }
 
 .learning-card.is-dragging {
-  /* drag 中はベースで 10px 持ち上げて常に "浮いている" 状態をキープ。
-     translateY(--drag-offset-y) で指に追従。 scale + 軽い傾きで物理的に
-     持ち上がった感を出す。半透明化はしない (透けると掴んだ感が消える)。 */
-  transform:
-    translateY(calc(var(--drag-offset-y, 0px) - 10px))
-    scale(1.06)
-    rotate(-1.4deg);
+  /* drag 中: translate を inline CSS var で連続更新し指に追従。
+     ベース -12px の浮き上がりを維持して「常に空中にいる」感を出す。 */
+  translate: 0 calc(var(--drag-offset-y, 0px) - 12px);
+  scale: 1.07;
+  rotate: -1.5deg;
   box-shadow:
-    0 24px 44px rgba(var(--ink-rgb), 0.30),
+    0 26px 46px rgba(var(--ink-rgb), 0.32),
     0 6px 14px rgba(var(--ink-rgb), 0.14);
   z-index: 20;
   opacity: 1;
-  /* translate は handler で連続更新するので transition から除外。
-     scale/rotate/box-shadow だけ滑らかに補間して "ふわっ" を演出。 */
+  /* translate は handler で連続更新するので transition 対象外にして
+     即時反映 (= 指追従が滑らか)。 scale/rotate/box-shadow のみ補間。 */
   transition:
-    box-shadow 0.18s ease,
     scale 0.18s ease,
-    rotate 0.18s ease;
-  will-change: transform;
+    rotate 0.18s ease,
+    box-shadow 0.18s ease;
+  will-change: translate, scale, rotate;
 }
 
 .learning-card.is-drop-target {
@@ -23562,8 +23549,14 @@
     var(--surface);
   overflow: hidden;
   box-shadow: 0 1px 0 rgba(var(--ink-rgb), 0.03);
+  /* translate / scale / rotate を transition に含めて、is-pressing /
+     is-dragging を解除したときも滑らかに着地する。drag 中だけ translate
+     transition を外す (上書きルールで対応)。 */
   transition:
     transform 0.18s ease,
+    translate 0.18s ease,
+    scale 0.18s ease,
+    rotate 0.18s ease,
     box-shadow 0.22s ease,
     border-color 0.18s ease;
 }
@@ -23571,7 +23564,9 @@
    ユーザー要望で撤去。背景の ウォッシュ (linear-gradient) だけで
    各項目の "気配" は残る。 */
 
-.learning-card:hover {
+/* :hover の浮き上がりは press / drag 中は適用しない (transform と translate
+   が二重にかかって座標がズレる)。 */
+.learning-card:hover:not(.is-pressing):not(.is-dragging) {
   transform: translateY(-2px);
   border-color: rgba(var(--ink-rgb), 0.18);
   box-shadow:
