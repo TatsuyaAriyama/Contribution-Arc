@@ -8018,13 +8018,10 @@ function App() {
     if (grant <= 0) return;
     setFocusChips((v) => v + grant);
     setFocusStayMinutesSnapshot((v) => v + grant * FOCUS_CHIP_INTERVAL_MIN);
-    showToast(
-      t("+{grant} Focus Chip 🔥（ポーカーで通常チップの 1.5× 配当 / 残り {remaining} 枚 ）", {
-        grant,
-        remaining: room - grant,
-      }),
-      { kind: "success" },
-    );
+    /* Focus Chip 獲得時のトースト ("+N Focus Chip … 残り X 枚") は
+       ユーザー指摘でホームに毎回出るのが煩わしいため非表示。
+       チップは引き続き残高に反映される。ポーカー画面の Focus 残高
+       メーターで状況確認できる。 */
   }, [
     currentStayMinutes,
     focusChipsDate,
