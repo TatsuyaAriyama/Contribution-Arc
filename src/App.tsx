@@ -20788,26 +20788,21 @@ function App() {
                     手触りを最上段に。Player Status カードは下に残す。 */}
                 <header className="profile-nondo-hero" aria-label={t("プロフィールヘッダー")}>
                   <div className="profile-nondo-corner" aria-hidden="false">
+                    {/* プロフィール画面から MENU (user-menu-panel) に
+                        1 タップで飛べるよう、ペアの左ボタンを MENU
+                        トグルに差し替え。 (旧: プロフィールリンクの
+                        コピー — シェアモーダル等から代替できる) */}
                     <button
                       type="button"
                       className="profile-nondo-corner-btn"
-                      onClick={() => {
-                        if (!userId) return;
-                        const baseUrl = `${window.location.origin}${window.location.pathname}`;
-                        const url = `${baseUrl}?u=${encodeURIComponent(userId)}`;
-                        try {
-                          void navigator.clipboard.writeText(url);
-                          showToast(t("プロフィールリンクをコピーしました"), { kind: "success" });
-                        } catch {
-                          window.prompt(t("プロフィールリンク（コピーしてください）"), url);
-                        }
-                      }}
-                      aria-label={t("プロフィールリンクをコピー")}
-                      title={t("プロフィールリンクをコピー")}
+                      onClick={() => setIsUserMenuOpen((open) => !open)}
+                      aria-label={t("メニュー")}
+                      title={t("メニュー")}
+                      aria-expanded={isUserMenuOpen}
                     >
                       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <rect x="8" y="5" width="11" height="14" rx="2" />
-                        <path d="M5 16V4a1 1 0 0 1 1-1h9" />
+                        <rect x="4" y="6" width="14" height="14" rx="2.2" />
+                        <path d="M8 3h10a2 2 0 0 1 2 2v11" />
                       </svg>
                     </button>
                     <button
