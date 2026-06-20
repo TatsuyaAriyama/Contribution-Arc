@@ -9164,7 +9164,11 @@ function App() {
         }
         return;
       }
+      const dx = clientX - longPressStartXRef.current;
       const dy = clientY - longPressStartYRef.current;
+      /* X / Y 両方を inline CSS var に書き、CSS 側で translate(dx, dy)。
+         縦だけ追従していて横は動かなかったバグの修正。 */
+      articleEl.style.setProperty("--drag-offset-x", `${dx}px`);
       articleEl.style.setProperty("--drag-offset-y", `${dy}px`);
       if (e.cancelable) e.preventDefault();
       const { hoverIdx } = computeDropTarget(clientX, clientY);
@@ -9188,6 +9192,7 @@ function App() {
       setDragLibraryItemId(null);
       setDragLibraryOverIndex(null);
       setPressingLibraryItemId(null);
+      articleEl.style.setProperty("--drag-offset-x", "0px");
       articleEl.style.setProperty("--drag-offset-y", "0px");
       articleEl.style.touchAction = "";
       cleanupListeners();

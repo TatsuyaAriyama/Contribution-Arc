@@ -23434,8 +23434,9 @@
 
 .learning-card.is-dragging {
   /* drag 中: translate を inline CSS var で連続更新し指に追従。
-     ベース -12px の浮き上がりを維持して「常に空中にいる」感を出す。 */
-  translate: 0 calc(var(--drag-offset-y, 0px) - 12px);
+     X / Y 両軸を受けて自由に動かせる。ベース -12px の浮き上がりは
+     Y 方向にだけ加算 (常に空中にいる感を出す)。 */
+  translate: var(--drag-offset-x, 0px) calc(var(--drag-offset-y, 0px) - 12px);
   scale: 1.07;
   rotate: -1.5deg;
   box-shadow:
