@@ -3867,9 +3867,12 @@ function App() {
   /* drag 中の最新 sorted 順を保持する ref。 commit は callback 経由なので
      クロージャ古値を避けるため。 */
   const dragSortedRef = useRef<LearningItem[]>([]);
-  /* document に貼る handler 参照を覚えて detach する。 */
-  const dragMoveHandlerRef = useRef<((e: PointerEvent) => void) | null>(null);
-  const dragUpHandlerRef = useRef<((e: PointerEvent) => void) | null>(null);
+  /* document に貼る handler 参照を覚えて detach する。
+     Touch / Mouse それぞれ別 type のイベントを使うので個別に保持。 */
+  const dragTouchMoveHandlerRef = useRef<((e: TouchEvent) => void) | null>(null);
+  const dragTouchEndHandlerRef = useRef<((e: TouchEvent) => void) | null>(null);
+  const dragMouseMoveHandlerRef = useRef<((e: MouseEvent) => void) | null>(null);
+  const dragMouseUpHandlerRef = useRef<((e: MouseEvent) => void) | null>(null);
   // バーコード(ISBN)スキャンで本を追加するモーダルの開閉。
   const [isBarcodeScanOpen, setIsBarcodeScanOpen] = useState(false);
   // 「記録の入力」フォーム(時間/量/メモ/画像)の対象 learning item id。
@@ -9074,6 +9077,182 @@ function App() {
         console.info("Learning item drag reorder cloud sync skipped.", error);
       });
     });
+  };
+
+  /* === Library カード: 長押し → ドラッグ並べ替え ===
+
+     Pointer Events + setPointerCapture を使うと iOS Safari で「translate
+     されたカードの上にカーソルが乗った状態で pointermove が止まる」
+     既知の挙動があり、指追従が壊れた。
+     より素朴な Touch Events / Mouse Events を直接ハンドルする実装に
+     置き換えて根本解決する。
+       - Touch: タッチ開始時に document に touchmove / touchend を貼り、
+         drag 中は preventDefault でスクロールを遮断
+       - Mouse: 同様に mousemove / mouseup を document に貼る
+     CSS は同じ (--drag-offset-y の値を直接 DOM へ書く)。 */
+  const startLearningDrag = (opts: {
+    articleEl: HTMLElement;
+    startX: number;
+    startY: number;
+    itemId: string;
+    sortedIndex: number;
+    sortedList: LearningItem[];
+    mode: "touch" | "mouse";
+  }) => {
+    const { articleEl, startX, startY, itemId, sortedIndex, sortedList, mode } = opts;
+
+    longPressStartXRef.current = startX;
+    longPressStartYRef.current = startY;
+    longPressStartIndexRef.current = sortedIndex;
+    dragWasCommittedRef.current = false;
+    dragSortedRef.current = sortedList;
+
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+    }
+
+    /* touch-action: none を直接 DOM に書き込み、ブラウザのスクロール
+       判定に先回り。 */
+    articleEl.style.touchAction = "none";
+
+    setPressingLibraryItemId(itemId);
+
+    /* 2D ヒットテスト: 指の真下にあるカードと、その左右どちら側に乗って
+       いるかから挿入位置を計算する。 */
+    const computeDropTarget = (clientX: number, clientY: number) => {
+      const live = dragSortedRef.current;
+      const fromIdx = live.findIndex((x) => x.id === itemId);
+      const fallback = { hoverIdx: fromIdx, targetIdx: fromIdx };
+      const stack = document.elementsFromPoint(clientX, clientY);
+      for (const node of stack) {
+        const article = (node as HTMLElement).closest?.(".learning-card") as HTMLElement | null;
+        if (!article) continue;
+        let hoverId: string | null = null;
+        for (const [id, el] of cardRectsRef.current) {
+          if (el === article) {
+            hoverId = id;
+            break;
+          }
+        }
+        if (!hoverId || hoverId === itemId) continue;
+        const i = live.findIndex((x) => x.id === hoverId);
+        if (i < 0) continue;
+        const rect = article.getBoundingClientRect();
+        const midX = rect.left + rect.width / 2;
+        const insertBefore = clientX < midX;
+        let targetIdx: number;
+        if (insertBefore) {
+          targetIdx = i < fromIdx ? i : i - 1;
+        } else {
+          targetIdx = i < fromIdx ? i + 1 : i;
+        }
+        return { hoverIdx: i, targetIdx };
+      }
+      return fallback;
+    };
+
+    const onMoveCommon = (clientX: number, clientY: number, e: TouchEvent | MouseEvent) => {
+      if (longPressTimerRef.current) {
+        const dx = clientX - longPressStartXRef.current;
+        const dy = clientY - longPressStartYRef.current;
+        if (Math.abs(dx) > 16 || Math.abs(dy) > 16) {
+          window.clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+          setPressingLibraryItemId(null);
+          articleEl.style.touchAction = "";
+          cleanupListeners();
+        }
+        return;
+      }
+      const dy = clientY - longPressStartYRef.current;
+      articleEl.style.setProperty("--drag-offset-y", `${dy}px`);
+      if (e.cancelable) e.preventDefault();
+      const { hoverIdx } = computeDropTarget(clientX, clientY);
+      setDragLibraryOverIndex(hoverIdx);
+    };
+
+    const finalize = (clientX: number, clientY: number) => {
+      if (longPressTimerRef.current) {
+        window.clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+      const live = dragSortedRef.current;
+      const { targetIdx } = computeDropTarget(clientX, clientY);
+      if (
+        dragWasCommittedRef.current &&
+        targetIdx >= 0 &&
+        targetIdx !== longPressStartIndexRef.current
+      ) {
+        commitLearningDragReorder(live, itemId, targetIdx);
+      }
+      setDragLibraryItemId(null);
+      setDragLibraryOverIndex(null);
+      setPressingLibraryItemId(null);
+      articleEl.style.setProperty("--drag-offset-y", "0px");
+      articleEl.style.touchAction = "";
+      cleanupListeners();
+    };
+
+    const cleanupListeners = () => {
+      if (dragTouchMoveHandlerRef.current) {
+        document.removeEventListener("touchmove", dragTouchMoveHandlerRef.current);
+        dragTouchMoveHandlerRef.current = null;
+      }
+      if (dragTouchEndHandlerRef.current) {
+        document.removeEventListener("touchend", dragTouchEndHandlerRef.current);
+        document.removeEventListener("touchcancel", dragTouchEndHandlerRef.current);
+        dragTouchEndHandlerRef.current = null;
+      }
+      if (dragMouseMoveHandlerRef.current) {
+        document.removeEventListener("mousemove", dragMouseMoveHandlerRef.current);
+        dragMouseMoveHandlerRef.current = null;
+      }
+      if (dragMouseUpHandlerRef.current) {
+        document.removeEventListener("mouseup", dragMouseUpHandlerRef.current);
+        dragMouseUpHandlerRef.current = null;
+      }
+    };
+
+    if (mode === "touch") {
+      const onTouchMove = (e: TouchEvent) => {
+        const t = e.touches[0];
+        if (!t) return;
+        onMoveCommon(t.clientX, t.clientY, e);
+      };
+      const onTouchEnd = (e: TouchEvent) => {
+        const t = e.changedTouches[0];
+        const x = t ? t.clientX : longPressStartXRef.current;
+        const y = t ? t.clientY : longPressStartYRef.current;
+        finalize(x, y);
+      };
+      cleanupListeners();
+      dragTouchMoveHandlerRef.current = onTouchMove;
+      dragTouchEndHandlerRef.current = onTouchEnd;
+      document.addEventListener("touchmove", onTouchMove, { passive: false });
+      document.addEventListener("touchend", onTouchEnd);
+      document.addEventListener("touchcancel", onTouchEnd);
+    } else {
+      const onMouseMove = (e: MouseEvent) => {
+        onMoveCommon(e.clientX, e.clientY, e);
+      };
+      const onMouseUp = (e: MouseEvent) => {
+        finalize(e.clientX, e.clientY);
+      };
+      cleanupListeners();
+      dragMouseMoveHandlerRef.current = onMouseMove;
+      dragMouseUpHandlerRef.current = onMouseUp;
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup", onMouseUp);
+    }
+
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressTimerRef.current = null;
+      setPressingLibraryItemId(null);
+      setDragLibraryItemId(itemId);
+      setDragLibraryOverIndex(sortedIndex);
+      dragWasCommittedRef.current = true;
+      if (navigator.vibrate) navigator.vibrate([15, 30, 25]);
+    }, 400);
   };
 
   const handleLearningEditorSave = () => {
@@ -20187,208 +20366,34 @@ function App() {
                       onContextMenu={(event) => {
                         event.preventDefault();
                       }}
-                      onPointerDown={(event) => {
-                        /* 入力フォーム / リンクは drag 対象外 (タップ動作を維持)。 */
+                      onTouchStart={(event) => {
                         const tgt = event.target as HTMLElement;
                         if (tgt.closest("a, input, textarea")) return;
-                        /* マウスの場合は左クリックのみ */
-                        if (event.pointerType === "mouse" && event.button !== 0) return;
-
-                        /* React の SyntheticEvent が後の callback (setTimeout)
-                           まで生存する保証がないので、必要なものを早めにキャプチャ。 */
-                        const articleEl = event.currentTarget as HTMLElement;
-                        const pointerId = event.pointerId;
-
-                        longPressStartYRef.current = event.clientY;
-                        longPressStartXRef.current = event.clientX;
-                        longPressStartIndexRef.current = sortedIndex;
-                        dragWasCommittedRef.current = false;
-                        dragSortedRef.current = sorted;
-
-                        if (longPressTimerRef.current) {
-                          window.clearTimeout(longPressTimerRef.current);
-                        }
-
-                        /* iOS / Android が touch を scroll/swipe と判断する前
-                           に touch-action: none を物理的に DOM へ適用する。
-                           React state 経由だと再 render を待つ間にブラウザが
-                           「これは scroll だ」と決定して pointercancel を投げて
-                           しまい、長押しが一瞬で死んだ。 */
-                        articleEl.style.touchAction = "none";
-
-                        /* pointer capture を即時付与。後で 400ms 待つ間に
-                           他要素にカーソルが移っても確実に pointermove を
-                           受け取れる。 (drag が成立しなかった場合は up で
-                           自動 release されるので副作用ナシ。) */
-                        try {
-                          articleEl.setPointerCapture(pointerId);
-                        } catch {
-                          /* 一部 Safari で稀に投げる */
-                        }
-
-                        /* 即座に「押されてる」フィードバックを出す。 */
-                        setPressingLibraryItemId(item.id);
-
-                        /* 2D ヒットテスト: 指の真下にあるカードと、その左右どちら
-                           側に乗っているかから挿入位置を計算する。
-                           4 カラムのグリッドなので Y 軸の中点比較だけだと
-                           「同じ行の左右の別カード」を区別できなかった。
-                           - elementsFromPoint(x, y): カーソル下に積まれた要素群を
-                             top→bottom 順に返す。drag 中のカードは z-index で上に
-                             乗っているのでスキップし、その下にある実際の hover
-                             候補カードを取り出す。
-                           - hover カードの矩形中央 X と pointer X を比較し、左半分
-                             →「このカードの前に挿入」、右半分→「後に挿入」と
-                             する。
-                           返り値: { hoverIdx, targetIdx }
-                             hoverIdx — 視覚的 drop マーカー用 (sorted 配列上の index)
-                             targetIdx — commit に渡す「除去後の挿入位置」
-                           hover カードが見つからない / 自分自身しか居ない場合は
-                           現在位置 (= 動かさない) を返す。 */
-                        const computeDropTarget = (
-                          clientX: number,
-                          clientY: number,
-                        ): { hoverIdx: number; targetIdx: number } => {
-                          const live = dragSortedRef.current;
-                          const fromIdx = live.findIndex((x) => x.id === item.id);
-                          const fallback = { hoverIdx: fromIdx, targetIdx: fromIdx };
-                          const stack = document.elementsFromPoint(clientX, clientY);
-                          for (const node of stack) {
-                            const article = (node as HTMLElement).closest?.(".learning-card") as
-                              | HTMLElement
-                              | null;
-                            if (!article) continue;
-                            let hoverId: string | null = null;
-                            for (const [id, el] of cardRectsRef.current) {
-                              if (el === article) {
-                                hoverId = id;
-                                break;
-                              }
-                            }
-                            if (!hoverId || hoverId === item.id) continue;
-                            const i = live.findIndex((x) => x.id === hoverId);
-                            if (i < 0) continue;
-                            const rect = article.getBoundingClientRect();
-                            const midX = rect.left + rect.width / 2;
-                            const insertBefore = clientX < midX;
-                            /* 配列から自分を取り除いた後の index に変換。 */
-                            let targetIdx: number;
-                            if (insertBefore) {
-                              targetIdx = i < fromIdx ? i : i - 1;
-                            } else {
-                              targetIdx = i < fromIdx ? i + 1 : i;
-                            }
-                            return { hoverIdx: i, targetIdx };
-                          }
-                          return fallback;
-                        };
-
-                        /* document handler (drag 中はカードを跨いで指が
-                           動いても確実にイベントが届くようにする)。 */
-                        const onDocPointerMove = (e: PointerEvent) => {
-                          /* 長押し成立前: 一定以上動いたら scroll とみなして
-                             タイマーをキャンセル。指の生理的なブレを越える
-                             しきい値 (16px) に設定。 8px だとタッチパネルの
-                             jitter で簡単に超えてしまい「一瞬浮かんで戻る」
-                             バグの原因になっていた。 */
-                          if (longPressTimerRef.current) {
-                            const dx = e.clientX - longPressStartXRef.current;
-                            const dy = e.clientY - longPressStartYRef.current;
-                            if (Math.abs(dx) > 16 || Math.abs(dy) > 16) {
-                              window.clearTimeout(longPressTimerRef.current);
-                              longPressTimerRef.current = null;
-                              setPressingLibraryItemId(null);
-                              articleEl.style.touchAction = "";
-                              try {
-                                articleEl.releasePointerCapture(pointerId);
-                              } catch {}
-                              cleanupDragListeners();
-                            }
-                            return;
-                          }
-                          /* drag 中: Y delta を CSS 変数に反映してカードを
-                             指に追従させる + 挿入位置を計算。 */
-                          const dy = e.clientY - longPressStartYRef.current;
-                          /* CSS var は React state を経由せず DOM に直接書く。
-                             React の再 render を 60fps 流すと iOS Safari で
-                             pointermove イベント間に間に合わず追従しないことが
-                             あった。直接 setProperty で次の paint に確実に
-                             反映させる。 */
-                          articleEl.style.setProperty("--drag-offset-y", `${dy}px`);
-                          /* preventDefault で iOS の elastic scroll 等を遮断 */
-                          if (e.cancelable) e.preventDefault();
-
-                          const { hoverIdx } = computeDropTarget(e.clientX, e.clientY);
-                          /* hover index は state 経由 (視覚 outline 用)。低頻度
-                             変化なので React 経由でも問題ない。 */
-                          setDragLibraryOverIndex(hoverIdx);
-                        };
-
-                        const onDocPointerUp = (e: PointerEvent) => {
-                          if (longPressTimerRef.current) {
-                            window.clearTimeout(longPressTimerRef.current);
-                            longPressTimerRef.current = null;
-                          }
-                          /* drag が成立していたら commit。 */
-                          const live = dragSortedRef.current;
-                          const { targetIdx } = computeDropTarget(e.clientX, e.clientY);
-                          if (
-                            dragWasCommittedRef.current &&
-                            targetIdx >= 0 &&
-                            targetIdx !== longPressStartIndexRef.current
-                          ) {
-                            commitLearningDragReorder(live, item.id, targetIdx);
-                          }
-                          setDragLibraryItemId(null);
-                          setDragLibraryOverIndex(null);
-                          setPressingLibraryItemId(null);
-                          /* CSS var を直接 0 に戻す。 transition で滑らかに
-                             着地。 React state ではないので render を待たずに
-                             即時反映できる。 */
-                          articleEl.style.setProperty("--drag-offset-y", "0px");
-                          articleEl.style.touchAction = "";
-                          try {
-                            articleEl.releasePointerCapture(pointerId);
-                          } catch {}
-                          cleanupDragListeners();
-                        };
-
-                        const cleanupDragListeners = () => {
-                          if (dragMoveHandlerRef.current) {
-                            document.removeEventListener("pointermove", dragMoveHandlerRef.current);
-                            dragMoveHandlerRef.current = null;
-                          }
-                          if (dragUpHandlerRef.current) {
-                            document.removeEventListener("pointerup", dragUpHandlerRef.current);
-                            document.removeEventListener("pointercancel", dragUpHandlerRef.current);
-                            dragUpHandlerRef.current = null;
-                          }
-                        };
-
-                        /* 古い handler を片付けてから登録。重複防止。 */
-                        if (dragMoveHandlerRef.current) {
-                          document.removeEventListener("pointermove", dragMoveHandlerRef.current);
-                        }
-                        if (dragUpHandlerRef.current) {
-                          document.removeEventListener("pointerup", dragUpHandlerRef.current);
-                          document.removeEventListener("pointercancel", dragUpHandlerRef.current);
-                        }
-                        dragMoveHandlerRef.current = onDocPointerMove;
-                        dragUpHandlerRef.current = onDocPointerUp;
-                        document.addEventListener("pointermove", onDocPointerMove, { passive: false });
-                        document.addEventListener("pointerup", onDocPointerUp);
-                        document.addEventListener("pointercancel", onDocPointerUp);
-
-                        /* 400ms 静止で drag モード成立。pointer capture と
-                           touch-action は既に pointerdown 時点で適用済み。 */
-                        longPressTimerRef.current = window.setTimeout(() => {
-                          longPressTimerRef.current = null;
-                          setPressingLibraryItemId(null);
-                          setDragLibraryItemId(item.id);
-                          setDragLibraryOverIndex(sortedIndex);
-                          dragWasCommittedRef.current = true;
-                          if (navigator.vibrate) navigator.vibrate([15, 30, 25]);
-                        }, 400);
+                        if (event.touches.length !== 1) return;
+                        const t0 = event.touches[0];
+                        startLearningDrag({
+                          articleEl: event.currentTarget as HTMLElement,
+                          startX: t0.clientX,
+                          startY: t0.clientY,
+                          itemId: item.id,
+                          sortedIndex,
+                          sortedList: sorted,
+                          mode: "touch",
+                        });
+                      }}
+                      onMouseDown={(event) => {
+                        const tgt = event.target as HTMLElement;
+                        if (tgt.closest("a, input, textarea")) return;
+                        if (event.button !== 0) return;
+                        startLearningDrag({
+                          articleEl: event.currentTarget as HTMLElement,
+                          startX: event.clientX,
+                          startY: event.clientY,
+                          itemId: item.id,
+                          sortedIndex,
+                          sortedList: sorted,
+                          mode: "mouse",
+                        });
                       }}
                       onClickCapture={(event) => {
                         /* drag 成立後の release で発火する click を抑止 */
