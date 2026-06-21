@@ -10433,6 +10433,10 @@ function App() {
   const handleSettingsOpen = () => {
     setDraftUserName(playerName);
     setDraftUserId(userId);
+    // 「決意」を設定モーダルでも編集できるよう、開くたびに最新値で
+    // ドラフトを同期する。プロフィール画面のインライン編集と同じ
+    // draftDetermination を共有するので、どちらで編集しても一貫する。
+    setDraftDetermination(determination);
     setSettingsError("");
     setIsSettingsOpen(true);
   };
@@ -10454,10 +10458,11 @@ function App() {
     return window.contributionArcDesktop.onOpenSettings(() => {
       setDraftUserName(playerName);
       setDraftUserId(userId);
+      setDraftDetermination(determination);
       setSettingsError("");
       setIsSettingsOpen(true);
     });
-  }, [isDesktopApp, playerName, userId]);
+  }, [isDesktopApp, playerName, userId, determination]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded || !userId) {
@@ -10737,6 +10742,9 @@ function App() {
     const nextName = draftUserName.trim();
     const nextDisplayName = nextName || playerName || currentUser.email?.split("@")[0] || "Developer";
     const nextUserId = draftUserId.trim();
+    // 「決意」も同じフォームの送信で確定する。トランザクション内で
+    // 旧 determination を書いてしまわないよう、この確定値を使う。
+    const nextDetermination = draftDetermination.trim();
     const userIdError = validateUserId(nextUserId, t);
     if (userIdError) {
       setSettingsError(userIdError);
@@ -10784,7 +10792,7 @@ function App() {
                   displayName: playerName,
                   following,
                   photoURL: playerAvatar,
-                  determination,
+                  determination: nextDetermination,
                   characterColor: playerCharacterColor,
                   characterShape: playerCharacterShape,
                 });
@@ -10812,7 +10820,7 @@ function App() {
                 displayName: nextDisplayName,
                 avatarUrl: getSerializableAvatar(playerAvatar || currentUser.photoURL || ""),
                 photoURL: getSerializableAvatar(playerAvatar || currentUser.photoURL || ""),
-                determination,
+                determination: nextDetermination,
                 characterColor: playerCharacterColor,
                 characterShape: playerCharacterShape,
                 ownedCharacterShapes: [...ownedCharacterShapes].sort(),
@@ -10861,6 +10869,12 @@ function App() {
         const accountScope = getAccountStorageScope(currentUser.uid, nextUserId);
         setUserId(nextUserId);
         setCustomUserName(nextDisplayName);
+        // 「決意」も state / localStorage に確定保存（クラウドへは上の
+        // トランザクションで書き込み済み）。これでプロフィール画面の
+        // インライン表示も即座に新しい決意へ更新される。
+        setDetermination(nextDetermination);
+        setDraftDetermination(nextDetermination);
+        safeSetLocalStorage(getAccountStorageKey(accountScope, "determination"), nextDetermination);
         safeSetLocalStorage(`contribution-arc-user-id-${currentUser.uid}`, nextUserId);
         safeSetLocalStorage(getAccountStorageKey(accountScope, "name"), nextDisplayName);
         if (!wasOnboardingSettings) {
@@ -18590,30 +18604,72 @@ function App() {
                   表示サイズ → 分身キャラクター → 通知・組織・削除 …
                   「テーマ (dark/light)」は廃止しライトモードのみ。 */}
 
-              <label>
-                <span>{t("ユーザーネーム")}</span>
-                {/* autoFocus は撤去: 設定を開くたびにキーボードが出て
-                    「変更前提」の挙動になっていたため、ユーザーが意図的
-                    にタップした時だけ入力に入るよう普通の挙動に戻す。 */}
-                <input
-                  value={draftUserName}
-                  onChange={(event) => setDraftUserName(event.target.value)}
-                  placeholder={t("表示したい名前")}
-                  maxLength={24}
-                />
-              </label>
+              {/* === プロフィール ===
+                  名前・ユーザーID・決意をひとまとめに。「決意」はこれまで
+                  プロフィール画面のカード内でしか編集できず、設定には項目が
+                  無いのに空状態が「プロフィール設定で書ける」と案内する矛盾が
+                  あった。ここへ統合して編集導線を一本化し、文字数カウンタと
+                  ID ルールの常時表示でフィードバックを足す。 */}
+              <div className="settings-section settings-section--profile">
+                <p className="settings-section-title">{t("プロフィール")}</p>
 
-              <label>
-                <span>{t("ユーザーID")}</span>
-                <input
-                  value={draftUserId}
-                  onChange={(event) => setDraftUserId(event.target.value.toLowerCase())}
-                  placeholder="ari.dev"
-                  maxLength={30}
-                  required
-                />
-                {isOnboardingSettings ? <small>{t("小文字の半角英数字、_、. が使えます。")}</small> : null}
-              </label>
+                <label>
+                  <span className="settings-field-label">
+                    {t("ユーザーネーム")}
+                    <small className="settings-char-count">{draftUserName.length}/24</small>
+                  </span>
+                  {/* autoFocus は撤去: 設定を開くたびにキーボードが出て
+                      「変更前提」の挙動になっていたため、ユーザーが意図的
+                      にタップした時だけ入力に入るよう普通の挙動に戻す。 */}
+                  <input
+                    value={draftUserName}
+                    onChange={(event) => setDraftUserName(event.target.value)}
+                    placeholder={t("表示したい名前")}
+                    maxLength={24}
+                  />
+                </label>
+
+                <label>
+                  <span className="settings-field-label">
+                    {t("ユーザーID")}
+                    <small className="settings-char-count">{draftUserId.length}/30</small>
+                  </span>
+                  <input
+                    value={draftUserId}
+                    onChange={(event) => setDraftUserId(event.target.value.toLowerCase())}
+                    placeholder="ari.dev"
+                    maxLength={30}
+                    required
+                  />
+                  {/* ルールは常時表示。入力中に不正な文字を打ったら、その場で
+                      理由を warn テキストに切り替えて気づけるようにする
+                      (onboarding 以外でもルールが見えないのが不便だった)。 */}
+                  {(() => {
+                    const liveError = draftUserId.trim() ? validateUserId(draftUserId.trim(), t) : "";
+                    return liveError ? (
+                      <small className="settings-field-warn">{liveError}</small>
+                    ) : (
+                      <small className="settings-field-hint">{t("小文字の半角英数字、_、. が使えます。")}</small>
+                    );
+                  })()}
+                </label>
+
+                <label>
+                  <span className="settings-field-label">
+                    {t("決意")}
+                    <small className="settings-char-count">{draftDetermination.length}/140</small>
+                  </span>
+                  <textarea
+                    className="settings-determination-input"
+                    value={draftDetermination}
+                    onChange={(event) => setDraftDetermination(event.target.value)}
+                    placeholder={t("今の決意を一行で書いておこう")}
+                    maxLength={140}
+                    rows={2}
+                  />
+                  <small className="settings-field-hint">{t("起動するたびに目に入る、今の自分への一行。")}</small>
+                </label>
+              </div>
 
 
               {/* Organization (tenant) management. New in the B2B

@@ -741,6 +741,84 @@
   line-height: 1.45;
 }
 
+/* === 設定モーダル: セクション分け + フィールド補助 ===
+   平坦に積み上がっていた項目を「プロフィール」等のラベル付き
+   グループに束ね、見出し・文字数カウンタ・入力規則ヒントで
+   どこで何を編集しているか分かるようにする。DESIGN.md の
+   「線で区切らず空白で区切る / eyebrow のみ letter-spacing」
+   に倣い、塗らず hairline と余白だけで段差を作る。 */
+.settings-section {
+  display: grid;
+  gap: 14px;
+}
+
+.settings-section + .settings-section,
+.settings-section + .settings-theme-panel {
+  margin-top: 6px;
+}
+
+.settings-section-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ラベル行: 見出し（左）と文字数カウンタ（右）を両端に並べる。 */
+.settings-form label span.settings-field-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+}
+
+.settings-char-count {
+  flex: none;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 760;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.settings-field-hint {
+  color: var(--muted);
+}
+
+/* 入力規則違反は「赤を増やさない」方針に沿って警告系暖色 1 つだけで
+   伝える（エラー専用色は持たない DESIGN ルール）。 */
+.settings-field-warn {
+  color: var(--accent-warm, #d3573b);
+  font-weight: 800;
+}
+
+/* 決意は 1〜2 行のゆとりを持たせた textarea。input と同じ field
+   chrome を踏襲し、pill にはしない（rounded は input に合わせる）。 */
+.settings-determination-input {
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-warm);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+}
+
+.settings-determination-input:focus {
+  border-color: rgba(31, 111, 74, 0.36);
+  background: var(--surface);
+  box-shadow: 0 0 0 4px rgba(31, 111, 74, 0.08);
+}
+
 .settings-error,
 .search-note {
   margin: 0;
@@ -1485,17 +1563,23 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+  /* 設定フォームは縦に長いので、保存/キャンセルを下端に固定して
+     どこまでスクロールしても 1 タップで確定できるようにする。
+     modal の padding(26px) を bottom 負値で相殺してフチに密着させ、
+     上にグラデを敷いて項目がボタン裏に透けても読めるようにする。 */
+  position: sticky;
+  bottom: -26px;
+  z-index: 2;
+  margin-top: 4px;
+  padding: 12px 0 0;
+  background:
+    linear-gradient(180deg, rgba(var(--surface-rgb), 0), rgba(var(--surface-rgb), 0.96) 34%),
+    rgba(var(--surface-rgb), 0.94);
 }
 
 .onboarding-settings-modal .settings-actions {
   grid-template-columns: 1fr;
-  position: sticky;
   bottom: -22px;
-  z-index: 2;
-  padding: 10px 0 0;
-  background:
-    linear-gradient(180deg, rgba(var(--surface-rgb), 0), rgba(var(--surface-rgb), 0.96) 34%),
-    rgba(var(--surface-rgb), 0.94);
 }
 
 .settings-actions button {
