@@ -1296,6 +1296,8 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "オーナーは削除できません。Admin ダッシュボードからオーナーを譲渡してから削除してください。":
     "Owners cannot be deleted. Transfer ownership from the Admin dashboard first.",
   "プライバシーポリシー": "Privacy policy",
+  "利用規約": "Terms of Service",
+  "サポート": "Support",
   "ポーカーを準備中…": "Preparing poker…",
   "✦ 分身を変える": "✦ Change your character",
   "組織情報を読み込めませんでした。": "Couldn't load organization info.",

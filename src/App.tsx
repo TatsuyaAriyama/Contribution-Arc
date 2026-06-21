@@ -19005,9 +19005,11 @@ function App() {
                       {t("アカウントを削除")}
                     </button>
                   </div>
-                  {/* App Store / Google Play 提出には Privacy Policy への
-                      アプリ内からのアクセスが必要。言語に合わせて HTML を
-                      切替 (en → privacy.html / ja → privacy.ja.html)。 */}
+                  {/* App Store / Google Play 提出要件: Privacy Policy /
+                      Terms of Service / Support のアプリ内リンク。 言語に
+                      合わせて HTML を切替 (en → *.html / ja → *.ja.html)。
+                      App Store Connect の "Support URL" にもこの support.html
+                      の URL をそのまま登録できる。 */}
                   <p className="settings-data-legal">
                     <a
                       href={`${import.meta.env.BASE_URL}${language === "ja" ? "privacy.ja.html" : "privacy.html"}`}
@@ -19015,6 +19017,22 @@ function App() {
                       rel="noopener noreferrer"
                     >
                       {t("プライバシーポリシー")}
+                    </a>
+                    {" · "}
+                    <a
+                      href={`${import.meta.env.BASE_URL}${language === "ja" ? "terms.ja.html" : "terms.html"}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {t("利用規約")}
+                    </a>
+                    {" · "}
+                    <a
+                      href={`${import.meta.env.BASE_URL}${language === "ja" ? "support.ja.html" : "support.html"}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {t("サポート")}
                     </a>
                   </p>
                 </div>
