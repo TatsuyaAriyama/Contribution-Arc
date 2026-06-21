@@ -23453,6 +23453,19 @@
   will-change: translate, scale, rotate;
 }
 
+/* デスクトップ（マウス）でのみ掴める affordance を出す。タッチ端末では
+   cursor は無関係なので hover/pointer:fine に限定し、内側の操作ボタンは
+   各自の cursor を保持する。 */
+@media (hover: hover) and (pointer: fine) {
+  .learning-grid .learning-card {
+    cursor: grab;
+  }
+  .learning-grid .learning-card.is-pressing,
+  .learning-grid .learning-card.is-dragging {
+    cursor: grabbing;
+  }
+}
+
 .learning-card.is-drop-target {
   outline: 2px dashed rgba(var(--ink-rgb), 0.32);
   outline-offset: -2px;

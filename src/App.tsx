@@ -9164,6 +9164,67 @@ function App() {
       return fallback;
     };
 
+    /* === ドラッグ中の端まで来たら自動スクロール ===
+       4 列固定グリッドはアイテム数が増えると画面より縦に長くなる。自動
+       スクロールが無いと「画面外の位置へは並べ替えられない」ため、指が
+       上端／下端の近くに来たらスクロールコンテナ（無ければ window）を送る。
+       スクロールでカードの基準位置がずれるので start を補正し、指追従と
+       hover 判定を維持する。 */
+    const findScrollParent = (node: HTMLElement | null): HTMLElement | null => {
+      let el = node?.parentElement ?? null;
+      while (el) {
+        const oy = window.getComputedStyle(el).overflowY;
+        if ((oy === "auto" || oy === "scroll") && el.scrollHeight > el.clientHeight) {
+          return el;
+        }
+        el = el.parentElement;
+      }
+      return null;
+    };
+    const scrollParent = findScrollParent(articleEl);
+    let pointerX = startX;
+    let pointerY = startY;
+    let autoScrollRaf: number | null = null;
+    const EDGE_ZONE = 84;
+    const MAX_SCROLL_STEP = 16;
+    const scrollBounds = () => {
+      if (scrollParent) {
+        const r = scrollParent.getBoundingClientRect();
+        return { top: r.top, bottom: r.bottom };
+      }
+      return { top: 0, bottom: window.innerHeight };
+    };
+    const applyScroll = (dy: number) => {
+      if (scrollParent) scrollParent.scrollTop += dy;
+      else window.scrollBy(0, dy);
+    };
+    const autoScrollTick = () => {
+      autoScrollRaf = null;
+      if (!dragWasCommittedRef.current) return;
+      const { top, bottom } = scrollBounds();
+      let dy = 0;
+      if (pointerY < top + EDGE_ZONE) {
+        dy = -Math.ceil(((top + EDGE_ZONE - pointerY) / EDGE_ZONE) * MAX_SCROLL_STEP);
+      } else if (pointerY > bottom - EDGE_ZONE) {
+        dy = Math.ceil(((pointerY - (bottom - EDGE_ZONE)) / EDGE_ZONE) * MAX_SCROLL_STEP);
+      }
+      if (dy !== 0) {
+        applyScroll(dy);
+        longPressStartYRef.current -= dy;
+        articleEl.style.setProperty("--drag-offset-x", `${pointerX - longPressStartXRef.current}px`);
+        articleEl.style.setProperty("--drag-offset-y", `${pointerY - longPressStartYRef.current}px`);
+        const { hoverIdx } = computeDropTarget(pointerX, pointerY);
+        setDragLibraryOverIndex(hoverIdx);
+      }
+      autoScrollRaf = requestAnimationFrame(autoScrollTick);
+    };
+    const stopAutoScroll = () => {
+      if (autoScrollRaf !== null) {
+        cancelAnimationFrame(autoScrollRaf);
+        autoScrollRaf = null;
+      }
+    };
+
     const onMoveCommon = (clientX: number, clientY: number, e: TouchEvent | MouseEvent) => {
       if (longPressTimerRef.current) {
         const dx = clientX - longPressStartXRef.current;
@@ -9177,6 +9238,8 @@ function App() {
         }
         return;
       }
+      pointerX = clientX;
+      pointerY = clientY;
       const dx = clientX - longPressStartXRef.current;
       const dy = clientY - longPressStartYRef.current;
       /* X / Y 両方を inline CSS var に書き、CSS 側で translate(dx, dy)。
@@ -9212,6 +9275,7 @@ function App() {
     };
 
     const cleanupListeners = () => {
+      stopAutoScroll();
       if (dragTouchMoveHandlerRef.current) {
         document.removeEventListener("touchmove", dragTouchMoveHandlerRef.current);
         dragTouchMoveHandlerRef.current = null;
@@ -9270,6 +9334,7 @@ function App() {
       setDragLibraryOverIndex(sortedIndex);
       dragWasCommittedRef.current = true;
       if (navigator.vibrate) navigator.vibrate([15, 30, 25]);
+      autoScrollRaf = requestAnimationFrame(autoScrollTick);
     }, 400);
   };
 
