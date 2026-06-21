@@ -165,7 +165,7 @@ function normalizeForFilter(text: string): string {
   return text
     .normalize("NFKC")
     .toLowerCase()
-    .replace(/[\s　]+/g, "");
+    .replace(/[\s\u3000]+/g, "");
 }
 
 export function containsBlockedWord(text: string): boolean {

@@ -1445,7 +1445,7 @@ function getStudyStreak(logs: StudyLog[]) {
       return date.getTime();
     }),
   );
-  let cursor = new Date();
+  const cursor = new Date();
   cursor.setHours(0, 0, 0, 0);
   let streak = 0;
 
@@ -1472,7 +1472,7 @@ function getDailyReportStreak(reports: DailyReport[]) {
       )
       .map((report) => report.date),
   );
-  let cursor = new Date();
+  const cursor = new Date();
   let streak = 0;
   while (true) {
     const year = cursor.getFullYear();

@@ -42,25 +42,6 @@ export function GoalPickerModal({
 }: Props) {
   const { t, language } = useTranslation();
 
-  /* EN モードは Japan-specific な高校/大学カタログがほぼ役に立たない
-     ので、free-text 入力に切替える。catalog 検索 UI を出すと "Find Tokyo
-     University" のような期待を煽ってしまうため、思い切って別画面にする。
-     onSelectCustom が無い場合は (後方互換のため) 通常の catalog UI に
-     フォールバックする。 */
-  if (language === "en" && onSelectCustom) {
-    return (
-      <CustomGoalForm
-        initialName={currentCustomName}
-        hasExisting={Boolean(currentGoalId || currentCustomName)}
-        onSubmit={(name) => {
-          onSelectCustom(name);
-        }}
-        onClear={onClear}
-        onClose={onClose}
-        t={t}
-      />
-    );
-  }
   const [kind, setKind] = useState<GoalKind>(() => {
     // 現在選択中の goal があればそのカテゴリで開く、なければ大学から
     const current = GOAL_CATALOG.find((g) => g.id === currentGoalId);
@@ -77,6 +58,27 @@ export function GoalPickerModal({
     () => searchGoals(query, kind).length,
     [query, kind],
   );
+
+  /* EN モードは Japan-specific な高校/大学カタログがほぼ役に立たない
+     ので、free-text 入力に切替える。catalog 検索 UI を出すと "Find Tokyo
+     University" のような期待を煽ってしまうため、思い切って別画面にする。
+     onSelectCustom が無い場合は (後方互換のため) 通常の catalog UI に
+     フォールバックする。フックは Rules of Hooks に従い、この早期 return
+     より前で全て宣言しておく。 */
+  if (language === "en" && onSelectCustom) {
+    return (
+      <CustomGoalForm
+        initialName={currentCustomName}
+        hasExisting={Boolean(currentGoalId || currentCustomName)}
+        onSubmit={(name) => {
+          onSelectCustom(name);
+        }}
+        onClear={onClear}
+        onClose={onClose}
+        t={t}
+      />
+    );
+  }
 
   return (
     <div className="settings-modal-backdrop" role="presentation" onClick={onClose}>

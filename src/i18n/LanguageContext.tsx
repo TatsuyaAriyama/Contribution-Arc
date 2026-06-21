@@ -137,7 +137,6 @@ export function LanguageProvider({ children, initialLanguage }: LanguageProvider
       const translated = EN_TRANSLATIONS[jaText] ?? jaText;
       if (import.meta.env.DEV && !(jaText in EN_TRANSLATIONS)) {
         // Help spot untranslated strings during development.
-        // eslint-disable-next-line no-console
         console.warn(`[i18n] No EN translation for: ${jaText}`);
       }
       return applyInterpolations(translated, vars);

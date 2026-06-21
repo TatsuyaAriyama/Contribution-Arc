@@ -358,6 +358,7 @@ export function ManagerDashboard({
     // letters readable (most OSes accept them now) but strips slashes /
     // quotes / control chars that break downloads.
     const slug = (organizationName || "team")
+      // eslint-disable-next-line no-control-regex -- intentional control-char strip
       .replace(/[\\/:*?"<>|\x00-\x1f]/g, "")
       .replace(/\s+/g, "-")
       .slice(0, 40) || "team";

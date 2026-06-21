@@ -78,7 +78,7 @@ export function BarcodeScannerModal({ onClose, onDetected }: Props) {
 
     // --- Path A: ネイティブ BarcodeDetector (Android 等) ---
     if (BD) {
-      let detector: { detect: (src: CanvasImageSource) => Promise<Array<{ rawValue: string }>> } | null = null;
+      let detector: { detect: (src: CanvasImageSource) => Promise<Array<{ rawValue: string }>> } | null;
       try {
         detector = new BD({ formats: ["ean_13", "ean_8", "upc_a"] });
       } catch {

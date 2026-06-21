@@ -457,7 +457,7 @@ function normalizeForGoalSearch(text: string): string {
   return kanaToHira
     .normalize("NFKC")
     .toLowerCase()
-    .replace(/[\s　]+/g, "");
+    .replace(/[\s\u3000]+/g, "");
 }
 
 /** 「東大」「とうだい」「Todai」「Tokyo University」どれでも当たるよう、
