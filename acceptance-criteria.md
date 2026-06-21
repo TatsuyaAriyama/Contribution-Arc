@@ -57,14 +57,20 @@
 | `UNIT` | ユニットテストが緑 | Vitest（未導入 → SKIP） |
 | `F-LISTENER-LEAK` | `onSnapshot` の戻り値を捨てている（解除されない）箇所が無い | 静的解析（grep ヒューリスティック） |
 | `F-LISTENER-BUDGET` | 同時 `onSnapshot` リスナー数が予算内（既定上限: 14、現状 12） | 静的カウント |
-| `F-RUNTIME-BUDGET` | 代表的な1セッションの Firestore 読み/書き回数が予算内 | Playwright + Firestore 計測（配線後に有効化） |
+| `F-RUNTIME-BUDGET` | 代表的な1セッションの Firestore 実行時トラフィック（WebChannel POST バースト）が予算内 | Playwright で `/Listen/channel`・`/Write/channel` POST を計測 |
 | `RULES-DENY-DEFAULT` | ルール未定義パスはデフォルト拒否される | Firestore rules test |
 | `W-LH-PERF-BUDGET` | パフォーマンス予算内（再掲） | Lighthouse CI |
 
-#### Firestore 予算の定義（要・実測で調整）
+#### Firestore 予算の定義
 - **リスナー予算**: 同時 `onSnapshot` 購読 ≤ `14`（`verify.sh` の `MAX_LISTENERS`）。
-- **読み取り予算 / セッション**: 初回ロード〜フィード閲覧〜記録1件編集で `document reads ≤ 300`（暫定。`F-RUNTIME-BUDGET` で実測して確定）。
-- **書き込み予算 / セッション**: 同シナリオで `writes ≤ 30`（暫定）。
+- **実行時トラフィック予算 / セッション**（`F-RUNTIME-BUDGET`）: Firebase JS SDK は Firestore を
+  WebChannel で話すため、生の document reads/writes ではなく **クライアント→サーバの POST バースト数**を
+  計測する（読み取り = `/Listen/channel`、書き込み = `/Write/channel`）。リスナー暴走や書き込みループは
+  この値の急増として確実に捕まる。
+  - 代表シナリオ: ログイン→フィード表示→学習対象1件作成→投稿1件。
+  - **実測（2026-06-21）**: `listen=6` / `write=8`。WebChannel の batching で run ごとに多少ぶれるため、
+    回帰検知力を保ちつつ flaky にならない範囲でヘッドルームを乗せ、上限は `listen ≤ 30` / `write ≤ 20`。
+  - しきい値は `tests/e2e/firestore-budget.spec.ts` の `LISTEN_BUDGET` / `WRITE_BUDGET` と同期させること。
 - **リスナー解除**: すべての `onSnapshot` は `useEffect` の cleanup または明示的 `unsubscribe` で解除されること（`F-LISTENER-LEAK`）。
 
 ### HUMAN（主観・ループ終了条件にしない）

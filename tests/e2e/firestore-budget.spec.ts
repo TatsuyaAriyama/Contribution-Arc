@@ -1,30 +1,66 @@
-// F-RUNTIME-BUDGET: 代表的な1セッションの Firestore 読み/書き回数が予算内か。
-// スケルトン: Firestore SDK の呼び出しを計測する手段は2案。
-//   案A) Firestore Emulator を使い、サーバ側メトリクス / リクエストログから集計。
-//   案B) アプリ起動時に getDoc/getDocs/onSnapshot/setDoc... をラップして window.__fsOps に記録。
-// ここでは案B 用のフックを置き、しきい値だけ先に定義しておく。
-import { test, expect } from "@playwright/test";
+// F-RUNTIME-BUDGET: 代表的な1セッションの Firestore 実行時トラフィックが
+// 予算内かを機械判定する。ゴール③「重くない / データが破綻しない」を、
+// 主観でなく実測のランタイム指標で守るのが狙い。
+//
+// 計測方法: Firebase JS SDK は Firestore を WebChannel で話す。
+//   - 読み取り（onSnapshot 購読 / getDoc 一回読み）→ /Listen/channel への POST
+//   - 書き込み（commit）→ /Write/channel への POST
+// テスト側の page.on("request") で emulator(127.0.0.1:8080) 宛の POST を
+// チャネル種別ごとに数える。生のドキュメント数ではなく「クライアント→サーバの
+// バースト数」だが、リスナー暴走や書き込みループといった③が嫌う回帰は
+// この値の急増として確実に捕まえられる。production code には一切触れない。
+import { test, expect, type Page, type Request } from "@playwright/test";
+import { login } from "./fixtures/login";
 
-// acceptance-criteria.md の Firestore 予算と同期させること（暫定値）。
-const READ_BUDGET = 300;
-const WRITE_BUDGET = 30;
+// acceptance-criteria.md の Firestore ランタイム予算と同期させること。
+// 実測（2026-06-21, 代表シナリオ）: listen=6, write=8。WebChannel の batching で
+// run ごとに多少ぶれるため、回帰検知力を保ちつつ flaky にならない範囲で
+// ヘッドルームを乗せた上限。
+const LISTEN_BUDGET = 30; // 読み取り系（/Listen/channel POST）実測6
+const WRITE_BUDGET = 20; //  書き込み系（/Write/channel POST）実測8
 
-test.fixme("1セッションの Firestore 読み/書きが予算内", async ({ page }) => {
-  // TODO: アプリ側に計測フックを用意する（dev/E2E ビルド限定で window.__fsOps を公開）。
-  //   例: src/firebase.ts で E2E フラグ時に getDocs/onSnapshot 等を counting proxy で包む。
-  await page.goto("/");
+function isFirestore(req: Request) {
+  const u = req.url();
+  return u.includes("127.0.0.1:8080") || u.includes("localhost:8080");
+}
 
-  // TODO: 代表シナリオを実行（ログイン → フィード閲覧 → 記録1件編集）。
+test("1セッションの Firestore ランタイム書き込み/読み取りが予算内", async ({
+  page,
+}: {
+  page: Page;
+}) => {
+  let listenPosts = 0;
+  let writePosts = 0;
+  page.on("request", (req) => {
+    if (req.method() !== "POST" || !isFirestore(req)) return;
+    const u = req.url();
+    if (u.includes("/Write/channel")) writePosts += 1;
+    else if (u.includes("/Listen/channel")) listenPosts += 1;
+  });
 
-  const ops = await page.evaluate(
-    () =>
-      (window as unknown as { __fsOps?: { reads: number; writes: number } }).__fsOps ?? {
-        reads: -1,
-        writes: -1,
-      },
+  // --- 代表シナリオ ---
+  await login(page); // 認証 → フィード表示（初期購読が立ち上がる）
+  // 学習対象を1件作る（書き込みが1バースト発生する代表操作）
+  await page.getByTestId("bottomnav-learning").click();
+  await page.getByTestId("learning-add-button").click();
+  await page.getByTestId("learning-editor-name").fill(`budget-${Date.now()}`);
+  await page.getByTestId("learning-editor-save").click();
+  await expect(page.getByTestId("learning-card-trigger").first()).toBeVisible();
+  // ホームへ戻って1件投稿（もう1バースト）
+  await page.getByTestId("bottomnav-home").click();
+  await page.getByTestId("home-post-textarea").fill(`budget-post-${Date.now()}`);
+  await page.getByTestId("home-post-submit").click();
+  await expect(page.getByTestId("feed-post").first()).toBeVisible();
+  // 後続のフラッシュ分を取りこぼさないよう少しだけ待つ。
+  await page.waitForTimeout(1500);
+
+  // 実測値をログ（予算チューニング用）。
+  console.log(`[F-RUNTIME-BUDGET] listenPosts=${listenPosts} writePosts=${writePosts}`);
+
+  expect(listenPosts, "Listen(読み取り)バーストが予算超過").toBeLessThanOrEqual(
+    LISTEN_BUDGET,
   );
-
-  expect(ops.reads, "計測フック未配線").toBeGreaterThanOrEqual(0);
-  expect(ops.reads).toBeLessThanOrEqual(READ_BUDGET);
-  expect(ops.writes).toBeLessThanOrEqual(WRITE_BUDGET);
+  expect(writePosts, "Write(書き込み)バーストが予算超過").toBeLessThanOrEqual(
+    WRITE_BUDGET,
+  );
 });

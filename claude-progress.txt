@@ -92,9 +92,22 @@ longtask 計測と Firestore 読み書き計測も同じ Playwright run に相�
   ラップ。package.json に test:e2e。
 - longtask / F-RUNTIME-BUDGET は test.fixme のまま（→R5）。
 
+### R5 — スクロール longtask + Firestore runtime budget 確定 2026-06-21
+- W-SCROLL-LONGTASK: home-feed.spec に実装。投稿14件を用意し
+  PerformanceObserver('longtask') を仕込んでプログラム的に上下スクロール、
+  50ms 超タスクを数える（上限5）。実測 total=0 over50=0（headless で滑らか）。
+  カクつき回帰の機械的ガードとして機能。
+- F-RUNTIME-BUDGET: 生の reads/writes ではなく WebChannel の POST バースト数を
+  page.on("request") で計測（読み取り=/Listen/channel, 書き込み=/Write/channel）。
+  production code には一切触れない非侵襲計測。代表シナリオ（ログイン→学習対象1件
+  作成→投稿1件）で実測 listen=6 / write=8。flaky 回避のヘッドルームを乗せ
+  LISTEN_BUDGET=30 / WRITE_BUDGET=20 に確定。acceptance-criteria.md の予算定義も
+  WebChannel バースト基準に更新（暫定の reads≤300/writes≤30 を置換）。
+- e2e は計6本全緑。verify.sh web は PASS=8 FAIL=0 SKIP=1（残 W-LH のみ）。
+
 ### 現在の verify.sh web 集計: PASS=8 FAIL=0 SKIP=1
 残 SKIP: W-LH-PERF-BUDGET（→R6）。
-W-SCROLL-LONGTASK / F-RUNTIME-BUDGET は W-E2E 内の fixme（→R5 で有効化）。
+W-SCROLL-LONGTASK / F-RUNTIME-BUDGET は R5 で有効化済み（W-E2E に相乗り）。
 native（N-*）は RUN_NATIVE=1 時のみ（→R7）。
 
 ## メモ
