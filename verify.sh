@@ -113,7 +113,8 @@ run_web() {
   fi
 
   # Firestore rules test
-  if [ -d "tests/firestore" ] && npx --no-install vitest --version >/dev/null 2>&1 && have firebase; then
+  if [ -d "tests/firestore" ] && npx --no-install vitest --version >/dev/null 2>&1 && have firebase \
+     && node -e "require.resolve('@firebase/rules-unit-testing/package.json')" >/dev/null 2>&1; then
     if npx --no-install vitest run --config tests/firestore/vitest.config.ts >"$LOG_DIR/rules.log" 2>&1; then
       c_pass "RULES"            "firestore rules test"
     else

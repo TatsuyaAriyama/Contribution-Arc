@@ -1,13 +1,14 @@
 import { initializeApp } from "firebase/app";
 import {
   browserLocalPersistence,
+  connectAuthEmulator,
   getAuth,
   GithubAuthProvider,
   GoogleAuthProvider,
   OAuthProvider,
   setPersistence,
 } from "firebase/auth";
-import { initializeFirestore } from "firebase/firestore";
+import { connectFirestoreEmulator, initializeFirestore } from "firebase/firestore";
 import { getFunctions } from "firebase/functions";
 
 const firebaseConfig = {
@@ -59,4 +60,12 @@ googleProvider.setCustomParameters({ prompt: "select_account" });
 void setPersistence(auth, browserLocalPersistence).catch((error) => {
   console.warn("Auth persistence setup failed; falling back to default.", error);
 });
+
+// E2E / ローカル統合テスト用の seam。VITE_USE_EMULATORS=true のときだけ
+// Firebase Emulator Suite (Auth/Firestore) に接続する。未設定なら no-op で、
+// 本番・通常 dev の挙動には一切影響しない。
+if (import.meta.env.VITE_USE_EMULATORS === "true") {
+  connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+  connectFirestoreEmulator(db, "127.0.0.1", 8080);
+}
 
