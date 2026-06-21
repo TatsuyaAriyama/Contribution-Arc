@@ -1,0 +1,36 @@
+# Maestro フロー（スケルトン）— iOS シミュレータ
+# ゴール① スクロール / ゴール② キーボード入力
+# 未導入: maestro。導入: curl -Ls "https://get.maestro.mobile.dev" | bash
+# 実行: maestro test .maestro   （シミュレータにアプリ install 済み前提）
+#
+# 対応チェック ID: N-MAESTRO-SCROLL / N-MAESTRO-KEYBOARD
+appId: com.ariyamatatsuya.contributionarc
+---
+# --- 起動 ---
+- launchApp:
+    clearState: false
+
+# --- N-MAESTRO-SCROLL: フィードのフリックスクロール ---
+# TODO: ホーム/フィードのアンカー要素を実際の文言・id に合わせる
+- assertVisible:
+    text: ".*"          # TODO: フィードの確実な目印に差し替え
+- repeat:
+    times: 8
+    commands:
+      - swipe:
+          direction: UP
+          duration: 300
+# スクロール後もクラッシュせず UI が生きていること
+- assertVisible:
+    text: ".*"          # TODO: 末尾付近の確実な目印に差し替え
+
+# --- N-MAESTRO-KEYBOARD: 記録入力でキーボードが入力欄を隠さない ---
+# TODO: 学習記録ビューへ遷移する操作に差し替え
+# - tapOn:
+#     id: "open-learning-record"
+# - tapOn:
+#     id: "record-note-input"
+# - inputText: "maestro keyboard test"
+# - assertVisible:
+#     id: "record-submit"   # キーボード表示中でも送信ボタンが見えている
+# - hideKeyboard

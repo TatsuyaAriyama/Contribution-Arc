@@ -1,0 +1,61 @@
+Contribution Arc — スマホ版 自動化ループ 進捗ログ
+==================================================
+
+## このセッション（足場のみ・機能実装なし）
+- リポジトリ全体を把握（React+Vite+Firebase / Capacitor(SPM) iOS, 状態駆動の単一SPA）。
+- acceptance-criteria.md を作成（3ゴール → AUTO / HUMAN に分解）。
+- verify.sh を作成（WEB 層 / NATIVE 層、状態は PASS/FAIL/SKIP）。
+- テスト雛形を配置: Playwright e2e, Firestore rules test, Maestro flow, Lighthouse budget。
+- 禁止事項は遵守: archive / 署名 / App Store 提出 / cap submit 系は未着手。
+
+## verify.sh 初回実行結果（mode=all, RUN_NATIVE=0）
+日時: 2026-06-21
+集計: PASS=6  FAIL=0  SKIP=16
+
+### 緑（PASS=6）— 既存コードのベースラインは健全
+- TYPECHECK          tsc --noEmit
+- BUILD              vite build
+- F-LISTENER-LEAK    解除されない onSnapshot は無し
+- F-LISTENER-BUDGET  onSnapshot 呼び出し 12 / 上限 14
+- N-TOOL-XCODE       xcodebuild あり
+- N-TOOL-SIMCTL      xcrun(simctl) あり
+
+### ハード FAIL（赤）=0
+今回、実際に走って失敗したチェックは無い。
+※「赤」の実体は下記 SKIP（ツール未導入・未配線で未だ緑にできていない項目）。
+
+### SKIP=16（＝これから緑にしていく対象）
+ツール未導入:
+- LINT               eslint 未設定
+- UNIT               vitest 未導入
+- N-TOOL-MAESTRO     maestro 未導入
+- W-LH-PERF-BUDGET   @lhci/cli 未導入
+
+未配線（雛形はあるが中身/依存が未整備）:
+- W-E2E-HOME-POST      playwright 未導入
+- W-E2E-HOME-SCROLL    playwright 未導入
+- W-SCROLL-LONGTASK    playwright 未導入
+- W-E2E-RECORD-CRUD    playwright 未導入
+- W-E2E-RECORD-PERSIST playwright 未導入
+- F-RUNTIME-BUDGET     playwright + Firestore計測 未配線
+- RULES-RECORD-OWNER   firestore rules test 未配線（vitest/emulator）
+- RULES-DENY-DEFAULT   firestore rules test 未配線（vitest/emulator）
+
+ネイティブ重ステップ（RUN_NATIVE=1 で実行・今回は未実行）:
+- N-CAP-SYNC, N-IOS-BUILD, N-MAESTRO-SCROLL, N-MAESTRO-KEYBOARD
+
+## 次の周で最初に潰す1項目（提案）
+**Playwright e2e の配線（@playwright/test 導入 + テスト用ログインの導線）。**
+理由: 1つ導入するだけで W-E2E-HOME-POST / HOME-SCROLL / RECORD-CRUD /
+RECORD-PERSIST / SCROLL-LONGTASK / F-RUNTIME-BUDGET の最大6項目が動き出し、
+ゴール①②の中核（自由投稿・記録CRUD・スクロール品質）を一気にカバーできる。
+longtask 計測と Firestore 読み書き計測も同じ Playwright run に相乗りできる。
+※新ライブラリ導入になるため、着手前にユーザー確認が必要。
+
+補欠: LINT（eslint 設定）は最も低コストで緑にでき、③のコード品質シグナルを得られる。
+
+## メモ
+- iOS は Capacitor 8 = SPM 構成（Podfile/.xcworkspace なし）。scheme は "App"、
+  verify.sh は ios/App/App.xcodeproj を直接ビルドする。
+- Firestore 予算しきい値（MAX_LISTENERS=14, reads≤300, writes≤30）は暫定。
+  F-RUNTIME-BUDGET を実測して確定すること。
