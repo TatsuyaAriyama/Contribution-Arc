@@ -77,9 +77,24 @@ longtask 計測と Firestore 読み書き計測も同じ Playwright run に相�
 - verify.sh の RULES 分岐を firebase emulators:exec 経由に更新（emulator 必須）。
 - package.json に test:rules スクリプト追加。RULES PASS。
 
-### 現在の verify.sh web 集計: PASS=7 FAIL=0 SKIP=7
-残 SKIP: W-E2E-HOME-POST/SCROLL, W-SCROLL-LONGTASK, W-E2E-RECORD-CRUD/PERSIST,
-F-RUNTIME-BUDGET（→R4/R5 Playwright）, W-LH-PERF-BUDGET（→R6）。
+### R4 — Playwright e2e 基盤+認証+CRUD（W-E2E 緑）2026-06-21
+- @playwright/test 導入 + chromium。playwright.config は専用ポート(5279)で
+  自前起動（reuse 禁止：過去に別アプリ Madoromi の dev サーバを誤掴み）。
+  mobile-chromium（Pixel7 viewport + longtask 対応）。
+- global-setup: Auth Emulator REST で test user を seed → uid を取得 →
+  Firestore Emulator REST(Bearer owner)で users/{uid} に
+  onboardingCompletedAt+userId を seed（初回オンボーディングを skip）。
+- src に data-testid 追加（表示・スタイル非干渉）: ログインフォーム、ホーム
+  composer、bottom-nav(home/learning)、ライブラリ追加/編集/削除、feed-post。
+- tests/e2e: home-feed.spec（投稿出現・スクロール欠落なし）、
+  study-records.spec（学習対象 作成→編集→削除、リロード永続）。
+- verify.sh の W-E2E 分岐を firebase emulators:exec --only auth,firestore で
+  ラップ。package.json に test:e2e。
+- longtask / F-RUNTIME-BUDGET は test.fixme のまま（→R5）。
+
+### 現在の verify.sh web 集計: PASS=8 FAIL=0 SKIP=1
+残 SKIP: W-LH-PERF-BUDGET（→R6）。
+W-SCROLL-LONGTASK / F-RUNTIME-BUDGET は W-E2E 内の fixme（→R5 で有効化）。
 native（N-*）は RUN_NATIVE=1 時のみ（→R7）。
 
 ## メモ

@@ -21,3 +21,8 @@ build/*.provisionprofile
 firestore-debug.log
 firebase-debug.log
 ui-debug.log
+
+# Playwright e2e artifacts
+test-results
+playwright-report
+.playwright

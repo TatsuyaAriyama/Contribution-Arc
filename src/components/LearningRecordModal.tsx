@@ -135,6 +135,7 @@ export function LearningRecordModal({
         <button
           type="button"
           className="learning-record-item"
+          data-testid="learning-record-edit-link"
           onClick={onEdit}
           style={{ ["--learning-card-color" as string]: itemColor }}
         >

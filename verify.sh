@@ -97,8 +97,10 @@ run_web() {
   section "WEB: e2e / 体験品質"
 
   # Playwright e2e（HOME-POST, HOME-SCROLL, RECORD-CRUD, RECORD-PERSIST, SCROLL-LONGTASK, RUNTIME-BUDGET）
-  if [ -f "playwright.config.ts" ] && npx --no-install playwright --version >/dev/null 2>&1; then
-    if npx --no-install playwright test >"$LOG_DIR/e2e.log" 2>&1; then
+  # Auth+Firestore Emulator 内で走らせる（firebase emulators:exec でラップ）。
+  if [ -f "playwright.config.ts" ] && npx --no-install playwright --version >/dev/null 2>&1 && have firebase; then
+    if firebase emulators:exec --only auth,firestore \
+         "npx --no-install playwright test" >"$LOG_DIR/e2e.log" 2>&1; then
       c_pass "W-E2E"            "playwright test（全 e2e）"
     else
       c_fail "W-E2E"            "playwright 失敗 → $LOG_DIR/e2e.log"

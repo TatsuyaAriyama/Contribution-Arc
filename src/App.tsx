@@ -3648,6 +3648,7 @@ function LoginScreen() {
           <button
             type="button"
             className="login-email-toggle"
+            data-testid="login-email-toggle"
             onClick={() => setIsEmailFormOpen((prev) => !prev)}
             aria-expanded={isEmailFormOpen}
           >
@@ -3678,6 +3679,7 @@ function LoginScreen() {
                 <span>Email</span>
                 <input
                   type="email"
+                  data-testid="login-email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="ari@example.com"
@@ -3689,6 +3691,7 @@ function LoginScreen() {
                 <span>Password</span>
                 <input
                   type="password"
+                  data-testid="login-password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   autoComplete={authMode === "signup" ? "new-password" : "current-password"}
@@ -3696,7 +3699,7 @@ function LoginScreen() {
                   required
                 />
               </label>
-              <button className="login-submit" type="submit" disabled={isSubmitting}>
+              <button className="login-submit" type="submit" data-testid="login-submit" disabled={isSubmitting}>
                 {isSubmitting
                   ? "Connecting..."
                   : authMode === "signup"
@@ -13655,6 +13658,7 @@ function App() {
       <article
         className={`log-post-card ${variant === "compact" ? "compact" : ""}${post.userId === currentUserUid ? " is-own" : ""}`}
         key={post.id}
+        data-testid="feed-post"
       >
         <button type="button" className="log-post-author" onClick={() => handlePostAuthorOpen(post)}>
           {(() => {
@@ -15452,6 +15456,7 @@ function App() {
             <ProfileCharacterPreview color={playerCharacterColor} />
             <div>
               <textarea
+                data-testid="home-post-textarea"
                 value={postDraft}
                 onChange={(event) => {
                   setPostDraft(event.target.value);
@@ -15465,7 +15470,7 @@ function App() {
                 {/* 旧 shortcuts (学習を記録 / Roomから作成 / 学習ログから作成)
                     はユーザー要望で撤去。投稿は自由入力 + 「投稿」ボタンのみで完結。 */}
                 <CharCountRing value={postDraft.length} max={280} />
-                <button type="submit" disabled={isPosting || !postDraft.trim()}>
+                <button type="submit" data-testid="home-post-submit" disabled={isPosting || !postDraft.trim()}>
                   {isPosting ? t("Posting") : t("投稿")}
                 </button>
               </div>
@@ -16375,6 +16380,7 @@ function App() {
               <label>
                 <span>{t("名前")}</span>
                 <input
+                  data-testid="learning-editor-name"
                   value={learningEditorState.name}
                   onChange={(event) =>
                     setLearningEditorState((state) => (state ? { ...state, name: event.target.value } : state))
@@ -16570,7 +16576,7 @@ function App() {
                   <button type="button" className="learning-cancel-button" onClick={closeLearningEditor}>
                     {t("キャンセル")}
                   </button>
-                  <button type="submit" className="learning-save-button">
+                  <button type="submit" className="learning-save-button" data-testid="learning-editor-save">
                     {t("保存")}
                   </button>
                 </div>
@@ -16595,6 +16601,7 @@ function App() {
                     <button
                       type="button"
                       className="learning-delete-confirm"
+                      data-testid="learning-editor-delete-confirm"
                       onClick={handleLearningEditorDelete}
                     >
                       {t("本当に削除する")}
@@ -16604,6 +16611,7 @@ function App() {
                   <button
                     type="button"
                     className="learning-delete-trigger"
+                    data-testid="learning-editor-delete-trigger"
                     onClick={() => setIsLearningDeleteConfirming(true)}
                   >
                     {t("削除する")}
@@ -16817,6 +16825,7 @@ function App() {
                 <button
                   type="button"
                   className="learning-save-button"
+                  data-testid="learning-detail-edit"
                   onClick={() => {
                     closeDetail();
                     openLearningEditorForEdit(item);
@@ -20126,7 +20135,7 @@ function App() {
                 </svg>
                 {t("バーコード")}
               </button>
-              <button type="button" className="learning-add-button" onClick={() => openLearningEditorForCreate("")}>
+              <button type="button" className="learning-add-button" data-testid="learning-add-button" onClick={() => openLearningEditorForCreate("")}>
                 + {t("追加")}
               </button>
             </div>
@@ -20410,6 +20419,7 @@ function App() {
                       <button
                         type="button"
                         className="learning-card-trigger"
+                        data-testid="learning-card-trigger"
                         onClick={() => setLearningRecordItemId(item.id)}
                         aria-label={t("{name}の詳細", { name: item.name })}
                       >
@@ -23124,6 +23134,7 @@ function App() {
               というユーザー要求への対応。アクティブ判定もそれに合わせて反転。 */}
           <button
             type="button"
+            data-testid="bottomnav-home"
             className={currentView === "feed" ? "is-active" : ""}
             onClick={() => setCurrentView("feed")}
             aria-label={t("ホーム")}
@@ -23182,6 +23193,7 @@ function App() {
               ライブラリを左、プロフィールを右端に配置する。 */}
           <button
             type="button"
+            data-testid="bottomnav-learning"
             className={currentView === "learning" ? "is-active" : ""}
             onClick={() => setCurrentView("learning")}
             aria-label={t("ライブラリ")}

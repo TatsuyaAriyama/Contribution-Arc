@@ -75,6 +75,7 @@ export function PremiumSidebar({
       <nav className="side-nav" aria-label={t("メインナビゲーション")}>
         <button
           type="button"
+          data-testid="nav-home"
           className={currentView === "home" ? "active" : ""}
           onClick={() => handleNavigate(() => onViewChange("home"))}
         >
@@ -85,6 +86,7 @@ export function PremiumSidebar({
             ホーム直下に置き、唯一の CTA スタイルで一目で分かるようにする。 */}
         <button
           type="button"
+          data-testid="nav-learning"
           className={`side-nav-record${currentView === "learning" ? " active" : ""}`}
           onClick={() => handleNavigate(() => onViewChange("learning"))}
         >
