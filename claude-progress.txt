@@ -117,13 +117,42 @@ longtask 計測と Firestore 読み書き計測も同じ Playwright run に相�
   バンドルサイズ系は実測直上に締める（script≤750KB/total≤1100KB）。
 - package.json に test:lh（vite build && lhci autorun）、.gitignore に .lighthouseci。
 
-### 現在の verify.sh web 集計: PASS=9 FAIL=0 SKIP=0（Web 層 全緑）
-W-SCROLL-LONGTASK / F-RUNTIME-BUDGET は R5 で有効化済み（W-E2E に相乗り）。
-native（N-*）は RUN_NATIVE=1 時のみ（→R7）。
-→ 節目: ios-auth を main にマージして push（deploy 反映）。
+### Web 層完走時の verify.sh web 集計: PASS=9 FAIL=0 SKIP=0（Web 層 全緑）
+→ 節目: ios-auth を main にマージ（fast-forward）して push、deploy 成功を確認。
+   （remote main が先行していたため rebase で線形化してから push）
+
+### R7 — Native: Maestro + simulator build（ネイティブ層 完走）2026-06-21
+- Maestro 導入（curl get.maestro.mobile.dev）。N-TOOL-MAESTRO 緑。
+- N-CAP-SYNC: CAPACITOR_BUILD=true vite build → cap sync ios 緑。
+- N-IOS-BUILD: xcodebuild -project ios/App/App.xcodeproj -scheme App
+  -destination 'generic/platform=iOS Simulator' -derivedDataPath <known>
+  build CODE_SIGNING_ALLOWED=NO（署名/archive/提出は一切なし）緑。
+- Maestro 到達範囲の判明（実機シミュレータ実測）: 本番 Capacitor ビルドは
+  production Firebase に接続し、起動ゲート isAuthReady（onAuthStateChanged の
+  初回発火, App.tsx:5125）が解決するまでフィード/記録に進めない。自動実行に実
+  OAuth 資格情報が無く、ログイン画面にも到達できず "Contribution Arc / LOADING"
+  splash で停止。WebView/バンドル自体は正常ロード・React マウント済み（hierarchy
+  で確認）。※これは環境固有の到達制約であり、製品コードは未修正（スコープ外）。
+- 方針転換（緑を偽装しない）: 到達可能で意味のある「起動スモーク」を実テスト化。
+  .maestro/launch-smoke.yaml = launch → assert "Contribution Arc" 可視（WebView
+  マウント+React 描画の証明、白画面/バンドル404/起動クラッシュを機械検知）→
+  swipe×4 → 再 assert（非クラッシュ）。verify.sh は build→sim boot→install→
+  maestro test を一気通貫で実行し N-MAESTRO-LAUNCH として判定。実測 Passed(40s)。
+- N-MAESTRO-SCROLL / N-MAESTRO-KEYBOARD は認証必須フィード/記録入力が自動到達
+  不能のため恒常 SKIP（ツール不足ではなく到達不能）。acceptance-criteria.md に
+  到達範囲を明記。
+- verify.sh native 集計: PASS=6 FAIL=0 SKIP=2。
+
+### 最終集計（全層）: FAIL=0
+- web: PASS=9 SKIP=0 / native: PASS=6 SKIP=2（SCROLL/KEYBOARD=認証到達不能）。
+- ハード FAIL（赤）はゼロ。残 SKIP の2件は「ツール導入で潰せる」性質ではなく、
+  本番認証を自動で越えられないという到達制約に由来（恒常 SKIP として明記済み）。
 
 ## メモ
 - iOS は Capacitor 8 = SPM 構成（Podfile/.xcworkspace なし）。scheme は "App"、
   verify.sh は ios/App/App.xcodeproj を直接ビルドする。
-- Firestore 予算しきい値（MAX_LISTENERS=14, reads≤300, writes≤30）は暫定。
-  F-RUNTIME-BUDGET を実測して確定すること。
+- Firestore 予算は R5 で実測確定（WebChannel POST バースト: listen≤30/write≤20）。
+- Lighthouse 予算は R6 で実測確定（desktop: TBT≤300/CLS≤0.1/LCP≤3000/TTI≤4000,
+  script≤750KB/total≤1100KB）。
+- Maestro の N-MAESTRO-LAUNCH は起動済みシミュレータが無ければ利用可能な
+  iPhone を1台 boot して install→test する（verify.sh が面倒を見る）。

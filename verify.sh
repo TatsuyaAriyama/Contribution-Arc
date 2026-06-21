@@ -192,12 +192,16 @@ run_native() {
   fi
 
   # N-IOS-BUILD: シミュレータ向けビルド（scheme: App, SPM 構成・workspace なし）
+  # 既知の derivedDataPath に吐かせ、後段の Maestro で .app を install できるようにする。
+  local DD="$LOG_DIR/dd"
+  local APP_PATH="$DD/Build/Products/Debug-iphonesimulator/App.app"
   if have xcodebuild; then
     if xcodebuild \
          -project ios/App/App.xcodeproj \
          -scheme App \
          -configuration Debug \
          -destination 'generic/platform=iOS Simulator' \
+         -derivedDataPath "$DD" \
          build CODE_SIGNING_ALLOWED=NO >"$LOG_DIR/xcodebuild.log" 2>&1; then
       c_pass "N-IOS-BUILD" "xcodebuild (simulator, 署名なし)"
     else
@@ -207,18 +211,36 @@ run_native() {
     c_skip "N-IOS-BUILD" "xcodebuild なし"
   fi
 
-  # Maestro フロー（スクロール / キーボード）
-  if have maestro && [ -d ".maestro" ]; then
-    if maestro test .maestro >"$LOG_DIR/maestro.log" 2>&1; then
-      c_pass "N-MAESTRO-SCROLL"   "maestro scroll/keyboard flow"
-      c_pass "N-MAESTRO-KEYBOARD" "（同上フローに含む）"
-    else
-      c_fail "N-MAESTRO-SCROLL"   "maestro 失敗 → $LOG_DIR/maestro.log"
-      c_fail "N-MAESTRO-KEYBOARD" "maestro 失敗 → $LOG_DIR/maestro.log"
+  # Maestro フロー（起動スモーク）
+  #   N-MAESTRO-LAUNCH: WKWebView がバンドルを読み React がマウント描画し、
+  #     スワイプで落ちない（白画面/バンドル404/起動クラッシュを機械検知）。
+  #   N-MAESTRO-SCROLL / N-MAESTRO-KEYBOARD: フィード/記録入力は認証必須で、
+  #     本番ネイティブシェルは onAuthStateChanged 解決まで進めない。自動実行に
+  #     実 OAuth 資格情報が無く到達不能のため、理由付きで SKIP（acceptance-
+  #     criteria.md に明記）。
+  if have maestro && [ -d ".maestro" ] && [ -e "$APP_PATH" ]; then
+    # 起動済みシミュレータを使う。無ければ利用可能な iPhone を1台 boot。
+    local SIM_UDID
+    SIM_UDID="$(xcrun simctl list devices booted 2>/dev/null | grep -Eo '[0-9A-F-]{36}' | head -1)"
+    if [ -z "$SIM_UDID" ]; then
+      SIM_UDID="$(xcrun simctl list devices available 2>/dev/null | grep -E 'iPhone 1[5-9]' | grep -Eo '[0-9A-F-]{36}' | head -1)"
+      [ -n "$SIM_UDID" ] && xcrun simctl boot "$SIM_UDID" >/dev/null 2>&1 && xcrun simctl bootstatus "$SIM_UDID" -b >/dev/null 2>&1
     fi
+    if [ -n "$SIM_UDID" ] && xcrun simctl install "$SIM_UDID" "$APP_PATH" >"$LOG_DIR/siminstall.log" 2>&1; then
+      if maestro test --device "$SIM_UDID" .maestro >"$LOG_DIR/maestro.log" 2>&1; then
+        c_pass "N-MAESTRO-LAUNCH"   "maestro 起動スモーク（WebView+React 描画/非クラッシュ）"
+      else
+        c_fail "N-MAESTRO-LAUNCH"   "maestro 失敗 → $LOG_DIR/maestro.log"
+      fi
+    else
+      c_skip "N-MAESTRO-LAUNCH"   "シミュレータ起動/インストール不可"
+    fi
+    c_skip "N-MAESTRO-SCROLL"   "認証必須フィード未到達（自動 OAuth 不可）"
+    c_skip "N-MAESTRO-KEYBOARD" "認証必須記録入力未到達（自動 OAuth 不可）"
   else
-    c_skip "N-MAESTRO-SCROLL"   "maestro 未導入 or .maestro なし"
-    c_skip "N-MAESTRO-KEYBOARD" "maestro 未導入 or .maestro なし"
+    c_skip "N-MAESTRO-LAUNCH"   "maestro 未導入 / .maestro なし / .app 未ビルド"
+    c_skip "N-MAESTRO-SCROLL"   "認証必須フィード未到達（自動 OAuth 不可）"
+    c_skip "N-MAESTRO-KEYBOARD" "認証必須記録入力未到達（自動 OAuth 不可）"
   fi
 }
 

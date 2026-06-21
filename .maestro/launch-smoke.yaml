@@ -1,0 +1,38 @@
+# Maestro フロー — iOS シミュレータ 起動スモーク（N-MAESTRO-LAUNCH）
+#
+# 何を保証するか:
+#   Capacitor の WKWebView が dist バンドルを読み込み、React アプリが
+#   マウントして最初の画面（起動 splash / "Contribution Arc"）を描画し、
+#   タッチ操作（スワイプ）でクラッシュ・白画面化しないこと。
+#   → ネイティブシェル特有の回帰（バンドル未配置・WebView ロード失敗・
+#     起動クラッシュ・白画面）を機械的に捕まえる。
+#
+# 到達範囲の注意:
+#   本番 Capacitor ビルドは production Firebase に接続し、認証ゲート
+#   (`isAuthReady` = onAuthStateChanged 初回発火) を通るまでフィード/記録
+#   画面に進めない。自動実行では実 OAuth 資格情報が無く認証を越えられない
+#   ため、フィードのフリックスクロール（N-MAESTRO-SCROLL）と記録入力の
+#   キーボード検証（N-MAESTRO-KEYBOARD）はこのフローの対象外（verify.sh で
+#   理由付き SKIP）。ここでは「WebView が生きて描画している」ことを保証する。
+#
+# 実行: maestro test .maestro   （シミュレータにアプリ install 済み前提）
+appId: com.ariyamatatsuya.contributionarc
+---
+# --- 起動 ---
+- launchApp:
+    clearState: false
+
+# --- WebView マウント + React 描画の確認 ---
+# 起動 splash / auth 復帰中 / ログイン画面のいずれでも必ず存在するブランド名。
+# これが見えれば「バンドルが読まれ React がマウントして描画した」と言える
+# （白画面・バンドル404・WebView クラッシュなら出ない）。
+- assertVisible: "Contribution Arc"
+
+# --- タッチ操作で落ちない（スワイプ後も UI が生きている）---
+- repeat:
+    times: 4
+    commands:
+      - swipe:
+          direction: UP
+          duration: 300
+- assertVisible: "Contribution Arc"

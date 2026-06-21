@@ -20,7 +20,8 @@
 | `W-E2E-HOME-SCROLL` | フィードを長距離スクロールしても投稿が欠落せず最後まで到達できる | Playwright e2e |
 | `W-SCROLL-LONGTASK` | スクロール中の Long Task が閾値以下（既定: 1フレームあたり50ms超のタスクが連続しない） | Playwright + PerformanceObserver（longtask）で機械判定 |
 | `W-LH-PERF-BUDGET` | Lighthouse のパフォーマンス予算（TBT / CLS / LCP / バンドルサイズ）を超過しない | Lighthouse CI（desktop preset）+ `lighthouse-budget.json` |
-| `N-MAESTRO-SCROLL` | 実機シミュレータでフィードをフリックスクロールしてもクラッシュ・空白化しない | Maestro flow（`.maestro/scroll-keyboard.yaml`） |
+| `N-MAESTRO-LAUNCH` | 実機シミュレータでアプリが起動し WKWebView がバンドルを読み React が描画、スワイプで落ちない（白画面/バンドル404/起動クラッシュを機械検知） | Maestro flow（`.maestro/launch-smoke.yaml`） |
+| `N-MAESTRO-SCROLL` | シミュレータでフィードをフリックスクロールしてもクラッシュ・空白化しない（※認証必須で自動到達不可 → SKIP。起動健全性は `N-MAESTRO-LAUNCH` が担保） | Maestro flow |
 
 ### HUMAN（主観・ループ終了条件にしない）
 - スクロールの「気持ちよさ」「慣性・追従感」が自然か。
@@ -36,7 +37,7 @@
 |----|------|----------|
 | `W-E2E-RECORD-CRUD` | 学習記録の作成・編集・削除が UI から一周できる | Playwright e2e（`tests/e2e/study-records.spec.ts`） |
 | `W-E2E-RECORD-PERSIST` | 記録がリロード後も保持される（永続化の往復） | Playwright e2e |
-| `N-MAESTRO-KEYBOARD` | 記録入力でキーボード表示時に入力欄が隠れない／閉じられる | Maestro flow（keyboard フロー） |
+| `N-MAESTRO-KEYBOARD` | 記録入力でキーボード表示時に入力欄が隠れない／閉じられる（※認証必須で自動到達不可 → SKIP） | Maestro flow |
 | `RULES-RECORD-OWNER` | 学習記録は所有者のみ読み書き可（他人の userId では拒否） | Firestore rules test（`tests/firestore/rules.test.ts`） |
 
 ### HUMAN（主観・ループ終了条件にしない）
@@ -92,5 +93,11 @@
 
 ## 運用メモ
 - ループは **AUTO の FAIL がゼロ** になることを終了条件とする。`SKIP` はツール導入・配線待ちで、潰すべき対象だが「赤」とは別管理。
-- `verify.sh web` で Web 層のみ、`RUN_NATIVE=1 ./verify.sh` でネイティブ層も実行。
+- `verify.sh web` で Web 層のみ、`verify.sh native`（= `RUN_NATIVE=1`）でネイティブ層も実行。
 - 予算値（`MAX_LISTENERS` 等）は `verify.sh` 冒頭の定数で一元管理する。
+- **ネイティブ層の到達範囲**: `N-CAP-SYNC` / `N-IOS-BUILD` は web→`cap sync ios`→シミュレータ
+  build（署名なし）まで。`N-MAESTRO-LAUNCH` は WKWebView の起動健全性（バンドル読込＋React 描画＋
+  非クラッシュ）を保証する。`N-MAESTRO-SCROLL` / `N-MAESTRO-KEYBOARD` が対象とするフィード/記録入力は
+  **認証必須**で、本番ネイティブシェルは `onAuthStateChanged` 解決まで進めず、自動実行に実 OAuth 資格
+  情報が無いため到達不能 → 恒常的に `SKIP`（ツール不足ではなく到達不能のため。署名/archive/提出は
+  本ハーネスの対象外）。
