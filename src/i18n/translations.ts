@@ -342,6 +342,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
     "Link GitHub to overlay commits on your learning graph",
   "Googleで続行":                "Continue with Google",
   "GitHubで続行":                "Continue with GitHub",
+  "Appleで続行":                 "Continue with Apple",
   "もう一度ログインボタンを押してください。":
     "Please click the sign-in button again.",
   "Connecting...":              "Connecting...",

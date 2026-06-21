@@ -22,8 +22,8 @@
     "electron:build": "cross-env ELECTRON_BUILD=true npm run build && electron-builder --mac zip",
     "electron:build:mas": "cross-env ELECTRON_BUILD=true npm run build && electron-builder --mac mas",
     "electron:build:win": "cross-env ELECTRON_BUILD=true npm run build && electron-builder --win",
-    "ios:build": "cross-env CAPACITOR_BUILD=true npm run build",
-    "ios:sync": "cross-env CAPACITOR_BUILD=true npm run build && cap sync ios",
+    "ios:build": "cross-env CAPACITOR_BUILD=true VITE_PLATFORM=ios npm run build",
+    "ios:sync": "cross-env CAPACITOR_BUILD=true VITE_PLATFORM=ios npm run build && cap sync ios",
     "ios:open": "cap open ios"
   },
   "dependencies": {

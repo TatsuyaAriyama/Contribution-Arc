@@ -20,31 +20,33 @@
 | Launch Screen | `ios/App/App/Base.lproj/LaunchScreen.storyboard`, `Splash.imageset/` | 黒背景 + マーク |
 | i18n (en) | `src/i18n/translations.ts` | プライマリ言語 EN でも申請可能な品質 |
 | Settings 内リンク | `src/App.tsx` (Settings → Data) | "プライバシーポリシー · 利用規約 · サポート" を 1 行で表示 |
+| **iOS ビルドのデジタル商品ゲート** | `package.json` `ios:build`/`ios:sync` | `VITE_PLATFORM=ios` を立てて Shop/Arc 購入/ポーカーを非表示化 (3.1.1) |
+| **Sign in with Apple ボタン (コード)** | `src/App.tsx` ログイン画面 / `firebase.ts` | iOS ビルド時に Apple ボタンを先頭表示・`handleProviderLogin("apple")` 配線済 (4.8)。※Firebase/Apple 側の有効化は下記の人間作業が残る |
+| **カメラ / 写真の用途説明** | `ios/App/App/Info.plist` | `NSCameraUsageDescription` (バーコード/getUserMedia)・`NSPhotoLibraryUsageDescription` を追加 |
+| **Privacy manifest** | `ios/App/App/PrivacyInfo.xcprivacy` | Apple 2024 必須。収集データ型 + UserDefaults(CA92.1) を宣言。Xcode の Resources に登録済 |
+| **iPhone 専用** | `ios/App/App.xcodeproj` | `TARGETED_DEVICE_FAMILY = 1` |
+| **ブロック / ミュート / NGワード** | `src/App.tsx` (`blockedFriendUids`/`mutedFriendUids`/`containsBlockedWord`) | 1.2 のブロック要件は充足。※下記「通報」が未実装 |
 
 ---
 
-## ⚠️ Apple のガイドラインで必須になっているもの (=未対応)
+## ⚠️ Apple のガイドラインで必須になっているもの
 
-### 1. Sign in with Apple (App Store Guideline 4.8)
+### 1. Sign in with Apple (App Store Guideline 4.8) — コードは対応済 / Apple 側設定が残る
 
-> サードパーティ (Google / GitHub 等) のソーシャルログインを提供している
-> 場合、**Apple は Sign in with Apple の提供を必須**としている。
+> サードパーティ (Google / GitHub) のソーシャルログインを出している以上、
+> **Apple は Sign in with Apple の提供を必須**としている。
 
-現状、サインインは Google + GitHub の 2 プロバイダで、Apple は未実装。
-これがないと申請ほぼ確実に Rejected。
+✅ **済 (リポジトリ側)**: `appleProvider` + `handleProviderLogin("apple")` 配線、
+ログイン画面に iOS ビルド限定で「Appleで続行」ボタンを HIG 準拠 (白ボタン/先頭) で追加。
 
-**作業**:
+⚠️ **残 (あなたの作業 — Firebase/Apple 側を有効化しないとボタンを押してもエラーになる)**:
 1. Apple Developer の "Certificates, IDs & Profiles" で対象 App ID に
    `Sign In with Apple` capability を有効化
-2. Apple Developer の Services ID を作成し、Firebase Console から要求される
-   `return URL` を登録、`Sign in with Apple Key` を生成・ダウンロード
+2. Apple Developer の Services ID を作成し、Firebase が要求する `return URL` を登録、
+   `Sign in with Apple Key` を生成・ダウンロード
 3. Firebase Console → Authentication → Sign-in method → Apple を有効化、
-   Services ID と Apple Sign in with Apple Key を登録
-4. `src/services/firebase.ts` 等に `signInWithPopup(auth, new OAuthProvider("apple.com"))`
-   ルートを追加 (現状の Google/GitHub フローを参考に)
-5. UI に「Apple でサインイン」ボタンを追加。Apple HIG に従い、Apple ボタンは
-   他のソーシャル ログインボタンと **同じか大きい** サイズで配置すること
-6. Xcode の `App` target → Signing & Capabilities → "+" → `Sign In with Apple` を追加
+   Services ID と Key を登録
+4. Xcode の `App` target → Signing & Capabilities → "+" → `Sign In with Apple` を追加
 
 ### 2. App Tracking Transparency (ATT)
 
@@ -69,11 +71,27 @@ App Store Connect → App Privacy で以下を申告する。`privacy.ja.html` �
 
 投稿・返信・チャット機能があるアプリは、以下が必須:
 
-- **通報機能** (現状あり?要確認)
-- **ブロック / ミュート機能** (現状なし → 申請までに追加推奨)
-- **24 時間以内に対応する旨の表明**
+| 要件 | 状況 | 場所 |
+|------|------|------|
+| **ブロック機能** | ✅ 済 | `src/App.tsx` `blockedFriendUids` |
+| **ミュート機能** | ✅ 済 | `src/App.tsx` `mutedFriendUids` |
+| **NG ワードフィルタ** | ✅ 済 | `src/App.tsx` `containsBlockedWord` |
+| **通報機能** | ⚠️ 未実装 | — |
+| **24 時間以内に対応する旨の表明** | ⚠️ 人間作業 | 利用規約 / App Store Connect の Review メモ |
 
-未対応の場合は 1.2 で Rejected されることが多い。
+⚠️ **残る 1.2 ギャップ = 通報 (report) 機能**。ブロック・ミュート・NG ワードは充足
+しているが、個別の投稿/返信を運営に通報する導線が無い。Apple は UGC アプリに
+「不適切コンテンツの通報 → 24h 以内対応」を要求するため、ここが未実装だと 1.2 で
+Rejected される可能性がある。
+
+対応方針 (要ユーザー判断):
+- 各投稿のオーバーフローメニューに「通報する」を追加し、`reports/{reportId}` へ
+  `{ targetPostId, reporterUid, reason, createdAt }` を 1 write する（既存の
+  Firestore コスト規律: payload 署名で dedup）。
+- 通報受信後 24h 以内に対応する旨を `terms.html` / Review メモに明記。
+
+> 過去に提出実績があるため、前回 1.2 を通過した構成（ブロック等のみ）で再申請し、
+> Apple から通報導線を求められた時点で上記を追加する、という運用も選択肢。
 
 ---
 
@@ -94,10 +112,13 @@ npm install        # capacitor 系もここで入る
 ### 2. Web → iOS 同期
 
 ```bash
-CAPACITOR_BUILD=true npm run build   # vite.config.ts が relative path に切替
-npx cap sync ios                     # dist/ を ios/ にコピー
-npx cap open ios                     # Xcode 起動
+npm run ios:sync   # = CAPACITOR_BUILD=true VITE_PLATFORM=ios vite build && cap sync ios
+npx cap open ios   # Xcode 起動
 ```
+
+> ⚠️ **必ず `npm run ios:sync` を使うこと**。`VITE_PLATFORM=ios` を立てないと
+> Shop / Arc 購入 / ポーカーが画面に出たまま提出され、Apple guideline 3.1.1
+> (デジタル商品は Apple IAP 必須) で Rejected になる。
 
 ### 3. Xcode での署名 / Capability 設定
 
@@ -181,7 +202,7 @@ self-study, productivity
 |------|------|
 | Guideline 4.8 (Apple Sign in 不在) | 上記 #1 を実装 |
 | Guideline 5.1.1 (Privacy declaration ⇔ policy 不一致) | App Privacy 申告を `privacy.html` と一致させる |
-| Guideline 1.2 (ユーザー生成コンテンツのモデレーション) | 通報・ブロック機能を追加 |
+| Guideline 1.2 (ユーザー生成コンテンツのモデレーション) | 通報機能を追加 (ブロック/ミュート/NGワードは実装済) |
 | Guideline 4.2.3 (機能が薄すぎ / Web ラッパー疑惑) | スクリーンショット差替え、Capacitor のネイティブ API 利用箇所を増やす (IAP / Haptics 等) |
 
 ---

@@ -3347,7 +3347,16 @@ function GitHubIcon() {
   );
 }
 
-
+function AppleIcon() {
+  return (
+    <svg className="provider-icon apple-icon" viewBox="0 0 16 16" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M11.18 8.46c-.02-1.7 1.39-2.52 1.46-2.56-.8-1.16-2.03-1.32-2.47-1.34-1.05-.11-2.05.62-2.58.62-.53 0-1.35-.6-2.22-.59-1.14.02-2.2.66-2.79 1.69-1.19 2.06-.3 5.11.85 6.78.57.82 1.24 1.73 2.12 1.7.85-.04 1.18-.55 2.2-.55 1.02 0 1.32.55 2.22.53.92-.02 1.5-.83 2.06-1.66.65-.95.92-1.87.93-1.92-.02-.01-1.78-.69-1.8-2.71-.02-.01.34-.21.36-.22zM9.5 3.34c.47-.57.79-1.36.7-2.15-.68.03-1.5.45-1.98 1.02-.43.5-.81 1.31-.71 2.08.76.06 1.53-.39 1.99-.95z"
+      />
+    </svg>
+  );
+}
 
 
 
@@ -3627,6 +3636,22 @@ function LoginScreen() {
         </p>
 
         <div className="login-showcase-actions">
+          {/* App Store 提出版(iOS)では、Google/GitHub のソーシャル
+              ログインを出す以上、Apple ガイドライン 4.8 で Sign in with
+              Apple の提供が必須。HIG に従い他プロバイダと同等以上の扱いで
+              先頭に置く。Web/Electron では Apple を Firebase で有効化して
+              いないため表示しない。 */}
+          {IS_IOS_BUILD ? (
+            <button
+              type="button"
+              className="provider-button apple"
+              onClick={() => handleProviderLogin("apple")}
+              disabled={isSubmitting}
+            >
+              <AppleIcon />
+              <span>{t("Appleで続行")}</span>
+            </button>
+          ) : null}
           <button
             type="button"
             className="provider-button github"
