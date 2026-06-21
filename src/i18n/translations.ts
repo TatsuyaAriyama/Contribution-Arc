@@ -356,6 +356,8 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "通知":                       "Notifications",
   "フレンド":                   "Friends",
   "フレンド・検索":             "Friends & Search",
+  "{count}人をフォロー中":      "Following {count}",
+  "残高 {count} Arc":           "{count} Arc",
   "ユーザーIDで探す (例: ari.dev)":
                                 "Search by user ID (e.g. ari.dev)",
   "届いている申請":             "Incoming requests",

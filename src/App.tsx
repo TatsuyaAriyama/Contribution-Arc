@@ -21096,7 +21096,11 @@ function App() {
                     </svg>
                   </span>
                   <span className="profile-nondo-section-label profile-nondo-marker">Menu</span>
-                  <span className="profile-nondo-section-count">{currentOrganization?.ownerUid === currentUser.uid ? 6 : 5}</span>
+                  {/* メニュー項目数。唯一の条件分岐はショップ (iOS では
+                      Apple guideline 3.1.1 で非表示) なので、それに合わせる。
+                      旧実装は組織オーナー判定で 6/5 を出していたが、項目数とは
+                      無関係で実態とズレていた。 */}
+                  <span className="profile-nondo-section-count">{IS_IOS_BUILD ? 5 : 6}</span>
                   <span className="profile-nondo-section-arrow" aria-hidden="true">›</span>
                 </div>
                 <nav className="profile-menu" aria-label={t("メニュー")}>
@@ -21160,7 +21164,14 @@ function App() {
                         <path d="M14.6 15c0.8-0.7 1.7-1 2.9-1c2.3 0 3.7 1.5 3.7 3.4" />
                       </svg>
                     </span>
-                    <span className="profile-menu-label">{t("フレンド・検索")}</span>
+                    <span className="profile-menu-label">
+                      {t("フレンド・検索")}
+                      {following.length > 0 ? (
+                        <small className="profile-menu-sub">
+                          {t("{count}人をフォロー中", { count: following.length })}
+                        </small>
+                      ) : null}
+                    </span>
                     <span className="profile-menu-arrow" aria-hidden="true">›</span>
                   </button>
                   {/* 「通知」「作業部屋」エントリは要望により撤去。
@@ -21182,7 +21193,10 @@ function App() {
                           <path d="M9 9V6a3 3 0 0 1 6 0v3" />
                         </svg>
                       </span>
-                      <span className="profile-menu-label">{t("ショップ")}</span>
+                      <span className="profile-menu-label">
+                        {t("ショップ")}
+                        <small className="profile-menu-sub">{t("残高 {count} Arc", { count: coins })}</small>
+                      </span>
                       <span className="profile-menu-arrow" aria-hidden="true">›</span>
                     </button>
                   ) : null}
