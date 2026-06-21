@@ -1,20 +1,25 @@
 import { useEffect, useRef, useState, type ReactNode, type TouchEvent } from "react";
+import { canArmAtTop, computePull, findScrollableAncestor } from "./pullToRefreshGesture";
 
 /**
  * Pull-to-Refresh コンポーネント。X / Instagram 流の引き下げで更新する
  * ジェスチャをモバイル向けに提供する。
  *
  * 動作仕様：
- * - window.scrollY === 0 のときだけ起動 (スクロール中の誤発火を防ぐ)
- * - touchmove で指の Y 移動量を resistance 0.5 で減衰して引き量に変換
- * - 60px 引いて指を離すと onRefresh を呼ぶ
+ * - 指の真下の「実際にスクロールしている要素」を touchstart のたびに live
+ *   で解決し (resolveScroller)、その要素が最上端 (scrollTop<=0) のときだけ
+ *   起動する。フィード途中ではスクロールコンテナが scrollTop>0 なので決して
+ *   起動しない (= 誤発火しない)。
+ * - touchmove で指の Y 移動量を resistance で減衰して引き量に変換。ただし
+ *   ARM_DISTANCE を超える明確な引きだけを計上し、僅かなブレでインジケータが
+ *   チラつかないようにする。
+ * - THRESHOLD まで引いて指を離すと onRefresh を呼ぶ
  * - onRefresh が resolve するまで indicator がスピンし続ける
  * - インジケータは container 上端に absolute で出し、子コンテンツも軽く
  *   translateY されることで "引いてる" 感を視覚化する
  *
  * 依存ライブラリは使わず、touch event だけで完結。iOS の rubber-band と
- * 競合しないよう、touchmove 内で event.preventDefault() は呼ばず、
- * scrollTop === 0 で 0px 以下に引かれた時のみ視覚的に追従する。
+ * 競合しないよう、touchmove 内で event.preventDefault() は呼ばない。
  */
 export function PullToRefresh({
   onRefresh,
@@ -31,67 +36,70 @@ export function PullToRefresh({
   // touchstart は PTR を起動しないようにする。「最上部にバウンドした直後
   // に指で下に引いた」ような誤発火を防ぐ。
   const lastScrollAtRef = useRef(0);
-  // PTR が watch するスクロール対象。.feed-view-content のように
-  // overflow-y:auto を持つ ancestor がいると window.scrollY は常に 0 で、
-  // 内部スクロール最中でも PTR が起動してしまう不具合があった。
-  // mount 時に DOM ツリーを上に辿って実際の scroll container を見つけて
-  // それを scrollTop の source にする。見つからなければ window 扱い。
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const scrollSourceRef = useRef<HTMLElement | Window>(typeof window !== "undefined" ? window : (null as never));
+  // このジェスチャで実際にスクロールしている要素。touchstart のたびに
+  // 指の下の DOM から live で解決する (下記 resolveScroller 参照)。
+  const gestureScrollerRef = useRef<HTMLElement | null>(null);
 
   const THRESHOLD = 140;
   const MAX_PULL = 200;
   const RESISTANCE = 0.28;
+  // pull を計上し始める最小の引き距離。ここを超えるまではインジケータも
+  // 出さないので、スクロール上端での僅かな指のブレで「更新しかけ」が
+  // チラつくのを防ぐ。
+  const ARM_DISTANCE = 18;
   // スクロール後この時間 (ms) は PTR を起動しない。500ms あれば momentum
   // も止まり、ユーザーが「意図的に下に引いた」と区別できる。
   const SCROLL_QUIET_MS = 500;
 
+  // 指の下 (= startEl) から上に辿り、実際にスクロール可能な (中身が
+  // あふれていて overflow-y が auto/scroll) 最初の ancestor を返す。
+  // 旧実装は mount 時に一度だけ container を検出し、外したときは window
+  // にフォールバックしていた。window.scrollY は内部スクロール時も常に 0
+  // なので、フィード途中でも getScrollTop()===0 になり PTR が誤発火して
+  // いた。毎ジェスチャ live で解決することでこの取りこぼしを無くす。
+  const resolveScroller = (startEl: Element | null): HTMLElement | null => {
+    if (typeof window === "undefined") return null;
+    const start = (startEl as HTMLElement | null) || rootRef.current;
+    return findScrollableAncestor<HTMLElement>(
+      start,
+      (el) => {
+        const style = window.getComputedStyle(el);
+        const canScrollY = style.overflowY === "auto" || style.overflowY === "scroll";
+        return canScrollY && el.scrollHeight > el.clientHeight + 1;
+      },
+      (el) => el === document.body || el === document.documentElement,
+    );
+  };
+
+  // 現在の scrollTop。ジェスチャ中の scroller が無ければ「最上部扱い (0)」。
   const getScrollTop = () => {
-    const target = scrollSourceRef.current;
-    if (!target) return 0;
-    if (target === window) return window.scrollY;
-    return (target as HTMLElement).scrollTop;
+    const scroller = gestureScrollerRef.current;
+    return scroller ? scroller.scrollTop : 0;
   };
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    // 自身の root から上に辿って overflow-y: auto/scroll を持つ ancestor
-    // を見つける。それが実際のスクロールコンテナ。
-    let scroller: HTMLElement | Window = window;
-    let el: HTMLElement | null = rootRef.current?.parentElement || null;
-    while (el && el !== document.body) {
-      const overflowY = window.getComputedStyle(el).overflowY;
-      if (overflowY === "auto" || overflowY === "scroll") {
-        scroller = el;
-        break;
-      }
-      el = el.parentElement;
-    }
-    scrollSourceRef.current = scroller;
-
     const handleScroll = () => {
       lastScrollAtRef.current = Date.now();
     };
-    // 検出した scrollSource に加えて、capture phase で document 全体に
-    // listen する。これは scroll event が bubble しないことへの保険：
-    // - scrollSource 検出が何かの理由で失敗していても、capture リスナー
-    //   が子要素の scroll を拾うので lastScrollAt が必ず更新される
-    // - 別ペインや内側にネストした overflow があってもカバーできる
-    scroller.addEventListener("scroll", handleScroll, { passive: true });
+    // capture phase で document 全体の scroll を拾い、momentum / バウンドの
+    // 直後かどうかを判定するためのタイムスタンプを更新する。
     document.addEventListener("scroll", handleScroll, { capture: true, passive: true });
     return () => {
-      scroller.removeEventListener("scroll", handleScroll);
       document.removeEventListener("scroll", handleScroll, { capture: true });
     };
   }, []);
 
   const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
     if (refreshing) return;
-    // 実際のスクロールコンテナの最上端でしか起動しない。中途半端な位置で
-    // 引いても「リロードしかけ」表示が出るとスクロール体験が壊れる。
-    if (getScrollTop() > 0) return;
+    // 指の真下のスクロールコンテナを live で解決し、その最上端でだけ起動。
+    const scroller = resolveScroller(event.target as Element | null);
+    gestureScrollerRef.current = scroller;
+    // スクロール可能なコンテナが本当に最上端 (scrollTop<=0) のときだけ。
+    // 中途半端な位置 (scrollTop>0) で引いても起動しない＝誤発火を断つ。
+    if (!canArmAtTop(scroller ? scroller.scrollTop : null)) return;
     // スクロール momentum / 最上部バウンドの直後は PTR を起動しない。
-    // ユーザーが「早くスクロールしたら更新される」と報告した誤発火を防ぐ。
     if (Date.now() - lastScrollAtRef.current < SCROLL_QUIET_MS) return;
     startYRef.current = event.touches[0].clientY;
     activeRef.current = true;
@@ -99,7 +107,7 @@ export function PullToRefresh({
 
   const handleTouchMove = (event: TouchEvent<HTMLDivElement>) => {
     if (!activeRef.current || refreshing || startYRef.current === null) return;
-    // 途中で下にスクロールしたら追跡を解除
+    // 途中で少しでも下にスクロールしたら (= 最上端を離れたら) 追跡を解除
     if (getScrollTop() > 0) {
       activeRef.current = false;
       setPull(0);
@@ -113,23 +121,21 @@ export function PullToRefresh({
       return;
     }
     const deltaY = event.touches[0].clientY - startYRef.current;
-    // 下方向の移動 (deltaY > 0) のみを引き量にする。上方向や横方向は無視。
-    if (deltaY <= 0) {
-      setPull(0);
-      return;
-    }
-    const next = Math.min(deltaY * RESISTANCE, MAX_PULL);
-    setPull(next);
+    // ARM_DISTANCE を超える明確な下方向の引きだけを pull にする。僅かな
+    // 指のブレや上方向・横方向は無視し、インジケータをチラつかせない。
+    setPull(computePull(deltaY, ARM_DISTANCE, RESISTANCE, MAX_PULL));
   };
 
   const handleTouchEnd = async () => {
     if (!activeRef.current || refreshing) {
       activeRef.current = false;
       startYRef.current = null;
+      gestureScrollerRef.current = null;
       return;
     }
     activeRef.current = false;
     startYRef.current = null;
+    gestureScrollerRef.current = null;
     if (pull >= THRESHOLD) {
       setRefreshing(true);
       try {
