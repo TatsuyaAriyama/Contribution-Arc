@@ -50,10 +50,8 @@ import {
   backfillStudyLogOrganizationId,
   createOrganization,
   createOrganizationInvite,
-  fetchOrganizationStudyLogs,
   leaveOrganization,
   listAuditLogs,
-  listMemberStudyLogs,
   listOrganizationMembers,
   listUsersByGoal,
   type GoalMatchUser,
@@ -93,7 +91,6 @@ import {
   isValidSlackWebhookUrl,
   postToSlackWebhook,
 } from "./services/slack";
-import { buildWeeklyDigestPayload } from "./services/teamDigest";
 import {
   deleteLearningItemFromCloud,
   fetchLearningItemsFromCloud,
@@ -174,7 +171,6 @@ import {
   type RoomChatMessage,
 } from "./services/roomChat";
 import { ArcPurchasePanel } from "./components/ArcPurchasePanel";
-import { ManagerDashboard } from "./components/ManagerDashboard";
 
 /* iOS App Store 提出版では Apple 以外のデジタル商品決済 (Stripe で
    Arc コインを売る等) は guideline 3.1.1 で即リジェクトされる。
@@ -5001,27 +4997,6 @@ function App() {
         setOrgError(message);
       });
   }, [orgInviteToken, currentUser]);
-
-  /* Load organization members when manager view is opened.
-     Only org owners can access the manager dashboard. */
-  useEffect(() => {
-    if (currentView !== "manager" || !currentOrganization) return;
-    if (currentUser?.uid !== currentOrganization.ownerUid) return;
-    if (orgMembers.length > 0 && !isLoadingOrgMembers) return; // Already loaded
-
-    setIsLoadingOrgMembers(true);
-    listOrganizationMembers(db, currentOrganization.id)
-      .then((members) => {
-        setOrgMembers(members);
-      })
-      .catch((error) => {
-        console.warn("Failed to load org members for manager dashboard", error);
-        setOrgAdminError(t("メンバー一覧を読み込めませんでした。"));
-      })
-      .finally(() => {
-        setIsLoadingOrgMembers(false);
-      });
-  }, [currentView, currentOrganization, currentUser?.uid]);
 
   /* One-time, member-side backfill of organizationId onto pre-rollout
      study logs. Every org member runs this once so the owner's Manager
@@ -10340,8 +10315,10 @@ function App() {
       });
       setDailyMessage(t("{section}を保存しました。", { section: sectionLabel }));
 
-      // 日報報酬：当日の「今日やること」と「振り返り」を両方書き終えたら 50 Arc。
-      // 1日1回・端末間で二重受領しないよう lastDailyReportRewardDate で gate する。
+      // 日報報酬：当日の日報（「今日やること」または「振り返り」のどちらか）を
+      // 書いて共有したら 50 Arc。両方そろわなくても、その日初めて中身のある日報を
+      // 記録した時点で受け取れる。1日1回・端末間で二重受領しないよう
+      // lastDailyReportRewardDate で gate する。
       // - 過去日の編集には払わない（バックフィルで Arc 稼ぎを成立させない）
       // - 下書き保存では払わない（共有された時点が達成）
       // - 失敗 (catch) 経路でも払わない（クラウドに届いていないため）
@@ -10353,12 +10330,11 @@ function App() {
         selectedDailyDate === todayLocalKey &&
         lastDailyReportRewardDate !== todayLocalKey &&
         !syncedReport.isDraft &&
-        planComplete &&
-        reflectionComplete
+        (planComplete || reflectionComplete)
       ) {
         setCoins((value) => value + 50);
         setLastDailyReportRewardDate(todayLocalKey);
-        showToast(t("+50 Arc 獲得 ✦ 今日やること & 振り返り を両方完了しました"), {
+        showToast(t("+50 Arc 獲得 ✦ 今日の日報を記録しました"), {
           kind: "success",
         });
       }
@@ -16210,26 +16186,6 @@ function App() {
                 {/* === トップバーから移設したハブ項目 ===
                     管理 / 作業部屋 / ショップ / フレンド / ライブ / 検索 /
                     通知 / フィード表示 をここに集約。旧アイコン群は撤去済み。 */}
-                {currentOrganization && currentUser?.uid === currentOrganization.ownerUid ? (
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                      setCurrentView("manager");
-                    }}
-                  >
-                    <svg className="user-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                      <rect x="3" y="6" width="8" height="10" fill="none" stroke="currentColor" strokeWidth="1.6" rx="0.5" />
-                      <rect x="13" y="6" width="8" height="10" fill="none" stroke="currentColor" strokeWidth="1.6" rx="0.5" />
-                      <circle cx="7" cy="10.5" r="1.2" fill="currentColor" />
-                      <circle cx="17" cy="10.5" r="1.2" fill="currentColor" />
-                      <path d="M7 12.5v3 M17 12.5v3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                    </svg>
-                    <span>{t("管理")}</span>
-                  </button>
-                ) : null}
-
                 <button
                   type="button"
                   role="menuitem"
@@ -19654,11 +19610,11 @@ function App() {
                   {earned ? (
                     <span className="daily-reward-banner-text">
                       <strong>{t("+50 Arc 獲得済み")}</strong>
-                      <small>{t("明日も「今日やること」と「振り返り」の両方共有で Arc を狙えます。")}</small>
+                      <small>{t("明日も日報を記録すれば Arc を狙えます。")}</small>
                     </span>
                   ) : (
                     <span className="daily-reward-banner-text">
-                      <strong>{t("両方を共有すると +50 Arc / 日")}</strong>
+                      <strong>{t("今日の日報を記録すると +50 Arc / 日")}</strong>
                       <span className="daily-reward-banner-progress" aria-label={t("今日の達成状況")}>
                         <span className={planDone ? "is-done" : ""}>
                           {planDone ? "✓ " : "・"}
@@ -21131,24 +21087,6 @@ function App() {
                       <span className="profile-menu-arrow" aria-hidden="true">›</span>
                     </button>
                   ) : null}
-                  {currentOrganization?.ownerUid === currentUser.uid ? (
-                    <button
-                      type="button"
-                      className="profile-menu-item"
-                      onClick={() => setCurrentView("manager")}
-                    >
-                      <span className="profile-menu-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="4" y="4" width="7" height="7" rx="1.5" />
-                          <rect x="13" y="4" width="7" height="7" rx="1.5" />
-                          <rect x="4" y="13" width="7" height="7" rx="1.5" />
-                          <rect x="13" y="13" width="7" height="7" rx="1.5" />
-                        </svg>
-                      </span>
-                      <span className="profile-menu-label">{t("管理ダッシュボード")}</span>
-                      <span className="profile-menu-arrow" aria-hidden="true">›</span>
-                    </button>
-                  ) : null}
                   <button
                     type="button"
                     className="profile-menu-item profile-menu-item--avatar"
@@ -22398,6 +22336,15 @@ function App() {
                   style={{ width: `${Math.min(100, (feedRewardArcEarned / 500) * 100)}%` }}
                 />
               </div>
+              {/* 日報の獲得導線。フィード投稿の上限 (500) と違い、日報は
+                  毎日 +50 Arc もらえる無上限の経路なので、ここで明示して
+                  「Arc が貯まらない」体験を解消する。 */}
+              <p className="shop-feed-bonus-copy">
+                {t("日報を書くと毎日 +50 Arc。")}
+                {lastDailyReportRewardDate === todayDateKey
+                  ? t("今日の分は受け取り済み。明日また記録してみてください。")
+                  : t("今日はまだ受け取っていません。日報を記録してみてください。")}
+              </p>
             </div>
           </section>
 
@@ -22668,78 +22615,6 @@ function App() {
               )}
             </div>
           </section>
-        </motion.section>
-      ) : currentView === "manager" ? (
-        <motion.section
-          className="manager-screen"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={SPRING_SNAPPY}
-        >
-          <div className="profile-topbar">
-            <button type="button" onClick={() => setCurrentView("home")}>
-              ← Home
-            </button>
-          </div>
-          {currentOrganization && currentUser?.uid === currentOrganization.ownerUid ? (
-            isLoadingOrgMembers ? (
-              <div className="manager-loading">
-                <p>{t("読み込み中…")}</p>
-              </div>
-            ) : (
-              <ManagerDashboard
-                teamMembers={orgMembers}
-                currentUser={{
-                  uid: currentUser.uid,
-                  userId: userId,
-                  displayName: currentUser.displayName || "Manager",
-                  avatarUrl: currentUser.photoURL || "",
-                  level: 0,
-                  effortExp: 0,
-                  outputExp: 0,
-                  streak: 0,
-                  organizationRole: "owner",
-                  lastSyncedAt: new Date().toISOString(),
-                  contributionCount: 0,
-                }}
-                organizationName={currentOrganization.name}
-                hasSlackWebhook={
-                  !!currentOrganization.slackWebhookUrl &&
-                  isValidSlackWebhookUrl(currentOrganization.slackWebhookUrl)
-                }
-                onSendSlackDigest={async () => {
-                  const webhookUrl = currentOrganization.slackWebhookUrl;
-                  if (!webhookUrl || !isValidSlackWebhookUrl(webhookUrl)) {
-                    return t("Slackウェブフックが設定されていません");
-                  }
-                  const payload = buildWeeklyDigestPayload({
-                    organizationName: currentOrganization.name,
-                    members: orgMembers,
-                    language,
-                  });
-                  const result = await postToSlackWebhook(webhookUrl, payload);
-                  if (!result.ok) {
-                    return t("Slack送信に失敗: {error}", { error: result.error || "unknown" });
-                  }
-                  return undefined;
-                }}
-                onFetchOrgLogs={(sinceIso) =>
-                  fetchOrganizationStudyLogs(db, currentOrganization.id, sinceIso)
-                }
-                onFetchMemberLogs={(memberUid) =>
-                  listMemberStudyLogs(db, currentOrganization.id, memberUid)
-                }
-              />
-            )
-          ) : (
-            <div className="manager-empty-state">
-              <div className="card">
-                <p className="card-kicker">Manager Dashboard</p>
-                <h2>{t("アクセス権限がありません")}</h2>
-                <p>{t("マネージャーダッシュボードはOrganizationのオーナーのみアクセス可能です")}</p>
-              </div>
-            </div>
-          )}
         </motion.section>
       ) : (
       <motion.div

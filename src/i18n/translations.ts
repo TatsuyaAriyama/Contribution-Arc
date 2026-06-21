@@ -498,12 +498,16 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "+50 Arc 獲得済み":             "+50 Arc earned",
   "明日も「今日やること」と「振り返り」の両方共有で Arc を狙えます。":
                                 "Earn Arc again tomorrow by sharing both today's plan and reflection.",
+  "明日も日報を記録すれば Arc を狙えます。":
+                                "Log a report again tomorrow to earn more Arc.",
   "両方を共有すると +50 Arc / 日":
                                 "Share both to earn +50 Arc / day",
+  "今日の日報を記録すると +50 Arc / 日":
+                                "Log today's report to earn +50 Arc / day",
   "今日の達成状況":              "Today's progress",
   "今日やることの進捗":          "Plan progress",
-  "+50 Arc 獲得 ✦ 今日やること & 振り返り を両方完了しました":
-                                "+50 Arc earned ✦ You completed both today's plan and reflection",
+  "+50 Arc 獲得 ✦ 今日の日報を記録しました":
+                                "+50 Arc earned ✦ You logged today's report",
 
   // 日報: クイックアクション
   "過去の計画から引き継ぎ":      "Carry over from previous plans",
@@ -1635,6 +1639,9 @@ export const EN_TRANSLATIONS: Record<string, string> = {
     "Post once a day to earn +50 Arc. You can earn up to 500 Arc in total.",
   "上限に到達しました。ありがとうございます！": "You've hit the cap. Thank you!",
   "今日はまだ受け取っていません。投稿してみてください。": "You haven't received today's bonus yet. Try posting.",
+  "日報を書くと毎日 +50 Arc。": "Write a daily report to earn +50 Arc every day.",
+  "今日の分は受け取り済み。明日また記録してみてください。": "You've claimed today's reward. Try logging again tomorrow.",
+  "今日はまだ受け取っていません。日報を記録してみてください。": "You haven't received it yet today. Try logging a report.",
   "分身の姿を変える": "Change your character's look",
   "所持済み": "Owned",
   "使用中": "Equipped",
