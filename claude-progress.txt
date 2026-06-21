@@ -105,10 +105,22 @@ longtask 計測と Firestore 読み書き計測も同じ Playwright run に相�
   WebChannel バースト基準に更新（暫定の reads≤300/writes≤30 を置換）。
 - e2e は計6本全緑。verify.sh web は PASS=8 FAIL=0 SKIP=1（残 W-LH のみ）。
 
-### 現在の verify.sh web 集計: PASS=8 FAIL=0 SKIP=1
-残 SKIP: W-LH-PERF-BUDGET（→R6）。
+### R6 — Lighthouse CI（W-LH-PERF-BUDGET 緑・Web 層完走）2026-06-21
+- @lhci/cli 導入。lighthouserc.json を staticDistDir 配信から vite preview 配信に
+  変更（dist を本番同様 /Contribution-Arc/ サブパスでサーブ。ルート配信だと
+  base 付きアセットが 404 になるため）。startServerCommand で計測。
+- 実測（desktop preset）: perf=0.98 / TBT=0ms / CLS=0 / LCP=821ms / TTI=822ms /
+  script=513KB / total=634KB。
+- preset 選定: モバイル throttling だと perf=0.70/LCP=5.4s だが、native は file://
+  読み込みでネット律速が代表性を欠くため desktop を決定論的回帰ガードに採用。
+- 予算: タイミング系はヘッドルーム維持（TBT≤300/CLS≤0.1/LCP≤3000/TTI≤4000）、
+  バンドルサイズ系は実測直上に締める（script≤750KB/total≤1100KB）。
+- package.json に test:lh（vite build && lhci autorun）、.gitignore に .lighthouseci。
+
+### 現在の verify.sh web 集計: PASS=9 FAIL=0 SKIP=0（Web 層 全緑）
 W-SCROLL-LONGTASK / F-RUNTIME-BUDGET は R5 で有効化済み（W-E2E に相乗り）。
 native（N-*）は RUN_NATIVE=1 時のみ（→R7）。
+→ 節目: ios-auth を main にマージして push（deploy 反映）。
 
 ## メモ
 - iOS は Capacitor 8 = SPM 構成（Podfile/.xcworkspace なし）。scheme は "App"、

@@ -19,7 +19,7 @@
 | `W-E2E-HOME-POST` | ホームで自由投稿を作成 → フィード先頭に出現する | Playwright e2e（`tests/e2e/home-feed.spec.ts`） |
 | `W-E2E-HOME-SCROLL` | フィードを長距離スクロールしても投稿が欠落せず最後まで到達できる | Playwright e2e |
 | `W-SCROLL-LONGTASK` | スクロール中の Long Task が閾値以下（既定: 1フレームあたり50ms超のタスクが連続しない） | Playwright + PerformanceObserver（longtask）で機械判定 |
-| `W-LH-PERF-BUDGET` | Lighthouse のパフォーマンス予算（TBT / CLS / TTI 等）を超過しない | Lighthouse CI + `lighthouse-budget.json` |
+| `W-LH-PERF-BUDGET` | Lighthouse のパフォーマンス予算（TBT / CLS / LCP / バンドルサイズ）を超過しない | Lighthouse CI（desktop preset）+ `lighthouse-budget.json` |
 | `N-MAESTRO-SCROLL` | 実機シミュレータでフィードをフリックスクロールしてもクラッシュ・空白化しない | Maestro flow（`.maestro/scroll-keyboard.yaml`） |
 
 ### HUMAN（主観・ループ終了条件にしない）
@@ -72,6 +72,17 @@
     回帰検知力を保ちつつ flaky にならない範囲でヘッドルームを乗せ、上限は `listen ≤ 30` / `write ≤ 20`。
   - しきい値は `tests/e2e/firestore-budget.spec.ts` の `LISTEN_BUDGET` / `WRITE_BUDGET` と同期させること。
 - **リスナー解除**: すべての `onSnapshot` は `useEffect` の cleanup または明示的 `unsubscribe` で解除されること（`F-LISTENER-LEAK`）。
+
+#### Lighthouse 予算の定義（`W-LH-PERF-BUDGET`）
+- 計測方法: `vite build` した `dist` を `vite preview` で本番と同じ `/Contribution-Arc/` サブパスで
+  サーブし、その URL を Lighthouse CI（**desktop preset**）で計測する。native iOS シェルはバンドルを
+  `file://` から読むためネットワーク律速のモバイル throttling は代表性が無く、desktop preset を
+  決定論的な回帰ガードとして採用。
+- **実測（2026-06-21, desktop）**: perf=0.98 / TBT=0ms / CLS=0 / LCP=821ms / TTI=822ms /
+  script=513KB / total=634KB。
+- しきい値（`lighthouse-budget.json` / `lighthouserc.json`）: タイミング系は CI 機差を見込んで
+  ヘッドルームを乗せる（TBT≤300ms, CLS≤0.1, LCP≤3000ms, TTI≤4000ms）。バンドルサイズ系は
+  決定論的で最も鋭い回帰シグナルなので実測直上に締める（script≤750KB, total≤1100KB）。
 
 ### HUMAN（主観・ループ終了条件にしない）
 - 体感速度（初回表示・画面遷移）が「重くない」と感じられるか。

@@ -1,10 +1,10 @@
 {
-  "//": "Lighthouse CI 設定（スケルトン）。未導入: @lhci/cli。",
-  "//run": "npx vite build && npx vite preview --port 4173 & npx lhci autorun",
+  "//": "Lighthouse CI 設定。dist を vite preview で本番と同じ /Contribution-Arc/ サブパスでサーブし、その URL を計測する（staticDistDir をルート配信すると base 付きアセットが 404 になるため）。`npm run test:lh` が事前 build を行う。",
   "ci": {
     "collect": {
-      "staticDistDir": "./dist",
-      "url": ["http://localhost/Contribution-Arc/"],
+      "startServerCommand": "vite preview --port 4178 --strictPort",
+      "startServerReadyPattern": "Local:",
+      "url": ["http://localhost:4178/Contribution-Arc/"],
       "numberOfRuns": 1,
       "settings": {
         "preset": "desktop",
