@@ -4508,6 +4508,9 @@ function App() {
   const [openMonumentId, setOpenMonumentId] = useState<string | null>(null);
   const [determination, setDetermination] = useState("");
   const [draftDetermination, setDraftDetermination] = useState("");
+  // GitHub ユーザー名の手入力ドラフト。OAuth を経由せずに「ユーザー名だけ」で
+  // public な草を連携できるようにするための入力（iOS ネイティブでも動く）。
+  const [draftGithubUsername, setDraftGithubUsername] = useState("");
   /* 目標 (志望校 or 資格)。決意とは別軸で「ゴール」を 1 つだけ持つ。
      goalId は data/goalCatalog の id。自由記述派には goalCustomName。 */
   const [goalId, setGoalId] = useState("");
@@ -7753,21 +7756,27 @@ function App() {
   // getAdditionalUserInfo) because providerData.displayName is the user's
   // GitHub *display name*, which often differs from the login the
   // contributions API needs. Fall back to displayName, then to userId.
+  // OAuth リンクの有無に関わらず、手入力 / クラウド同期されたユーザー名を
+  // localStorage から読む。これにより GitHub OAuth を経由しなくても
+  // (= iOS ネイティブの WKWebView でも) public な草を取得・連携できる。
   const githubLoginCached = (() => {
-    if (!currentUser || !githubProviderInfo) return "";
+    if (!currentUser) return "";
     try {
       return window.localStorage.getItem(`ca:gh-login:${currentUser.uid}`) || "";
     } catch {
       return "";
     }
   })();
-  // Resolution order: this device's sign-in cache → the login synced from
-  // the cloud profile (covers a fresh device) → the GitHub display name →
-  // userId. Only resolve when the GitHub provider is actually linked so an
-  // unlinked account doesn't keep querying a stale synced login.
-  const githubUsername = githubProviderInfo
-    ? githubLoginCached || syncedGithubUsername || githubProviderInfo.displayName || userId
-    : "";
+  // Resolution order: this device's sign-in/manual cache → the login synced
+  // from the cloud profile (covers a fresh device) → (only when OAuth-linked)
+  // the GitHub display name / userId. The manual-entry path writes the
+  // username into the cache + synced value, so it resolves without OAuth.
+  // userId は OAuth リンク済みのときだけフォールバック候補にする（手入力前の
+  // 未連携状態で userId を GitHub 名と誤推測しないため）。
+  const githubUsername =
+    githubLoginCached ||
+    syncedGithubUsername ||
+    (githubProviderInfo ? githubProviderInfo.displayName || userId : "");
   // Lazy-fetch the user's public GitHub contribution grid. If the first
   // candidate (the resolved username above) doesn't exist on GitHub — which
   // happens when displayName ≠ login — we transparently retry with the
@@ -7778,19 +7787,20 @@ function App() {
     githubLoginCached,
     syncedGithubUsername,
     githubProviderInfo?.displayName || "",
-    userId,
+    githubProviderInfo ? userId : "",
   ]
     .filter(Boolean)
     .join("|");
   useEffect(() => {
-    if (!githubProviderInfo) return;
+    // OAuth リンクが無くても、手入力 / 同期済みのユーザー名があれば取得する。
+    // 候補が一つも無い（未連携）ときだけ何もしない。
     const candidates = Array.from(
       new Set(
         [
           githubLoginCached,
           syncedGithubUsername,
-          githubProviderInfo.displayName || "",
-          userId,
+          githubProviderInfo?.displayName || "",
+          githubProviderInfo ? userId : "",
         ]
           .map((value) => value.trim())
           .filter(Boolean),
@@ -10437,6 +10447,9 @@ function App() {
     // ドラフトを同期する。プロフィール画面のインライン編集と同じ
     // draftDetermination を共有するので、どちらで編集しても一貫する。
     setDraftDetermination(determination);
+    // 現在連携済みの GitHub ユーザー名（手入力 or OAuth キャッシュ由来）を
+    // ドラフトに載せる。userId への自動フォールバックは初期表示しない。
+    setDraftGithubUsername(githubLoginCached || syncedGithubUsername || "");
     setSettingsError("");
     setIsSettingsOpen(true);
   };
@@ -10459,10 +10472,11 @@ function App() {
       setDraftUserName(playerName);
       setDraftUserId(userId);
       setDraftDetermination(determination);
+      setDraftGithubUsername(githubLoginCached || syncedGithubUsername || "");
       setSettingsError("");
       setIsSettingsOpen(true);
     });
-  }, [isDesktopApp, playerName, userId, determination]);
+  }, [isDesktopApp, playerName, userId, determination, githubLoginCached, syncedGithubUsername]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded || !userId) {
@@ -10745,6 +10759,9 @@ function App() {
     // 「決意」も同じフォームの送信で確定する。トランザクション内で
     // 旧 determination を書いてしまわないよう、この確定値を使う。
     const nextDetermination = draftDetermination.trim();
+    // GitHub ユーザー名の手入力値。空欄なら既存の連携を壊さないよう、現在の
+    // 解決値 (githubUsername) を温存する。
+    const nextGithubUsername = draftGithubUsername.trim();
     const userIdError = validateUserId(nextUserId, t);
     if (userIdError) {
       setSettingsError(userIdError);
@@ -10837,7 +10854,7 @@ function App() {
                 unlockedCharacters: [characterOptions[0].id],
                 characterExp: effortExp,
                 githubId,
-                githubUsername,
+                githubUsername: nextGithubUsername || githubUsername,
                 contributionCount: outputStats.contributions,
                 lastSyncedAt: new Date().toISOString(),
                 language,
@@ -10874,6 +10891,13 @@ function App() {
         // インライン表示も即座に新しい決意へ更新される。
         setDetermination(nextDetermination);
         setDraftDetermination(nextDetermination);
+        // 手入力した GitHub ユーザー名を即反映。state と localStorage の両方に
+        // 載せることで、再 render 時に githubUsername が解決され草の取得が走る。
+        // 空欄のときは既存の連携を温存する（クリア扱いにしない）。
+        if (nextGithubUsername) {
+          setSyncedGithubUsername(nextGithubUsername);
+          safeSetLocalStorage(`ca:gh-login:${currentUser.uid}`, nextGithubUsername);
+        }
         safeSetLocalStorage(getAccountStorageKey(accountScope, "determination"), nextDetermination);
         safeSetLocalStorage(`contribution-arc-user-id-${currentUser.uid}`, nextUserId);
         safeSetLocalStorage(getAccountStorageKey(accountScope, "name"), nextDisplayName);
@@ -15206,7 +15230,7 @@ function App() {
               <button
                 type="button"
                 className="contribution-arc-github-link-btn"
-                onClick={handleLinkGithub}
+                onClick={IS_IOS_BUILD ? handleSettingsOpen : handleLinkGithub}
                 disabled={isLinkingGithub}
               >
                 {isLinkingGithub ? t("連携中…") : t("GitHub を連携")}
@@ -18668,6 +18692,25 @@ function App() {
                     rows={2}
                   />
                   <small className="settings-field-hint">{t("起動するたびに目に入る、今の自分への一行。")}</small>
+                </label>
+
+                <label>
+                  <span className="settings-field-label">
+                    {t("GitHub ユーザー名")}
+                    <small className="settings-char-count">{draftGithubUsername.length}/39</small>
+                  </span>
+                  <input
+                    value={draftGithubUsername}
+                    onChange={(event) =>
+                      setDraftGithubUsername(event.target.value.replace(/[^a-zA-Z0-9-]/g, ""))
+                    }
+                    placeholder="octocat"
+                    maxLength={39}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                  />
+                  <small className="settings-field-hint">{t("入力すると、あなたの public な草（contribution）がプロフィールの図に重なります。")}</small>
                 </label>
               </div>
 
