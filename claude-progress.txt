@@ -54,6 +54,34 @@ longtask 計測と Firestore 読み書き計測も同じ Playwright run に相�
 
 補欠: LINT（eslint 設定）は最も低コストで緑にでき、③のコード品質シグナルを得られる。
 
+## 品質緑化ループ（高品質方針・Emulator Suite 土台）
+方針: 1イテレーション=1チェック群を本物のテストで緑化→コミット。push は節目集約。
+
+### R1 — ESLint 基盤（LINT 緑）2026-06-21
+- eslint.config.js（flat config: @eslint/js + typescript-eslint + react-hooks +
+  react-refresh）。dist/build/ios/electron/functions/lib 等を ignore。
+- rules-of-hooks=error。React Compiler 系の助言ルール（set-state-in-effect 等）は
+  実リファクタが要るため warn に降格（スコープ外）。実エラー8件は原因箇所で修正。
+- 結果: 0 errors / 79 warnings（exit 0）。LINT PASS。
+
+### R2 — Vitest + Emulator seam（UNIT 緑・テスト土台）2026-06-21
+- src/firebase.ts に env ガード seam を追加（VITE_USE_EMULATORS=true 時のみ
+  Auth/Firestore Emulator に接続。本番動作は不変）。
+- firebase.json に emulators ブロック（auth:9099, firestore:8080）。
+- vitest.config.ts + tests/unit/format.test.ts（純関数9本）。UNIT PASS。
+
+### R3 — Firestore rules test（RULES 緑）2026-06-21
+- tests/firestore/rules.test.ts を実装（12 tests）。実ルール準拠:
+  learningItems/posts は authed read・owner write、studyLogs は owner-only、
+  studyMinutes>1440 拒否、未定義パスは default deny。
+- verify.sh の RULES 分岐を firebase emulators:exec 経由に更新（emulator 必須）。
+- package.json に test:rules スクリプト追加。RULES PASS。
+
+### 現在の verify.sh web 集計: PASS=7 FAIL=0 SKIP=7
+残 SKIP: W-E2E-HOME-POST/SCROLL, W-SCROLL-LONGTASK, W-E2E-RECORD-CRUD/PERSIST,
+F-RUNTIME-BUDGET（→R4/R5 Playwright）, W-LH-PERF-BUDGET（→R6）。
+native（N-*）は RUN_NATIVE=1 時のみ（→R7）。
+
 ## メモ
 - iOS は Capacitor 8 = SPM 構成（Podfile/.xcworkspace なし）。scheme は "App"、
   verify.sh は ios/App/App.xcodeproj を直接ビルドする。

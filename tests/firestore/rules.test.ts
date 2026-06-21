@@ -1,28 +1,61 @@
-// Firestore セキュリティルールのテスト（スケルトン）
-// ゴール③ データ管理: 学習記録は所有者のみ / 未定義パスはデフォルト拒否。
-// 未導入: vitest, @firebase/rules-unit-testing。Firestore エミュレータ前提。
+// Firestore セキュリティルールのテスト（emulator + @firebase/rules-unit-testing）。
+// ゴール③ データ管理: 所有者モデルと default deny を実ルールに対して検証する。
 //
 // 対応チェック ID:
-//   RULES-RECORD-OWNER … 所有者のみ read/write 可
+//   RULES-RECORD-OWNER … 学習記録(learningItems/studyLogs)・posts の所有者制約
 //   RULES-DENY-DEFAULT … 未定義パスは拒否
+//
+// 実行は emulator 前提（verify.sh が firebase emulators:exec でラップ）:
+//   firebase emulators:exec --only firestore \
+//     "vitest run --config tests/firestore/vitest.config.ts"
 import { readFileSync } from "node:fs";
-import { afterAll, beforeAll, describe, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   assertFails,
   assertSucceeds,
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from "@firebase/rules-unit-testing";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import {
+  doc,
+  deleteDoc,
+  getDoc,
+  setDoc,
+  updateDoc,
+} from "firebase/firestore";
 
 let testEnv: RulesTestEnvironment;
+
+const ALICE = "alice";
+const BOB = "bob";
+
+// rules を満たす最小ペイロード
+const learningItem = (userId: string) => ({
+  userId,
+  name: "リーダブルコード",
+  category: "book",
+  color: "#888888",
+});
+const studyLog = (userId: string, minutes = 30) => ({
+  userId,
+  category: "coding",
+  studyMinutes: minutes,
+  earnedExp: minutes,
+});
+const post = (userId: string) => ({
+  userId,
+  text: "今日も30分コミット",
+  username: "alice",
+  createdAt: new Date().toISOString(),
+  likesCount: 0,
+  likedUserIds: [],
+});
 
 beforeAll(async () => {
   testEnv = await initializeTestEnvironment({
     projectId: "demo-contribution-arc",
     firestore: {
       rules: readFileSync("firestore.rules", "utf8"),
-      // host/port はエミュレータの既定（localhost:8080）を使用
     },
   });
 });
@@ -31,27 +64,88 @@ afterAll(async () => {
   await testEnv?.cleanup();
 });
 
-describe("learning records (RULES-RECORD-OWNER)", () => {
-  it.todo("所有者は自分の学習記録を read/write できる", async () => {
-    const alice = testEnv.authenticatedContext("alice").firestore();
-    // TODO: firestore.rules の実際のコレクションパスに合わせる
-    const ref = doc(alice, "users/alice/learningItems/item1");
-    await assertSucceeds(setDoc(ref, { name: "book", ownerId: "alice" }));
-    await assertSucceeds(getDoc(ref));
+beforeEach(async () => {
+  await testEnv.clearFirestore();
+});
+
+// セキュリティルールを無視して下準備（既存ドキュメントの seed 用）
+async function seed(path: string, data: Record<string, unknown>) {
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), path), data);
+  });
+}
+
+const aliceDb = () => testEnv.authenticatedContext(ALICE).firestore();
+const bobDb = () => testEnv.authenticatedContext(BOB).firestore();
+const anonDb = () => testEnv.unauthenticatedContext().firestore();
+
+describe("learningItems (RULES-RECORD-OWNER)", () => {
+  it("所有者は自分の学習記録を作成・読取できる", async () => {
+    const db = aliceDb();
+    await assertSucceeds(setDoc(doc(db, "learningItems/i1"), learningItem(ALICE)));
+    await assertSucceeds(getDoc(doc(db, "learningItems/i1")));
   });
 
-  it.todo("他人の学習記録は read/write 拒否される", async () => {
-    const bob = testEnv.authenticatedContext("bob").firestore();
-    const ref = doc(bob, "users/alice/learningItems/item1");
-    await assertFails(getDoc(ref));
-    await assertFails(setDoc(ref, { name: "hijack" }));
+  it("他人の userId では作成できない", async () => {
+    // bob が userId=alice の記録を作ろうとする
+    await assertFails(setDoc(doc(bobDb(), "learningItems/i2"), learningItem(ALICE)));
+  });
+
+  it("他人の記録は更新・削除できない", async () => {
+    await seed("learningItems/i3", learningItem(ALICE));
+    await assertFails(updateDoc(doc(bobDb(), "learningItems/i3"), { name: "改ざん" }));
+    await assertFails(deleteDoc(doc(bobDb(), "learningItems/i3")));
+  });
+
+  it("学習記録の read は authed なら可（ルール仕様: read は signedIn）", async () => {
+    await seed("learningItems/i4", learningItem(ALICE));
+    await assertSucceeds(getDoc(doc(bobDb(), "learningItems/i4")));
+  });
+
+  it("未認証は読取も書込も不可", async () => {
+    await seed("learningItems/i5", learningItem(ALICE));
+    await assertFails(getDoc(doc(anonDb(), "learningItems/i5")));
+    await assertFails(setDoc(doc(anonDb(), "learningItems/i6"), learningItem(ALICE)));
+  });
+});
+
+describe("studyLogs (RULES-RECORD-OWNER: read も所有者のみ)", () => {
+  it("所有者は作成・読取できる", async () => {
+    const db = aliceDb();
+    await assertSucceeds(setDoc(doc(db, "studyLogs/l1"), studyLog(ALICE)));
+    await assertSucceeds(getDoc(doc(db, "studyLogs/l1")));
+  });
+
+  it("他人の studyLog は読取できない（org 未所属）", async () => {
+    await seed("studyLogs/l2", studyLog(ALICE));
+    await assertFails(getDoc(doc(bobDb(), "studyLogs/l2")));
+  });
+
+  it("studyMinutes の上限(1440)超過は作成不可", async () => {
+    await assertFails(setDoc(doc(aliceDb(), "studyLogs/l3"), studyLog(ALICE, 5000)));
+  });
+});
+
+describe("posts (RULES-RECORD-OWNER: feed は authed read)", () => {
+  it("作成者は投稿でき、authed は誰でも読める", async () => {
+    await assertSucceeds(setDoc(doc(aliceDb(), "posts/p1"), post(ALICE)));
+    await assertSucceeds(getDoc(doc(bobDb(), "posts/p1")));
+  });
+
+  it("他人になりすました投稿はできない", async () => {
+    await assertFails(setDoc(doc(bobDb(), "posts/p2"), post(ALICE)));
+  });
+
+  it("他人の投稿は削除できない", async () => {
+    await seed("posts/p3", post(ALICE));
+    await assertFails(deleteDoc(doc(bobDb(), "posts/p3")));
   });
 });
 
 describe("default deny (RULES-DENY-DEFAULT)", () => {
-  it.todo("ルール未定義パスは拒否される", async () => {
-    const alice = testEnv.authenticatedContext("alice").firestore();
-    const ref = doc(alice, "totally/undefined/path/x");
-    await assertFails(getDoc(ref));
+  it("ルール未定義パスは認証済みでも拒否される", async () => {
+    const db = aliceDb();
+    await assertFails(getDoc(doc(db, "totally/undefined")));
+    await assertFails(setDoc(doc(db, "totally/undefined"), { x: 1 }));
   });
 });

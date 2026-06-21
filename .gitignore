@@ -16,3 +16,8 @@ release
 build/*.provisionprofile
 *.p12
 *.cer
+
+# Firebase emulator debug logs
+firestore-debug.log
+firebase-debug.log
+ui-debug.log
