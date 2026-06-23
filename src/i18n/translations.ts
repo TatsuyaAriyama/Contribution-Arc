@@ -203,6 +203,8 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "進行中":                      "In progress",
   "中断":                        "Paused",
   "今週":                        "This week",
+  "前の週":                      "Previous week",
+  "次の週":                      "Next week",
   "記録日数":                    "Days logged",
   "{count}日":                   "{count} days",
   "最終記録":                    "Last logged",

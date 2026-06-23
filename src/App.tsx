@@ -1165,8 +1165,12 @@ function buildStudyKnowledgeGraph(logs: StudyLog[]): KnowledgeGraphData {
   });
 }
 
-function getWeeklyStudyHours(logs: StudyLog[]): WeeklyStudyDay[] {
+function getWeeklyStudyHours(logs: StudyLog[], weekOffset = 0): WeeklyStudyDay[] {
   const weekStart = getWeekStart();
+  if (weekOffset !== 0) {
+    // weekOffset<0 で過去の週へ遡る（プロフィールの週グラフのナビ用）。
+    weekStart.setDate(weekStart.getDate() + weekOffset * 7);
+  }
   const todayKey = getTodayKey();
   const nextWeek = new Date(weekStart);
   nextWeek.setDate(weekStart.getDate() + 7);
@@ -3914,6 +3918,8 @@ function App() {
      その日に記録した学習項目・時間を編集できる詳細パネルを開く。
      null = 閉じている、0..6 = Mon..Sun。 */
   const [profileWeekDayIndex, setProfileWeekDayIndex] = useState<number | null>(null);
+  /* プロフィールの週グラフが表示している週。0=今週, -1=先週 ... 過去のみ。 */
+  const [profileWeekOffset, setProfileWeekOffset] = useState(0);
   /* 同じ目標のユーザー一覧モーダル。null = 閉じている。
      開くと指定 goal で Firestore を query して結果を表示する。 */
   const [goalMatchModal, setGoalMatchModal] = useState<{
@@ -7568,6 +7574,25 @@ function App() {
   const isDesktopApp = Boolean(window.contributionArcDesktop?.isElectron);
   const isOnboardingSettings = onboardingStep === "settings";
   const weeklyStudyHours = getWeeklyStudyHours(studyLogs);
+  /* 週グラフの表示用データ。今週(=0)は cloud 保存にも使う weeklyStudyHours を
+     そのまま使い、過去週はその場で集計する。weeklyStudyHours 自体は今週固定の
+     ままにして、cloud の weekdayMinutes(他人から見える今週分布)を汚さない。 */
+  const displayedWeeklyStudyHours =
+    profileWeekOffset === 0
+      ? weeklyStudyHours
+      : getWeeklyStudyHours(studyLogs, profileWeekOffset);
+  /* 遡れる下限 = 最古の学習ログがある週。それ以前は全部 0 なので止める。 */
+  const minProfileWeekOffset = useMemo(() => {
+    if (studyLogs.length === 0) return 0;
+    let oldest = Infinity;
+    for (const log of studyLogs) {
+      const ms = new Date(log.createdAt).getTime();
+      if (Number.isFinite(ms) && ms < oldest) oldest = ms;
+    }
+    if (!Number.isFinite(oldest)) return 0;
+    const weekMs = 7 * 24 * 60 * 60 * 1000;
+    return Math.min(0, Math.floor((oldest - getWeekStart().getTime()) / weekMs));
+  }, [studyLogs]);
   const contributionArc = useMemo(() => getContributionArc(studyLogs), [studyLogs]);
   // GitHub contribution heatmap state. Fetched lazily from the public
   // jogruber endpoint once we know the user's GitHub username. Errors are
@@ -14096,10 +14121,18 @@ function App() {
   const profileWeekChart = (
     minutesByDay: number[],
     todayIndex: number,
-    options?: { editable?: boolean; weekData?: WeeklyStudyDay[] },
+    options?: { editable?: boolean; weekData?: WeeklyStudyDay[]; navigable?: boolean },
   ) => {
     const editable = !!options?.editable;
     const weekData = options?.weekData;
+    /* navigable: 自分のプロフィールでだけ週送りナビを出す。過去週は
+       editable=false で渡されるので閲覧専用になる。 */
+    const navigable = !!options?.navigable;
+    const showPastWeek = navigable && profileWeekOffset !== 0;
+    const weekRangeLabel =
+      weekData && weekData.length > 0
+        ? `${weekData[0].dateLabel} – ${weekData[weekData.length - 1].dateLabel}`
+        : "";
     const max = Math.max(1, ...minutesByDay);
     const total = minutesByDay.reduce((sum, m) => sum + m, 0);
     const activeDays = minutesByDay.filter((m) => m > 0).length;
@@ -14115,7 +14148,37 @@ function App() {
     return (
       <section className="profile-week-chart" aria-label={t("今週の学習時間")}>
         <div className="profile-week-chart-head">
-          <p className="card-kicker">This Week</p>
+          <div className="profile-week-chart-title">
+            <p className="card-kicker">{showPastWeek ? weekRangeLabel : "This Week"}</p>
+            {navigable ? (
+              <div className="profile-week-chart-nav">
+                <button
+                  type="button"
+                  className="profile-week-chart-nav-btn"
+                  disabled={profileWeekOffset <= minProfileWeekOffset}
+                  onClick={() => {
+                    setProfileWeekOffset((o) => Math.max(minProfileWeekOffset, o - 1));
+                    setProfileWeekDayIndex(null);
+                  }}
+                  aria-label={t("前の週")}
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  className="profile-week-chart-nav-btn"
+                  disabled={profileWeekOffset >= 0}
+                  onClick={() => {
+                    setProfileWeekOffset((o) => Math.min(0, o + 1));
+                    setProfileWeekDayIndex(null);
+                  }}
+                  aria-label={t("次の週")}
+                >
+                  ›
+                </button>
+              </div>
+            ) : null}
+          </div>
           <div className="profile-week-chart-summary">
             <strong>{formatStudyTimeJa(total, language)}</strong>
             <span>{t("{active}日 / 7日", { active: activeDays })}</span>
@@ -21106,9 +21169,13 @@ function App() {
                 {/* 今週の学習を曜日別の棒グラフで。自分の studyLogs から
                     直接組むのでリアルタイム。 */}
                 {profileWeekChart(
-                  weeklyStudyHours.map((day) => day.totalMinutes),
-                  (new Date().getDay() + 6) % 7,
-                  { editable: true, weekData: weeklyStudyHours },
+                  displayedWeeklyStudyHours.map((day) => day.totalMinutes),
+                  profileWeekOffset === 0 ? (new Date().getDay() + 6) % 7 : -1,
+                  {
+                    editable: profileWeekOffset === 0,
+                    weekData: displayedWeeklyStudyHours,
+                    navigable: true,
+                  },
                 )}
 
                 {/* クイックアクション (プロフィールを編集 / ショップ /
