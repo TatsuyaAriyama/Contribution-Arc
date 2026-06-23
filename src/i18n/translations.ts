@@ -223,6 +223,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "{active}日 / 7日":             "{active} / 7 days",
   "今週の合計 {duration}":         "Week total {duration}",
   "{day} の学習を編集":            "Edit {day}'s learning",
+  "{day} の学習を見る":            "View {day}'s learning",
   "選択した曜日の詳細":            "Selected day details",
   "「{subject}」({minutes}分) を削除しますか？":
                                   "Delete \"{subject}\" ({minutes} min)?",

@@ -14136,7 +14136,10 @@ function App() {
     const max = Math.max(1, ...minutesByDay);
     const total = minutesByDay.reduce((sum, m) => sum + m, 0);
     const activeDays = minutesByDay.filter((m) => m > 0).length;
-    const selectedIndex = editable ? profileWeekDayIndex : null;
+    /* 自分のプロフィール (navigable) なら過去週でも曜日をタップして
+       その日の詳細を確認できる。編集できるのは今週 (editable) だけ。 */
+    const selectable = navigable;
+    const selectedIndex = selectable ? profileWeekDayIndex : null;
     const selectedDay = selectedIndex !== null ? weekData?.[selectedIndex] : null;
     /* 曜日ラベルは t() で localize する (en: Mon/Tue/.../Sun)。
        辞書側に "月":"Mon" 等を持たせる。 */
@@ -14191,10 +14194,10 @@ function App() {
         >
           {minutesByDay.map((minutes, index) => {
             const heightPct = minutes > 0 ? Math.max(8, (minutes / max) * 100) : 0;
-            const isSelected = editable && index === selectedIndex;
+            const isSelected = selectable && index === selectedIndex;
             const colClass = `profile-week-chart-col${index === todayIndex ? " is-today" : ""}${
               minutes > 0 ? " has-value" : ""
-            }${editable ? " is-editable" : ""}${isSelected ? " is-selected" : ""}`;
+            }${selectable ? " is-editable" : ""}${isSelected ? " is-selected" : ""}`;
             const inner = (
               <>
                 <span className="profile-week-chart-value">
@@ -14206,7 +14209,7 @@ function App() {
                 <span className="profile-week-chart-day">{dayShortLabel(index)}</span>
               </>
             );
-            if (editable) {
+            if (selectable) {
               return (
                 <button
                   key={index}
@@ -14220,7 +14223,11 @@ function App() {
                     setProfileWeekAddSubjectId("");
                     setProfileWeekAddMinutes("");
                   }}
-                  aria-label={t("{day} の学習を編集", { day: dayShortLabel(index) })}
+                  aria-label={
+                    editable
+                      ? t("{day} の学習を編集", { day: dayShortLabel(index) })
+                      : t("{day} の学習を見る", { day: dayShortLabel(index) })
+                  }
                 >
                   {inner}
                 </button>
@@ -14234,7 +14241,7 @@ function App() {
           })}
         </div>
 
-        {editable && selectedDay ? (
+        {selectable && selectedDay ? (
           <div className="profile-week-day-detail" role="region" aria-label={t("選択した曜日の詳細")}>
             <div className="profile-week-day-detail-head">
               <div>
@@ -14254,7 +14261,9 @@ function App() {
             </div>
             {selectedDay.logs.length === 0 ? (
               <p className="profile-week-day-detail-empty">
-                {t("この日の学習ログはまだありません。下のフォームから追加できます。")}
+                {editable
+                  ? t("この日の学習ログはまだありません。下のフォームから追加できます。")
+                  : t("この日の学習ログはありません。")}
               </p>
             ) : (
               <ul className="profile-week-day-detail-list">
@@ -14296,16 +14305,23 @@ function App() {
                           <span className="profile-week-day-detail-time" aria-hidden="true">
                             {timeLabel}
                           </span>
-                          <button
-                            type="button"
-                            className="profile-week-day-detail-delete"
-                            onClick={() => handleProfileWeekLogDelete(log)}
-                            aria-label={t("削除")}
-                            title={t("削除")}
-                          >
-                            ×
-                          </button>
+                          {editable ? (
+                            <button
+                              type="button"
+                              className="profile-week-day-detail-delete"
+                              onClick={() => handleProfileWeekLogDelete(log)}
+                              aria-label={t("削除")}
+                              title={t("削除")}
+                            >
+                              ×
+                            </button>
+                          ) : (
+                            <span className="profile-week-day-detail-readonly-minutes">
+                              {formatStudyTimeJa(log.minutes, language)}
+                            </span>
+                          )}
                         </span>
+                        {editable ? (
                         <span className="profile-week-day-detail-row-edit">
                           <span className="profile-week-day-detail-adjust" role="group" aria-label={t("時間を調整")}>
                             <button type="button" onClick={() => adjustBy(-15)} aria-label="-15">−15</button>
@@ -14347,6 +14363,7 @@ function App() {
                             {t("更新")}
                           </button>
                         </span>
+                        ) : null}
                       </li>
                     );
                   })}
@@ -14354,7 +14371,8 @@ function App() {
             )}
 
             {/* 新規ログ追加フォーム。Subject (Library のアクティブ項目) を選び、
-                分を入力 → クイックチップ or 自由入力 → +追加。 */}
+                分を入力 → クイックチップ or 自由入力 → +追加。今週のみ。 */}
+            {editable ? (
             <div className="profile-week-day-detail-add">
               <div className="profile-week-day-detail-add-head">
                 <span className="profile-week-day-detail-add-label">{t("この日に追加")}</span>
@@ -14424,6 +14442,7 @@ function App() {
                 </>
               )}
             </div>
+            ) : null}
           </div>
         ) : null}
       </section>

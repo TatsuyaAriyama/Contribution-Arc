@@ -39677,6 +39677,14 @@ html:not([data-theme="dark"]) .app-view-feed .feed-view-content {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+/* 過去週は閲覧専用なので、編集 input の代わりにその日の分を右端に表示。 */
+.profile-week-day-detail-readonly-minutes {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
 .profile-week-day-detail-adjust {
   display: inline-flex;
   align-items: center;
