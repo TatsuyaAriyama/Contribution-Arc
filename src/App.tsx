@@ -20474,9 +20474,6 @@ function App() {
           transition={SPRING_SNAPPY}
         >
           <header className="learning-header">
-            <div>
-              <h2>{t("ライブラリ")}</h2>
-            </div>
             <div className="learning-header-actions">
               <button
                 type="button"
@@ -21036,9 +21033,6 @@ function App() {
           </>
           ) : (
             (() => {
-              const itemById = new Map(
-                learningItems.map((entry) => [entry.id, entry] as const),
-              );
               const sorted = [...studyLogs].sort(
                 (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
               );
@@ -21053,11 +21047,6 @@ function App() {
               return (
                 <div className="study-timeline">
                   {sorted.map((log) => {
-                    const item = log.learningItemId
-                      ? itemById.get(log.learningItemId)
-                      : undefined;
-                    const cover = item?.photo;
-                    const swatch = log.color || item?.color || "rgba(31,111,74,0.5)";
                     const d = new Date(log.createdAt);
                     const valid = !Number.isNaN(d.getTime());
                     const ymd = valid
@@ -21068,15 +21057,11 @@ function App() {
                       : "—";
                     return (
                       <article className="study-timeline-card" key={log.id}>
-                        <div
-                          className={`study-timeline-cover${cover ? "" : " is-empty"}`}
-                          style={cover ? undefined : { background: swatch }}
-                        >
-                          {cover ? (
-                            <img src={cover} alt="" loading="lazy" />
-                          ) : (
-                            <span aria-hidden="true">{log.subject.slice(0, 1)}</span>
-                          )}
+                        <div className="study-timeline-avatar">
+                          <ProfileCharacterPreview
+                            color={playerCharacterColor}
+                            shape={playerCharacterShape}
+                          />
                         </div>
                         <div className="study-timeline-body">
                           <div className="study-timeline-head">
