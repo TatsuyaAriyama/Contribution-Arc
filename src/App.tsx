@@ -19909,32 +19909,32 @@ function App() {
                 (todayReport?.planItems?.length ?? 0) > 0 && !todayReport?.isDraft;
               const reflectionDone =
                 ((todayReport?.reflection || "").trim().length > 0) && !todayReport?.isDraft;
+              if (earned) {
+                /* 受領済みは大きなバナーを出さず、控えめな一行補足だけにする
+                   (黒い大カードが縦スペースを取りすぎて邪魔なため)。 */
+                return (
+                  <p className="daily-reward-earned-note" role="status">
+                    <span aria-hidden="true">✦</span>{" "}
+                    {t("今日の +50 Arc は獲得済み。明日も日報で継続しましょう。")}
+                  </p>
+                );
+              }
               return (
-                <div
-                  className={`daily-reward-banner${earned ? " is-earned" : ""}`}
-                  role="status"
-                >
+                <div className="daily-reward-banner" role="status">
                   <span className="daily-reward-banner-icon" aria-hidden="true">✦</span>
-                  {earned ? (
-                    <span className="daily-reward-banner-text">
-                      <strong>{t("+50 Arc 獲得済み")}</strong>
-                      <small>{t("明日も日報を記録すれば Arc を狙えます。")}</small>
-                    </span>
-                  ) : (
-                    <span className="daily-reward-banner-text">
-                      <strong>{t("今日の日報を記録すると +50 Arc / 日")}</strong>
-                      <span className="daily-reward-banner-progress" aria-label={t("今日の達成状況")}>
-                        <span className={planDone ? "is-done" : ""}>
-                          {planDone ? "✓ " : "・"}
-                          {t("今日やること")}
-                        </span>
-                        <span className={reflectionDone ? "is-done" : ""}>
-                          {reflectionDone ? "✓ " : "・"}
-                          {t("振り返り")}
-                        </span>
+                  <span className="daily-reward-banner-text">
+                    <strong>{t("今日の日報を記録すると +50 Arc / 日")}</strong>
+                    <span className="daily-reward-banner-progress" aria-label={t("今日の達成状況")}>
+                      <span className={planDone ? "is-done" : ""}>
+                        {planDone ? "✓ " : "・"}
+                        {t("今日やること")}
+                      </span>
+                      <span className={reflectionDone ? "is-done" : ""}>
+                        {reflectionDone ? "✓ " : "・"}
+                        {t("振り返り")}
                       </span>
                     </span>
-                  )}
+                  </span>
                 </div>
               );
             })()}

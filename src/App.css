@@ -7422,6 +7422,19 @@
 /* 日報報酬バナー。デザイン方針「枠だけにカラー / 本体は白黒」に揃える。
    学習記録カード (左 3-4px 緑アクセント + 本体白) と同じ語彙で統一。
    濃い緑グラデ塗りは廃止。 */
+/* 受領済みの控えめな補足。大きな黒バナーの代わりに薄く一行で出す。 */
+.daily-reward-earned-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.daily-reward-earned-note span {
+  color: var(--reward-gold, #d49a1a);
+}
+
 .daily-reward-banner {
   /* Habit カードと統一語彙：ink 1.5px hairline + 大角丸 + 白。
      左バーは廃止 (カードとして完結したオブジェクトに見える方が筋が通る)。 */

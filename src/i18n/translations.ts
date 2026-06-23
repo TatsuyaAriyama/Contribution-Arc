@@ -512,6 +512,8 @@ export const EN_TRANSLATIONS: Record<string, string> = {
 
   // 日報: 報酬バナー
   "+50 Arc 獲得済み":             "+50 Arc earned",
+  "今日の +50 Arc は獲得済み。明日も日報で継続しましょう。":
+                                "Today's +50 Arc is earned. Keep the streak going with tomorrow's report.",
   "明日も「今日やること」と「振り返り」の両方共有で Arc を狙えます。":
                                 "Earn Arc again tomorrow by sharing both today's plan and reflection.",
   "明日も日報を記録すれば Arc を狙えます。":
