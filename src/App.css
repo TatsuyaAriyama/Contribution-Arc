@@ -23409,11 +23409,12 @@
   transform: scale(0.97);
 }
 
-/* ライブラリ画面「タイムライン」タブ: 自分の過去の学習記録を時系列表示 */
+/* ライブラリ画面「タイムライン」タブ: 自分の過去の学習記録を
+   Discord ライクなメッセージ形式で時系列表示する。 */
 .study-timeline {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 4px;
   margin-top: 6px;
 }
 .study-timeline-empty {
@@ -23434,16 +23435,19 @@
 .study-timeline-card {
   display: flex;
   gap: 12px;
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: var(--surface);
+  padding: 12px 14px;
+  border-radius: 14px;
+  transition: background 0.15s ease;
 }
+.study-timeline-card:hover {
+  background: rgba(var(--ink-rgb), 0.025);
+}
+/* 左の丸アバター (誰の記録か)。記録ブロックの外に小さく置く。 */
 .study-timeline-avatar {
   flex: 0 0 auto;
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   overflow: hidden;
 }
 .study-timeline-avatar .profile-character-preview {
@@ -23455,27 +23459,65 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
+/* 名前 + 時刻 (Discord のメッセージヘッダー風) */
 .study-timeline-head {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
   gap: 8px;
 }
+.study-timeline-author {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.study-timeline-date {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+/* 学習内容ブロック: 教材カバー + タイトル + 学習時間 */
+.study-timeline-study {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(var(--ink-rgb), 0.035);
+}
+.study-timeline-cover {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 58px;
+  border-radius: 6px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+.study-timeline-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.study-timeline-cover.is-empty span {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+}
+.study-timeline-study-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
 .study-timeline-subject {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.study-timeline-date {
-  flex: 0 0 auto;
-  font-size: 12px;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
 }
 .study-timeline-metrics {
   display: flex;
@@ -23495,13 +23537,13 @@
 .study-timeline-note {
   font-size: 13px;
   color: var(--ink);
-  line-height: 1.5;
+  line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
 }
 .study-timeline-photo {
   width: 100%;
-  max-height: 220px;
+  max-height: 240px;
   object-fit: cover;
   border-radius: 10px;
   margin-top: 2px;

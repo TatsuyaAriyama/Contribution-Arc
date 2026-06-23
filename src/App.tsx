@@ -21033,6 +21033,9 @@ function App() {
           </>
           ) : (
             (() => {
+              const itemById = new Map(
+                learningItems.map((entry) => [entry.id, entry] as const),
+              );
               const sorted = [...studyLogs].sort(
                 (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
               );
@@ -21047,6 +21050,11 @@ function App() {
               return (
                 <div className="study-timeline">
                   {sorted.map((log) => {
+                    const item = log.learningItemId
+                      ? itemById.get(log.learningItemId)
+                      : undefined;
+                    const cover = item?.photo;
+                    const swatch = log.color || item?.color || "rgba(31,111,74,0.5)";
                     const d = new Date(log.createdAt);
                     const valid = !Number.isNaN(d.getTime());
                     const ymd = valid
@@ -21065,19 +21073,34 @@ function App() {
                         </div>
                         <div className="study-timeline-body">
                           <div className="study-timeline-head">
-                            <strong className="study-timeline-subject">{log.subject}</strong>
+                            <strong className="study-timeline-author">{playerName}</strong>
                             <span className="study-timeline-date">{dateLabel}</span>
                           </div>
-                          <div className="study-timeline-metrics">
-                            <span className="study-timeline-time">
-                              {formatStudyTimeJa(log.minutes, language)}
-                            </span>
-                            {typeof log.amount === "number" && log.amount > 0 ? (
-                              <span className="study-timeline-amount">
-                                {log.amount}
-                                {log.amountUnit || ""}
+                          <div className="study-timeline-study">
+                            <div
+                              className={`study-timeline-cover${cover ? "" : " is-empty"}`}
+                              style={cover ? undefined : { background: swatch }}
+                            >
+                              {cover ? (
+                                <img src={cover} alt="" loading="lazy" />
+                              ) : (
+                                <span aria-hidden="true">{log.subject.slice(0, 1)}</span>
+                              )}
+                            </div>
+                            <div className="study-timeline-study-meta">
+                              <strong className="study-timeline-subject">{log.subject}</strong>
+                              <span className="study-timeline-metrics">
+                                <span className="study-timeline-time">
+                                  {formatStudyTimeJa(log.minutes, language)}
+                                </span>
+                                {typeof log.amount === "number" && log.amount > 0 ? (
+                                  <span className="study-timeline-amount">
+                                    {log.amount}
+                                    {log.amountUnit || ""}
+                                  </span>
+                                ) : null}
                               </span>
-                            ) : null}
+                            </div>
                           </div>
                           {log.note ? (
                             <p className="study-timeline-note">{log.note}</p>
