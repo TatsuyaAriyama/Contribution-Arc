@@ -147,6 +147,7 @@ import {
   getWeekStart,
 } from "./utils/format";
 import { resolveCoins } from "./utils/characterProgress";
+import { getDueDailyReminder } from "./utils/dailyReminder";
 import {
   createCheckoutSession,
   createPortalSession,
@@ -603,7 +604,7 @@ type RoomCreateState = "idle" | "saving" | "saved" | "offline";
 
 type NotificationItem = {
   id: string;
-  type: "dailyLog" | "post" | "friendRequest" | "reply" | "workspaceInvite" | "like";
+  type: "dailyLog" | "post" | "friendRequest" | "reply" | "workspaceInvite" | "like" | "dailyReminder";
   title: string;
   body: string;
   createdAt: string;
@@ -616,6 +617,7 @@ type DesktopNotificationSettings = {
   post: boolean;
   reply: boolean;
   friendRequest: boolean;
+  dailyReminder: boolean;
   sound: boolean;
   soundVolume: number;
 };
@@ -960,6 +962,7 @@ const defaultDesktopNotificationSettings: DesktopNotificationSettings = {
   post: true,
   reply: true,
   friendRequest: true,
+  dailyReminder: true,
   sound: true,
   soundVolume: 0.35,
 };
@@ -973,6 +976,7 @@ const notificationSoundSources = {
   friendRequest: `${import.meta.env.BASE_URL}sounds/notification-soft.mp3`,
   workspaceInvite: `${import.meta.env.BASE_URL}sounds/notification-soft.mp3`,
   like: `${import.meta.env.BASE_URL}sounds/notification-soft.mp3`,
+  dailyReminder: `${import.meta.env.BASE_URL}sounds/notification-soft.mp3`,
 } as const;
 const workspaceActorSlots = [
   { x: 28, y: 54 },
@@ -8574,6 +8578,75 @@ function App() {
       window.clearInterval(interval);
     };
   }, [currentUser, currentView, selectedRoomId, isInSelectedRoom, currentPresence?.joinedAt]);
+  /* 朝と夜に 1 回ずつ、その日まだ日報を出していなければリマインドする。
+     アプリ利用中に時間帯へ入ったら通知パネル + トーストで促し、ブラウザ
+     通知が許可されていてアプリが背面 (別タブ/最小化) なら OS 通知も出す。
+     「いま出すべきか」の判定は getDueDailyReminder (純関数) に集約。 */
+  useEffect(() => {
+    if (!currentUser) return;
+    if (!desktopNotificationSettings.dailyReminder) return;
+    const accountScope = getAccountStorageScope(currentUser.uid, userId);
+    const morningKey = getAccountStorageKey(accountScope, "daily-reminder-morning");
+    const eveningKey = getAccountStorageKey(accountScope, "daily-reminder-evening");
+    const check = () => {
+      const now = new Date();
+      const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      const slot = getDueDailyReminder({
+        now,
+        todayKey,
+        reportSubmittedToday: lastDailyReportRewardDate === todayKey,
+        morningSentDate: window.localStorage.getItem(morningKey) || "",
+        eveningSentDate: window.localStorage.getItem(eveningKey) || "",
+      });
+      if (!slot) return;
+      safeSetLocalStorage(slot === "morning" ? morningKey : eveningKey, todayKey);
+      const title = t("日報の時間です");
+      const body =
+        slot === "morning"
+          ? t("おはようございます。今日の「やること」を日報に書いて1日を始めましょう。")
+          : t("おつかれさまでした。今日の振り返りを日報に残しておきましょう。");
+      pushAppNotification(
+        {
+          id: `daily-reminder-${todayKey}-${slot}`,
+          type: "dailyReminder",
+          title,
+          body,
+          createdAt: now.toISOString(),
+          read: false,
+          sourceUserId: "system",
+        },
+        true,
+      );
+      showToast(body, { kind: "info" });
+      if (
+        typeof Notification !== "undefined" &&
+        Notification.permission === "granted" &&
+        document.hidden
+      ) {
+        try {
+          new Notification(title, {
+            body,
+            icon: `${import.meta.env.BASE_URL}icon-192.png`,
+          });
+        } catch {
+          /* 一部ブラウザは ServiceWorker 経由のみ Notification を許可する。
+             直接構築が失敗してもアプリ内通知は出ているので無視。 */
+        }
+      }
+    };
+    check();
+    const interval = window.setInterval(check, 60 * 1000);
+    const onVisibility = () => {
+      if (!document.hidden) check();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.uid, userId, desktopNotificationSettings.dailyReminder, lastDailyReportRewardDate]);
+
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
       return;
@@ -18924,6 +18997,29 @@ function App() {
                       />
                     </label>
                   ))}
+                  <label>
+                    <span>{t("日報リマインド（朝・夜）")}</span>
+                    <input
+                      type="checkbox"
+                      checked={desktopNotificationSettings.dailyReminder}
+                      onChange={(event) => {
+                        const checked = event.target.checked;
+                        setDesktopNotificationSettings((settings) => ({
+                          ...settings,
+                          dailyReminder: checked,
+                        }));
+                        /* ON にしたタイミング (= ユーザー操作) でブラウザ通知の
+                           許可を求める。未決定のときだけ要求し、拒否済みは尊重。 */
+                        if (
+                          checked &&
+                          typeof Notification !== "undefined" &&
+                          Notification.permission === "default"
+                        ) {
+                          void Notification.requestPermission();
+                        }
+                      }}
+                    />
+                  </label>
                   <label>
                     <span>{t("通知音")}</span>
                     <input

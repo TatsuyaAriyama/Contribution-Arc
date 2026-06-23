@@ -98,6 +98,12 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "日報通知":            "Daily report notifications",
   "投稿通知":            "Post notifications",
   "フレンド申請通知":    "Friend request notifications",
+  "日報リマインド（朝・夜）": "Daily report reminders (morning & evening)",
+  "日報の時間です":      "Time for your daily report",
+  "おはようございます。今日の「やること」を日報に書いて1日を始めましょう。":
+                       "Good morning. Start the day by noting today's plan in your daily report.",
+  "おつかれさまでした。今日の振り返りを日報に残しておきましょう。":
+                       "Nice work today. Take a moment to log your reflection in the daily report.",
   "通知音":              "Notification sound",
   "通知音量":            "Notification volume",
   "通知音をテスト":      "Test notification sound",
