@@ -23409,6 +23409,112 @@
   transform: scale(0.97);
 }
 
+/* ライブラリ画面「タイムライン」タブ: 自分の過去の学習記録を時系列表示 */
+.study-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 6px;
+}
+.study-timeline-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 32px 18px;
+  text-align: center;
+  color: var(--muted);
+}
+.study-timeline-empty strong {
+  color: var(--ink);
+  font-size: 15px;
+}
+.study-timeline-empty span {
+  font-size: 13px;
+}
+.study-timeline-card {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.study-timeline-cover {
+  flex: 0 0 auto;
+  width: 48px;
+  height: 64px;
+  border-radius: 8px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+.study-timeline-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.study-timeline-cover.is-empty span {
+  color: #fff;
+  font-size: 20px;
+  font-weight: 800;
+}
+.study-timeline-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.study-timeline-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.study-timeline-subject {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.study-timeline-date {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.study-timeline-metrics {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.study-timeline-time {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--green);
+}
+.study-timeline-amount {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.study-timeline-note {
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.study-timeline-photo {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 10px;
+  margin-top: 2px;
+}
+
 .learning-controls {
   display: flex;
   align-items: center;

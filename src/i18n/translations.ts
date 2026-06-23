@@ -123,6 +123,11 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "作業部屋":            "Workroom",
   "記録する":            "Log",
   "ライブラリ":          "Library",
+  "タイムライン":        "Timeline",
+  "ライブラリの表示":    "Library view",
+  "まだ学習記録がありません。": "No study records yet.",
+  "ライブラリの教材から記録すると、ここに時系列で並びます。":
+                       "Records you log from your library appear here in order.",
   "日報":                "Daily",
   "ショップ":            "Shop",
   "ショップ ({coins} Arc)": "Shop ({coins} Arc)",

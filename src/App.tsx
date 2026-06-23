@@ -3859,6 +3859,7 @@ function App() {
   // 選んで並べ替えた結果が reload しても保持される (以前は毎回 "recent"
   // にリセットされ、せっかく振った order が見えず「反映されない」ように
   // 感じていた)。
+  const [libraryTab, setLibraryTab] = useState<"library" | "timeline">("library");
   const [learningSortMode, setLearningSortMode] = useState<"recent" | "total" | "name" | "custom">(() => {
     if (typeof window === "undefined") return "recent";
     try {
@@ -20495,6 +20496,29 @@ function App() {
             </div>
           </header>
 
+          <div className="timeline-filter-tabs" role="tablist" aria-label={t("ライブラリの表示")}>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={libraryTab === "library"}
+              className={`timeline-filter-tab${libraryTab === "library" ? " is-active" : ""}`}
+              onClick={() => setLibraryTab("library")}
+            >
+              {t("ライブラリ")}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={libraryTab === "timeline"}
+              className={`timeline-filter-tab${libraryTab === "timeline" ? " is-active" : ""}`}
+              onClick={() => setLibraryTab("timeline")}
+            >
+              {t("タイムライン")}
+            </button>
+          </div>
+
+          {libraryTab === "library" ? (
+          <>
           <div className="learning-controls">
             <input
               className="learning-search"
@@ -21009,6 +21033,86 @@ function App() {
               </div>
             );
           })()}
+          </>
+          ) : (
+            (() => {
+              const itemById = new Map(
+                learningItems.map((entry) => [entry.id, entry] as const),
+              );
+              const sorted = [...studyLogs].sort(
+                (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+              );
+              if (sorted.length === 0) {
+                return (
+                  <div className="study-timeline-empty">
+                    <strong>{t("まだ学習記録がありません。")}</strong>
+                    <span>{t("ライブラリの教材から記録すると、ここに時系列で並びます。")}</span>
+                  </div>
+                );
+              }
+              return (
+                <div className="study-timeline">
+                  {sorted.map((log) => {
+                    const item = log.learningItemId
+                      ? itemById.get(log.learningItemId)
+                      : undefined;
+                    const cover = item?.photo;
+                    const swatch = log.color || item?.color || "rgba(31,111,74,0.5)";
+                    const d = new Date(log.createdAt);
+                    const valid = !Number.isNaN(d.getTime());
+                    const ymd = valid
+                      ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+                      : "";
+                    const dateLabel = valid
+                      ? `${formatDailyDate(ymd, language)} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
+                      : "—";
+                    return (
+                      <article className="study-timeline-card" key={log.id}>
+                        <div
+                          className={`study-timeline-cover${cover ? "" : " is-empty"}`}
+                          style={cover ? undefined : { background: swatch }}
+                        >
+                          {cover ? (
+                            <img src={cover} alt="" loading="lazy" />
+                          ) : (
+                            <span aria-hidden="true">{log.subject.slice(0, 1)}</span>
+                          )}
+                        </div>
+                        <div className="study-timeline-body">
+                          <div className="study-timeline-head">
+                            <strong className="study-timeline-subject">{log.subject}</strong>
+                            <span className="study-timeline-date">{dateLabel}</span>
+                          </div>
+                          <div className="study-timeline-metrics">
+                            <span className="study-timeline-time">
+                              {formatStudyTimeJa(log.minutes, language)}
+                            </span>
+                            {typeof log.amount === "number" && log.amount > 0 ? (
+                              <span className="study-timeline-amount">
+                                {log.amount}
+                                {log.amountUnit || ""}
+                              </span>
+                            ) : null}
+                          </div>
+                          {log.note ? (
+                            <p className="study-timeline-note">{log.note}</p>
+                          ) : null}
+                          {log.photo ? (
+                            <img
+                              className="study-timeline-photo"
+                              src={log.photo}
+                              alt=""
+                              loading="lazy"
+                            />
+                          ) : null}
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              );
+            })()
+          )}
         </motion.section>
       ) : currentView === "logs" ? (
         <motion.section
