@@ -50,7 +50,7 @@ export function renderMorphCubeSvg(color: string, options?: { showEdges?: boolea
   return (
     <svg
       className="morph-svg"
-      viewBox="320 320 480 460"
+      viewBox="332 306 446 446"
       aria-hidden="true"
       focusable="false"
       preserveAspectRatio="xMidYMid meet"
@@ -107,7 +107,7 @@ export function renderGhostSvg(color: string) {
   return (
     <svg
       className="ghost-svg"
-      viewBox="0 0 128 140"
+      viewBox="-3 -4 134 134"
       aria-hidden="true"
       focusable="false"
       preserveAspectRatio="xMidYMid meet"
@@ -177,7 +177,7 @@ export function renderOwlSvg(_color: string) {
   return (
     <svg
       className="owl-svg"
-      viewBox="0 0 128 140"
+      viewBox="-7 -1 141 141"
       aria-hidden="true"
       focusable="false"
       preserveAspectRatio="xMidYMid meet"
@@ -248,7 +248,7 @@ export function renderRoboSvg(_color: string) {
   return (
     <svg
       className="robo-svg"
-      viewBox="0 0 128 140"
+      viewBox="-7 -9 141 141"
       aria-hidden="true"
       focusable="false"
       preserveAspectRatio="xMidYMid meet"
@@ -312,7 +312,7 @@ export function renderAngelSvg(_color: string) {
   return (
     <svg
       className="angel-svg"
-      viewBox="0 0 128 140"
+      viewBox="-8 -5 144 144"
       aria-hidden="true"
       focusable="false"
       preserveAspectRatio="xMidYMid meet"
@@ -385,7 +385,7 @@ export function renderDefaultCharacterSvg(color: string, options?: { showEdges?:
   return (
     <svg
       className="default-char-svg"
-      viewBox="320 320 480 540"
+      viewBox="292 315 527 527"
       preserveAspectRatio="xMidYMid meet"
       aria-hidden="true"
       focusable="false"

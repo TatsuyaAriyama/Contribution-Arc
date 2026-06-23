@@ -340,7 +340,7 @@
 }
 
 .notification-item > button:first-child .profile-character-preview .actor-sprite {
-  transform: translateY(-1px) scale(0.78);
+  transform: none;
 }
 
 .notification-item strong,
@@ -3662,7 +3662,10 @@
 }
 
 .profile-character-preview .actor-sprite {
-  transform: translateY(9px) scale(0.92);
+  /* viewBox を各 shape で正方形に正規化し、キャラ本体を枠中央・一定
+     占有率に統一したため、コンテキストごとの translate/scale 補正は
+     不要になった。全画面で同じ枠占有・中央配置にするため none で揃える。 */
+  transform: none;
 }
 
 .character-color-grid {
@@ -4838,7 +4841,7 @@
 .log-post-author .profile-character-preview .actor-sprite,
 .log-post-author-compact .profile-character-preview .actor-sprite,
 .post-reply-item .profile-character-preview .actor-sprite {
-  transform: translateY(-1px) scale(0.78);
+  transform: none;
   transform-origin: center center;
 }
 /* 画像 / SVG 版アバターを使う場合のフォールバック。container の縦幅に
@@ -5520,7 +5523,7 @@
   justify-content: center;
 }
 .post-detail-author .profile-character-preview .actor-sprite {
-  transform: translateY(-1px) scale(0.78);
+  transform: none;
   transform-origin: center center;
 }
 .post-detail-author .profile-character-preview > img,
@@ -7821,7 +7824,7 @@
 }
 
 .daily-shared-list .profile-character-preview .actor-sprite {
-  transform: translateY(-2px) scale(0.78);
+  transform: none;
 }
 
 .daily-shared-list strong,
@@ -13495,7 +13498,7 @@
    room on every side so the owl's head/tufts can extrude upward and
    the legs/feet can extrude downward without clipping. */
 .shape-tile-stage .profile-character-preview .actor-sprite {
-  transform: translateY(2px);
+  transform: none;
 }
 
 .shape-tile-text {
