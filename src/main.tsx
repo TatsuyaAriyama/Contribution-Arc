@@ -5,6 +5,9 @@ import { AppErrorBoundary } from "./AppErrorBoundary";
 import { LanguageProvider } from "./i18n/LanguageContext";
 import "./index.css";
 
+/* vite.config.ts の define で各ビルドごとに注入される値。 */
+declare const __SW_BUILD_ID__: string;
+
 /* Capture `beforeinstallprompt` as early as possible — it can fire
    before React mounts and the PWAInstallPrompt component's effect
    attaches its own listener, in which case the event would be lost.
@@ -67,10 +70,34 @@ if (
   window.location.protocol.startsWith("http")
 ) {
   window.addEventListener("load", () => {
-    const swUrl = `${import.meta.env.BASE_URL}sw.js`;
-    navigator.serviceWorker.register(swUrl, { scope: import.meta.env.BASE_URL }).catch(() => {
-      /* Registration failures are non-fatal — the app still works,
-         it just won't surface the install prompt. */
-    });
+    const swUrl = `${import.meta.env.BASE_URL}sw.js?v=${__SW_BUILD_ID__}`;
+    navigator.serviceWorker
+      .register(swUrl, { scope: import.meta.env.BASE_URL })
+      .then((registration) => {
+        /* デプロイのたびに __SW_BUILD_ID__ が変わり、SW の登録 URL が
+           変わるので updatefound が発火する。新しい SW が activated に
+           なり、かつ既に別の SW が制御中 (= 初回登録ではなく更新) のとき
+           だけ一度リロードして、最新の JS/CSS を確実に読み込む。これで
+           「デプロイしたのに古い画面のまま」を自動で解消する。 */
+        registration.addEventListener("updatefound", () => {
+          const installing = registration.installing;
+          if (!installing) return;
+          installing.addEventListener("statechange", () => {
+            if (
+              installing.state === "activated" &&
+              navigator.serviceWorker.controller
+            ) {
+              window.location.reload();
+            }
+          });
+        });
+        /* ブラウザ既定の更新チェック (最大 24h 間隔) を待たず、起動直後に
+           一度チェックを促す。 */
+        void registration.update();
+      })
+      .catch(() => {
+        /* Registration failures are non-fatal — the app still works,
+           it just won't surface the install prompt. */
+      });
   });
 }
