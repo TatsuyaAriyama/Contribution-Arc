@@ -5052,30 +5052,21 @@
 }
 
 .log-post-card {
-  /* タイムラインと統一した Discord 風レイアウト: 左に丸アバター列、
-     右に名前+時刻+本文。 */
+  /* Discord 型: 投稿を包む白カードを撤去し、画面端まで広げる。左右は
+     固定パディング 16px のみ。アバターは投稿の上端に揃える。 */
   display: flex;
+  align-items: flex-start;
   gap: 12px;
-  padding: 12px 14px;
-  border: 1px solid rgba(var(--ink-rgb), 0.06);
-  border-radius: 14px;
-  background: var(--surface);
-  box-shadow: 0 1px 0 rgba(var(--ink-rgb), 0.02);
-  transform: translateY(0);
-  transition:
-    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.18s ease,
-    background 0.18s ease;
-  will-change: transform;
+  padding: 0 16px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  transition: background 0.18s ease;
 }
 
 .log-post-card:hover {
-  border-color: rgba(var(--ink-rgb), 0.14);
-  transform: translateY(-2px);
-  box-shadow:
-    0 1px 2px rgba(var(--ink-rgb), 0.04),
-    0 8px 20px -8px rgba(var(--ink-rgb), 0.12);
+  background: rgba(var(--ink-rgb), 0.02);
 }
 
 .log-post-card:active {
@@ -5092,19 +5083,15 @@
 .log-post-card.compact {
   gap: 8px;
   padding: 12px 14px;
+  border: 1px solid rgba(var(--ink-rgb), 0.06);
   border-radius: 12px;
+  background: var(--surface);
 }
 
 /* Subtle accent for the current user's own posts: thin green left edge
    + barely-there tint, so attribution reads without dominating the feed. */
-.log-post-card.is-own {
-  border-left: 3px solid var(--green);
-  background: linear-gradient(
-    90deg,
-    rgba(31, 111, 74, 0.035) 0%,
-    var(--surface) 60%
-  );
-}
+/* 自分の投稿アクセント (左 green エッジ + tint) は Discord 型のフラット化で
+   カード感が出てしまうため撤去。 */
 
 
 /* ─── 自動投稿の細長コンパクト pill カード ───
@@ -5320,7 +5307,7 @@
   line-height: 1.55;
 }
 
-.log-post-card > p {
+.log-post-card p {
   margin: 0;
   color: var(--ink);
   /* 同じく行高と font-size を一段圧縮。読みやすさは保ちつつ高さを
@@ -5331,7 +5318,7 @@
   white-space: pre-wrap;
 }
 
-.log-post-card.compact > p {
+.log-post-card.compact p {
   font-size: 13px;
   line-height: 1.55;
 }
@@ -23459,20 +23446,12 @@
 /* ライブラリ画面「タイムライン」タブ: 自分の過去の学習記録を
    Discord ライクなメッセージ形式で時系列表示する。 */
 .study-timeline {
+  /* Discord 型: 投稿を包む箱を撤去し、地のオフホワイト背景のまま縦に
+     並べる。左右は各カードの 16px パディングで揃える。 */
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 10px;
-  padding: 18px 14px 26px;
-  border-radius: 22px;
-  border: 1px solid rgba(var(--ink-rgb), 0.05);
-  /* 大人っぽく上品な背景: ウォームニュートラルの縦グラデに、ブランドの
-     フォレストグリーンとリワードゴールドを四隅からごく淡く差し、奥行きを
-     出す。彩度は抑えめにして落ち着いた印象にする。 */
-  background:
-    radial-gradient(120% 80% at 0% 0%, rgba(31, 111, 74, 0.06), transparent 45%),
-    radial-gradient(110% 70% at 100% 6%, rgba(212, 154, 26, 0.05), transparent 42%),
-    linear-gradient(180deg, #fbfaf7 0%, #f2f0e9 100%);
+  gap: 18px;
+  margin-top: 12px;
 }
 .study-timeline-empty {
   display: flex;
@@ -23491,23 +23470,13 @@
 }
 .study-timeline-card {
   display: flex;
+  align-items: flex-start;
   gap: 12px;
-  padding: 14px;
-  border-radius: 16px;
-  background: var(--surface);
-  border: 1px solid rgba(var(--ink-rgb), 0.05);
-  box-shadow:
-    0 10px 30px rgba(var(--ink-rgb), 0.06),
-    inset 0 1px 0 rgba(var(--surface-rgb), 0.9);
-  transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease;
+  padding: 0 16px;
+  transition: background 0.18s ease;
 }
 .study-timeline-card:hover {
-  transform: translateY(-1px);
-  box-shadow:
-    0 16px 38px rgba(var(--ink-rgb), 0.09),
-    inset 0 1px 0 rgba(var(--surface-rgb), 0.9);
+  background: rgba(var(--ink-rgb), 0.02);
 }
 /* 左の丸アバター (誰の記録か)。記録ブロックの外に小さく置く。 */
 .study-timeline-avatar {
@@ -25404,7 +25373,7 @@
 .home-feed-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 18px;
 }
 
 .home-feed-list .feed-card,
