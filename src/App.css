@@ -37419,8 +37419,11 @@ select:disabled {
    =============================================================== */
 .profile-nondo-hero {
   position: relative;
-  padding: 14px 4px 4px;
-  margin-bottom: 18px;
+  /* 大見出しの名前を撤去したので、右上の corner ボタン (38px) が
+     収まる最小高さだけ確保し、上部の余白を切り詰める。 */
+  min-height: 38px;
+  padding: 0 4px;
+  margin-bottom: 12px;
 }
 
 /* 右上の line icon ペア (storage / settings 風) */

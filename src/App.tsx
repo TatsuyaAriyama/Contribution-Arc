@@ -21170,12 +21170,11 @@ function App() {
                       </svg>
                     </button>
                   </div>
-                  <h1 className="profile-nondo-name">
-                    {playerName}
-                  </h1>
-                  <p className="profile-nondo-handle">
-                    {userId ? `@${userId}` : "—"}
-                  </p>
+                  {/* 大見出しのユーザー名 + @ハンドルは下の PLAYER STATUS
+                      カードと重複し、上部の縦スペースを大きく専有して
+                      This Week が画面外へ押し出されていたため撤去。名前は
+                      Player Status カードに残る。右上のメニュー / 設定
+                      ボタン (corner) だけをこのヘッダーに残す。 */}
                 </header>
 
                 {/* 自分の目標は Player Status の識別チップ行にコンパクトに
