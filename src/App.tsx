@@ -146,6 +146,7 @@ import {
   getTodayKey,
   getWeekStart,
 } from "./utils/format";
+import { resolveCoins } from "./utils/characterProgress";
 import {
   createCheckoutSession,
   createPortalSession,
@@ -5473,7 +5474,22 @@ function App() {
           new Set<CharacterShape>(["default", ...loadedOwned]),
         );
         const safeShape: CharacterShape = resolvedOwned.includes(loadedShape) ? loadedShape : "default";
-        const grantedCoins = isAdmin ? Math.max(profile.coins || 0, 30000) : profile.coins || 0;
+        /* coins も color/shape と同じ「ローカルが新しければ守る」規則で
+           解決する。これが無いと、購入で減らした残高がデバウンス書き込み
+           着地前のリロードで cloud の購入前残高に巻き戻り、owned だけ
+           localStorage キャッシュで残って「コインを払わず解放」になる。 */
+        const savedCoinsRaw = window.localStorage.getItem(
+          getAccountStorageKey(accountScope, "coins"),
+        );
+        const savedCoins =
+          savedCoinsRaw != null && savedCoinsRaw !== "" ? Number(savedCoinsRaw) : null;
+        const resolvedCoinsBase = resolveCoins({
+          localCoins: savedCoins,
+          localStamp: localCharStamp,
+          cloudCoins: profile.coins || 0,
+          cloudStamp: cloudCharStamp,
+        });
+        const grantedCoins = isAdmin ? Math.max(resolvedCoinsBase, 30000) : resolvedCoinsBase;
         /* purchase 直後の reload で local の新規所持シルエットが cloud
            の stale な値に上書きされて消える事故を防ぐため、現在 state
            (localStorage hydrate 由来) と union してから採用する。 */
@@ -5643,12 +5659,14 @@ function App() {
               : merged;
           });
         }
-        if (typeof profile.coins === "number") {
+        if (typeof profile.coins === "number" && cloudWinsForChar) {
           /* realtime sync では admin floor を適用しない。
              ここで Math.max(profile.coins, 30000) すると、購入で減らした
              直後に snapshot が降ってきて 30000 に戻され「coin が減らない /
-             購入が無効化される」回帰が起きる。初回 hydrate (5447 付近) で
-             だけ floor を当てる方針に変更。 */
+             購入が無効化される」回帰が起きる。初回 hydrate でだけ floor を
+             当てる方針。さらに color/shape と同じ cloudWinsForChar ガード下
+             に置き、購入直後 (characterChoiceLock 中 / ローカルが新しい間)
+             は cloud の購入前残高で巻き戻さない。 */
           const nextCoins = profile.coins;
           setCoins((current) => (current === nextCoins ? current : nextCoins));
         }
@@ -6766,6 +6784,19 @@ function App() {
       JSON.stringify([...ownedCharacterShapes].sort()),
     );
   }, [currentUser, ownedCharacterShapes, isWorkspaceLoaded, userId]);
+
+  /* coins も localStorage にミラーする。owned を即時 hydrate でキャッシュ
+     しているのに coins だけ cloud 値そのままだと、購入直後リロードで残高が
+     巻き戻り、owned だけ残って「無料解放」になる。resolveCoins が
+     character-updated-at の stamp 比較でローカル残高を優先できるよう、
+     現在残高を常に書き出しておく。 */
+  useEffect(() => {
+    if (!currentUser || !isWorkspaceLoaded) {
+      return;
+    }
+    const accountScope = getAccountStorageScope(currentUser.uid, userId);
+    safeSetLocalStorage(getAccountStorageKey(accountScope, "coins"), String(coins));
+  }, [currentUser, coins, isWorkspaceLoaded, userId]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
