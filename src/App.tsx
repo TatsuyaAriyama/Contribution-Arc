@@ -13763,113 +13763,29 @@ function App() {
 
   const postCard = (post: ContributionPostRecord, variant: "full" | "compact" = "full") => {
     const isLiked = post.likedUserIds.includes(currentUserUid);
-    const isAuto = post.postType === "auto-study" || post.postType === "auto-workspace";
+    const isOwn = post.userId === currentUserUid;
+    const look = resolveAuthorAppearance(post.userId, post.characterColor, post.characterShape);
 
-    // 自動投稿 (学習記録 / 作業部屋退室) は手書きの長文と並べると圧迫感が
-    // 出るので、1 行横並びのコンパクト pill カードで描画する。like ボタンも
-    // 縮約してハートだけにする。reply 系の機能は省略 (auto-* に reply を
-    // ぶら下げる UX は意味が薄い)。
-    if (isAuto) {
-      const autoLook = resolveAuthorAppearance(
-        post.userId,
-        post.characterColor,
-        post.characterShape,
-      );
-      const isOwnAuto = post.userId === currentUserUid;
+    /* 学習ブロックの題材。手書き投稿は post.subject、学習自動投稿 (auto-study)
+       は本文の『…』表記から拾う。これがあれば Studyplus 風の学習インセットを
+       出す。これで auto-study / 手書きの学習投稿が同じ見た目に揃う。 */
+    const subjectMatch = post.text ? post.text.match(/『(.+?)』/) : null;
+    const studySubject =
+      post.subject || (post.postType === "auto-study" && subjectMatch ? subjectMatch[1] : "");
+    const hasStudyBlock = !!studySubject;
+    const studyMinutes = post.studyMinutes || 0;
 
-      /* 学習ログは「『科目』を N 学習しました」の一文をやめ、学習時間を
-         主役にしたインク印（蔵書印）風の "学習チケット" に仕立てる。
-         印の中の集中メーターは時間に応じて満ちる（4h で full）。 */
-      if (post.postType === "auto-study") {
-        const subjectMatch = post.text.match(/『(.+?)』/);
-        const subject = subjectMatch ? subjectMatch[1] : "";
-        const mins = Math.max(0, post.studyMinutes || 0);
-        let stampValue: string;
-        let stampUnit: string;
-        if (mins >= 60) {
-          const hours = mins / 60;
-          stampValue = Number.isInteger(hours) ? String(hours) : hours.toFixed(1);
-          stampUnit = "h";
-        } else {
-          stampValue = String(mins);
-          stampUnit = "min";
-        }
-        const focusFill = Math.min(mins / 240, 1);
-        return (
-          <article
-            className={`study-log-card${isOwnAuto ? " is-own" : ""}`}
-            data-kind="study"
-            key={post.id}
-          >
-            <button
-              type="button"
-              className="study-log-stamp"
-              style={{ ["--fill" as string]: String(focusFill) } as React.CSSProperties}
-              onClick={() => handlePostAuthorOpen(post)}
-              aria-label={t("{username}・{text}", { username: post.username, text: post.text })}
-            >
-              <span className="study-log-stamp-value">{stampValue}</span>
-              <span className="study-log-stamp-unit">{stampUnit}</span>
-            </button>
-            <button
-              type="button"
-              className="study-log-main"
-              onClick={() => handlePostAuthorOpen(post)}
-            >
-              <span className="study-log-eyebrow">{t("学習の記録")}</span>
-              <strong className="study-log-subject">
-                {subject ? `『${subject}』` : post.text}
-              </strong>
-              <span className="study-log-byline">
-                {t("{username}・{time}", { username: post.username, time: formatPostTime(post.createdAt) })}
-              </span>
-            </button>
-            <button
-              type="button"
-              className={`log-post-compact-like${isLiked ? " is-liked" : ""}`}
-              onClick={() => handlePostLike(post)}
-              aria-label={isLiked ? t("ハートを取り消す") : t("ハートする")}
-              aria-pressed={isLiked}
-            >
-              <span aria-hidden="true">{isLiked ? "♥" : "♡"}</span>
-              {post.likesCount > 0 ? <span className="log-post-compact-like-count">{post.likesCount}</span> : null}
-            </button>
-          </article>
-        );
+    /* 本文テキスト。学習ブロックに題材を出すときは、本文側から重複する
+       『題材』表記や題材そのものを取り除いてメモだけ残す。 */
+    let bodyText = (post.text || "").trim();
+    if (hasStudyBlock) {
+      if (bodyText === studySubject || bodyText === `『${studySubject}』`) {
+        bodyText = "";
+      } else {
+        bodyText = bodyText.replace(`『${studySubject}』`, "").trim();
       }
-
-      return (
-        <article
-          className={`log-post-card-compact${isOwnAuto ? " is-own" : ""}`}
-          data-kind="workspace"
-          key={post.id}
-        >
-          <button
-            type="button"
-            className="log-post-author-compact"
-            onClick={() => handlePostAuthorOpen(post)}
-            aria-label={t("{username} のプロフィールを開く", { username: post.username })}
-          >
-            <ProfileCharacterPreview color={autoLook.color} shape={autoLook.shape} />
-          </button>
-          <span className="log-post-compact-body">
-            <strong className="log-post-compact-name">{post.username}</strong>
-            <span className="log-post-compact-text">{post.text}</span>
-          </span>
-          <small className="log-post-compact-time">{formatPostTime(post.createdAt)}</small>
-          <button
-            type="button"
-            className={`log-post-compact-like${isLiked ? " is-liked" : ""}`}
-            onClick={() => handlePostLike(post)}
-            aria-label={isLiked ? t("ハートを取り消す") : t("ハートする")}
-            aria-pressed={isLiked}
-          >
-            <span aria-hidden="true">{isLiked ? "♥" : "♡"}</span>
-            {post.likesCount > 0 ? <span className="log-post-compact-like-count">{post.likesCount}</span> : null}
-          </button>
-        </article>
-      );
     }
+
 
     /* 投稿の下の小さなメタ。以前は studyMinutes が 0 / roomName が空の
        時に "quiet progress" "Quiet log" という英語のプレースホルダーを
@@ -13890,35 +13806,46 @@ function App() {
 
     return (
       <article
-        className={`log-post-card ${variant === "compact" ? "compact" : ""}${post.userId === currentUserUid ? " is-own" : ""}`}
+        className={`log-post-card${variant === "compact" ? " compact" : ""}${isOwn ? " is-own" : ""}`}
         key={post.id}
         data-testid="feed-post"
+        data-kind={
+          post.postType === "auto-workspace"
+            ? "workspace"
+            : post.postType === "auto-study"
+              ? "study"
+              : undefined
+        }
       >
-        <button type="button" className="log-post-author" onClick={() => handlePostAuthorOpen(post)}>
-          {(() => {
-            const look = resolveAuthorAppearance(
-              post.userId,
-              post.characterColor,
-              post.characterShape,
-            );
-            return <ProfileCharacterPreview color={look.color} shape={look.shape} />;
-          })()}
-          <span>
-            <strong>
-              {post.username}
-              {post.postType === "auto-workspace" ? (
-                <span className="log-post-auto-badge" data-kind="workspace" aria-label={t("作業部屋での積み上げ")}>
-                  ✦ {t("作業ログ")}
-                </span>
-              ) : post.postType === "auto-study" ? (
-                <span className="log-post-auto-badge" data-kind="study" aria-label={t("学習記録から自動投稿")}>
-                  📘 {t("学習ログ")}
-                </span>
-              ) : null}
-            </strong>
-            <small>{formatPostTime(post.createdAt)}</small>
-          </span>
+        <button
+          type="button"
+          className="log-post-avatar"
+          onClick={() => handlePostAuthorOpen(post)}
+          aria-label={t("{username} のプロフィールを開く", { username: post.username })}
+        >
+          <ProfileCharacterPreview color={look.color} shape={look.shape} />
         </button>
+
+        <div className="log-post-main">
+          <div className="log-post-head">
+            <button
+              type="button"
+              className="log-post-author-name"
+              onClick={() => handlePostAuthorOpen(post)}
+            >
+              <strong>{post.username}</strong>
+            </button>
+            {post.postType === "auto-workspace" ? (
+              <span className="log-post-auto-badge" data-kind="workspace" aria-label={t("作業部屋での積み上げ")}>
+                ✦ {t("作業ログ")}
+              </span>
+            ) : post.postType === "auto-study" ? (
+              <span className="log-post-auto-badge" data-kind="study" aria-label={t("学習記録から自動投稿")}>
+                📘 {t("学習ログ")}
+              </span>
+            ) : null}
+            <span className="log-post-time">{formatPostTime(post.createdAt)}</span>
+          </div>
 
         {/* 本文ブロック: タップで詳細モーダルを開く。アクション (いいね /
             返信 / 削除) は外側にあるので不用意に発火しない。 */}
@@ -13946,7 +13873,7 @@ function App() {
           }}
           aria-label={t("投稿の詳細を見る")}
         >
-          {post.subject ? (
+          {hasStudyBlock ? (
             <div className="log-post-study-inset">
               {post.itemPhoto ? (
                 <img
@@ -13961,21 +13888,19 @@ function App() {
                   style={{ background: post.characterColor || "rgba(0,0,0,0.06)" }}
                   aria-hidden="true"
                 >
-                  {post.subject.slice(0, 1)}
+                  {studySubject.slice(0, 1)}
                 </div>
               )}
               <div className="log-post-study-meta">
-                <strong className="log-post-study-subject">{post.subject}</strong>
+                <strong className="log-post-study-subject">{studySubject}</strong>
                 <span className="log-post-study-time">
-                  {formatStayTime(post.studyMinutes || 0, language)}
+                  {formatStayTime(studyMinutes, language)}
                 </span>
               </div>
             </div>
           ) : null}
 
-          {post.text && post.text.trim() && post.text.trim() !== post.subject ? (
-            <p>{post.text}</p>
-          ) : null}
+          {bodyText ? <p>{bodyText}</p> : null}
 
           {post.photo ? (
             <img
@@ -13986,7 +13911,7 @@ function App() {
             />
           ) : null}
 
-          {hasMeta && !post.subject ? (
+          {hasMeta && !hasStudyBlock ? (
             <div className="log-post-meta">
               {studyLabel ? <span>{studyLabel}</span> : null}
               {contributionLabel ? <span>{contributionLabel}</span> : null}
@@ -14181,6 +14106,7 @@ function App() {
               </motion.form>
             ) : null}
           </AnimatePresence>
+        </div>
         </div>
       </article>
     );

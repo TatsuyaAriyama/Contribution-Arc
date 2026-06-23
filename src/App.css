@@ -5052,12 +5052,11 @@
 }
 
 .log-post-card {
-  display: grid;
-  /* ユーザー要望：「1人あたりのカードが大きい」を解消し、画面により多くの
-     投稿が入るよう全方向の余白を圧縮。gap 10→6、padding 16/18→10/14。
-     line-height と font-size も後ろの > p ルールで一段縮める。 */
-  gap: 6px;
-  padding: 10px 14px;
+  /* タイムラインと統一した Discord 風レイアウト: 左に丸アバター列、
+     右に名前+時刻+本文。 */
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
   border: 1px solid rgba(var(--ink-rgb), 0.06);
   border-radius: 14px;
   background: var(--surface);
@@ -5341,21 +5340,69 @@
    な影で乗せる。dataURL なので圧縮済み (~1024px / JPEG 0.7)。 */
 /* Studyplus 風の学習記録サブカード: 学習項目の cover + 名前 + 時間。
    ホームフィードで 1 投稿が画面を占有しないよう slim な inset に。 */
+/* Discord 風: 左の丸アバター列 + 右の本文列 */
+.log-post-avatar {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+.log-post-avatar .profile-character-preview {
+  width: 100%;
+  height: 100%;
+}
+.log-post-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.log-post-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.log-post-author-name {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.log-post-author-name strong {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.log-post-time {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .log-post-study-inset {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: rgba(var(--ink-rgb), 0.04);
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(var(--ink-rgb), 0.035);
 }
 .log-post-study-cover {
   display: flex;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  width: 56px;
-  height: 56px;
+  width: 44px;
+  height: 58px;
   border-radius: 6px;
   object-fit: cover;
   background: rgba(var(--ink-rgb), 0.06);
