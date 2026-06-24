@@ -478,6 +478,8 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "振り返り":                   "Reflection",
   "過去の記録":                 "History",
   "日報の表示":                 "Daily report view",
+  "見積もり時間(分)":            "Estimated minutes",
+  "見積もり合計 {time}":         "Estimated total {time}",
   "Team Daily を読み込む":      "Load Team Daily",
   "更新中…":                    "Updating…",
   "再読み込み":                 "Refresh",

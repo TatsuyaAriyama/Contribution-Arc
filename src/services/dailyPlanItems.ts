@@ -36,6 +36,9 @@ export type PlanItem = {
   /** YYYY-MM-DD of the report this item was originally seeded from
    *  when it carried over from an earlier day. Empty for fresh items. */
   carriedFrom?: string;
+  /** タスクの見積もり所要時間 (分)。0 = 未設定。合計を出して
+   *  「今日の計画が現実的か」を可視化する。 */
+  estimateMinutes?: number;
 };
 
 /** Type-safe random id — uses `crypto.randomUUID` when available and a
@@ -55,6 +58,12 @@ export function makePlanItem(partial: Partial<PlanItem> = {}): PlanItem {
     done: partial.done === true,
     comment: typeof partial.comment === "string" ? partial.comment : "",
     carriedFrom: typeof partial.carriedFrom === "string" ? partial.carriedFrom : "",
+    estimateMinutes:
+      typeof partial.estimateMinutes === "number" &&
+      Number.isFinite(partial.estimateMinutes) &&
+      partial.estimateMinutes > 0
+        ? Math.round(partial.estimateMinutes)
+        : 0,
   };
 }
 
@@ -74,6 +83,8 @@ export function normalizePlanItems(value: unknown): PlanItem[] {
         done: partial.done === true,
         comment: typeof partial.comment === "string" ? partial.comment : "",
         carriedFrom: typeof partial.carriedFrom === "string" ? partial.carriedFrom : "",
+        estimateMinutes:
+          typeof partial.estimateMinutes === "number" ? partial.estimateMinutes : 0,
       }),
     );
   }

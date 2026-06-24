@@ -234,6 +234,26 @@ export function DailyPlanChecklist({
                       {l.carriedFrom}
                     </span>
                   ) : null}
+                  <label className="plan-checklist-estimate">
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      step={5}
+                      value={item.estimateMinutes ? String(item.estimateMinutes) : ""}
+                      placeholder="–"
+                      disabled={disabled}
+                      aria-label={t("見積もり時間(分)")}
+                      onChange={(event) => {
+                        const raw = Number(event.target.value);
+                        updateItem(item.id, {
+                          estimateMinutes:
+                            Number.isFinite(raw) && raw > 0 ? Math.round(raw) : 0,
+                        });
+                      }}
+                    />
+                    <span aria-hidden="true">{t("分")}</span>
+                  </label>
                   <button
                     type="button"
                     className="plan-checklist-remove"

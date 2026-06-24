@@ -205,7 +205,6 @@ import {
 import {
   derivePlanText,
   getCarriedOverItems,
-  makePlanItem,
   normalizePlanItems,
   type PlanItem,
   planItemsFromLegacyText,
@@ -10294,40 +10293,6 @@ function App() {
     showToast(t("{count}件の未完了タスクを追加しました", { count: newItems.length }), { kind: "success" });
   };
 
-  /* 昨日 (= 選択日の前日) の plan items 全部を today に複製。
-     未完了/完了問わず "同じことを今日もやる" 用。done は全て false に
-     リセットしてから追加。重複は skip。 */
-  const handleCopyPreviousDayPlan = () => {
-    const prior = dailyReports
-      .filter((report) => report.date && report.date < selectedDailyDate)
-      .sort((a, b) => b.date.localeCompare(a.date))[0];
-    if (!prior) {
-      showToast(t("前日の計画が見つかりません"), { kind: "info" });
-      return;
-    }
-    const sourceItems =
-      prior.planItems && prior.planItems.length > 0
-        ? prior.planItems
-        : planItemsFromLegacyText(prior.plan || "");
-    if (sourceItems.length === 0) {
-      showToast(t("前日の計画が空です"), { kind: "info" });
-      return;
-    }
-    const existingTexts = new Set(
-      dailyPlanItemsDraft.map((item) => item.text.trim()).filter(Boolean),
-    );
-    const newItems = sourceItems
-      .filter((item) => item.text.trim().length > 0)
-      .filter((item) => !existingTexts.has(item.text.trim()))
-      .map((item) => makePlanItem({ text: item.text, done: false }));
-    if (newItems.length === 0) {
-      showToast(t("前日の計画はすでに含まれています"), { kind: "info" });
-      return;
-    }
-    setDailyPlanItemsDraft((prev) => [...prev, ...newItems]);
-    showToast(t("{count}件を前日からコピーしました", { count: newItems.length }), { kind: "success" });
-  };
-
   const handleDailyReportSectionSave = async (section: "plan" | "reflection") => {
     if (!currentUser || isSavingDailyReport) {
       return;
@@ -19896,14 +19861,6 @@ function App() {
                     >
                       {t("未完了を持ち越し")}
                     </button>
-                    <button
-                      type="button"
-                      className="daily-plan-quick-action"
-                      onClick={handleCopyPreviousDayPlan}
-                      title={t("前日の計画をすべて今日にコピー")}
-                    >
-                      {t("前日の計画をコピー")}
-                    </button>
                   </div>
                 ) : null}
                 {/* Plan items の完了率 progress bar。1 件以上の項目がある時
@@ -19931,6 +19888,20 @@ function App() {
                     </div>
                   </div>
                 ) : null}
+                {(() => {
+                  /* 各タスクの見積もり時間 (分) の合計。今日の計画が現実的かを
+                     一目で確認できるよう、1 件でも見積もりがあれば表示する。 */
+                  const totalEstimate = dailyPlanItemsDraft.reduce(
+                    (sum, item) => sum + (item.estimateMinutes || 0),
+                    0,
+                  );
+                  return totalEstimate > 0 ? (
+                    <p className="daily-plan-estimate-total">
+                      <span aria-hidden="true">⏱</span>{" "}
+                      {t("見積もり合計 {time}", { time: formatStayTime(totalEstimate, language) })}
+                    </p>
+                  ) : null;
+                })()}
                 <DailyPlanChecklist
                   items={dailyPlanItemsDraft}
                   onChange={setDailyPlanItemsDraft}

@@ -6901,11 +6901,47 @@
 
 .plan-checklist-line {
   display: grid;
-  grid-template-columns: 1fr auto auto;
-  /* textarea が複数行に伸びても carry chip / remove ボタンは
+  grid-template-columns: 1fr auto auto auto;
+  /* textarea が複数行に伸びても carry chip / 見積もり / remove ボタンは
      先頭行の高さに揃える。 */
   align-items: start;
   gap: 6px;
+}
+
+/* タスクごとの見積もり時間 (分) 入力。控えめな小型フィールド。 */
+.plan-checklist-estimate {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.plan-checklist-estimate input {
+  width: 38px;
+  padding: 2px 4px;
+  border: 1px solid rgba(var(--ink-rgb), 0.12);
+  border-radius: 6px;
+  font-size: 12px;
+  text-align: right;
+  background: var(--surface);
+  color: var(--ink);
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.plan-checklist-estimate input::-webkit-outer-spin-button,
+.plan-checklist-estimate input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* 計画全体の見積もり合計。進捗バーの下に控えめに置く。 */
+.daily-plan-estimate-total {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
 }
 
 /* Phase 11b：通常時は 1 行 ellipsis の読み取り表示 (button)、
