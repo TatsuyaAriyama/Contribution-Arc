@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { resolveCoins } from "../../src/utils/characterProgress";
+import { resolveCoins, resolveOwnedShapes } from "../../src/utils/characterProgress";
 
 describe("resolveCoins", () => {
   it("keeps the local balance when it is newer (just-spent coins survive a reload)", () => {
@@ -39,5 +39,57 @@ describe("resolveCoins", () => {
     expect(
       resolveCoins({ localCoins: 0, localStamp: 5, cloudCoins: 1000, cloudStamp: 1 }),
     ).toBe(0);
+  });
+});
+
+describe("resolveOwnedShapes", () => {
+  it("keeps a just-equipped shape owned when the local choice is newer than cloud", () => {
+    // robo を購入/着用直後にリロード: cloud のデバウンス書き込みが未着地で
+    // cloudOwned はまだ ["default"]。preferLocal=true なのでローカル所有
+    // キャッシュを信用し、robo が所有集合から漏れない (装着が default に
+    // 巻き戻らない)。
+    expect(
+      resolveOwnedShapes({
+        cloudOwned: ["default"],
+        localOwned: ["default", "robo"],
+        preferLocal: true,
+        defaultShape: "default",
+      }),
+    ).toEqual(["default", "robo"]);
+  });
+
+  it("ignores the local cache when cloud is newer (tamper-resistant)", () => {
+    // ローカル選択が古い (= cloud が source of truth)。localStorage を
+    // 改ざんして robo を足しても、cloud が所有していなければ解放しない。
+    expect(
+      resolveOwnedShapes({
+        cloudOwned: ["default"],
+        localOwned: ["default", "robo"],
+        preferLocal: false,
+        defaultShape: "default",
+      }),
+    ).toEqual(["default"]);
+  });
+
+  it("merges cloud purchases from another device regardless of preferLocal", () => {
+    expect(
+      resolveOwnedShapes({
+        cloudOwned: ["default", "owl"],
+        localOwned: ["default"],
+        preferLocal: false,
+        defaultShape: "default",
+      }),
+    ).toEqual(["default", "owl"]);
+  });
+
+  it("always includes the default shape and dedupes", () => {
+    expect(
+      resolveOwnedShapes({
+        cloudOwned: ["ghost", "ghost"],
+        localOwned: ["ghost"],
+        preferLocal: true,
+        defaultShape: "default",
+      }),
+    ).toEqual(["default", "ghost"]);
   });
 });

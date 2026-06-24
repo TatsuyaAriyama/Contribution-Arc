@@ -146,7 +146,7 @@ import {
   getTodayKey,
   getWeekStart,
 } from "./utils/format";
-import { resolveCoins } from "./utils/characterProgress";
+import { resolveCoins, resolveOwnedShapes } from "./utils/characterProgress";
 import { getDueDailyReminder } from "./utils/dailyReminder";
 import {
   createCheckoutSession,
@@ -5516,9 +5516,20 @@ function App() {
            default に snap-back させる方針に変更。
            admin (= 開発者本人) もテスト時に正しくロック挙動を再現できる
            ように同じ判定を通す。coin 30k 付与だけは残して購入で確認可能に。 */
-        const resolvedOwned: CharacterShape[] = Array.from(
-          new Set<CharacterShape>(["default", ...loadedOwned]),
-        );
+        /* ローカル選択が cloud より新しい間 (= preferLocalChar) は、購入/
+           着用のデバウンス書き込み (1.5s) がまだ cloud に着地していない /
+           失敗している。その間はローカル所有キャッシュ (savedOwnedShapes)
+           も所有事実として信用する。これが無いと、買って着用 → 即リロードで
+           cloud 未反映の所有が resolvedOwned から漏れ、装着 shape の所有
+           チェックが落ちて default に巻き戻る (「選択したのにリロードで戻る」
+           バグの原因)。cloud が新しい場合は cloud の所有リストのみを信用し、
+           localStorage 改ざんによる非所持 shape の解放は防ぐ。 */
+        const resolvedOwned: CharacterShape[] = resolveOwnedShapes<CharacterShape>({
+          cloudOwned: loadedOwned,
+          localOwned: savedOwnedShapes,
+          preferLocal: preferLocalChar,
+          defaultShape: "default",
+        });
         const safeShape: CharacterShape = resolvedOwned.includes(loadedShape) ? loadedShape : "default";
         /* coins も color/shape と同じ「ローカルが新しければ守る」規則で
            解決する。これが無いと、購入で減らした残高がデバウンス書き込み
