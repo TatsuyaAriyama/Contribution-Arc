@@ -3622,6 +3622,10 @@
    フリップ時に前後で大きさが揃うようにする。 */
 .status-flip-back > .contribution-arc-card {
   flex: 1 1 auto;
+  /* 裏面はマップだけのコンパクト版。下マージンを殺し、内側の縦並びを
+     中央寄せして表のステータスカードと高さ・余白を揃える。 */
+  margin-bottom: 0;
+  justify-content: center;
 }
 
 .status-flip.is-flipped .status-flip-front {
@@ -23159,6 +23163,12 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 24px;
   align-items: start;
+}
+
+/* コンパクト版 (Player Status フリップ裏面): ドーナツ列を省いた分、
+   マップを 1 カラムで全幅に伸ばす。 */
+.contribution-arc-card.is-compact .contribution-arc-body {
+  grid-template-columns: 1fr;
 }
 
 @media (max-width: 880px) {

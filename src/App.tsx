@@ -15253,8 +15253,14 @@ function App() {
     );
   };
 
-  const contributionArcCardSection = (
-    <section className="contribution-arc-card" aria-label="Contribution Arc">
+  /* compact=true のときは裏面 (Player Status フリップ) 向けに、ドーナツ
+     ジャンル配分と選択日の詳細を省いてマップだけのコンパクト表示にする。
+     表のステータスカードと大きさが揃い、反転が綺麗に見える。 */
+  const renderContributionArcSection = (compact = false) => (
+    <section
+      className={`contribution-arc-card${compact ? " is-compact" : ""}`}
+      aria-label="Contribution Arc"
+    >
         <div className="contribution-arc-head">
           <div className="contribution-arc-head-title">
             <p className="card-kicker">
@@ -15482,6 +15488,7 @@ function App() {
             </p>
           )}
         </div>
+        {!compact ? (
         <AnimatePresence mode="wait" initial={false}>
           {donutDisplay.total > 0 ? (
             <motion.div
@@ -15659,8 +15666,9 @@ function App() {
             </motion.div>
           )}
         </AnimatePresence>
+        ) : null}
         </div>
-        {selectedArcDay ? (
+        {!compact && selectedArcDay ? (
           <div className="contribution-arc-detail" role="region" aria-label={t("選択日の学習詳細")}>
             <div className="contribution-arc-detail-head">
               <div>
@@ -21196,7 +21204,7 @@ function App() {
           animate={{ opacity: 1, y: 0 }}
           transition={SPRING_SNAPPY}
         >
-          {contributionArcCardSection}
+          {renderContributionArcSection()}
           {currentUser ? (
             <TutorialHint
               uid={currentUser.uid}
@@ -21500,7 +21508,7 @@ function App() {
                         </svg>
                         {t("ステータスに戻る")}
                       </button>
-                      {contributionArcCardSection}
+                      {renderContributionArcSection(true)}
                     </div>
                   </div>
                 </div>
@@ -23411,7 +23419,7 @@ function App() {
 
       {/* GitHub / 学習のコントリビューションマップ。お知らせをホーム最上部に
           出す方針に変えたので、このマップは下段へ移動した。 */}
-      {contributionArcCardSection}
+      {renderContributionArcSection()}
 
       </motion.div>
       )}
