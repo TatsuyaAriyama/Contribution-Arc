@@ -4795,6 +4795,39 @@ function App() {
   );
   const [dailyHistoryDateFilter, setDailyHistoryDateFilter] = useState("");
   const [dailyHistorySearch, setDailyHistorySearch] = useState("");
+  /* 過去に書いた日報の分の Arc を一度だけ遡及付与する (バックフィル)。
+     報酬の日付バグ等で受け取れていなかった過去分を補填する。下書きでなく
+     計画 or 振り返りが書かれた過去日のユニーク日数 × 50 Arc。今日分は通常の
+     報酬ロジックが扱うので除外。アカウント別フラグで 1 回のみ実行する。 */
+  useEffect(() => {
+    if (!currentUser || !isProfileHydrated) return;
+    if (dailyReports.length === 0) return;
+    const flag = `ca:daily-reward-backfill-v1:${currentUser.uid}`;
+    if (window.localStorage.getItem(flag)) return;
+    const today = getLearnerDate();
+    const earnedDates = new Set<string>();
+    for (const report of dailyReports) {
+      if (report.isDraft) continue;
+      if (!report.date || report.date >= today) continue;
+      const hasPlan =
+        (report.planItems && report.planItems.length > 0) ||
+        (report.plan ? report.plan.trim().length > 0 : false);
+      const hasReflection = (report.reflection || "").trim().length > 0;
+      if (hasPlan || hasReflection) earnedDates.add(report.date);
+    }
+    safeSetLocalStorage(flag, "1");
+    const days = earnedDates.size;
+    if (days > 0) {
+      const grant = days * 50;
+      setCoins((value) => value + grant);
+      writeCharacterChoiceStamp();
+      showToast(
+        t("過去の日報 {days} 日分の +{arc} Arc を付与しました", { days, arc: grant }),
+        { kind: "success" },
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser, isProfileHydrated, dailyReports]);
   // 右パネルのセグメントタブ: "mine" = 自分の過去日報 / "team" = みんなの日報。
   // 性質の違う 2 リストを縦積みせず切替式にして、Team Daily の発見性を上げる。
   const [dailyHistoryTab, setDailyHistoryTab] = useState<"mine" | "team">("mine");

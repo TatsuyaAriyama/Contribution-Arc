@@ -589,6 +589,8 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "日報の記録":                  "Daily report history",
   "自分の記録":                  "My history",
   "過去の日報を絞り込む":        "Filter past reports",
+  "過去の日報 {days} 日分の +{arc} Arc を付与しました":
+                                "Granted +{arc} Arc for {days} days of past reports",
   "本文・日付から探す":          "Search text or date",
   "クリア":                      "Clear",
   "今日やることは未入力":        "No plan written",
