@@ -7545,7 +7545,9 @@
 
 .plan-checklist-preview-row {
   display: grid;
-  grid-template-columns: 14px minmax(0, 1fr);
+  /* マーク | テキスト | 見積もり(右端・auto)。見積もりは別行にせず
+     同じ行の専用カラムに収める。無いときは auto=0 幅。 */
+  grid-template-columns: 14px minmax(0, 1fr) auto;
   gap: 6px;
   align-items: baseline;
   width: 100%;
@@ -7584,10 +7586,12 @@
   font-size: 11px;
 }
 
-/* 各タスクの見積もり時間。みんなの日報でも控えめな緑トーンの小チップで
-   「どれくらいの見積もりか」を一目で。 */
+/* 各タスクの見積もり時間。行の右端カラムに小さく収める。別行にせず
+   テキストと同じ行で右寄せ、控えめな緑トーン。 */
 .plan-checklist-preview-estimate {
-  margin-left: 6px;
+  grid-column: 3;
+  justify-self: end;
+  align-self: baseline;
   display: inline-flex;
   align-items: center;
   gap: 2px;
@@ -7598,7 +7602,6 @@
   font-size: 10.5px;
   font-weight: 700;
   white-space: nowrap;
-  vertical-align: baseline;
 }
 
 .plan-checklist-preview-estimate > span {

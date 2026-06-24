@@ -365,20 +365,20 @@ export function PlanChecklistPreview({
           <span className="plan-checklist-preview-text">
             {item.text || emptyItemText || t("(空)")}
             {item.comment ? <small> — {item.comment}</small> : null}
-            {/* 見積もり時間を小さく添える。みんなの日報でも各タスクに
-               どれくらい見積もったかが一目で分かる。0 / 未設定は出さない。 */}
-            {item.estimateMinutes && item.estimateMinutes > 0 ? (
-              <small
-                className="plan-checklist-preview-estimate"
-                aria-label={t("見積もり {time}", {
-                  time: formatStayTime(item.estimateMinutes, language),
-                })}
-              >
-                <span aria-hidden="true">⏱</span>
-                {formatStayTime(item.estimateMinutes, language)}
-              </small>
-            ) : null}
           </span>
+          {/* 見積もり時間は各タスクの右端に小さく。別行にせず同じ行の
+             専用カラムに収める。0 / 未設定は出さない。 */}
+          {item.estimateMinutes && item.estimateMinutes > 0 ? (
+            <small
+              className="plan-checklist-preview-estimate"
+              aria-label={t("見積もり {time}", {
+                time: formatStayTime(item.estimateMinutes, language),
+              })}
+            >
+              <span aria-hidden="true">⏱</span>
+              {formatStayTime(item.estimateMinutes, language)}
+            </small>
+          ) : null}
         </div>
       ))}
       {hidden > 0 ? (
