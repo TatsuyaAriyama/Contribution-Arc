@@ -6912,15 +6912,15 @@
 .plan-checklist-estimate {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 1px;
   margin-top: 3px;
-  font-size: 11px;
+  font-size: 10px;
   color: var(--muted);
   white-space: nowrap;
 }
 .plan-checklist-estimate input {
-  width: 38px;
-  padding: 2px 4px;
+  width: 30px;
+  padding: 2px 3px;
   border: 1px solid rgba(var(--ink-rgb), 0.12);
   border-radius: 6px;
   font-size: 12px;
@@ -6929,6 +6929,9 @@
   color: var(--ink);
   -moz-appearance: textfield;
   appearance: textfield;
+}
+.plan-checklist-estimate span {
+  margin: 0 1px 0 0;
 }
 .plan-checklist-estimate input::-webkit-outer-spin-button,
 .plan-checklist-estimate input::-webkit-inner-spin-button {

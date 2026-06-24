@@ -234,26 +234,50 @@ export function DailyPlanChecklist({
                       {l.carriedFrom}
                     </span>
                   ) : null}
-                  <label className="plan-checklist-estimate">
+                  <span className="plan-checklist-estimate">
                     <input
                       type="number"
                       inputMode="numeric"
                       min={0}
+                      step={1}
+                      value={
+                        item.estimateMinutes
+                          ? String(Math.floor(item.estimateMinutes / 60) || "")
+                          : ""
+                      }
+                      placeholder="0"
+                      disabled={disabled}
+                      aria-label={t("見積もり時間(時間)")}
+                      onChange={(event) => {
+                        const h = Math.max(0, Math.floor(Number(event.target.value)) || 0);
+                        const m = (item.estimateMinutes || 0) % 60;
+                        updateItem(item.id, { estimateMinutes: h * 60 + m });
+                      }}
+                    />
+                    <span aria-hidden="true">{t("時間")}</span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={59}
                       step={5}
-                      value={item.estimateMinutes ? String(item.estimateMinutes) : ""}
-                      placeholder="–"
+                      value={
+                        item.estimateMinutes ? String(item.estimateMinutes % 60 || "") : ""
+                      }
+                      placeholder="0"
                       disabled={disabled}
                       aria-label={t("見積もり時間(分)")}
                       onChange={(event) => {
-                        const raw = Number(event.target.value);
-                        updateItem(item.id, {
-                          estimateMinutes:
-                            Number.isFinite(raw) && raw > 0 ? Math.round(raw) : 0,
-                        });
+                        const m = Math.max(
+                          0,
+                          Math.min(59, Math.floor(Number(event.target.value)) || 0),
+                        );
+                        const h = Math.floor((item.estimateMinutes || 0) / 60);
+                        updateItem(item.id, { estimateMinutes: h * 60 + m });
                       }}
                     />
                     <span aria-hidden="true">{t("分")}</span>
-                  </label>
+                  </span>
                   <button
                     type="button"
                     className="plan-checklist-remove"
