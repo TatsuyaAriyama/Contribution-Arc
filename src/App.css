@@ -3593,9 +3593,8 @@
   transition: transform 0.72s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.status-flip.is-flipped .status-flip-inner {
-  transform: rotateY(180deg);
-}
+/* 回転角はインラインスタイル (rotateY(turns*180deg)) で駆動する。
+   タップのたびに前方向へ 180° 足し続け、表→裏→表…と一回転し続ける。 */
 
 .status-flip-face {
   grid-area: 1 / 1;
@@ -3614,6 +3613,8 @@
   flex-direction: column;
   gap: 8px;
   transform: rotateY(180deg);
+  /* 裏面はどこをタップしても回るので面全体をボタン扱いにする。 */
+  cursor: pointer;
   /* 表を見ている間は裏がクリックを奪わないよう pointer-events を切る。 */
   pointer-events: none;
 }
@@ -3626,6 +3627,15 @@
      中央寄せして表のステータスカードと高さ・余白を揃える。 */
   margin-bottom: 0;
   justify-content: center;
+  /* 裏面のマップはこの面では装飾。クリックを奪わず親 (面) へ通し、
+     どこをタップしても一回転して表に戻れるようにする。 */
+  pointer-events: none;
+}
+
+.status-flip-back:focus-visible {
+  outline: 4px solid rgba(31, 111, 74, 0.12);
+  outline-offset: 4px;
+  border-radius: 22px;
 }
 
 .status-flip.is-flipped .status-flip-front {
@@ -3642,27 +3652,10 @@
   border-radius: 22px;
 }
 
-/* 表の右下に「押すとマップが出る」ことを示す控えめなヒントチップ。 */
-.status-flip-hint {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(31, 111, 74, 0.16);
-  background: rgba(var(--tint-soft-rgb), 0.55);
-  color: var(--green);
-  font-size: 10.5px;
-  font-weight: 850;
-  pointer-events: none;
-}
-
-/* 裏面ヘッダの「ステータスに戻る」ボタン。 */
+/* 裏面ヘッダの「ステータスに戻る」ラベル。面全体がタップで回るので
+   これは押し方を示す装飾チップ (pointer-events なし)。 */
 .status-flip-back-btn {
-  justify-self: start;
+  align-self: start;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -3673,11 +3666,7 @@
   color: var(--ink-strong);
   font-size: 12px;
   font-weight: 850;
-  cursor: pointer;
-}
-
-.status-flip-back-btn:hover {
-  background: rgba(var(--tint-soft-rgb), 0.4);
+  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

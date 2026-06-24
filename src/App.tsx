@@ -4056,8 +4056,11 @@ function App() {
   const [selectedArcDayKey, setSelectedArcDayKey] = useState<string | null>(null);
   /* プロフィールの Player Status カードを押すと裏返り、裏面に GitHub /
      学習のコントリビューションマップ (contributionArcCardSection) が出る。
-     true=裏面 (マップ) 表示中。 */
-  const [isStatusFlipped, setIsStatusFlipped] = useState(false);
+     タップのたびに前方向へ 180° 回り続ける「一回転」演出にしたいので、
+     boolean ではなく累積回数で持つ。偶数=表 / 奇数=裏。 */
+  const [statusFlipTurns, setStatusFlipTurns] = useState(0);
+  const isStatusFlipped = statusFlipTurns % 2 === 1;
+  const flipStatusCard = () => setStatusFlipTurns((turns) => turns + 1);
   /* Donut legend インライン編集中の subject。null=非編集。
      draft はそのまま input の controlled value。 */
   const [editingDonutSubject, setEditingDonutSubject] = useState<string | null>(null);
@@ -21467,47 +21470,50 @@ function App() {
                     押すと裏返り、裏面に GitHub / 学習のコントリビューション
                     マップ (以前作成した contributionArcCardSection) が出る。 */}
                 <div className={`status-flip${isStatusFlipped ? " is-flipped" : ""}`}>
-                  <div className="status-flip-inner">
+                  <div
+                    className="status-flip-inner"
+                    style={{ transform: `rotateY(${statusFlipTurns * 180}deg)` }}
+                  >
                     <div
                       className="status-flip-face status-flip-front"
                       role="button"
                       tabIndex={isStatusFlipped ? -1 : 0}
                       aria-hidden={isStatusFlipped}
                       aria-label={t("GitHubマップを表示")}
-                      onClick={() => setIsStatusFlipped(true)}
+                      onClick={flipStatusCard}
                       onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === " ") {
                           event.preventDefault();
-                          setIsStatusFlipped(true);
+                          flipStatusCard();
                         }
                       }}
                     >
                       {playerStatusCard(false)}
-                      <span className="status-flip-hint" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="3" y="3" width="7" height="7" rx="1.5" />
-                          <rect x="14" y="3" width="7" height="7" rx="1.5" />
-                          <rect x="14" y="14" width="7" height="7" rx="1.5" />
-                          <rect x="3" y="14" width="7" height="7" rx="1.5" />
-                        </svg>
-                        {t("GitHubマップ")}
-                      </span>
                     </div>
+                    {/* 裏面もタップ／クリックすると、もう一度前方向へ一回転して
+                        表へ戻る。中のマップはこの面では装飾なので
+                        pointer-events を切り、どこをタップしても回るようにする
+                        (CSS 側で .status-flip-back .contribution-arc-card を無効化)。 */}
                     <div
                       className="status-flip-face status-flip-back"
+                      role="button"
+                      tabIndex={isStatusFlipped ? 0 : -1}
                       aria-hidden={!isStatusFlipped}
+                      aria-label={t("ステータスに戻る")}
+                      onClick={flipStatusCard}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          flipStatusCard();
+                        }
+                      }}
                     >
-                      <button
-                        type="button"
-                        className="status-flip-back-btn"
-                        onClick={() => setIsStatusFlipped(false)}
-                        tabIndex={isStatusFlipped ? 0 : -1}
-                      >
-                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <span className="status-flip-back-btn" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M15 18l-6-6 6-6" />
                         </svg>
                         {t("ステータスに戻る")}
-                      </button>
+                      </span>
                       {renderContributionArcSection(true)}
                     </div>
                   </div>
