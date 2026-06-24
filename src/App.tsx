@@ -4054,6 +4054,10 @@ function App() {
   const quickLogPendingRef = useRef<Map<string, number>>(new Map());
   const quickLogPendingItemRef = useRef<Map<string, LearningItem>>(new Map());
   const [selectedArcDayKey, setSelectedArcDayKey] = useState<string | null>(null);
+  /* プロフィールの Player Status カードを押すと裏返り、裏面に GitHub /
+     学習のコントリビューションマップ (contributionArcCardSection) が出る。
+     true=裏面 (マップ) 表示中。 */
+  const [isStatusFlipped, setIsStatusFlipped] = useState(false);
   /* Donut legend インライン編集中の subject。null=非編集。
      draft はそのまま input の controlled value。 */
   const [editingDonutSubject, setEditingDonutSubject] = useState<string | null>(null);
@@ -13730,13 +13734,14 @@ function App() {
               <button
                 type="button"
                 className="player-chip player-chip-link player-chip-goal"
-                onClick={() =>
+                onClick={(event) => {
+                  event.stopPropagation();
                   void handleOpenGoalMatch({
                     goalId: ownGoalHit ? (goalId || "").trim() : undefined,
                     goalCustomName: ownGoalHit ? undefined : ownGoalName,
                     goalLabel: ownGoalName,
-                  })
-                }
+                  });
+                }}
                 title={`${ownGoalKindLabel}: ${ownGoalName} — ${t("同じ目標の人を探す")}`}
                 aria-label={`${ownGoalKindLabel}: ${ownGoalName}。${t("同じ目標の人を探す")}`}
               >
@@ -13771,7 +13776,10 @@ function App() {
         <button
           type="button"
           className="level-reward-claim"
-          onClick={claimLevelRewards}
+          onClick={(event) => {
+            event.stopPropagation();
+            claimLevelRewards();
+          }}
         >
           <span className="level-reward-claim-icon" aria-hidden="true">◆</span>
           <span className="level-reward-claim-text">
@@ -13838,7 +13846,10 @@ function App() {
           subtle quote block) so users keep their intention visible
           every time they glance at status. Empty state nudges
           editing. */}
-      <div className="player-determination">
+      <div
+        className="player-determination"
+        onClick={(event) => event.stopPropagation()}
+      >
         <span>{t("決意")}</span>
         {isInteractive ? (
           determinationText ? (
@@ -21444,8 +21455,55 @@ function App() {
                     集約した（旧: ここに大きなカードを出していたが、設定すると
                     名前直下を占有して邪魔になるため移設）。 */}
 
-                {/* Player Status はプロフィールの主役なので最上部に固定。 */}
-                {playerStatusCard(false)}
+                {/* Player Status はプロフィールの主役なので最上部に固定。
+                    押すと裏返り、裏面に GitHub / 学習のコントリビューション
+                    マップ (以前作成した contributionArcCardSection) が出る。 */}
+                <div className={`status-flip${isStatusFlipped ? " is-flipped" : ""}`}>
+                  <div className="status-flip-inner">
+                    <div
+                      className="status-flip-face status-flip-front"
+                      role="button"
+                      tabIndex={isStatusFlipped ? -1 : 0}
+                      aria-hidden={isStatusFlipped}
+                      aria-label={t("GitHubマップを表示")}
+                      onClick={() => setIsStatusFlipped(true)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setIsStatusFlipped(true);
+                        }
+                      }}
+                    >
+                      {playerStatusCard(false)}
+                      <span className="status-flip-hint" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                          <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                          <rect x="14" y="14" width="7" height="7" rx="1.5" />
+                          <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                        </svg>
+                        {t("GitHubマップ")}
+                      </span>
+                    </div>
+                    <div
+                      className="status-flip-face status-flip-back"
+                      aria-hidden={!isStatusFlipped}
+                    >
+                      <button
+                        type="button"
+                        className="status-flip-back-btn"
+                        onClick={() => setIsStatusFlipped(false)}
+                        tabIndex={isStatusFlipped ? 0 : -1}
+                      >
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M15 18l-6-6 6-6" />
+                        </svg>
+                        {t("ステータスに戻る")}
+                      </button>
+                      {contributionArcCardSection}
+                    </div>
+                  </div>
+                </div>
 
                 {/* 今週の学習を曜日別の棒グラフで。自分の studyLogs から
                     直接組むのでリアルタイム。 */}

@@ -3579,6 +3579,109 @@
   outline-offset: 4px;
 }
 
+/* === Player Status フリップ (表=ステータス / 裏=GitHubマップ) ===
+   プロフィールの Player Status を押すと Y 軸でくるっと反転し、裏面に
+   以前作成したコントリビューションマップが出現する。表裏は grid で
+   同じセルに重ね、コンテナ高さは高い方の面に合わせてクリップを防ぐ。 */
+.status-flip {
+  perspective: 1800px;
+}
+
+.status-flip-inner {
+  display: grid;
+  transform-style: preserve-3d;
+  transition: transform 0.72s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.status-flip.is-flipped .status-flip-inner {
+  transform: rotateY(180deg);
+}
+
+.status-flip-face {
+  grid-area: 1 / 1;
+  min-width: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.status-flip-front {
+  position: relative;
+  cursor: pointer;
+}
+
+.status-flip-back {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transform: rotateY(180deg);
+  /* 表を見ている間は裏がクリックを奪わないよう pointer-events を切る。 */
+  pointer-events: none;
+}
+
+/* 裏のマップカードは表のステータスカードと同じ枠を満たすよう伸縮させ、
+   フリップ時に前後で大きさが揃うようにする。 */
+.status-flip-back > .contribution-arc-card {
+  flex: 1 1 auto;
+}
+
+.status-flip.is-flipped .status-flip-front {
+  pointer-events: none;
+}
+
+.status-flip.is-flipped .status-flip-back {
+  pointer-events: auto;
+}
+
+.status-flip-front:focus-visible {
+  outline: 4px solid rgba(31, 111, 74, 0.12);
+  outline-offset: 4px;
+  border-radius: 22px;
+}
+
+/* 表の右下に「押すとマップが出る」ことを示す控えめなヒントチップ。 */
+.status-flip-hint {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(31, 111, 74, 0.16);
+  background: rgba(var(--tint-soft-rgb), 0.55);
+  color: var(--green);
+  font-size: 10.5px;
+  font-weight: 850;
+  pointer-events: none;
+}
+
+/* 裏面ヘッダの「ステータスに戻る」ボタン。 */
+.status-flip-back-btn {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px 6px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-strong);
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.status-flip-back-btn:hover {
+  background: rgba(var(--tint-soft-rgb), 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-flip-inner {
+    transition: none;
+  }
+}
+
 .profile-screen {
   display: grid;
   /* セクション間隔を 14 → 10 に詰めて、上下のヘッダー / ステータスが
