@@ -8755,6 +8755,61 @@
   animation: exp-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* レベル報酬の受領 CTA。DESIGN.md「Lv 上昇＝ブランド緑」に従い緑塗りの
+   CTA とし、報酬の金 (DESIGN.md reward-gold) はコインアイコンで添える。 */
+.level-reward-claim {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 11px 16px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--green), var(--green-hover));
+  color: #04140b;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow:
+    0 2px 8px rgba(var(--green-rgb), 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
+}
+
+.level-reward-claim:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+  box-shadow:
+    0 4px 14px rgba(var(--green-rgb), 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.level-reward-claim:active {
+  transform: translateY(0);
+}
+
+.level-reward-claim-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f3c969, #c79030);
+  color: #5a3c00;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 900;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
 .commit-note {
   margin: 10px 0 0;
   color: var(--muted);

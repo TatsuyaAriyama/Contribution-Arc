@@ -1383,6 +1383,10 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "二本の角と研ぎ澄まされた吊り目を持つ暗赤の幼竜。胸に焰を宿し、夜の作業に静かな熱を添える。":
     "A dark-crimson hatchling with two horns and sharp, slanted eyes. The ember in its chest adds a quiet heat to your late work.",
 
+  // === レベル報酬 ===
+  "レベル報酬 +{arc} Arc を受け取る": "Claim +{arc} Arc in level rewards",
+  "レベル報酬 +{arc} Arc を受け取りました": "Claimed +{arc} Arc in level rewards",
+
   // === Arc pack badges ===
   "10%お得": "10% off",
   "20%お得": "20% off",

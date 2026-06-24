@@ -2626,6 +2626,41 @@ function getLevelState(totalExp: number) {
   };
 }
 
+/* レベル到達報酬の Arc 額。学習で上げたレベルに「受け取れる報酬」を
+   結びつけ、これまで表示専用だったレベルに実利を与える。Lv1 は開始地点
+   なので 0。通常 +15、5 の倍数で +50、10 の倍数でさらに +100 を上乗せし、
+   節目をリッチに感じさせる。シルエット最高 2,000 Arc に対して Lv30 までの
+   累計が約 1,000 Arc 程度に収まるよう控えめに設定し、Arc 経済を壊さない。 */
+function getLevelRewardArc(level: number): number {
+  if (level <= 1) return 0;
+  let arc = 15;
+  if (level % 5 === 0) arc += 50;
+  if (level % 10 === 0) arc += 100;
+  return arc;
+}
+
+/* currentLevel までに到達済みで、まだ受領していないレベルの報酬合計と
+   対象レベル一覧を返す。claimed は受領済みレベルの集合
+   (openedWorkspaceGiftLevels フィールドを「レベル報酬の受領記録」として
+   再利用)。過去に上げたレベル分もまとめて受領できる。 */
+function getClaimableLevelRewards(
+  currentLevel: number,
+  claimed: number[],
+): { levels: number[]; totalArc: number } {
+  const claimedSet = new Set(claimed);
+  const levels: number[] = [];
+  let totalArc = 0;
+  for (let lv = 2; lv <= currentLevel; lv += 1) {
+    if (claimedSet.has(lv)) continue;
+    const arc = getLevelRewardArc(lv);
+    if (arc > 0) {
+      levels.push(lv);
+      totalArc += arc;
+    }
+  }
+  return { levels, totalArc };
+}
+
 function getTitleRanks(logs: StudyLog[], effortExp: number, outputExp: number): TitleRank[] {
   const activeDays = new Set(logs.map((log) => new Date(log.createdAt).toDateString())).size;
   const totalHours = logs.reduce((sum, log) => sum + log.minutes, 0) / 60;
@@ -7878,6 +7913,29 @@ function App() {
   const currentTitle =
     [...titles].reverse().find((title) => title.unlocked)?.name || "Commit Knight";
   const studyStreak = getStudyStreak(studyLogs);
+  /* レベル報酬: 到達済みで未受領のレベル分の Arc 合計と対象レベル。
+     openedWorkspaceGiftLevels を「受領済みレベルの記録」として再利用する
+     (元々レベル節目でギフトを配る想定の骨組みだったが未使用だった)。計算は
+     軽量なのでフック不要、他のハンドラと同じく毎レンダーの派生値とする。 */
+  const claimableLevelRewards = getClaimableLevelRewards(
+    levelState.level,
+    openedWorkspaceGiftLevels,
+  );
+  const claimLevelRewards = () => {
+    const { levels, totalArc } = claimableLevelRewards;
+    if (levels.length === 0 || totalArc <= 0) return;
+    setCoins((value) => value + totalArc);
+    setOpenedWorkspaceGiftLevels((current) =>
+      Array.from(new Set([...current, ...levels])).sort((a, b) => a - b),
+    );
+    /* coins/character と同じ stamp 保護: 受領直後にリロードしても cloud の
+       未反映残高で巻き戻らないよう、ローカル選択時刻を更新しておく。 */
+    writeCharacterChoiceStamp();
+    showToast(
+      t("レベル報酬 +{arc} Arc を受け取りました", { arc: totalArc.toLocaleString() }),
+      { kind: "success" },
+    );
+  };
   const githubProviderInfo = currentUser?.providerData.find((provider) => provider.providerId === "github.com");
   const githubId = githubProviderInfo?.uid || "";
   // Prefer the cached GitHub login captured at sign-in (via
@@ -13705,6 +13763,24 @@ function App() {
           <span style={{ width: `${levelState.percent}%` }} />
         </div>
       </div>
+
+      {/* レベル報酬の受領 CTA。プロフィール本体 (= !isInteractive) でのみ
+          表示し、ホームの遷移カードでは出さない (カード全体の onClick と
+          ボタンクリックが競合しないように)。未受領分があるときだけ出す。 */}
+      {!isInteractive && claimableLevelRewards.totalArc > 0 ? (
+        <button
+          type="button"
+          className="level-reward-claim"
+          onClick={claimLevelRewards}
+        >
+          <span className="level-reward-claim-icon" aria-hidden="true">◆</span>
+          <span className="level-reward-claim-text">
+            {t("レベル報酬 +{arc} Arc を受け取る", {
+              arc: claimableLevelRewards.totalArc.toLocaleString(),
+            })}
+          </span>
+        </button>
+      ) : null}
 
       <div className="status-metrics">
         <div>
