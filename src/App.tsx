@@ -4061,6 +4061,16 @@ function App() {
   const [statusFlipTurns, setStatusFlipTurns] = useState(0);
   const isStatusFlipped = statusFlipTurns % 2 === 1;
   const flipStatusCard = () => setStatusFlipTurns((turns) => turns + 1);
+  /* 裏面のタップ振り分け。草マス (button) / 詳細パネル内のボタン等の操作要素を
+     タップしたときは本来の動作 (その日の詳細表示など) を優先し、カードを
+     回さない。余白など操作要素以外をタップしたら一回転して表へ戻る。 */
+  const handleStatusBackClick = (event: ReactMouseEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    if (target.closest("button, a, input, .contribution-arc-detail")) {
+      return;
+    }
+    flipStatusCard();
+  };
   /* Donut legend インライン編集中の subject。null=非編集。
      draft はそのまま input の controlled value。 */
   const [editingDonutSubject, setEditingDonutSubject] = useState<string | null>(null);
@@ -15268,16 +15278,18 @@ function App() {
           <div className="contribution-arc-head-title">
             <p className="card-kicker">
               Contribution Arc
-              <button
-                type="button"
-                className="contribution-arc-showcase-link"
-                onClick={() => setCurrentView("showcase")}
-                aria-label={t("世界観を見る")}
-                title={t("世界観を見る")}
-              >
-                <span aria-hidden="true">✦</span>
-                <span>{t("世界観")}</span>
-              </button>
+              {!compact ? (
+                <button
+                  type="button"
+                  className="contribution-arc-showcase-link"
+                  onClick={() => setCurrentView("showcase")}
+                  aria-label={t("世界観を見る")}
+                  title={t("世界観を見る")}
+                >
+                  <span aria-hidden="true">✦</span>
+                  <span>{t("世界観")}</span>
+                </button>
+              ) : null}
             </p>
             <strong>
               {t("{hours}時間 学習", { hours: Math.round(contributionArc.totalMinutes / 60) })}
@@ -15671,7 +15683,7 @@ function App() {
         </AnimatePresence>
         ) : null}
         </div>
-        {!compact && selectedArcDay ? (
+        {selectedArcDay ? (
           <div className="contribution-arc-detail" role="region" aria-label={t("選択日の学習詳細")}>
             <div className="contribution-arc-detail-head">
               <div>
@@ -21490,19 +21502,21 @@ function App() {
                     >
                       {playerStatusCard(false)}
                     </div>
-                    {/* 裏面もタップ／クリックすると、もう一度前方向へ一回転して
-                        表へ戻る。中のマップはこの面では装飾なので
-                        pointer-events を切り、どこをタップしても回るようにする
-                        (CSS 側で .status-flip-back .contribution-arc-card を無効化)。 */}
+                    {/* 裏面: 草マス (button) をタップするとその日の詳細が出る。
+                        マス以外の余白をタップすると、もう一度前方向へ一回転して
+                        表へ戻る (handleStatusBackClick が振り分ける)。 */}
                     <div
                       className="status-flip-face status-flip-back"
                       role="button"
                       tabIndex={isStatusFlipped ? 0 : -1}
                       aria-hidden={!isStatusFlipped}
                       aria-label={t("ステータスに戻る")}
-                      onClick={flipStatusCard}
+                      onClick={handleStatusBackClick}
                       onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
+                        if (
+                          (event.key === "Enter" || event.key === " ") &&
+                          event.target === event.currentTarget
+                        ) {
                           event.preventDefault();
                           flipStatusCard();
                         }
