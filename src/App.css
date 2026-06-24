@@ -6901,11 +6901,18 @@
 
 .plan-checklist-line {
   display: grid;
-  grid-template-columns: 1fr auto auto auto;
-  /* textarea が複数行に伸びても carry chip / 見積もり / remove ボタンは
-     先頭行の高さに揃える。 */
+  grid-template-columns: 1fr auto;
+  /* テキストはフル幅。carry chip と見積もりはこの下の
+     .plan-checklist-meta に置くので、line には text と remove だけ。 */
   align-items: start;
   gap: 6px;
+}
+.plan-checklist-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
 }
 
 /* タスクごとの見積もり時間 (分) 入力。控えめな小型フィールド。 */
@@ -6913,7 +6920,6 @@
   display: inline-flex;
   align-items: center;
   gap: 1px;
-  margin-top: 3px;
   font-size: 10px;
   color: var(--muted);
   white-space: nowrap;

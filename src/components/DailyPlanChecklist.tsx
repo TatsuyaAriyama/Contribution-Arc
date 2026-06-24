@@ -225,6 +225,17 @@ export function DailyPlanChecklist({
                       )}
                     </button>
                   )}
+                  <button
+                    type="button"
+                    className="plan-checklist-remove"
+                    onClick={() => removeItem(item.id)}
+                    disabled={disabled}
+                    aria-label={l.remove}
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="plan-checklist-meta">
                   {item.carriedFrom ? (
                     <span
                       className="plan-checklist-carry"
@@ -278,15 +289,6 @@ export function DailyPlanChecklist({
                     />
                     <span aria-hidden="true">{t("分")}</span>
                   </span>
-                  <button
-                    type="button"
-                    className="plan-checklist-remove"
-                    onClick={() => removeItem(item.id)}
-                    disabled={disabled}
-                    aria-label={l.remove}
-                  >
-                    ×
-                  </button>
                 </div>
                 {showComment ? (
                   <input

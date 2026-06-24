@@ -19845,9 +19845,6 @@ function App() {
               <form className="daily-entry-card" onSubmit={(event) => handleDailyReportSectionSubmit(event, "plan")}>
                 <div className="daily-entry-label-row">
                   <span className="daily-entry-label">{t("今日やること")}</span>
-                  <small className="daily-entry-hint">
-                    {t("1行1タスク。完了したらチェックして、必要なら一言メモを残せます。")}
-                  </small>
                 </div>
                 {/* クイックアクション：過去の plan items を再利用。
                     実用面で最も需要が高い「持ち越し」「前日コピー」を 1 タップで。 */}
