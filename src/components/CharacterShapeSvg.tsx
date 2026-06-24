@@ -353,15 +353,15 @@ export function renderAngelSvg(_color: string) {
   );
 }
 
-/** 焔 (Homura) — 胸に焔を宿す幼竜。二本の角と頭の左右の小さな耳、
- *  研ぎ澄まされた吊り目を持つ暗赤のキューブ。色は固定 (暗赤 + 焔色)
+/** 焰 (Homura) — 胸に焰を宿す幼竜。二本の角と頭の左右の小さな耳、
+ *  研ぎ澄まされた吊り目を持つ暗赤のキューブ。色は固定 (暗赤 + 焰色)
  *  でユーザーの characterColor は無視する。鳥でも竜でもない夜の幼体、
  *  というモチーフ。 */
 export function renderEmberSvg(_color: string) {
   const bodyTop = "#43201a"; // 上面 brim (やや明るい暗赤)
   const rightShade = "#1b0c08"; // 右側面の影
-  const horn = "#d4632c"; // 角 / アクセントの焔色
-  const screenFrame = "#c25a28"; // 顔枠の焔色
+  const horn = "#d4632c"; // 角 / アクセントの焰色
+  const screenFrame = "#c25a28"; // 顔枠の焰色
   const screenBg = "#150a08"; // 顔スクリーン (ほぼ黒)
   const eye = "#f1e2c4"; // 吊り目 (クリーム)
   const leg = "#2c130f"; // 脚
@@ -404,7 +404,7 @@ export function renderEmberSvg(_color: string) {
       {/* 右側面の陰影 (立体) */}
       <path d="M104 48 L112 50 L112 102 L104 108 Z" fill={rightShade} />
 
-      {/* 顔スクリーン (焔色の縁) */}
+      {/* 顔スクリーン (焰色の縁) */}
       <rect x={40} y={58} width={48} height={34} rx={10} fill={screenBg} stroke={screenFrame} strokeWidth={2.6} />
 
       {/* 研ぎ澄まされた吊り目 (内側が下がる怒り目) */}
@@ -415,7 +415,7 @@ export function renderEmberSvg(_color: string) {
       <rect x={47} y={108} width={12} height={13} rx={3.5} fill={leg} />
       <rect x={69} y={108} width={12} height={13} rx={3.5} fill={leg} />
 
-      {/* 足元の焔 (ジグザグの爪火) */}
+      {/* 足元の焰 (ジグザグの爪火) */}
       <polyline
         points="44,121 49,127 54,121"
         fill="none"

@@ -761,10 +761,10 @@ const characterShapeOptions: {
   },
   {
     value: "ember",
-    name: "焔",
+    name: "焰",
     romaji: "Homura",
-    tagline: "胸に焔を宿す幼竜",
-    intro: "小さな角と畳んだ翼。胸の奥に焔を抱え、夜空を焦がす日を待つ竜の子。",
+    tagline: "胸に焰を宿す幼竜",
+    intro: "小さな角と畳んだ翼。胸の奥に焰を抱え、夜空を焦がす日を待つ竜の子。",
   },
 ];
 
@@ -810,9 +810,9 @@ const shapeShopCatalog: ShapeShopItem[] = [
   },
   {
     shape: "ember",
-    name: "焔 Homura",
-    tagline: "胸に焔を宿す幼竜",
-    description: "二本の角と研ぎ澄まされた吊り目を持つ暗赤の幼竜。胸に焔を宿し、夜の作業に静かな熱を添える。",
+    name: "焰 Homura",
+    tagline: "胸に焰を宿す幼竜",
+    description: "二本の角と研ぎ澄まされた吊り目を持つ暗赤の幼竜。胸に焰を宿し、夜の作業に静かな熱を添える。",
     price: 2000,
   },
 ];

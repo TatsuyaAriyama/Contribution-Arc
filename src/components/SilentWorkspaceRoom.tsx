@@ -1308,7 +1308,7 @@ export function SilentWorkspaceRoom({
                     /* 凜 (Rin) — 共有 SVG。固定パレットなのでカラーは無視。 */
                     renderAngelSvg(member.color || "#7667a8")
                   ) : member.characterShape === "ember" ? (
-                    /* 焔 (Homura) — 共有 SVG。固定パレットなのでカラーは無視。 */
+                    /* 焰 (Homura) — 共有 SVG。固定パレットなのでカラーは無視。 */
                     renderEmberSvg(member.color || "#7667a8")
                   ) : (
                     /* "default" (相 / 緑キューブ + face panel + 足):
