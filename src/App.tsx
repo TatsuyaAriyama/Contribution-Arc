@@ -19826,43 +19826,17 @@ function App() {
                 書く行為そのものに集中するため、定量的なメタ情報は出さない。 */}
 
             {(() => {
-              // 当日の日報を編集中なら「両方共有で +50 Arc」のバナーを出す。
-              // 達成 (受領済み) なら「獲得済み」表示に切替えて、明日のループへ
-              // 期待を引き継ぐ。過去日報の編集ビューでは出さない。
+              /* 当日のみ。達成済み (報酬受領済み) のときだけ控えめな一行ノートを
+                 出す。未達成の「+50 Arc を記録しよう」促しバナーは、今日やること
+                 〜更新までを一画面に収めたいので表示しない。過去日報では出さない。 */
               if (selectedDailyDate !== todayDateKey) return null;
-              const todayReport = dailyReports.find((r) => r.date === selectedDailyDate);
               const earned = lastDailyReportRewardDate === todayDateKey;
-              const planDone =
-                (todayReport?.planItems?.length ?? 0) > 0 && !todayReport?.isDraft;
-              const reflectionDone =
-                ((todayReport?.reflection || "").trim().length > 0) && !todayReport?.isDraft;
-              if (earned) {
-                /* 受領済みは大きなバナーを出さず、控えめな一行補足だけにする
-                   (黒い大カードが縦スペースを取りすぎて邪魔なため)。 */
-                return (
-                  <p className="daily-reward-earned-note" role="status">
-                    <span aria-hidden="true">✦</span>{" "}
-                    {t("今日の +50 Arc は獲得済み。明日も日報で継続しましょう。")}
-                  </p>
-                );
-              }
+              if (!earned) return null;
               return (
-                <div className="daily-reward-banner" role="status">
-                  <span className="daily-reward-banner-icon" aria-hidden="true">✦</span>
-                  <span className="daily-reward-banner-text">
-                    <strong>{t("今日の日報を記録すると +50 Arc / 日")}</strong>
-                    <span className="daily-reward-banner-progress" aria-label={t("今日の達成状況")}>
-                      <span className={planDone ? "is-done" : ""}>
-                        {planDone ? "✓ " : "・"}
-                        {t("今日やること")}
-                      </span>
-                      <span className={reflectionDone ? "is-done" : ""}>
-                        {reflectionDone ? "✓ " : "・"}
-                        {t("振り返り")}
-                      </span>
-                    </span>
-                  </span>
-                </div>
+                <p className="daily-reward-earned-note" role="status">
+                  <span aria-hidden="true">✦</span>{" "}
+                  {t("今日の +50 Arc は獲得済み。明日も日報で継続しましょう。")}
+                </p>
               );
             })()}
 
