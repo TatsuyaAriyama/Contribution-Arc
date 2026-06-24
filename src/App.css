@@ -6190,7 +6190,6 @@
    全要素は Inter 1 家族で完結する。 */
 .daily-screen .card-kicker,
 .daily-screen .daily-entry-hint,
-.daily-screen .daily-reward-banner-text small,
 .daily-screen .daily-plan-progress-meta,
 .daily-screen .daily-editor-head label span {
   font-weight: 700;
@@ -6203,7 +6202,6 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-.daily-screen .daily-reward-banner-text strong,
 .daily-screen .daily-plan-progress-meta strong,
 .daily-screen .daily-streak-badge {
   font-weight: 800;
@@ -7469,90 +7467,9 @@
   color: var(--reward-gold, #d49a1a);
 }
 
-.daily-reward-banner {
-  /* Habit カードと統一語彙：ink 1.5px hairline + 大角丸 + 白。
-     左バーは廃止 (カードとして完結したオブジェクトに見える方が筋が通る)。 */
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 0 0 12px;
-  padding: 16px 18px;
-  border: 1.5px solid var(--ink);
-  border-radius: 18px;
-  background: var(--surface);
-  color: var(--ink);
-  font-size: 13px;
-}
-.daily-reward-banner.is-earned {
-  /* 獲得済みは ink 反転で「達成済み」を強く示す。 */
-  background: var(--ink);
-  color: var(--cta-fg);
-}
-.daily-reward-banner-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--green);
-  font-size: 14px;
-  font-weight: 700;
-  flex-shrink: 0;
-  box-shadow: none;
-}
-.daily-reward-banner.is-earned .daily-reward-banner-icon {
-  background: transparent;
-  color: var(--rare);
-  box-shadow: none;
-}
-.daily-reward-banner-text {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-  flex: 1;
-}
-.daily-reward-banner-text strong {
-  color: var(--ink);
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: -0.005em;
-  line-height: 1.3;
-}
-.daily-reward-banner-text small {
-  color: var(--muted);
-  font-size: 11.5px;
-  font-weight: 600;
-  line-height: 1.4;
-}
-.daily-reward-banner-progress {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  font-size: 11.5px;
-  font-weight: 700;
-}
-/* 進捗チップも白 + hairline、達成時のみ ink 塗りでメリハリ。緑は出さない。 */
-.daily-reward-banner-progress > span {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 9px;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--muted);
-  letter-spacing: 0;
-}
-.daily-reward-banner-progress > span.is-done {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--cta-fg);
-}
-/* ダークモードは token (--surface / --ink / --green / --line / --rare) が
-   全て自動で polarity flip するので、専用上書きは不要。base ルールが
-   そのまま「黒地に白文字 + 左 4px 緑」に切り替わる。 */
+/* 旧 .daily-reward-banner 系（未達成の「+50 Arc を記録しよう」促しバナー）は
+   一画面に収めるため撤去し、達成済みの一行ノート .daily-reward-earned-note に
+   一本化したため削除。 */
 
 .daily-history-card {
   display: grid;
