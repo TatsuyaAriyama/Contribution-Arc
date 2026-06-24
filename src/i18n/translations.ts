@@ -1374,6 +1374,15 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "頭上に淡い輪を浮かべた金色のキューブ。穏やかな顔のスクリーンが、静かな時間に寄り添う。":
     "A golden cube with a pale halo above. Its gentle screen face keeps you company in the quiet hours.",
 
+  // === 焔 Homura ===
+  "焔": "Homura",
+  "焔 Homura": "Homura",
+  "胸に焔を宿す幼竜": "A dragon hatchling cradling an ember",
+  "小さな角と畳んだ翼。胸の奥に焔を抱え、夜空を焦がす日を待つ竜の子。":
+    "Small horns and folded wings — a dragon child holding an ember in its chest, waiting for the day it sets the night sky ablaze.",
+  "二本の角と研ぎ澄まされた吊り目を持つ暗赤の幼竜。胸に焔を宿し、夜の作業に静かな熱を添える。":
+    "A dark-crimson hatchling with two horns and sharp, slanted eyes. The ember in its chest adds a quiet heat to your late work.",
+
   // === Arc pack badges ===
   "10%お得": "10% off",
   "20%お得": "20% off",

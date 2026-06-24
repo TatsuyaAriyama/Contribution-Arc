@@ -353,6 +353,89 @@ export function renderAngelSvg(_color: string) {
   );
 }
 
+/** 焔 (Homura) — 胸に焔を宿す幼竜。二本の角と頭の左右の小さな耳、
+ *  研ぎ澄まされた吊り目を持つ暗赤のキューブ。色は固定 (暗赤 + 焔色)
+ *  でユーザーの characterColor は無視する。鳥でも竜でもない夜の幼体、
+ *  というモチーフ。 */
+export function renderEmberSvg(_color: string) {
+  const bodyTop = "#43201a"; // 上面 brim (やや明るい暗赤)
+  const rightShade = "#1b0c08"; // 右側面の影
+  const horn = "#d4632c"; // 角 / アクセントの焔色
+  const screenFrame = "#c25a28"; // 顔枠の焔色
+  const screenBg = "#150a08"; // 顔スクリーン (ほぼ黒)
+  const eye = "#f1e2c4"; // 吊り目 (クリーム)
+  const leg = "#2c130f"; // 脚
+  return (
+    <svg
+      className="ember-svg"
+      viewBox="-8 -5 144 144"
+      aria-hidden="true"
+      focusable="false"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <defs>
+        <linearGradient id="emberBodyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#3f1d16" />
+          <stop offset="1" stopColor="#200d08" />
+        </linearGradient>
+        <linearGradient id="emberHornGrad" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stopColor="#a8481c" />
+          <stop offset="1" stopColor="#ef9350" />
+        </linearGradient>
+      </defs>
+
+      {/* 床影 */}
+      <ellipse cx="64" cy="132" rx="34" ry="4.5" fill="#000" fillOpacity={0.22} />
+
+      {/* 二本の角 (頭頂からハの字に外上方へ尖る) */}
+      <line x1="55" y1="33" x2="45" y2="6" stroke="url(#emberHornGrad)" strokeWidth={3.4} strokeLinecap="round" />
+      <line x1="73" y1="33" x2="83" y2="6" stroke="url(#emberHornGrad)" strokeWidth={3.4} strokeLinecap="round" />
+
+      {/* 頭の左右の小さな耳 (三角の張り出し) */}
+      <path d="M24 44 L15 36 L24 34 Z" fill={bodyTop} stroke={horn} strokeWidth={1.4} strokeLinejoin="round" />
+      <path d="M104 44 L113 36 L104 34 Z" fill={rightShade} stroke={horn} strokeWidth={1.4} strokeLinejoin="round" />
+
+      {/* 頭/体の上面 (台形 brim) */}
+      <path d="M24 40 L104 40 L112 50 L16 50 Z" fill={bodyTop} />
+
+      {/* 本体キューブ (暗赤グラデ) */}
+      <rect x={24} y={48} width={80} height={60} rx={12} fill="url(#emberBodyGrad)" />
+
+      {/* 右側面の陰影 (立体) */}
+      <path d="M104 48 L112 50 L112 102 L104 108 Z" fill={rightShade} />
+
+      {/* 顔スクリーン (焔色の縁) */}
+      <rect x={40} y={58} width={48} height={34} rx={10} fill={screenBg} stroke={screenFrame} strokeWidth={2.6} />
+
+      {/* 研ぎ澄まされた吊り目 (内側が下がる怒り目) */}
+      <path d="M47 69 L60 75 L60 80 L47 75 Z" fill={eye} />
+      <path d="M81 69 L68 75 L68 80 L81 75 Z" fill={eye} />
+
+      {/* 脚 (2 本) */}
+      <rect x={47} y={108} width={12} height={13} rx={3.5} fill={leg} />
+      <rect x={69} y={108} width={12} height={13} rx={3.5} fill={leg} />
+
+      {/* 足元の焔 (ジグザグの爪火) */}
+      <polyline
+        points="44,121 49,127 54,121"
+        fill="none"
+        stroke={horn}
+        strokeWidth={2.4}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <polyline
+        points="74,121 79,127 84,121"
+        fill="none"
+        stroke={horn}
+        strokeWidth={2.4}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function renderDefaultCharacterSvg(color: string, options?: { showEdges?: boolean }) {
   const showEdges = options?.showEdges !== false; // 既定で表示 (preview)
   const front = color;

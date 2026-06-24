@@ -226,6 +226,7 @@ import {
   renderDefaultCharacterSvg,
   renderOwlSvg,
   renderRoboSvg,
+  renderEmberSvg,
 } from "./components/CharacterShapeSvg";
 import { SettingsIcon } from "./components/icons/SettingsIcon";
 import { BellIcon } from "./components/icons/BellIcon";
@@ -475,7 +476,7 @@ type RoomUserStatus = "working" | "deep-work" | "on-break";
    (round head with ear tufts, big amber eyes, beak; ground-hops
    instead of walks; ambient ~270° head turn). New shapes can be
    added here. */
-type CharacterShape = "default" | "ghost" | "owl" | "robo" | "angel";
+type CharacterShape = "default" | "ghost" | "owl" | "robo" | "angel" | "ember";
 
 type RoomUser = {
   id: string;
@@ -758,6 +759,13 @@ const characterShapeOptions: {
     tagline: "輪をいただく金色の使い",
     intro: "頭上にそっと輪を浮かべて佇む、金色の使い。",
   },
+  {
+    value: "ember",
+    name: "焔",
+    romaji: "Homura",
+    tagline: "胸に焔を宿す幼竜",
+    intro: "小さな角と畳んだ翼。胸の奥に焔を抱え、夜空を焦がす日を待つ竜の子。",
+  },
 ];
 
 // Shop catalog. "default" is intentionally not listed — every account
@@ -799,6 +807,13 @@ const shapeShopCatalog: ShapeShopItem[] = [
     tagline: "ネオンを灯す機械仕掛け",
     description: "胸にネオンの M を灯したナイトロボ。アンテナと黄金縁のエンブレムが、夜の作業を引き締める。",
     price: 1500,
+  },
+  {
+    shape: "ember",
+    name: "焔 Homura",
+    tagline: "胸に焔を宿す幼竜",
+    description: "二本の角と研ぎ澄まされた吊り目を持つ暗赤の幼竜。胸に焔を宿し、夜の作業に静かな熱を添える。",
+    price: 2000,
   },
 ];
 
@@ -1636,6 +1651,7 @@ const CHARACTER_SHAPES: readonly CharacterShape[] = [
   "owl",
   "robo",
   "angel",
+  "ember",
 ];
 function getSafeCharacterShape(shape: unknown): CharacterShape {
   if (typeof shape !== "string") return "default";
@@ -2508,8 +2524,9 @@ export const ProfileCharacterPreview = memo(function ProfileCharacterPreview({
   const isOwl = shape === "owl";
   const isRobo = shape === "robo";
   const isAngel = shape === "angel";
+  const isEmber = shape === "ember";
   const isDefault = shape === "default";
-  const isCustomShape = isGhost || isOwl || isRobo || isAngel || isDefault;
+  const isCustomShape = isGhost || isOwl || isRobo || isAngel || isEmber || isDefault;
   const resolvedColor = color || characterColorOptions[0].value;
   return (
     <div
@@ -2518,6 +2535,8 @@ export const ProfileCharacterPreview = memo(function ProfileCharacterPreview({
       }${isOwl ? " is-owl" : ""}${
         isRobo ? " is-robo" : ""
       }${isAngel ? " is-angel" : ""}${
+        isEmber ? " is-ember" : ""
+      }${
         isDefault ? " is-default-char" : ""
       }`}
       style={{ "--actor-color": resolvedColor } as CSSProperties}
@@ -2533,6 +2552,8 @@ export const ProfileCharacterPreview = memo(function ProfileCharacterPreview({
           renderRoboSvg(resolvedColor)
         ) : isAngel ? (
           renderAngelSvg(resolvedColor)
+        ) : isEmber ? (
+          renderEmberSvg(resolvedColor)
         ) : isGhost ? (
           ghostSvgMarkup
         ) : isDefault ? (

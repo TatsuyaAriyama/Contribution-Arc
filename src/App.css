@@ -11889,7 +11889,8 @@
 .room-preview-avatar-shape-ghost,
 .room-preview-avatar-shape-owl,
 .room-preview-avatar-shape-robo,
-.room-preview-avatar-shape-angel {
+.room-preview-avatar-shape-angel,
+.room-preview-avatar-shape-ember {
   background: rgba(var(--ink-rgb), 0.05);
 }
 
@@ -11908,7 +11909,8 @@
 .workspace-people-avatar.shape-ghost,
 .workspace-people-avatar.shape-owl,
 .workspace-people-avatar.shape-robo,
-.workspace-people-avatar.shape-angel {
+.workspace-people-avatar.shape-angel,
+.workspace-people-avatar.shape-ember {
   background: rgba(var(--ink-rgb), 0.05);
 }
 
@@ -13240,7 +13242,8 @@
    ~270° via .sprite-head. */
 .actor-sprite.shape-owl,
 .actor-sprite.shape-robo,
-.actor-sprite.shape-angel {
+.actor-sprite.shape-angel,
+.actor-sprite.shape-ember {
   /* これらは自己完結 SVG (固定パレット) を描く shape なので、
      親 .actor-sprite の var(--actor-color) 背景が SVG の余白から
      透けてユーザー選択の紫等が「裏に隠れた default キャラ」のよう

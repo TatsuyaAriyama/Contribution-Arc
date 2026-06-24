@@ -6,6 +6,7 @@ import {
   renderGhostSvg,
   renderOwlSvg,
   renderRoboSvg,
+  renderEmberSvg,
 } from "./CharacterShapeSvg";
 import { useTranslation } from "../i18n/LanguageContext";
 
@@ -37,7 +38,7 @@ export type RoomActivityItem = {
 
 type RoomActorStatus = "working" | "deep-work" | "on-break";
 
-export type CharacterShape = "default" | "ghost" | "owl" | "robo" | "angel";
+export type CharacterShape = "default" | "ghost" | "owl" | "robo" | "angel" | "ember";
 
 export type PresetLogEntry = {
   id: string;
@@ -774,6 +775,8 @@ export function SilentWorkspaceRoom({
                     content = renderRoboSvg(fillColor);
                   } else if (shape === "angel") {
                     content = renderAngelSvg(fillColor);
+                  } else if (shape === "ember") {
+                    content = renderEmberSvg(fillColor);
                   } else {
                     content = (
                       <span>{(member.name?.charAt(0) || "?").toUpperCase()}</span>
@@ -1304,6 +1307,9 @@ export function SilentWorkspaceRoom({
                   ) : member.characterShape === "angel" ? (
                     /* 凜 (Rin) — 共有 SVG。固定パレットなのでカラーは無視。 */
                     renderAngelSvg(member.color || "#7667a8")
+                  ) : member.characterShape === "ember" ? (
+                    /* 焔 (Homura) — 共有 SVG。固定パレットなのでカラーは無視。 */
+                    renderEmberSvg(member.color || "#7667a8")
                   ) : (
                     /* "default" (相 / 緑キューブ + face panel + 足):
                        preview と同じ共有 SVG を出して見た目を統一する。
