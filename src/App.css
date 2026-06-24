@@ -23157,6 +23157,58 @@
   grid-template-columns: 1fr;
 }
 
+/* === コンパクト裏面: 「どのマスを押しているか直感で分かる」整った表示 ===
+   ・マスを少し大きく＆間隔を広げてタップしやすく
+   ・選択マスはリングだけでなく拡大＋影で明確に
+   ・詳細はマップに被せず、下にきれいに区切って出す (JSX 側で別要素) */
+.contribution-arc-card.is-compact {
+  padding: 16px 18px 16px;
+  gap: 14px;
+}
+
+.contribution-arc-card.is-compact .contribution-arc-head {
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+
+/* 13 週ぶんは横幅に収まるのでスクロールを切り、選択マスの拡大が
+   端で欠けないよう overflow を可視化する。 */
+.contribution-arc-card.is-compact .contribution-arc-grid {
+  overflow: visible;
+  padding: 4px 2px;
+}
+
+.contribution-arc-card.is-compact .contribution-arc-track {
+  gap: 4px;
+}
+
+.contribution-arc-card.is-compact .contribution-arc-cell {
+  width: 15px;
+  height: 15px;
+  border-radius: 4px;
+}
+
+/* 選択中のマスは拡大＋リング＋影で「ここを押した」と一目で分かる。
+   z-index で隣のマスより前に出し、欠けて見えないようにする。 */
+.contribution-arc-card.is-compact .contribution-arc-cell.selected {
+  outline: 2.5px solid var(--green);
+  outline-offset: 2px;
+  transform: scale(1.32);
+  box-shadow: 0 4px 12px rgba(31, 111, 74, 0.32);
+  position: relative;
+  z-index: 2;
+}
+
+/* 凡例は控えめに。 */
+.contribution-arc-card.is-compact .contribution-arc-legend {
+  margin-top: 2px;
+}
+
+/* 詳細パネルはマップの下にカードとして独立表示 (被せない)。 */
+.contribution-arc-card.is-compact .contribution-arc-detail {
+  margin-top: 4px;
+}
+
 @media (max-width: 880px) {
   .contribution-arc-body {
     grid-template-columns: 1fr;

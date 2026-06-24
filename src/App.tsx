@@ -15302,6 +15302,7 @@ function App() {
               {githubContributionArc ? ` / ${githubContributionArc.activeDays}${t("日コミット")}` : ""}
             </span>
           </div>
+          {!compact ? (
           <div className="contribution-arc-stats" aria-label={t("学習サマリ")}>
             <div
               className="arc-stat"
@@ -15330,6 +15331,7 @@ function App() {
               <strong>{contributionArc.topMonthLabel || "—"}</strong>
             </div>
           </div>
+          ) : null}
         </div>
         <div className="contribution-arc-body">
         <div className="contribution-arc-left">
@@ -15353,7 +15355,7 @@ function App() {
                 <path d={contributionArcCurvePath} />
               </svg>
             ) : null}
-            {hoveredArcCell ? (() => {
+            {!compact && hoveredArcCell ? (() => {
               const hoveredCommits = githubByKey.get(hoveredArcCell.day.key)?.count ?? 0;
               const hasStudy = hoveredArcCell.day.minutes > 0;
               const hasCommits = hoveredCommits > 0;
@@ -15442,16 +15444,16 @@ function App() {
                       onClick={() =>
                         setSelectedArcDayKey((prev) => (prev === day.key ? null : day.key))
                       }
-                      onMouseEnter={(event) => {
+                      onMouseEnter={compact ? undefined : (event) => {
                         const placement = computeArcTooltipPlacement(event.currentTarget, day);
                         if (placement) setHoveredArcCell(placement);
                       }}
-                      onMouseLeave={() => setHoveredArcCell(null)}
-                      onFocus={(event) => {
+                      onMouseLeave={compact ? undefined : () => setHoveredArcCell(null)}
+                      onFocus={compact ? undefined : (event) => {
                         const placement = computeArcTooltipPlacement(event.currentTarget, day);
                         if (placement) setHoveredArcCell(placement);
                       }}
-                      onBlur={() => setHoveredArcCell(null)}
+                      onBlur={compact ? undefined : () => setHoveredArcCell(null)}
                       aria-label={ariaLabel}
                     />
                   );
@@ -15470,7 +15472,7 @@ function App() {
             <i className="lv-4" />
             <span>{t("多")}</span>
           </div>
-          {githubContributionArc ? (
+          {compact ? null : githubContributionArc ? (
             <div className="contribution-arc-github-stats">
               <span>
                 {t("今週")} <strong>{githubContributionArc.thisWeekCount}</strong> commit
