@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { makePlanItem, type PlanItem } from "../services/dailyPlanItems";
 import { useTranslation } from "../i18n/LanguageContext";
+import { formatStayTime } from "../utils/format";
 
 /**
  * Phase 10b — plan-as-checklist editor.
@@ -341,7 +342,7 @@ export function PlanChecklistPreview({
   moreLabel,
   emptyItemText,
 }: PlanChecklistPreviewProps) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   if (items.length === 0) {
     return emptyText ? <span className="plan-checklist-preview-empty">{emptyText}</span> : null;
   }
@@ -364,6 +365,19 @@ export function PlanChecklistPreview({
           <span className="plan-checklist-preview-text">
             {item.text || emptyItemText || t("(空)")}
             {item.comment ? <small> — {item.comment}</small> : null}
+            {/* 見積もり時間を小さく添える。みんなの日報でも各タスクに
+               どれくらい見積もったかが一目で分かる。0 / 未設定は出さない。 */}
+            {item.estimateMinutes && item.estimateMinutes > 0 ? (
+              <small
+                className="plan-checklist-preview-estimate"
+                aria-label={t("見積もり {time}", {
+                  time: formatStayTime(item.estimateMinutes, language),
+                })}
+              >
+                <span aria-hidden="true">⏱</span>
+                {formatStayTime(item.estimateMinutes, language)}
+              </small>
+            ) : null}
           </span>
         </div>
       ))}
