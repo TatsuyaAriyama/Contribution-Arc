@@ -20360,10 +20360,12 @@ function App() {
                         {isMine ? (
                           <button
                             type="button"
-                            className="daily-delete-button"
+                            className="daily-card-overflow"
                             onClick={() => handleDailyReportDelete(report)}
+                            aria-label={t("日報を削除")}
+                            title={t("削除")}
                           >
-                            {t("削除")}
+                            ⋯
                           </button>
                         ) : null}
                       </article>

@@ -1165,6 +1165,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "投稿で Arc を貯める": "Earn Arc by posting",
   "投稿を作成": "Create a post",
   "投稿を削除": "Delete post",
+  "日報を削除": "Delete daily report",
   "操作": "Actions",
   "現在のプラン": "Current plan",
   "認証モード": "Auth mode",

@@ -8167,6 +8167,41 @@
   outline: none;
 }
 
+/* 日報カードの削除導線は目立たせない。フル幅の「削除」ボタンをやめ、
+   カード右上隅の控えめな ⋯ にする。タップで確認ダイアログ → 削除。 */
+.daily-shared-list article {
+  position: relative;
+}
+.daily-card-overflow {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(var(--ink-rgb), 0.3);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
+  z-index: 2;
+}
+.daily-card-overflow:hover,
+.daily-card-overflow:focus-visible {
+  background: rgba(170, 57, 57, 0.08);
+  color: #8a2f2f;
+  outline: none;
+}
+
 /* 過去日報リストの右端に置く詳細モーダル導線 ("⋯") + "もっと見る"
    ボタン + 詳細モーダル底部の delete 行。 */
 .daily-history-detail-button {
