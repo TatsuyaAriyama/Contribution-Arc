@@ -8033,12 +8033,11 @@ function App() {
   /* YYYY-MM-DD for the user's local day. Re-computed every render so
      a midnight roll-over flips the daily-reward gate without needing
      a separate timer. */
-  const todayDateKey = (() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-      d.getDate(),
-    ).padStart(2, "0")}`;
-  })();
+  /* 日報の「今日」は selectedDailyDate (= getLearnerDate, 6 時 cutoff) と
+     同じ基準にする。純ローカル日付と混ぜると、深夜〜早朝に書いた日報で
+     `selectedDailyDate === todayDateKey` が食い違い、+50 Arc の報酬が
+     付かなくなる (報酬・reward note・履歴の今日判定が全部ズレる)。 */
+  const todayDateKey = getLearnerDate();
   const activeRoom =
     allWorkspaceRooms.find((room) => room.activeMembers.some((member) => member.userId === currentUserUid)) || null;
   const githubConnectionLabel = githubId ? "GitHub connected" : "GitHub ready";
@@ -10430,18 +10429,23 @@ function App() {
       // - 過去日の編集には払わない（バックフィルで Arc 稼ぎを成立させない）
       // - 下書き保存では払わない（共有された時点が達成）
       // - 失敗 (catch) 経路でも払わない（クラウドに届いていないため）
-      const todayLocal = new Date();
-      const todayLocalKey = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth() + 1).padStart(2, "0")}-${String(todayLocal.getDate()).padStart(2, "0")}`;
+      /* 「今日」は selectedDailyDate と同じ getLearnerDate 基準の
+         todayDateKey を使う (純ローカル日付と混ぜない)。 */
       const planComplete = syncedReport.planItems && syncedReport.planItems.length > 0;
       const reflectionComplete = syncedReport.reflection.trim().length > 0;
       if (
-        selectedDailyDate === todayLocalKey &&
-        lastDailyReportRewardDate !== todayLocalKey &&
+        selectedDailyDate === todayDateKey &&
+        lastDailyReportRewardDate !== todayDateKey &&
         !syncedReport.isDraft &&
         (planComplete || reflectionComplete)
       ) {
         setCoins((value) => value + 50);
-        setLastDailyReportRewardDate(todayLocalKey);
+        setLastDailyReportRewardDate(todayDateKey);
+        /* 報酬で増えた Arc を「ローカルが新しい」と印付けして、デバウンス
+           書き込みが cloud に着く前にリロード/別 snapshot が来ても
+           resolveCoins が cloud の旧残高に巻き戻さないようにする
+           (キャラ購入と同じ保護)。 */
+        writeCharacterChoiceStamp();
         showToast(t("+50 Arc 獲得 ✦ 今日の日報を記録しました"), {
           kind: "success",
         });
