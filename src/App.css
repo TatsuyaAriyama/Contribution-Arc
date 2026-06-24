@@ -7584,6 +7584,27 @@
   font-size: 11px;
 }
 
+/* 各タスクの見積もり時間。みんなの日報でも控えめな緑トーンの小チップで
+   「どれくらいの見積もりか」を一目で。 */
+.plan-checklist-preview-estimate {
+  margin-left: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(var(--tint-soft-rgb), 0.6);
+  color: var(--green);
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+
+.plan-checklist-preview-estimate > span {
+  font-size: 9.5px;
+}
+
 .plan-checklist-preview-more {
   margin-top: 2px;
   color: var(--muted);

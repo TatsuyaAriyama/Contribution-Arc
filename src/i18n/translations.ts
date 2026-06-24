@@ -481,6 +481,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "見積もり時間(分)":            "Estimated minutes",
   "見積もり時間(時間)":          "Estimated hours",
   "見積もり合計 {time}":         "Estimated total {time}",
+  "見積もり {time}":             "Estimate {time}",
   "Team Daily を読み込む":      "Load Team Daily",
   "更新中…":                    "Updating…",
   "再読み込み":                 "Refresh",
