@@ -4799,6 +4799,9 @@ function App() {
   // 右パネルのセグメントタブ: "mine" = 自分の過去日報 / "team" = みんなの日報。
   // 性質の違う 2 リストを縦積みせず切替式にして、Team Daily の発見性を上げる。
   const [dailyHistoryTab, setDailyHistoryTab] = useState<"mine" | "team">("mine");
+  /* 日報を 1 画面に収めるためのサブタブ。今日やること / 振り返り / 過去の記録を
+     縦積みせず切替式にして、各画面でスクロールせず操作できるようにする。 */
+  const [dailySubTab, setDailySubTab] = useState<"plan" | "reflection" | "history">("plan");
   /* 自分の日報リストは未展開時は直近 7 日分のみ。"もっと見る" を押すと
      全件 (最大 50) まで広げる。リスト全体が常に長く伸びてスクロール
      負担になっていたのを抑える。 */
@@ -19821,10 +19824,31 @@ function App() {
               </div>
             </div>
 
+            <nav className="daily-subtabs" role="tablist" aria-label={t("日報の表示")}>
+              {([
+                ["plan", "今日やること"],
+                ["reflection", "振り返り"],
+                ["history", "過去の記録"],
+              ] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={dailySubTab === key}
+                  className={`daily-subtab${dailySubTab === key ? " is-active" : ""}`}
+                  onClick={() => setDailySubTab(key)}
+                >
+                  {t(label)}
+                </button>
+              ))}
+            </nav>
+
             {/* シンプル投稿 + 日報アプリへの方向転換に伴い、日報上部の
                 学習サマリー (学習時間 / 記録 / 最も取り組んだ) は撤去。
                 書く行為そのものに集中するため、定量的なメタ情報は出さない。 */}
 
+            {dailySubTab !== "history" ? (
+              <>
             {(() => {
               /* 当日のみ。達成済み (報酬受領済み) のときだけ控えめな一行ノートを
                  出す。未達成の「+50 Arc を記録しよう」促しバナーは、今日やること
@@ -19852,6 +19876,7 @@ function App() {
                 {t("ローカル下書きとして自動保存されます。")}
               </p>
 
+              {dailySubTab === "plan" ? (
               <form className="daily-entry-card" onSubmit={(event) => handleDailyReportSectionSubmit(event, "plan")}>
                 <div className="daily-entry-label-row">
                   <span className="daily-entry-label">{t("今日やること")}</span>
@@ -19933,7 +19958,9 @@ function App() {
                   </button>
                 </div>
               </form>
+              ) : null}
 
+              {dailySubTab === "reflection" ? (
               <form
                 className="daily-entry-card"
                 onSubmit={(event) => handleDailyReportSectionSubmit(event, "reflection")}
@@ -20074,10 +20101,14 @@ function App() {
                   </button>
                 </div>
               </form>
+              ) : null}
               {dailyMessage ? <p className="daily-message">{dailyMessage}</p> : null}
             </div>
+              </>
+            ) : null}
           </section>
 
+          {dailySubTab === "history" ? (
           <aside className="daily-history-card">
             <div className="daily-history-tabs" role="tablist" aria-label={t("日報の記録")}>
               <button
@@ -20170,7 +20201,15 @@ function App() {
                           isToday ? " is-today" : ""
                         }`.trim()}
                       >
-                        <button type="button" onClick={() => handleDailyDateChange(report.date)}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleDailyDateChange(report.date);
+                            /* 過去の記録から日付を選んだら編集タブ (今日やること)
+                               へ移り、そのまま中身を見られる / 編集できるようにする。 */
+                            setDailySubTab("plan");
+                          }}
+                        >
                           <strong>
                             {formatDailyDate(report.date, language)}
                             {isToday ? (
@@ -20366,6 +20405,7 @@ function App() {
             </div>
             )}
           </aside>
+          ) : null}
         </motion.section>
       ) : currentView === "learning" ? (
         <motion.section

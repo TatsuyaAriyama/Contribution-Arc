@@ -6164,20 +6164,50 @@
 }
 
 .daily-screen {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.36fr);
-  gap: 16px;
-  align-items: start;
+  /* 旧 2 カラム grid をやめ、サブタブ式の 1 カラムに。今日やること /
+     振り返り / 過去の記録を切替表示し、各画面を縦に短く保つ。 */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   /* 日報画面は背面の warm paper canvas を消して pure white に。
-     Habit アプリ風のフラット白背景に揃える。負 margin と padding で
-     親 view-content の余白を取り消して、画面全幅に白を行き渡らせる。
-     下端は固定 bottom-nav に「振り返りを更新」ボタンが被らないよう
-     セーフエリア + nav 高さ分の余白を確保する。 */
+     負 margin と padding で親 view-content の余白を取り消して全幅に。
+     下端は固定 bottom-nav にボタンが被らないようセーフエリア確保。 */
   margin: -14px;
   padding: 14px 14px calc(96px + env(safe-area-inset-bottom, 0px));
   background: var(--surface);
   min-height: 100vh;
   border-radius: 0;
+}
+
+/* 日報のサブタブ (今日やること / 振り返り / 過去の記録) */
+.daily-subtabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid rgba(var(--ink-rgb), 0.08);
+}
+.daily-subtab {
+  appearance: none;
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 700;
+  padding: 10px 8px 12px;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition:
+    color 0.18s ease,
+    border-color 0.18s ease;
+}
+.daily-subtab.is-active {
+  color: var(--green);
+  border-bottom-color: var(--green);
+}
+.daily-subtab:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
 }
 
 /* === 日報の typography 統一 ===

@@ -476,6 +476,8 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "日付":                       "Date",
   "今日やること":               "Today's plan",
   "振り返り":                   "Reflection",
+  "過去の記録":                 "History",
+  "日報の表示":                 "Daily report view",
   "Team Daily を読み込む":      "Load Team Daily",
   "更新中…":                    "Updating…",
   "再読み込み":                 "Refresh",
