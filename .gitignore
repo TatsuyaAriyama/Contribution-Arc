@@ -29,3 +29,6 @@ playwright-report
 
 # Lighthouse CI reports
 .lighthouseci
+
+# Claude Code per-session runtime lock (should not be versioned)
+.claude/scheduled_tasks.lock
