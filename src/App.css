@@ -3627,9 +3627,6 @@
      中央寄せして表のステータスカードと高さ・余白を揃える。 */
   margin-bottom: 0;
   justify-content: center;
-  /* 裏面のマップはこの面では装飾。クリックを奪わず親 (面) へ通し、
-     どこをタップしても一回転して表に戻れるようにする。 */
-  pointer-events: none;
 }
 
 .status-flip-back:focus-visible {
