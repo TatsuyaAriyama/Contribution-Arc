@@ -15506,16 +15506,10 @@ function App() {
           )}
         </div>
         {!compact ? (
-        <AnimatePresence mode="wait" initial={false}>
-          {donutDisplay.total > 0 ? (
-            <motion.div
-              key={donutDisplay.key}
+          donutDisplay.total > 0 ? (
+            <div
               className={`contribution-arc-donut${donutDisplay.isDaily ? " is-daily" : ""}`}
               aria-label={donutDisplay.isDaily ? t("{label}の学習ジャンル配分", { label: donutDisplay.label }) : t("13週の学習ジャンル配分")}
-              initial={{ opacity: 0, scale: 0.94, rotate: -6 }}
-              animate={{ opacity: 1, scale: 1, rotate: 0 }}
-              exit={{ opacity: 0, scale: 0.94, rotate: 6 }}
-              transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
             >
               <div className="contribution-arc-donut-chart">
                 <svg viewBox="0 0 160 160" aria-hidden="true">
@@ -15632,16 +15626,11 @@ function App() {
                   {t("13週合計に戻す")}
                 </button>
               ) : null}
-            </motion.div>
+            </div>
           ) : donutDisplay.isDaily ? (
-            <motion.div
-              key={donutDisplay.key}
+            <div
               className="contribution-arc-donut is-daily is-empty-daily"
               aria-label={t("{label}の学習ジャンル配分（記録なし）", { label: donutDisplay.label })}
-              initial={{ opacity: 0, scale: 0.94, rotate: -6 }}
-              animate={{ opacity: 1, scale: 1, rotate: 0 }}
-              exit={{ opacity: 0, scale: 0.94, rotate: 6 }}
-              transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
             >
               <div className="contribution-arc-donut-chart">
                 <svg viewBox="0 0 160 160" aria-hidden="true">
@@ -15669,20 +15658,12 @@ function App() {
               >
                 {t("13週合計に戻す")}
               </button>
-            </motion.div>
+            </div>
           ) : (
-            <motion.div
-              key="empty-all"
-              className="contribution-arc-donut empty"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.18 }}
-            >
+            <div className="contribution-arc-donut empty">
               <p>{t("学習を記録するとここにジャンル分布が現れます。")}</p>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+          )
         ) : null}
         </div>
         {selectedArcDay ? (
@@ -15696,6 +15677,12 @@ function App() {
                   {selectedArcDay.minutes > 0
                     ? t("{duration} 学習", { duration: formatStudyTimeJa(selectedArcDay.minutes) })
                     : t("学習記録なし")}
+                  {/* 以前ツールチップで出していた、その日の GitHub commit 数を
+                     詳細にも表示する (マスに被せず下の詳細で読める)。 */}
+                  {(() => {
+                    const dayCommits = githubByKey.get(selectedArcDay.key)?.count ?? 0;
+                    return dayCommits > 0 ? ` · ${dayCommits} commit` : "";
+                  })()}
                 </span>
               </div>
               <button
