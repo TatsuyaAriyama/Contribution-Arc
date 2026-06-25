@@ -375,25 +375,10 @@ export function PlanChecklistPreview({
                 time: formatStayTime(item.estimateMinutes, language),
               })}
             >
-              {/* 絵文字 ⏱ は端末ごとに縦位置・大きさがバラつくため、
-                 インライン SVG の時計に統一。数字と確実に 1 行で揃う。 */}
-              <svg
-                className="plan-checklist-preview-estimate-icon"
-                viewBox="0 0 24 24"
-                width="11"
-                height="11"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <circle cx="12" cy="13.5" r="7.5" />
-                <path d="M12 10v3.5l2.4 1.6" />
-                <path d="M9.5 2.5h5" />
-                <path d="M12 2.5v2" />
-              </svg>
+              {/* 時計マークはチップの背景画像 (CSS の data-URI SVG) として
+                 描画する。レイアウト上の子は時間テキストだけになるので、
+                 端末を問わずアイコンと数字が縦積みになることが原理的に
+                 起きない。 */}
               {formatStayTime(item.estimateMinutes, language)}
             </small>
           ) : null}

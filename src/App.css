@@ -7587,32 +7587,27 @@
 }
 
 /* 各タスクの見積もり時間。行の右端カラムに小さく収める。
-   iOS Safari で flex の子 (アイコン/数字) が縦積みになる事例があったため、
-   inline-flex をやめ inline-block + white-space:nowrap に。これで時計と
-   数字は物理的に必ず 1 行で並ぶ (縦積み不可能)。 */
+   時計マークは「背景画像」として左に描く (data-URI SVG)。レイアウト上の
+   中身は時間テキスト 1 つだけなので、iOS を含めどの端末でもアイコンと
+   数字が縦積みになることが原理的に起きない。アプリはライトモード固定
+   なので stroke 色は緑 (#1f6f4a) を直接埋め込む。 */
 .plan-checklist-preview-estimate {
   grid-column: 3;
   justify-self: end;
   align-self: center;
   display: inline-block;
   white-space: nowrap;
-  padding: 1px 8px;
+  padding: 1px 8px 1px 22px;
   border-radius: 999px;
-  background: rgba(var(--tint-soft-rgb), 0.6);
+  background-color: rgba(var(--tint-soft-rgb), 0.6);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231f6f4a' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='13.5' r='7.5'/%3E%3Cpath d='M12 10v3.5l2.4 1.6'/%3E%3Cpath d='M9.5 2.5h5'/%3E%3Cpath d='M12 2.5v2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 7px center;
+  background-size: 11px 11px;
   color: var(--green);
   font-size: 10.5px;
   font-weight: 700;
   line-height: 1.5;
-}
-
-/* 時計アイコン (SVG) は数字の左横にインラインで。明示的に幅・高さを
-   CSS でも指定し (iOS の SVG サイズ崩れ対策)、ベースラインを少し下げて
-   数字と高さを合わせる。 */
-.plan-checklist-preview-estimate-icon {
-  width: 11px;
-  height: 11px;
-  margin-right: 3px;
-  vertical-align: -2px;
 }
 
 .plan-checklist-preview-more {
