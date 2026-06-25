@@ -8086,6 +8086,19 @@
   white-space: pre-wrap;
 }
 
+/* ただし構造化された Plan チェックリスト (PlanChecklistPreview) を包む
+   span には -webkit-box / line-clamp を当てない。box 化すると中の grid
+   行やチップが崩れ、見積もりチップのアイコンが縦積みになる。行数の制限
+   は PlanChecklistPreview 側の maxRows で行う。 */
+.daily-shared-section span.daily-shared-plan-items,
+.daily-shared-list .daily-shared-card-trigger .daily-shared-section span.daily-shared-plan-items {
+  display: block;
+  -webkit-line-clamp: none;
+  -webkit-box-orient: horizontal;
+  overflow: visible;
+  white-space: normal;
+}
+
 /* === Daily detail modal === */
 .daily-detail-modal {
   display: grid;
