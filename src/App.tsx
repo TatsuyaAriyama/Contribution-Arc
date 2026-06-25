@@ -18972,7 +18972,7 @@ function App() {
                     autoCorrect="off"
                     spellCheck={false}
                   />
-                  <small className="settings-field-hint">{t("入力すると、あなたの public な草（contribution）がプロフィールの図に重なります。")}</small>
+                  <small className="settings-field-hint">{t("GitHub ユーザー名を入力すると、公開コミットの記録がプロフィールのコントリビューションマップに表示されます。")}</small>
                 </label>
               </div>
 
