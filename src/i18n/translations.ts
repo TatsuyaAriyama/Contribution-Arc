@@ -415,8 +415,8 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "起動するたびに目に入る、今の自分への一行。":
                                 "A line to yourself you'll see every time you open the app.",
   "GitHub ユーザー名":          "GitHub username",
-  "入力すると、あなたの public な草（contribution）がプロフィールの図に重なります。":
-                                "Enter it to overlay your public GitHub contributions onto your profile chart.",
+  "GitHub ユーザー名を入力すると、公開コミットの記録がプロフィールのコントリビューションマップに表示されます。":
+                                "Enter your GitHub username to show your public commit activity on your profile's contribution map.",
 
   // === 目標 (志望校 / 資格) ===
   "目標を設定":                 "Set a goal",
