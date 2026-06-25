@@ -7587,25 +7587,31 @@
 }
 
 /* 各タスクの見積もり時間。行の右端カラムに小さく収める。別行にせず
-   テキストと同じ行で右寄せ、控えめな緑トーン。 */
+   テキストと同じ行で右寄せ、控えめな緑トーン。時計マークと数字は
+   1 行で中央揃えに固定する (絵文字の縦ズレ防止)。 */
 .plan-checklist-preview-estimate {
   grid-column: 3;
   justify-self: end;
-  align-self: baseline;
+  align-self: center;
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  padding: 0 6px;
+  gap: 3px;
+  padding: 1px 7px;
   border-radius: 999px;
   background: rgba(var(--tint-soft-rgb), 0.6);
   color: var(--green);
   font-size: 10.5px;
   font-weight: 700;
+  line-height: 1;
   white-space: nowrap;
 }
 
+/* 時計マークも 1 行・中央揃えにして数字と高さを合わせる。 */
 .plan-checklist-preview-estimate > span {
-  font-size: 9.5px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  line-height: 1;
 }
 
 .plan-checklist-preview-more {
