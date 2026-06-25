@@ -20488,7 +20488,7 @@ function App() {
                           {report.planItems && report.planItems.length > 0 ? (
                             <p className="daily-shared-section">
                               <strong>{t("今日やること")}</strong>
-                              <span>
+                              <span className="daily-shared-plan-items">
                                 <PlanChecklistPreview
                                   items={report.planItems}
                                   maxRows={4}
