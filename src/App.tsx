@@ -4061,12 +4061,14 @@ function App() {
   const [statusFlipTurns, setStatusFlipTurns] = useState(0);
   const isStatusFlipped = statusFlipTurns % 2 === 1;
   const flipStatusCard = () => setStatusFlipTurns((turns) => turns + 1);
-  /* 裏面のタップ振り分け。草マス (button) / 詳細パネル内のボタン等の操作要素を
-     タップしたときは本来の動作 (その日の詳細表示など) を優先し、カードを
-     回さない。余白など操作要素以外をタップしたら一回転して表へ戻る。 */
+  /* 裏面のタップ振り分け。マップカード内 (.contribution-arc-card) を
+     タップしたときは一切フリップしない。草マスは小さく押し損ねやすいので、
+     マスの隙間・凡例・見出し等に当たってもカードが回ってチラつかないよう、
+     マップ全体をフリップ対象外にする。表へ戻すのは「ステータスに戻る」
+     チップなどマップ外の余白タップだけ。 */
   const handleStatusBackClick = (event: ReactMouseEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
-    if (target.closest("button, a, input, .contribution-arc-detail")) {
+    if (target.closest("button, a, input, .contribution-arc-card")) {
       return;
     }
     flipStatusCard();
