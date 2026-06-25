@@ -22350,11 +22350,15 @@
     outline-color 0.12s ease;
 }
 
-.contribution-arc-cell:hover {
-  transform: scale(1.4);
-  box-shadow:
-    0 4px 10px rgba(31, 111, 74, 0.22),
-    0 0 0 1px rgba(var(--surface-rgb), 0.6);
+/* hover の拡大はマウス端末のみ。タッチでは tap 時に hover が誤発火して
+   セルが拡大→チラつくため、(hover: hover) で囲んで無効化する。 */
+@media (hover: hover) {
+  .contribution-arc-cell:hover {
+    transform: scale(1.4);
+    box-shadow:
+      0 4px 10px rgba(31, 111, 74, 0.22),
+      0 0 0 1px rgba(var(--surface-rgb), 0.6);
+  }
 }
 
 .contribution-arc-cell.empty {
@@ -23222,15 +23226,12 @@
   border-radius: 4px;
 }
 
-/* 選択中のマスは拡大＋リング＋影で「ここを押した」と一目で分かる。
-   z-index で隣のマスより前に出し、欠けて見えないようにする。 */
+/* 選択中のマスは「拡大」させず、静的な緑リングだけで示す。拡大 transition
+   は押すたびにセルがズーム＝チラつく原因だったため廃止。リングは動かない
+   ので、どのマスを押したかは分かりつつモーションは出ない。 */
 .contribution-arc-card.is-compact .contribution-arc-cell.selected {
   outline: 2.5px solid var(--green);
   outline-offset: 2px;
-  transform: scale(1.32);
-  box-shadow: 0 4px 12px rgba(31, 111, 74, 0.32);
-  position: relative;
-  z-index: 2;
 }
 
 /* 凡例は控えめに。 */
