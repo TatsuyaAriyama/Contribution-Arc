@@ -4073,10 +4073,6 @@ function App() {
     }
     flipStatusCard();
   };
-  /* Donut legend インライン編集中の subject。null=非編集。
-     draft はそのまま input の controlled value。 */
-  const [editingDonutSubject, setEditingDonutSubject] = useState<string | null>(null);
-  const [editingDonutDraft, setEditingDonutDraft] = useState("");
   const [hoveredArcCell, setHoveredArcCell] = useState<
     { day: ContributionArcDay; left: number; top: number; placement: "above" | "below" } | null
   >(null);
@@ -7800,19 +7796,6 @@ function App() {
     const total = top.reduce((sum, entry) => sum + entry.minutes, 0);
     return { items: top, total };
   };
-  const arcSubjectTotals = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayWeekday = today.getDay();
-    const startDate = new Date(today);
-    startDate.setDate(today.getDate() - ((CONTRIBUTION_ARC_WEEKS - 1) * 7 + todayWeekday));
-    const windowed = studyLogs.filter((log) => {
-      const d = new Date(log.createdAt);
-      return !Number.isNaN(d.getTime()) && d >= startDate;
-    });
-    return aggregateSubjectTotals(windowed);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [studyLogs, learningItems]);
   const hoveredArcDayLogs = useMemo(() => {
     if (!hoveredArcCell) return [] as StudyLog[];
     return studyLogsByDay.get(hoveredArcCell.day.key) || [];
@@ -7888,29 +7871,6 @@ function App() {
     // that's fine because it's only called inside this memo when inputs change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedArcDay, selectedArcDayLogs, learningItems]);
-  const donutDisplay = useMemo(() => {
-    // When a heatmap day is selected, always show that day's data —
-    // even if it's empty (no study logs). Selecting an empty day still
-    // needs to update the donut so the user gets clear feedback that
-    // their click registered.
-    if (selectedArcDay) {
-      const totals = selectedArcDaySubjectTotals ?? { items: [], total: 0 };
-      return {
-        ...totals,
-        label: t("{month}月{day}日", { month: selectedArcDay.date.getMonth() + 1, day: selectedArcDay.date.getDate() }),
-        isDaily: true,
-        // Stable key so framer-motion's AnimatePresence re-mounts on
-        // day change, triggering the swap animation.
-        key: `day-${selectedArcDay.key}`,
-      };
-    }
-    return {
-      ...arcSubjectTotals,
-      label: t("13週合計"),
-      isDaily: false,
-      key: "total",
-    };
-  }, [selectedArcDay, selectedArcDaySubjectTotals, arcSubjectTotals, t]);
   const contributionArcCurvePath = useMemo(() => {
     const weekMinutes = contributionArc.weekMinutes;
     if (weekMinutes.length === 0) return "";
@@ -13562,52 +13522,6 @@ function App() {
   // - cloud (Firestore studyLogs) に setDoc({ merge: true }) で同期
   // - 失敗時は state を元に戻し、エラートーストを出す
   // - 空文字は許可しない (空 → 何の subject か分からなくなる)
-  /* 過去の学習記録の時間 (minutes) を変更する。
-     - 1〜1440 分の範囲でクランプ (1日を超えない)
-
-
-  /* Donut legend / ジャンル一覧 から同じ subject の study log をまとめて
-     リネーム。「開発」「やあ」など重複・誤入力をユーザーが後から
-     掃除できるようにする。
-     - 楽観更新 → 全該当 log を並列で saveStudyLogToCloud
-     - 1 件でも失敗したら全件 rollback (一貫性のため)
-     - 空文字 / 同一文字列は no-op */
-  const handleSubjectBulkRename = (oldSubject: string, nextSubject: string) => {
-    if (!currentUser) return;
-    const trimmed = nextSubject.trim().slice(0, 60);
-    if (!trimmed) {
-      showToast(t("名前を入力してください"), { kind: "info" });
-      return;
-    }
-    if (oldSubject === trimmed) return;
-
-    const affected = studyLogs.filter((log) => log.subject === oldSubject);
-    if (affected.length === 0) return;
-
-    const affectedIds = new Set(affected.map((log) => log.id));
-    setStudyLogs((logs) =>
-      logs.map((log) => (affectedIds.has(log.id) ? { ...log, subject: trimmed } : log)),
-    );
-
-    void Promise.all(
-      affected.map((original) =>
-        saveStudyLogToCloud(db, currentUser.uid, { ...original, subject: trimmed }, {}),
-      ),
-    )
-      .then(() => {
-        showToast(
-          t("{count}件を「{name}」に変更しました", { count: affected.length, name: trimmed }),
-          { kind: "success" },
-        );
-      })
-      .catch((error) => {
-        console.info("Subject bulk rename cloud sync skipped.", error);
-        setStudyLogs((logs) =>
-          logs.map((log) => (affectedIds.has(log.id) ? { ...log, subject: oldSubject } : log)),
-        );
-        showToast(t("名前を変更できませんでした"), { kind: "error" });
-      });
-  };
 
   /* プロフィールの「This Week」棒グラフから日別に学習ログを編集する。
      1 件分の minutes を再保存／削除。subject は学習対象側 (Library) の
@@ -15507,166 +15421,6 @@ function App() {
             </p>
           )}
         </div>
-        {!compact ? (
-          donutDisplay.total > 0 ? (
-            <div
-              className={`contribution-arc-donut${donutDisplay.isDaily ? " is-daily" : ""}`}
-              aria-label={donutDisplay.isDaily ? t("{label}の学習ジャンル配分", { label: donutDisplay.label }) : t("13週の学習ジャンル配分")}
-            >
-              <div className="contribution-arc-donut-chart">
-                <svg viewBox="0 0 160 160" aria-hidden="true">
-                  <circle
-                    cx="80"
-                    cy="80"
-                    r="56"
-                    fill="none"
-                    stroke="rgba(17, 24, 39, 0.06)"
-                    strokeWidth="16"
-                  />
-                  {(() => {
-                    const r = 56;
-                    const circumference = 2 * Math.PI * r;
-                    let cumulative = 0;
-                    return donutDisplay.items.map((item, idx) => {
-                      const dash = (item.minutes / donutDisplay.total) * circumference;
-                      const seg = (
-                        <circle
-                          key={`${item.subject}-${idx}`}
-                          cx="80"
-                          cy="80"
-                          r={r}
-                          fill="none"
-                          stroke={item.color}
-                          strokeWidth="16"
-                          strokeDasharray={`${dash} ${circumference - dash}`}
-                          strokeDashoffset={-cumulative}
-                          transform="rotate(-90 80 80)"
-                        />
-                      );
-                      cumulative += dash;
-                      return seg;
-                    });
-                  })()}
-                </svg>
-                <div className="contribution-arc-donut-center">
-                  <small>{donutDisplay.label}</small>
-                  <strong>{formatStudyTimeJa(donutDisplay.total)}</strong>
-                  <span>{t("{n}ジャンル", { n: donutDisplay.items.length })}</span>
-                </div>
-              </div>
-              <ul className="contribution-arc-donut-legend">
-                {donutDisplay.items.map((item) => {
-                  const pct = Math.round((item.minutes / donutDisplay.total) * 100);
-                  const isEditing = editingDonutSubject === item.subject;
-                  /* 「その他」は複数 subject の集約結果なのでリネーム
-                     できない (どれを直すか曖昧) */
-                  const isRenameable = item.subject !== "その他";
-                  const commitRename = () => {
-                    const draft = editingDonutDraft;
-                    setEditingDonutSubject(null);
-                    setEditingDonutDraft("");
-                    if (draft && draft.trim() && draft.trim() !== item.subject) {
-                      handleSubjectBulkRename(item.subject, draft);
-                    }
-                  };
-                  return (
-                    <li key={item.subject} className={isEditing ? "is-editing" : ""}>
-                      <i style={{ background: item.color }} aria-hidden="true" />
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          className="legend-name-input"
-                          value={editingDonutDraft}
-                          autoFocus
-                          maxLength={60}
-                          onChange={(event) => setEditingDonutDraft(event.target.value)}
-                          onBlur={commitRename}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter") {
-                              event.preventDefault();
-                              commitRename();
-                            } else if (event.key === "Escape") {
-                              event.preventDefault();
-                              setEditingDonutSubject(null);
-                              setEditingDonutDraft("");
-                            }
-                          }}
-                          aria-label={t("{subject}の名前を編集", { subject: item.subject })}
-                        />
-                      ) : (
-                        <strong className="legend-name">{item.subject}</strong>
-                      )}
-                      <span className="legend-pct">{pct}%</span>
-                      <span className="legend-time">{formatStudyTimeJa(item.minutes)}</span>
-                      {isRenameable && !isEditing ? (
-                        <button
-                          type="button"
-                          className="legend-edit-button"
-                          onClick={() => {
-                            setEditingDonutSubject(item.subject);
-                            setEditingDonutDraft(item.subject);
-                          }}
-                          aria-label={t("{subject}の名前を編集", { subject: item.subject })}
-                          title={t("名前を編集")}
-                        >
-                          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d="M14.5 4.5l5 5L8 21H3v-5L14.5 4.5z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-                          </svg>
-                        </button>
-                      ) : null}
-                    </li>
-                  );
-                })}
-              </ul>
-              {donutDisplay.isDaily ? (
-                <button
-                  type="button"
-                  className="contribution-arc-donut-reset"
-                  onClick={() => setSelectedArcDayKey(null)}
-                  aria-label={t("13週合計に戻す")}
-                >
-                  {t("13週合計に戻す")}
-                </button>
-              ) : null}
-            </div>
-          ) : donutDisplay.isDaily ? (
-            <div
-              className="contribution-arc-donut is-daily is-empty-daily"
-              aria-label={t("{label}の学習ジャンル配分（記録なし）", { label: donutDisplay.label })}
-            >
-              <div className="contribution-arc-donut-chart">
-                <svg viewBox="0 0 160 160" aria-hidden="true">
-                  <circle
-                    cx="80"
-                    cy="80"
-                    r="56"
-                    fill="none"
-                    stroke="rgba(17, 24, 39, 0.06)"
-                    strokeWidth="16"
-                  />
-                </svg>
-                <div className="contribution-arc-donut-center">
-                  <small>{donutDisplay.label}</small>
-                  <strong>{t("0時間")}</strong>
-                  <span>{t("学習記録なし")}</span>
-                </div>
-              </div>
-              <p className="contribution-arc-donut-empty-note">{t("この日はまだ学習が記録されていません。")}</p>
-              <button
-                type="button"
-                className="contribution-arc-donut-reset"
-                onClick={() => setSelectedArcDayKey(null)}
-                aria-label={t("13週合計に戻す")}
-              >
-                {t("13週合計に戻す")}
-              </button>
-            </div>
-          ) : (
-            <div className="contribution-arc-donut empty">
-              <p>{t("学習を記録するとここにジャンル分布が現れます。")}</p>
-            </div>
-          )
-        ) : null}
         </div>
         {selectedArcDay ? (
           <div className="contribution-arc-detail" role="region" aria-label={t("選択日の学習詳細")}>

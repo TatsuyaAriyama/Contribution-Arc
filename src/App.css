@@ -23185,15 +23185,10 @@
 /* Two-column body: heatmap + donut */
 .contribution-arc-body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  /* ドーナツ (円型の記録) を廃止したので 1 カラム。マップが全幅。 */
+  grid-template-columns: 1fr;
   gap: 24px;
   align-items: start;
-}
-
-/* コンパクト版 (Player Status フリップ裏面): ドーナツ列を省いた分、
-   マップを 1 カラムで全幅に伸ばす。 */
-.contribution-arc-card.is-compact .contribution-arc-body {
-  grid-template-columns: 1fr;
 }
 
 /* === コンパクト裏面: 「どのマスを押しているか直感で分かる」整った表示 ===
