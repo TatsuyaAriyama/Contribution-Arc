@@ -7586,30 +7586,33 @@
   font-size: 11px;
 }
 
-/* 各タスクの見積もり時間。行の右端カラムに小さく収める。別行にせず
-   テキストと同じ行で右寄せ、控えめな緑トーン。時計マークと数字は
-   1 行で中央揃えに固定する (絵文字の縦ズレ防止)。 */
+/* 各タスクの見積もり時間。行の右端カラムに小さく収める。
+   iOS Safari で flex の子 (アイコン/数字) が縦積みになる事例があったため、
+   inline-flex をやめ inline-block + white-space:nowrap に。これで時計と
+   数字は物理的に必ず 1 行で並ぶ (縦積み不可能)。 */
 .plan-checklist-preview-estimate {
   grid-column: 3;
   justify-self: end;
   align-self: center;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 1px 7px;
+  display: inline-block;
+  white-space: nowrap;
+  padding: 1px 8px;
   border-radius: 999px;
   background: rgba(var(--tint-soft-rgb), 0.6);
   color: var(--green);
   font-size: 10.5px;
   font-weight: 700;
-  line-height: 1;
-  white-space: nowrap;
+  line-height: 1.5;
 }
 
-/* 時計アイコン (SVG)。数字と同じ 1 行で中央に揃うよう block + 中央寄せ。 */
+/* 時計アイコン (SVG) は数字の左横にインラインで。明示的に幅・高さを
+   CSS でも指定し (iOS の SVG サイズ崩れ対策)、ベースラインを少し下げて
+   数字と高さを合わせる。 */
 .plan-checklist-preview-estimate-icon {
-  display: block;
-  flex-shrink: 0;
+  width: 11px;
+  height: 11px;
+  margin-right: 3px;
+  vertical-align: -2px;
 }
 
 .plan-checklist-preview-more {
