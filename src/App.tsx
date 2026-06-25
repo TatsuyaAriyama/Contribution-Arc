@@ -4060,7 +4060,19 @@ function App() {
      boolean ではなく累積回数で持つ。偶数=表 / 奇数=裏。 */
   const [statusFlipTurns, setStatusFlipTurns] = useState(0);
   const isStatusFlipped = statusFlipTurns % 2 === 1;
-  const flipStatusCard = () => setStatusFlipTurns((turns) => turns + 1);
+  /* 3D (preserve-3d / perspective / backface) はフリップのアニメーション中
+     だけ有効にする。止まっている間は 3D を完全に解除し、表示中の面だけを
+     平面で描く。永続的に 3D 状態に置くと iOS Safari が定常的に再描画して
+     画面が常時チラつくため。is-animating の間だけ両面 + 3D を描画する。 */
+  const [isStatusFlipAnimating, setIsStatusFlipAnimating] = useState(false);
+  const statusFlipAnimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flipStatusCard = () => {
+    setIsStatusFlipAnimating(true);
+    setStatusFlipTurns((turns) => turns + 1);
+    if (statusFlipAnimTimerRef.current) clearTimeout(statusFlipAnimTimerRef.current);
+    /* transitionend のフォールバック (発火しない端末対策)。0.72s + 余裕。 */
+    statusFlipAnimTimerRef.current = setTimeout(() => setIsStatusFlipAnimating(false), 820);
+  };
   /* 裏面のタップ振り分け。マップカード内 (.contribution-arc-card) を
      タップしたときは一切フリップしない。草マスは小さく押し損ねやすいので、
      マスの隙間・凡例・見出し等に当たってもカードが回ってチラつかないよう、
@@ -21231,55 +21243,72 @@ function App() {
                 {/* Player Status はプロフィールの主役なので最上部に固定。
                     押すと裏返り、裏面に GitHub / 学習のコントリビューション
                     マップ (以前作成した contributionArcCardSection) が出る。 */}
-                <div className={`status-flip${isStatusFlipped ? " is-flipped" : ""}`}>
+                <div
+                  className={`status-flip${isStatusFlipped ? " is-flipped" : ""}${isStatusFlipAnimating ? " is-animating" : ""}`}
+                >
                   <div
                     className="status-flip-inner"
+                    /* 回転角は常時保持 (アニメ再入時に角度が連続するように)。
+                       3D 化 (perspective/preserve-3d/backface) は is-animating の
+                       間だけ CSS 側で有効化する。止まっている間は flat なので、
+                       inner と裏面の二重 rotateY(180) は鏡像にならず正立し、
+                       かつ 3D が無いので常時チラつかない。 */
                     style={{ transform: `rotateY(${statusFlipTurns * 180}deg)` }}
+                    onTransitionEnd={(event) => {
+                      if (event.propertyName === "transform") {
+                        if (statusFlipAnimTimerRef.current) clearTimeout(statusFlipAnimTimerRef.current);
+                        setIsStatusFlipAnimating(false);
+                      }
+                    }}
                   >
-                    <div
-                      className="status-flip-face status-flip-front"
-                      role="button"
-                      tabIndex={isStatusFlipped ? -1 : 0}
-                      aria-hidden={isStatusFlipped}
-                      aria-label={t("GitHubマップを表示")}
-                      onClick={flipStatusCard}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          flipStatusCard();
-                        }
-                      }}
-                    >
-                      {playerStatusCard(false)}
-                    </div>
+                    {isStatusFlipAnimating || !isStatusFlipped ? (
+                      <div
+                        className="status-flip-face status-flip-front"
+                        role="button"
+                        tabIndex={isStatusFlipped ? -1 : 0}
+                        aria-hidden={isStatusFlipped}
+                        aria-label={t("GitHubマップを表示")}
+                        onClick={flipStatusCard}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            flipStatusCard();
+                          }
+                        }}
+                      >
+                        {playerStatusCard(false)}
+                      </div>
+                    ) : null}
                     {/* 裏面: 草マス (button) をタップするとその日の詳細が出る。
                         マス以外の余白をタップすると、もう一度前方向へ一回転して
                         表へ戻る (handleStatusBackClick が振り分ける)。 */}
-                    <div
-                      className="status-flip-face status-flip-back"
-                      role="button"
-                      tabIndex={isStatusFlipped ? 0 : -1}
-                      aria-hidden={!isStatusFlipped}
-                      aria-label={t("ステータスに戻る")}
-                      onClick={handleStatusBackClick}
-                      onKeyDown={(event) => {
-                        if (
-                          (event.key === "Enter" || event.key === " ") &&
-                          event.target === event.currentTarget
-                        ) {
-                          event.preventDefault();
-                          flipStatusCard();
-                        }
-                      }}
-                    >
-                      <span className="status-flip-back-btn" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M15 18l-6-6 6-6" />
-                        </svg>
-                        {t("ステータスに戻る")}
-                      </span>
-                      {renderContributionArcSection(true, false)}
-                    </div>
+                    {isStatusFlipAnimating || isStatusFlipped ? (
+                      <div
+                        className="status-flip-face status-flip-back"
+                        role="button"
+                        tabIndex={isStatusFlipped ? 0 : -1}
+                        aria-hidden={!isStatusFlipped}
+                        aria-label={t("ステータスに戻る")}
+                        onClick={handleStatusBackClick}
+                        onKeyDown={(event) => {
+                          if (
+                            (event.key === "Enter" || event.key === " ") &&
+                            event.target === event.currentTarget
+                          ) {
+                            event.preventDefault();
+                            flipStatusCard();
+                          }
+                        }}
+                      >
+                        <span className="status-flip-back-btn" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M15 18l-6-6 6-6" />
+                          </svg>
+                          {t("ステータスに戻る")}
+                        </span>
+                        {renderContributionArcSection(true, false)}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
                 {/* 選択日の詳細はフリップカードの「外（下）」に出す。中に入れると

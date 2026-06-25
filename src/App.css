@@ -3583,24 +3583,35 @@
    プロフィールの Player Status を押すと Y 軸でくるっと反転し、裏面に
    以前作成したコントリビューションマップが出現する。表裏は grid で
    同じセルに重ね、コンテナ高さは高い方の面に合わせてクリップを防ぐ。 */
-.status-flip {
+/* 3D (perspective / preserve-3d / backface / rotateY) は .is-animating の
+   間＝フリップのアニメーション中だけ有効にする。止まっている間は素の
+   grid で、表示中の面 1 枚だけを平面表示する。永続的に 3D 状態に置くと
+   iOS Safari が定常的に再ラスタライズして画面が常時チラつくため。 */
+.status-flip.is-animating {
   perspective: 1800px;
 }
 
 .status-flip-inner {
   display: grid;
+}
+
+.status-flip.is-animating .status-flip-inner {
   transform-style: preserve-3d;
   transition: transform 0.72s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* 回転角はインラインスタイル (rotateY(turns*180deg)) で駆動する。
-   タップのたびに前方向へ 180° 足し続け、表→裏→表…と一回転し続ける。 */
-
 .status-flip-face {
   grid-area: 1 / 1;
   min-width: 0;
+}
+
+/* アニメ中だけ両面が重なるので backface を隠す。止まると 1 枚しか
+   描画しないので不要。 */
+.status-flip.is-animating .status-flip-face {
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  /* 回転中の誤クリック防止。 */
+  pointer-events: none;
 }
 
 .status-flip-front {
@@ -3612,11 +3623,12 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  transform: rotateY(180deg);
   /* 裏面はどこをタップしても回るので面全体をボタン扱いにする。 */
   cursor: pointer;
-  /* 表を見ている間は裏がクリックを奪わないよう pointer-events を切る。 */
-  pointer-events: none;
+  /* inner の rotateY(turns*180) を打ち消して裏面コンテンツを正立させる。
+     flat (停止中) では mirror×mirror=正立、3D (アニメ中) では 180+180=
+     360=正立。常時付与しておくことで停止/アニメどちらも正しい向き。 */
+  transform: rotateY(180deg);
 }
 
 /* 裏のマップカードは表のステータスカードと同じ枠を満たすよう伸縮させ、
@@ -3634,14 +3646,6 @@
   outline: 4px solid rgba(31, 111, 74, 0.12);
   outline-offset: 4px;
   border-radius: 22px;
-}
-
-.status-flip.is-flipped .status-flip-front {
-  pointer-events: none;
-}
-
-.status-flip.is-flipped .status-flip-back {
-  pointer-events: auto;
 }
 
 .status-flip-front:focus-visible {
@@ -3668,7 +3672,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .status-flip-inner {
+  .status-flip.is-animating .status-flip-inner {
     transition: none;
   }
 }
