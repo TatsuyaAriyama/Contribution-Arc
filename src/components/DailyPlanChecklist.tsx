@@ -375,7 +375,25 @@ export function PlanChecklistPreview({
                 time: formatStayTime(item.estimateMinutes, language),
               })}
             >
-              <span aria-hidden="true">⏱</span>
+              {/* 絵文字 ⏱ は端末ごとに縦位置・大きさがバラつくため、
+                 インライン SVG の時計に統一。数字と確実に 1 行で揃う。 */}
+              <svg
+                className="plan-checklist-preview-estimate-icon"
+                viewBox="0 0 24 24"
+                width="11"
+                height="11"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="13.5" r="7.5" />
+                <path d="M12 10v3.5l2.4 1.6" />
+                <path d="M9.5 2.5h5" />
+                <path d="M12 2.5v2" />
+              </svg>
               {formatStayTime(item.estimateMinutes, language)}
             </small>
           ) : null}
