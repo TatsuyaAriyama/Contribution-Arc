@@ -7606,12 +7606,10 @@
   white-space: nowrap;
 }
 
-/* 時計マークも 1 行・中央揃えにして数字と高さを合わせる。 */
-.plan-checklist-preview-estimate > span {
-  display: inline-flex;
-  align-items: center;
-  font-size: 11px;
-  line-height: 1;
+/* 時計アイコン (SVG)。数字と同じ 1 行で中央に揃うよう block + 中央寄せ。 */
+.plan-checklist-preview-estimate-icon {
+  display: block;
+  flex-shrink: 0;
 }
 
 .plan-checklist-preview-more {
