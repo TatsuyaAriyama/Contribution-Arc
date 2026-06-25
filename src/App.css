@@ -3623,12 +3623,11 @@
    フリップ時に前後で大きさが揃うようにする。 */
 .status-flip-back > .contribution-arc-card {
   flex: 1 1 auto;
-  /* 裏面はマップだけのコンパクト版。下マージンを殺す。
-     justify-content は flex-start (上揃え)。center にすると、マスを
-     押して詳細パネルが出るたびに固定高カード内で中身が再センタリング
-     され、マップが上下にジャンプする「謎のモーション」になっていた。 */
+  /* 裏面はマップだけ (選択日の詳細はフリップの外＝下に出すので、カード内の
+     高さはマスを押しても変わらない)。中身が固定高になったので center で
+     縦中央に置いても再センタリングのジャンプは起きない。 */
   margin-bottom: 0;
-  justify-content: flex-start;
+  justify-content: center;
 }
 
 .status-flip-back:focus-visible {

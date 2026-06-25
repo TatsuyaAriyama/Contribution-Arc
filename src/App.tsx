@@ -15182,10 +15182,61 @@ function App() {
     );
   };
 
+  /* 選択日の詳細 (学習内訳 + commit 数)。フリップ裏面ではカードの中に
+     入れると高さが変わって 3D が揺れるため、外 (フリップの下) でも
+     描画できるよう関数に切り出す。 */
+  const renderArcDayDetail = () =>
+    selectedArcDay ? (
+      <div className="contribution-arc-detail" role="region" aria-label={t("選択日の学習詳細")}>
+        <div className="contribution-arc-detail-head">
+          <div>
+            <strong>
+              {t("{year}年 {month}月{day}日", { year: selectedArcDay.date.getFullYear(), month: selectedArcDay.date.getMonth() + 1, day: selectedArcDay.date.getDate() })}
+            </strong>
+            <span>
+              {selectedArcDay.minutes > 0
+                ? t("{duration} 学習", { duration: formatStudyTimeJa(selectedArcDay.minutes) })
+                : t("学習記録なし")}
+              {(() => {
+                const dayCommits = githubByKey.get(selectedArcDay.key)?.count ?? 0;
+                return dayCommits > 0 ? ` · ${dayCommits} commit` : "";
+              })()}
+            </span>
+          </div>
+          <button
+            type="button"
+            className="contribution-arc-detail-close"
+            onClick={() => setSelectedArcDayKey(null)}
+            aria-label={t("閉じる")}
+          >
+            ×
+          </button>
+        </div>
+        {selectedArcDaySubjectTotals && selectedArcDaySubjectTotals.items.length > 0 ? (
+          <ul className="contribution-arc-detail-list">
+            {selectedArcDaySubjectTotals.items.map((entry, index) => (
+              <li key={`${entry.subject}-${index}`}>
+                <span
+                  className="contribution-arc-detail-dot"
+                  style={{ background: entry.color || "rgba(31,111,74,0.7)" }}
+                  aria-hidden="true"
+                />
+                <strong>{entry.subject}</strong>
+                <small>{formatStudyTime(entry.minutes)}</small>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="contribution-arc-detail-empty">{t("この日はまだ記録がありません。")}</p>
+        )}
+      </div>
+    ) : null;
+
   /* compact=true のときは裏面 (Player Status フリップ) 向けに、ドーナツ
-     ジャンル配分と選択日の詳細を省いてマップだけのコンパクト表示にする。
-     表のステータスカードと大きさが揃い、反転が綺麗に見える。 */
-  const renderContributionArcSection = (compact = false) => (
+     ジャンル配分を省いてマップだけのコンパクト表示にする。
+     includeDetail=false のときは選択日の詳細をカード内に描画しない
+     (フリップではカードの外＝下に出して高さ変動を防ぐため)。 */
+  const renderContributionArcSection = (compact = false, includeDetail = true) => (
     <section
       className={`contribution-arc-card${compact ? " is-compact" : ""}`}
       aria-label="Contribution Arc"
@@ -15422,53 +15473,7 @@ function App() {
           )}
         </div>
         </div>
-        {selectedArcDay ? (
-          <div className="contribution-arc-detail" role="region" aria-label={t("選択日の学習詳細")}>
-            <div className="contribution-arc-detail-head">
-              <div>
-                <strong>
-                  {t("{year}年 {month}月{day}日", { year: selectedArcDay.date.getFullYear(), month: selectedArcDay.date.getMonth() + 1, day: selectedArcDay.date.getDate() })}
-                </strong>
-                <span>
-                  {selectedArcDay.minutes > 0
-                    ? t("{duration} 学習", { duration: formatStudyTimeJa(selectedArcDay.minutes) })
-                    : t("学習記録なし")}
-                  {/* 以前ツールチップで出していた、その日の GitHub commit 数を
-                     詳細にも表示する (マスに被せず下の詳細で読める)。 */}
-                  {(() => {
-                    const dayCommits = githubByKey.get(selectedArcDay.key)?.count ?? 0;
-                    return dayCommits > 0 ? ` · ${dayCommits} commit` : "";
-                  })()}
-                </span>
-              </div>
-              <button
-                type="button"
-                className="contribution-arc-detail-close"
-                onClick={() => setSelectedArcDayKey(null)}
-                aria-label={t("閉じる")}
-              >
-                ×
-              </button>
-            </div>
-            {selectedArcDaySubjectTotals && selectedArcDaySubjectTotals.items.length > 0 ? (
-              <ul className="contribution-arc-detail-list">
-                {selectedArcDaySubjectTotals.items.map((entry, index) => (
-                  <li key={`${entry.subject}-${index}`}>
-                    <span
-                      className="contribution-arc-detail-dot"
-                      style={{ background: entry.color || "rgba(31,111,74,0.7)" }}
-                      aria-hidden="true"
-                    />
-                    <strong>{entry.subject}</strong>
-                    <small>{formatStudyTime(entry.minutes)}</small>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="contribution-arc-detail-empty">{t("この日はまだ記録がありません。")}</p>
-            )}
-          </div>
-        ) : null}
+        {includeDetail ? renderArcDayDetail() : null}
       </section>
   );
 
@@ -21273,10 +21278,14 @@ function App() {
                         </svg>
                         {t("ステータスに戻る")}
                       </span>
-                      {renderContributionArcSection(true)}
+                      {renderContributionArcSection(true, false)}
                     </div>
                   </div>
                 </div>
+                {/* 選択日の詳細はフリップカードの「外（下）」に出す。中に入れると
+                    詳細の高さ変動でフリップ(3D)コンテナが揺れて誤作動に見えた。
+                    裏面表示中だけ出す。 */}
+                {isStatusFlipped ? renderArcDayDetail() : null}
 
                 {/* 今週の学習を曜日別の棒グラフで。自分の studyLogs から
                     直接組むのでリアルタイム。 */}
