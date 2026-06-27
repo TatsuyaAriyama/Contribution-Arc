@@ -11983,7 +11983,14 @@
 .workspace-2d-shell.is-preview {
   display: grid;
   place-items: center;
-  min-height: clamp(420px, 56vh, 620px);
+  /* Cap the pre-join panel and center it: on wide desktops a full-width
+     (1088px) gradient panel left the 374px entry card floating in an
+     empty void. A ~720px framed panel keeps the card as a deliberate
+     focal module instead of lost space. */
+  width: 100%;
+  max-width: 720px;
+  margin-inline: auto;
+  min-height: clamp(360px, 46vh, 520px);
   padding: 24px;
   border: 1px solid rgba(var(--ink-rgb), 0.08);
   border-radius: 24px;
@@ -16765,7 +16772,12 @@
    turn splits into a 50/50 two-pane layout (.two-pane-shell) below the
    sticky topbar. */
 .premium-shell {
-  width: min(1560px, calc(100% - 48px));
+  /* DESIGN.md: standard content is 1080px, sidebar layouts widen to
+     1200–1280px. The two-pane (main view + feed sidebar) is a sidebar
+     layout, so cap at 1280px rather than the old 1560px — that kept
+     cards readable instead of stretching them edge-to-edge with empty
+     interiors on wide monitors. */
+  width: min(1280px, calc(100% - 48px));
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 24px;
@@ -17012,7 +17024,11 @@
 @media (min-width: 1081px) {
   .two-pane-shell {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    /* The left pane is the primary view; the right pane is a feed sidebar.
+       A 50/50 split made the feed as prominent as the main content and
+       left the main view too narrow for its hero/graph cards. Give the
+       main view ~60% and the feed ~40% so the hierarchy reads correctly. */
+    grid-template-columns: minmax(0, 1.5fr) minmax(320px, 1fr);
     gap: 24px;
     align-items: start;
     transition: grid-template-columns 220ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -26771,12 +26787,18 @@ select:focus-visible,
    somehow lingers in the DOM, this collapses it. Applies at every
    width so the mobile flex-column layout also keeps the feed hidden
    underneath the workspace. */
-.two-pane-shell:has(.workspace-screen) .two-pane-right {
+.two-pane-shell:has(.workspace-screen) .two-pane-right,
+.two-pane-shell:has(.daily-screen) .two-pane-right {
   display: none;
 }
 
+/* Workspace and Daily both collapse the two-pane grid to a single column
+   so the left view reclaims the full width (their feed panes are hidden
+   above). Daily has its own 自分の記録 / みんなの日報 columns and the 2D
+   room owns the whole canvas, so neither wants the global feed sidebar. */
 @media (min-width: 1081px) {
-  .two-pane-shell:has(.workspace-screen) {
+  .two-pane-shell:has(.workspace-screen),
+  .two-pane-shell:has(.daily-screen) {
     grid-template-columns: minmax(0, 1fr);
   }
 }

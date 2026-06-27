@@ -23404,9 +23404,13 @@ function App() {
           presence/chat tools — overlaying the global FEED next to it
           competes for attention, makes the desktop layout cramped, and
           hides the room behind feed scroll on mobile. Hide it there.
+          Daily (日報) already carries its own social column (みんなの日報),
+          so stacking the global feed beside it produced a cramped
+          three-column desktop layout — hide the feed there too and let
+          the report's native two-column view use the full width.
           On every other view the right pane respects the user's
           isFeedOpen preference (default true, persisted to localStorage). */}
-      {currentView !== "workspace" && currentView !== "feed" && isFeedOpen ? (
+      {currentView !== "workspace" && currentView !== "feed" && currentView !== "daily" && isFeedOpen ? (
         <aside className="two-pane-right" aria-label={t("投稿")}>
           {feedSection}
         </aside>
