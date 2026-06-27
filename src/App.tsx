@@ -4993,10 +4993,6 @@ function App() {
   const [replyError, setReplyError] = useState("");
   const [openReplyPostIds, setOpenReplyPostIds] = useState<Set<string>>(() => new Set());
   const [likeBurstPostId, setLikeBurstPostId] = useState<string | null>(null);
-  const [dailyPromptDraft, setDailyPromptDraft] = useState("");
-  const [dailyPromptDismissedFor, setDailyPromptDismissedFor] = useState<string>("");
-  const [isSavingDailyPrompt, setIsSavingDailyPrompt] = useState(false);
-  const [dailyPromptError, setDailyPromptError] = useState("");
   const [isDesktopWelcomeVisible, setIsDesktopWelcomeVisible] = useState(true);
   const [knowledgeGraph, setKnowledgeGraph] = useState<KnowledgeGraphData>(emptyKnowledgeGraph);
   const [selectedKnowledgeId, setSelectedKnowledgeId] = useState("");
@@ -5243,10 +5239,6 @@ function App() {
       setReplyError("");
       setOpenReplyPostIds(new Set());
       setLikeBurstPostId(null);
-      setDailyPromptDraft("");
-      setDailyPromptDismissedFor("");
-      setIsSavingDailyPrompt(false);
-      setDailyPromptError("");
       setIsDesktopWelcomeVisible(true);
       setKnowledgeGraph(emptyKnowledgeGraph);
       setSelectedKnowledgeId("");
@@ -6694,17 +6686,6 @@ function App() {
       JSON.stringify(knowledgeGraph),
     );
   }, [currentUser, knowledgeGraph, isWorkspaceLoaded, userId]);
-
-  useEffect(() => {
-    if (!currentUser) {
-      return;
-    }
-    const accountScope = getAccountStorageScope(currentUser.uid, userId);
-    const stored = window.localStorage.getItem(
-      getAccountStorageKey(accountScope, "daily-prompt-dismissed"),
-    );
-    setDailyPromptDismissedFor(stored || "");
-  }, [currentUser, userId]);
 
   useEffect(() => {
     if (!currentUser || !isWorkspaceLoaded) {
@@ -8380,7 +8361,6 @@ function App() {
   const selectedRoomPosts = selectedRoom ? posts.filter((post) => post.roomId === selectedRoom.id).slice(0, 4) : [];
   const selectedDailyReport = dailyReports.find((report) => report.date === selectedDailyDate) || null;
   const currentLearnerDate = getLearnerDate(new Date(feedNowTick));
-  const todayDailyReport = dailyReports.find((report) => report.date === currentLearnerDate) || null;
   // 連続日報ストリーク (今日まで連続して書いた日数)
   const dailyReportStreak = useMemo(() => getDailyReportStreak(dailyReports), [dailyReports]);
   // 日報を 1 枚の画像カードに書き出して共有/保存する。ネイティブな
@@ -10195,83 +10175,6 @@ function App() {
       console.info("Daily report delete skipped.", error);
       setDailyMessage(t("日報を削除できませんでした。"));
     });
-  };
-
-  const handleDailyPromptDismiss = () => {
-    if (!currentUser) return;
-    const date = getLearnerDate();
-    const accountScope = getAccountStorageScope(currentUser.uid, userId);
-    safeSetLocalStorage(getAccountStorageKey(accountScope, "daily-prompt-dismissed"), date);
-    setDailyPromptDismissedFor(date);
-    setDailyPromptError("");
-  };
-
-  const handleDailyPromptSave = async () => {
-    if (!currentUser || isSavingDailyPrompt) return;
-
-    const planText = dailyPromptDraft.trim();
-    if (!planText) {
-      setDailyPromptError(t("今日やることを入力してください。"));
-      return;
-    }
-
-    const date = getLearnerDate();
-    const now = new Date().toISOString();
-    const existingReport = dailyReports.find((report) => report.date === date);
-    const report: DailyReport = {
-      id: `${currentUser.uid}_${date}`,
-      userId: currentUser.uid,
-      userName: playerName,
-      characterColor: playerCharacterColor,
-      characterShape: playerCharacterShape,
-      currentTitle,
-      date,
-      plan: planText,
-      reflection: existingReport?.reflection || "",
-      createdAt: existingReport?.createdAt || now,
-      updatedAt: now,
-      syncStatus: "pending",
-      syncError: "",
-    };
-
-    setIsSavingDailyPrompt(true);
-    setDailyPromptError("");
-    setDailyReports((reports) => {
-      const nextReports = [report, ...reports.filter((item) => item.id !== report.id)].sort((a, b) =>
-        b.date.localeCompare(a.date),
-      );
-      persistDailyReports(currentUser.uid, userId, nextReports);
-      return nextReports;
-    });
-    void putPersistentItem("dailyReports", report);
-
-    // Keep the daily-screen draft in sync if the user opens it next.
-    // The home-screen prompt is plain text (single textarea), so we
-    // lift it into PlanItem rows the same way the editor would on open.
-    if (selectedDailyDate === date) {
-      setDailyPlanItemsDraft(planItemsFromLegacyText(planText));
-    }
-
-    try {
-      await withTimeout(
-        setDoc(
-          doc(db, "dailyReports", report.id),
-          {
-            ...dailyReportToCloudPayload(report),
-            updatedAt: report.updatedAt,
-            serverUpdatedAt: serverTimestamp(),
-          },
-          { merge: true },
-        ),
-        8000,
-        "daily-report-save-timeout",
-      );
-    } catch (error) {
-      console.info("Daily plan prompt save fell back to local cache.", error);
-    } finally {
-      setIsSavingDailyPrompt(false);
-      setDailyPromptDraft("");
-    }
   };
 
   /* チュートリアル "firstDailyPlan" の保存。今日の dailyReport の plan
@@ -23150,75 +23053,6 @@ function App() {
           <span className="home-teams-ribbon-arrow" aria-hidden="true">→</span>
         </button>
       ) : null}
-
-      <AnimatePresence initial={false}>
-        {(() => {
-          const hasTodayPlan = !!(todayDailyReport && todayDailyReport.plan.trim());
-          const isDismissed = dailyPromptDismissedFor === currentLearnerDate;
-          if (hasTodayPlan || isDismissed) return null;
-          return (
-            <motion.section
-              key="daily-plan-prompt"
-              className="daily-plan-prompt"
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8, height: 0, marginBottom: 0 }}
-              transition={{ duration: 0.24, ease: "easeOut" }}
-              aria-label={t("今日の予定を立てる")}
-            >
-              <div className="daily-plan-prompt-head">
-                <div>
-                  <p className="card-kicker">TODAY</p>
-                  <strong>{t("おはよう。今日は何をやる？")}</strong>
-                  <small>{formatDailyDate(currentLearnerDate)}</small>
-                </div>
-                <button
-                  type="button"
-                  className="daily-plan-prompt-skip"
-                  onClick={handleDailyPromptDismiss}
-                  aria-label={t("今日は書かずに進む")}
-                  data-tooltip={t("今日は書かずに進む")}
-                >
-                  {t("スキップ")}
-                </button>
-              </div>
-              <form
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  void handleDailyPromptSave();
-                }}
-              >
-                <textarea
-                  value={dailyPromptDraft}
-                  onChange={(event) => {
-                    setDailyPromptDraft(event.target.value);
-                    setDailyPromptError("");
-                  }}
-                  placeholder={t("例: DDIA Ch.7 を読み切る")}
-                  rows={2}
-                  maxLength={400}
-                />
-                <div className="daily-plan-prompt-foot">
-                  {dailyPromptError ? (
-                    <span className="daily-plan-prompt-error">{dailyPromptError}</span>
-                  ) : (
-                    <span className="daily-plan-prompt-hint">
-                      {t("日報の「今日やること」として保存される。短くてもOK。")}
-                    </span>
-                  )}
-                  <button
-                    type="submit"
-                    className="daily-plan-prompt-save"
-                    disabled={isSavingDailyPrompt || !dailyPromptDraft.trim()}
-                  >
-                    {isSavingDailyPrompt ? t("保存中") : t("今日を始める")}
-                  </button>
-                </div>
-              </form>
-            </motion.section>
-          );
-        })()}
-      </AnimatePresence>
 
       {/* GitHub / 学習のコントリビューションマップ。お知らせをホーム最上部に
           出す方針に変えたので、このマップは下段へ移動した。 */}
