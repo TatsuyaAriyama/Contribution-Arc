@@ -15510,11 +15510,17 @@
 }
 
 /* クイック記録ピルとストリークを横並びにする(この topbar-context だけ).
-   他用途の .topbar-context(grid でカードを縦積み)には影響させない. */
-.topbar-context:has(.topbar-quicklog) {
+   他用途の .topbar-context(grid でカードを縦積み)には影響させない.
+   margin-left:auto で記録アクション群をアバター側(右上)に寄せる。
+   以前は flex:1 で中央が間延びし、ナビとアバターの間に巨大な空白が
+   生まれていた。記録系は「アカウント/操作ゾーン」である右上に集約し、
+   左=ナビ / 右=操作 の 2 グループに整理する。 */
+.premium-dashboard-header .topbar-context:has(.topbar-quicklog) {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 /* 平日連続記録の控えめバッジ. 低彩度・小サイズ. 炎アイコンや
@@ -17002,7 +17008,10 @@
   gap: 4px;
   padding: 4px;
   border-radius: 14px;
-  background: rgba(var(--ink-rgb), 0.04);
+  /* 半透明ヘッダーの上で「ひとかたまりのセグメント操作」だと
+     はっきり読めるよう、地をやや濃く + hairline 枠で輪郭を出す。 */
+  background: rgba(var(--ink-rgb), 0.05);
+  border: 1px solid rgba(var(--ink-rgb), 0.06);
   flex-shrink: 0;
 }
 
@@ -26600,6 +26609,42 @@ select:focus-visible,
   border-radius: 2px;
   background: var(--green, #1f6f4a);
   opacity: 0.85;
+}
+
+/* ─── 日報タブ = 主動線のヒーロー ──────────────────────────────
+   最も使う画面なので、ナビの中で唯一グリーンの淡色タグにして
+   先頭にドットを添える。非アクティブでも常に緑が乗るので「ここが
+   メイン」と一目で分かる。アクティブ時はタグを一段濃くするだけで、
+   下線(::after)は塗りタグと干渉するため消す。 */
+.topbar-nav .daily-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--green, #1f6f4a);
+  background: rgba(31, 111, 74, 0.1);
+  font-weight: 700;
+}
+
+.topbar-nav .daily-tab:hover {
+  color: var(--green, #1f6f4a);
+  background: rgba(31, 111, 74, 0.16);
+}
+
+.topbar-nav .daily-tab.is-active {
+  background: rgba(31, 111, 74, 0.16);
+  box-shadow: 0 1px 2px rgba(31, 111, 74, 0.16);
+}
+
+.topbar-nav .daily-tab.is-active::after {
+  display: none;
+}
+
+.topbar-nav .daily-tab .daily-tab-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--green, #1f6f4a);
+  flex-shrink: 0;
 }
 
 /* ============================================================

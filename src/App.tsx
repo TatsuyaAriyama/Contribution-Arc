@@ -15857,11 +15857,16 @@ function App() {
           >
             {t("ライブラリ")}
           </button>
+          {/* 日報はこのアプリで最も使う画面。ナビ内で唯一グリーン
+              アクセント（先頭ドット + 緑タグ）を与えて「ここを開く」
+              という主動線を一目で分かるようにする。DESIGN.md の
+              「アクセント = primary 緑を“ここを見て”だけに使う」に従う。 */}
           <button
             type="button"
-            className={currentView === "daily" ? "is-active" : ""}
+            className={`daily-tab${currentView === "daily" ? " is-active" : ""}`}
             onClick={() => setCurrentView("daily")}
           >
+            <span className="daily-tab-dot" aria-hidden="true" />
             {t("日報")}
           </button>
         </nav>
