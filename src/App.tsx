@@ -21144,14 +21144,14 @@ function App() {
                 >
                   <div
                     className="status-flip-inner"
-                    /* 回転角は常時保持 (アニメ再入時に角度が連続するように)。
-                       3D 化 (perspective/preserve-3d/backface) は is-animating の
-                       間だけ CSS 側で有効化する。止まっている間は flat なので、
-                       inner と裏面の二重 rotateY(180) は鏡像にならず正立し、
-                       かつ 3D が無いので常時チラつかない。 */
-                    style={{ transform: `rotateY(${statusFlipTurns * 180}deg)` }}
-                    onTransitionEnd={(event) => {
-                      if (event.propertyName === "transform") {
+                    /* 押すたびに前方向へ 360°「一回転」する (CSS keyframes
+                       statusFlipSpin)。回転は is-animating の間だけ有効。停止中は
+                       transform 無し (flat・無回転) なので、旧方式のような
+                       rotateY 打ち消しに依存せず鏡像が一切発生しない。回転の
+                       中盤 (90°〜270°) は両面の opacity を 0 にして鏡像を隠し、
+                       終わり際に「次の面」をフェードインさせて着地する。 */
+                    onAnimationEnd={(event) => {
+                      if (event.animationName.startsWith("statusFlipSpin")) {
                         if (statusFlipAnimTimerRef.current) clearTimeout(statusFlipAnimTimerRef.current);
                         setIsStatusFlipAnimating(false);
                       }

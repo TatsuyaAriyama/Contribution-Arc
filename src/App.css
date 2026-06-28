@@ -3726,7 +3726,48 @@
 
 .status-flip.is-animating .status-flip-inner {
   transform-style: preserve-3d;
-  transition: transform 0.72s cubic-bezier(0.22, 1, 0.36, 1);
+  /* 押すたびに前方向へ 360°「一回転」する。回転の中盤 (90°〜270°) は
+     面が鏡像になるが、その間は面の opacity を 0 にして見せない (下の
+     statusFaceOut/In)。終わり際に「次の面」をフェードインさせて着地する
+     ことで、コインフリップ風に元の面 (プレイヤーステータス) へ戻る。
+     停止中は無回転なので旧方式の鏡像バグが原理的に起きない。 */
+  animation: statusFlipSpin 0.72s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes statusFlipSpin {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(360deg);
+  }
+}
+
+/* 回転中だけ両面が同じセルに重なる。鏡像になる中盤を挟んで、出ていく面は
+   前半 (〜90°) でフェードアウト、着地する面は後半 (270°〜) でフェードイン。
+   90°〜270° は両面とも opacity 0 なので鏡像が見えることはない。 */
+@keyframes statusFaceOut {
+  0% {
+    opacity: 1;
+  }
+  25% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes statusFaceIn {
+  0% {
+    opacity: 0;
+  }
+  75% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 .status-flip-face {
@@ -3734,12 +3775,21 @@
   min-width: 0;
 }
 
-/* アニメ中だけ両面が重なるので backface を隠す。止まると 1 枚しか
-   描画しないので不要。 */
+/* 回転中の面割り当て。is-flipped はトグル後 (=着地先) の状態を表すので、
+   着地先の面 = フェードイン、出ていく面 = フェードアウト。 */
+.status-flip.is-animating.is-flipped .status-flip-front,
+.status-flip.is-animating:not(.is-flipped) .status-flip-back {
+  animation: statusFaceOut 0.72s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.status-flip.is-animating.is-flipped .status-flip-back,
+.status-flip.is-animating:not(.is-flipped) .status-flip-front {
+  animation: statusFaceIn 0.72s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 回転中は誤クリック防止。鏡像隠しは opacity キーフレームで行うため
+   backface-visibility には依存しない。 */
 .status-flip.is-animating .status-flip-face {
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  /* 回転中の誤クリック防止。 */
   pointer-events: none;
 }
 
@@ -3754,10 +3804,8 @@
   gap: 8px;
   /* 裏面はどこをタップしても回るので面全体をボタン扱いにする。 */
   cursor: pointer;
-  /* inner の rotateY(turns*180) を打ち消して裏面コンテンツを正立させる。
-     flat (停止中) では mirror×mirror=正立、3D (アニメ中) では 180+180=
-     360=正立。常時付与しておくことで停止/アニメどちらも正しい向き。 */
-  transform: rotateY(180deg);
+  /* 旧方式の rotateY(180) 打ち消しは廃止 (コインフリップ方式では面を回転
+     させず、回転は inner だけが行い鏡像中は opacity で隠すため不要)。 */
 }
 
 /* 裏のマップカードは表のステータスカードと同じ枠を満たすよう伸縮させ、
