@@ -15807,6 +15807,11 @@ function App() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ ...SPRING_SOFT, delay: 0.06 }}
       >
+        {/* ユーザー要望でトップナビを左から
+            ホーム → 日報 → ライブラリ → 作業部屋 → プロフィール の順に固定。
+            モバイル bottom-nav（ホーム/日報/作業部屋/ライブラリ/プロフィール）
+            と同じ 5 つの主要 view を並べ、PC でもメニューを掘らずに
+            切り替えられるようにする。 */}
         <nav className="topbar-nav" aria-label="Main navigation">
           <button
             type="button"
@@ -15815,8 +15820,26 @@ function App() {
           >
             {t("ホーム")}
           </button>
-          {/* 作業部屋を「ホームの直後」=動線上で必ず通る位置に移動。
-              在室者がいるときは小さなドットとカウントを添えて、
+          {/* 日報はこのアプリで最も使う画面。ナビ内で唯一グリーン
+              アクセント（先頭ドット + 緑タグ）を与えて「ここを開く」
+              という主動線を一目で分かるようにする。DESIGN.md の
+              「アクセント = primary 緑を“ここを見て”だけに使う」に従う。 */}
+          <button
+            type="button"
+            className={`daily-tab${currentView === "daily" ? " is-active" : ""}`}
+            onClick={() => setCurrentView("daily")}
+          >
+            <span className="daily-tab-dot" aria-hidden="true" />
+            {t("日報")}
+          </button>
+          <button
+            type="button"
+            className={currentView === "learning" ? "is-active" : ""}
+            onClick={() => setCurrentView("learning")}
+          >
+            {t("ライブラリ")}
+          </button>
+          {/* 作業部屋。在室者がいるときは小さなドットとカウントを添えて、
               「今、誰かが居る」気配を静かに伝える（煽らない）。 */}
           <button
             type="button"
@@ -15840,22 +15863,10 @@ function App() {
           </button>
           <button
             type="button"
-            className={currentView === "learning" ? "is-active" : ""}
-            onClick={() => setCurrentView("learning")}
+            className={currentView === "profile" ? "is-active" : ""}
+            onClick={() => setCurrentView("profile")}
           >
-            {t("ライブラリ")}
-          </button>
-          {/* 日報はこのアプリで最も使う画面。ナビ内で唯一グリーン
-              アクセント（先頭ドット + 緑タグ）を与えて「ここを開く」
-              という主動線を一目で分かるようにする。DESIGN.md の
-              「アクセント = primary 緑を“ここを見て”だけに使う」に従う。 */}
-          <button
-            type="button"
-            className={`daily-tab${currentView === "daily" ? " is-active" : ""}`}
-            onClick={() => setCurrentView("daily")}
-          >
-            <span className="daily-tab-dot" aria-hidden="true" />
-            {t("日報")}
+            {t("プロフィール")}
           </button>
         </nav>
 
