@@ -15949,13 +15949,16 @@
 @media (max-width: 1180px) {
   .premium-dashboard-header {
     top: 14px;
-    align-items: stretch;
-    flex-direction: column;
+    /* topbar-context が player status カードを内包していた頃は縦積みが
+       必要だったが、現在は nav + 記録する + avatar の 3 要素のみ。狭幅でも
+       1 行に収まるので row(横並び)のまま中央揃えで詰め、avatar が単独行に
+       落ちて迷子になるのを防ぐ。≤720 はこの下のモバイル用ルールが上書き。 */
+    align-items: center;
     gap: 12px;
   }
 
   .premium-dashboard-header .user-session {
-    justify-content: stretch;
+    justify-content: flex-end;
   }
 
   .premium-dashboard-header .workspace-nav-button {
