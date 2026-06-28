@@ -39299,6 +39299,10 @@ select:disabled {
    ライト専用（ダークは純黒設計を維持）。
    ========================================================= */
 html:not([data-theme="dark"]) .daily-screen {
+  /* daily-screen 自身は中央カラム幅にしか広がらないため、
+     スクロール内のローカル背景としてはそのまま色を持たせつつ、
+     viewport 全幅の紙背景は下の ::before(fixed) が担う。
+     両者は同色なので継ぎ目は出ない。 */
   background-color: #fbf9f2;
   background-image:
     /* 紙の繊維：ごく薄い横の筋 */
@@ -39308,6 +39312,35 @@ html:not([data-theme="dark"]) .daily-screen {
       transparent 1px 4px
     ),
     /* 上からの暖かい光 */
+    radial-gradient(
+      130% 90% at 50% -12%,
+      rgba(255, 252, 244, 0.7),
+      rgba(251, 249, 242, 0) 55%
+    );
+}
+
+/* PC を含む広い画面では app-shell が中央カラムに制限され、daily-screen の
+   紙背景もカラム幅で止まり左右に body のグレーが残る。日報を開いている
+   間だけ、同じ紙テクスチャを viewport 全体(fixed)に敷いて「全画面の手帳の
+   ページ」にする。
+   ※ daily-screen 自身は framer-motion の transform/opacity で stacking
+   context を作るため、その擬似要素を fixed にしても viewport 基準にならない。
+   そこで transform を持たない祖先 .app-shell に :has(.daily-screen) で
+   日報表示時だけ ::before を生やし、viewport 全幅に固定する。z-index:-1 で
+   body 背景の上・全コンテンツの下に敷く。他 view には :has が外れて出ない。 */
+html:not([data-theme="dark"]) .app-shell:has(.daily-screen)::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: #fbf9f2;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(26, 24, 23, 0.014) 0 1px,
+      transparent 1px 4px
+    ),
     radial-gradient(
       130% 90% at 50% -12%,
       rgba(255, 252, 244, 0.7),
