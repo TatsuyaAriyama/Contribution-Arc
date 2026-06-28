@@ -3098,6 +3098,18 @@
 
 /* ヒーローの存在感を一段上げる(余白とタイトルを少し大きく)。森テーマの
    背景・色は既存の .home-screen .contribution-arc-card がそのまま担う。 */
+/* PC/広い画面（feed を畳むと左ペインは最大 1480px まで広がる）では
+   ホームのヒーロー・2 カラム行が横に伸びて間延びする。DESIGN.md の
+   「標準 1080 / サイドバー込み 1200〜1280」の幅帯に収まる 1180px で
+   ホーム全体を中央寄せし、視線の移動距離と行長を引き締める。
+   1024px 未満（タブレット〜狭幅）は従来どおり全幅なので回帰しない。 */
+@media (min-width: 1024px) {
+  .home-screen {
+    max-width: 1180px;
+    margin-inline: auto;
+  }
+}
+
 .home-screen > .contribution-arc-card {
   padding: 22px 26px 18px;
   border-radius: 18px;
@@ -6452,6 +6464,18 @@
   background: var(--surface);
   min-height: 100vh;
   border-radius: 0;
+}
+
+/* PC/広い画面では日報が端から端まで広がり 1 行が長すぎて読みにくい。
+   先に入れた「全画面の紙背景(::before)」はそのまま viewport 全体に残し、
+   本文だけを中央の快適な読み幅に寄せる。padding-inline を使うので
+   daily-screen 直下の子(見出し / サブタブ / エディタカード / 履歴)が
+   まとめて中央 900px に収まる。幅が 900px に満たないときは max() が
+   14px 側を採るので、タブレット〜小型ラップトップでは従来どおり全幅。 */
+@media (min-width: 1024px) {
+  .daily-screen {
+    padding-inline: max(14px, calc((100% - 900px) / 2));
+  }
 }
 
 /* 日報のサブタブ (今日やること / 振り返り / 過去の記録) */
