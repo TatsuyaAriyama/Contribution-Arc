@@ -15951,8 +15951,13 @@
     top: 14px;
     /* topbar-context が player status カードを内包していた頃は縦積みが
        必要だったが、現在は nav + 記録する + avatar の 3 要素のみ。狭幅でも
-       1 行に収まるので row(横並び)のまま中央揃えで詰め、avatar が単独行に
-       落ちて迷子になるのを防ぐ。≤720 はこの下のモバイル用ルールが上書き。 */
+       1 行に収まるので row(横並び)で中央揃えに詰め、avatar が単独行に
+       落ちて迷子になるのを防ぐ。
+       NOTE: `.site-header`(=このヘッダの別クラス)が `@media (max-width:900px)`
+       で flex-direction:column を当ててくるため、ここで明示的に row へ戻す。
+       両者は specificity 同値だが本ルールの方がソース順で後ろなので勝つ。
+       ≤720 はこの下のモバイル用ルールがさらに上書きする。 */
+    flex-direction: row;
     align-items: center;
     gap: 12px;
   }
