@@ -3088,6 +3088,135 @@
 /* 運営からのお知らせ — 旧 hero-grid を置き換えた告知欄。低彩度・
    余白重視で、煽らず静かに読める縦リスト（MEMORY のデザイン方針）。
    .card のベース枠の上に内側の余白とリストを重ねる。 */
+/* ===============================================================
+   ホーム = ダッシュボード
+   ヒーロー(森のコントリビューションカード)を最上段に全幅で置き、その
+   下を「主動線(クイックアクション)」+「お知らせ」の 2 カラムで構成。
+   PC の横幅を“意図的に”使い、空白で安っぽく見えるのを防ぐ。スマホ/
+   狭幅では 1 カラムへ自然に畳み、既存モバイルの完成度を崩さない。
+   =============================================================== */
+
+/* ヒーローの存在感を一段上げる(余白とタイトルを少し大きく)。森テーマの
+   背景・色は既存の .home-screen .contribution-arc-card がそのまま担う。 */
+.home-screen > .contribution-arc-card {
+  padding: 22px 26px 18px;
+  border-radius: 18px;
+  margin-bottom: 16px;
+}
+.home-screen > .contribution-arc-card .contribution-arc-head-title strong {
+  font-size: 24px;
+}
+
+/* 主役行: 既定 1 カラム。900px 以上で 2 カラム(左=動線 / 右=お知らせ)。 */
+.home-dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+@media (min-width: 900px) {
+  .home-dashboard-grid {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    align-items: start;
+  }
+}
+/* グリッド内カードの下マージンを殺し、間隔は grid gap に一本化。 */
+.home-dashboard-grid > .card {
+  margin-bottom: 0;
+}
+
+/* --- クイックアクション(主動線) --- */
+.home-quick-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px 20px;
+}
+.home-quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.home-quick-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 15px;
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
+  border-radius: 14px;
+  background: rgba(var(--ink-rgb), 0.02);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  transition:
+    transform 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+.home-quick-action:hover {
+  background: rgba(var(--ink-rgb), 0.045);
+  border-color: rgba(var(--ink-rgb), 0.14);
+  transform: translateY(-1px);
+}
+.home-quick-action:active {
+  transform: translateY(0) scale(0.99);
+}
+.home-quick-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 11px;
+  background: rgba(31, 111, 74, 0.12);
+  color: var(--green);
+}
+.home-quick-action-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.home-quick-action-text strong {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  line-height: 1.25;
+}
+.home-quick-action-text small {
+  font-size: 11.5px;
+  line-height: 1.3;
+  color: var(--muted);
+}
+
+/* 日報 = 唯一の塗り CTA(DESIGN.md: 「次のアクション」は near-black 一色)。
+   2×2 グリッドのサイズは保ったまま、塗りで主役だと一目で分かるように。 */
+.home-quick-action.is-primary {
+  background: var(--cta-bg);
+  border-color: var(--cta-bg);
+  color: var(--cta-fg);
+}
+.home-quick-action.is-primary:hover {
+  background: var(--cta-bg);
+  border-color: var(--cta-bg);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 30px rgba(var(--ink-rgb), 0.18);
+}
+.home-quick-action.is-primary .home-quick-action-icon {
+  background: rgba(var(--cta-fg-rgb), 0.16);
+  color: var(--cta-fg);
+}
+.home-quick-action.is-primary .home-quick-action-text strong {
+  color: var(--cta-fg);
+}
+.home-quick-action.is-primary .home-quick-action-text small {
+  color: rgba(var(--cta-fg-rgb), 0.7);
+}
+
 .home-announcements {
   display: flex;
   flex-direction: column;

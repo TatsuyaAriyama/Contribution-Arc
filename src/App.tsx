@@ -15160,18 +15160,6 @@ function App() {
           <div className="contribution-arc-head-title">
             <p className="card-kicker">
               Contribution Arc
-              {!compact ? (
-                <button
-                  type="button"
-                  className="contribution-arc-showcase-link"
-                  onClick={() => setCurrentView("showcase")}
-                  aria-label={t("世界観を見る")}
-                  title={t("世界観を見る")}
-                >
-                  <span aria-hidden="true">✦</span>
-                  <span>{t("世界観")}</span>
-                </button>
-              ) : null}
             </p>
             <strong>
               {t("{hours}時間 学習", { hours: Math.round(contributionArc.totalMinutes / 60) })}
@@ -22893,6 +22881,88 @@ function App() {
         transition={SPRING_SNAPPY}
       >
 
+      {/* ヒーロー: 森のコントリビューションカードはこのプロダクトの“顔”。
+          ダッシュボードの最上段に全幅で据え、ログイン直後に世界観と
+          積み上げが一目で伝わるようにする。 */}
+      {renderContributionArcSection()}
+
+      {/* ダッシュボードの主役行。左=主動線(クイックアクション)、
+          右=運営からのお知らせ。PC では 2 カラムで横幅を活かし、
+          スマホ/狭幅では 1 カラムに畳む。 */}
+      <div className="home-dashboard-grid">
+
+      {/* クイックアクション = 主動線。日報を最優先(唯一の塗り CTA)に、
+          記録・みんなの記録・作業部屋への近道を添える。静的遷移のみで
+          Firestore 読み取りは発生しない。 */}
+      <section className="home-quick-actions card" aria-label={t("クイックアクション")}>
+        <p className="card-kicker">{t("クイックアクション")}</p>
+        <div className="home-quick-actions-grid">
+          <button
+            type="button"
+            className="home-quick-action is-primary"
+            onClick={() => setCurrentView("daily")}
+          >
+            <span className="home-quick-action-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H15l5 5v9.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5z" />
+                <path d="M14 4v5h5M8 13h8M8 17h5" />
+              </svg>
+            </span>
+            <span className="home-quick-action-text">
+              <strong>{t("日報を書く")}</strong>
+              <small>{t("今日の学びを記録")}</small>
+            </span>
+          </button>
+          <button
+            type="button"
+            className="home-quick-action"
+            onClick={() => setCurrentView("learning")}
+          >
+            <span className="home-quick-action-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </span>
+            <span className="home-quick-action-text">
+              <strong>{t("記録する")}</strong>
+              <small>{t("学習・コミットを追加")}</small>
+            </span>
+          </button>
+          <button
+            type="button"
+            className="home-quick-action"
+            onClick={() => setCurrentView("logs")}
+          >
+            <span className="home-quick-action-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="9" cy="8" r="3" />
+                <path d="M3 19a6 6 0 0 1 12 0M16 6.5a3 3 0 0 1 0 5.5M18 19a5 5 0 0 0-3-4.6" />
+              </svg>
+            </span>
+            <span className="home-quick-action-text">
+              <strong>{t("みんなの記録")}</strong>
+              <small>{t("仲間の積み上げを見る")}</small>
+            </span>
+          </button>
+          <button
+            type="button"
+            className="home-quick-action"
+            onClick={() => setCurrentView("workspace")}
+          >
+            <span className="home-quick-action-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="13" rx="2" />
+                <path d="M8 21h8M12 17v4" />
+              </svg>
+            </span>
+            <span className="home-quick-action-text">
+              <strong>{t("作業部屋")}</strong>
+              <small>{t("集中ルームに入る")}</small>
+            </span>
+          </button>
+        </div>
+      </section>
+
       {/* 運営からのお知らせ。ホームには pinned (ウェルカム) を固定で
           先頭に出し、その下に最新 1 件だけ。過去のお知らせはヘッダー
           右の「すべて見る」から一覧モーダルで辿る。中身は ANNOUNCEMENTS
@@ -22999,6 +23069,9 @@ function App() {
         )}
       </section>
 
+      </div>
+      {/* /.home-dashboard-grid */}
+
       {currentUser ? (
         <TutorialHint
           uid={currentUser.uid}
@@ -23058,10 +23131,6 @@ function App() {
           <span className="home-teams-ribbon-arrow" aria-hidden="true">→</span>
         </button>
       ) : null}
-
-      {/* GitHub / 学習のコントリビューションマップ。お知らせをホーム最上部に
-          出す方針に変えたので、このマップは下段へ移動した。 */}
-      {renderContributionArcSection()}
 
       </motion.div>
       )}

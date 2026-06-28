@@ -11,6 +11,9 @@ const isNativeBuild = isElectronBuild || isCapacitorBuild;
 
 export default defineConfig({
   base: isNativeBuild ? "./" : "/Contribution-Arc/",
+  // Honor a PORT env var when provided (the local preview tooling assigns a
+  // port this way). Falls back to Vite's default port-selection otherwise.
+  server: process.env.PORT ? { port: Number(process.env.PORT) } : undefined,
   plugins: [react(), tailwindcss()],
   // ビルドごとに変わる ID。Service Worker の登録 URL に付与して、
   // デプロイのたびに新しい SW として更新が検知されるようにする
