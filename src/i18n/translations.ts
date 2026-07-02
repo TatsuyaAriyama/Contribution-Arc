@@ -1769,6 +1769,9 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "もっと見る ({count} 件)": "Show more ({count})",
   "この日報を削除": "Delete this entry",
 
+  // === Phase 2: ホーム「今日」カード → 日報の振り返りへのブリッジ ===
+  "今日の振り返りを書く": "Write today's reflection",
+
   // === Phase 12: Library status labels rename ===
   "学習中": "Learning",
   "達成済み": "Mastered",

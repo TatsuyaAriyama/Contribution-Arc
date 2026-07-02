@@ -2100,7 +2100,12 @@ function renderReflectionBody(
 
 /* "今日のログから下書きを挿入" 用のサマリ。selectedDailyDate と同じ
  * 学習日に属する studyLogs を subject 別に集計し、1 行の自然文に整形。
- * ログが無ければ空文字を返し、呼び出し側でトーストを出す。 */
+ * ログが無ければ空文字を返し、呼び出し側でトーストを出す。
+ *
+ * Phase 2: 1 行目の集計に加えて、その日のログの note (要点メモ) を
+ * 記録順・重複除去・最大 5 件の箇条書きとして下に添える (振り返りの
+ * 下書きをより具体的にするため)。note が無いログのみの日は従来通り
+ * 1 行のみを返すので、呼び出し側の挙動は変わらない。 */
 function summarizeStudyLogsForDate(
   logs: StudyLog[],
   date: string,
@@ -2126,10 +2131,27 @@ function summarizeStudyLogsForDate(
     t("{subject} {time}", { subject, time: formatStayTime(minutes, language) }),
   );
   const joiner = language === "en" ? ", " : "、";
-  return t("{summary} (合計 {total})", {
+  const headline = t("{summary} (合計 {total})", {
     summary: segments.join(joiner),
     total: formatStayTime(totalMinutes, language),
   });
+
+  // note (要点メモ) を記録順・重複除去で集め、最大 5 件の箇条書きにする。
+  const uniqueNotes: string[] = [];
+  for (const log of todays) {
+    const flattened = (log.note || "").replace(/\s+/g, " ").trim();
+    if (!flattened) continue;
+    if (uniqueNotes.includes(flattened)) continue;
+    uniqueNotes.push(flattened);
+  }
+  if (uniqueNotes.length === 0) return headline;
+  const noteLines = uniqueNotes
+    .slice(0, 5)
+    .map((note) => `- ${note.length > 80 ? note.slice(0, 80) : note}`);
+  if (uniqueNotes.length > 5) {
+    noteLines.push("- …");
+  }
+  return [headline, ...noteLines].join("\n");
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
@@ -8489,6 +8511,14 @@ function App() {
         .reduce((sum, log) => sum + log.minutes, 0),
     [studyLogs, currentLearnerDate],
   );
+  /* Phase 2: 「今日」カード → 日報の振り返りへの静かなブリッジ用。
+     今日の記録が 1 件以上あるのに振り返りが空のままなら、書き忘れの
+     可能性が高いので一行リンクを出す (PRODUCT.md 3. コア動線「振り返る」)。 */
+  const todayHasStudyLogs = studyLogs.some(
+    (log) => getLearnerDate(new Date(log.createdAt)) === currentLearnerDate,
+  );
+  const todayDailyReportForBridge = dailyReports.find((report) => report.date === currentLearnerDate) || null;
+  const todayReflectionIsEmpty = !(todayDailyReportForBridge?.reflection || "").trim();
   // 連続日報ストリーク (今日まで連続して書いた日数)
   const dailyReportStreak = useMemo(() => getDailyReportStreak(dailyReports), [dailyReports]);
   // 日報を 1 枚の画像カードに書き出して共有/保存する。ネイティブな
@@ -23461,6 +23491,22 @@ function App() {
                     <span className="focus-presence-quiet-dot" aria-hidden="true" />
                     {t("いま {n} 人が集中しています", { n: focusPresenceList.length })}
                   </p>
+                ) : null}
+                {todayHasStudyLogs && todayReflectionIsEmpty ? (
+                  <button
+                    type="button"
+                    className="focus-today-daily-link"
+                    onClick={() => {
+                      if (selectedDailyDate !== currentLearnerDate) {
+                        handleDailyDateChange(currentLearnerDate);
+                      }
+                      setCurrentView("daily");
+                      setDailySubTab("reflection");
+                    }}
+                  >
+                    <span>{t("今日の振り返りを書く")}</span>
+                    <span aria-hidden="true">›</span>
+                  </button>
                 ) : null}
               </section>
 

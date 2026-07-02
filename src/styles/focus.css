@@ -544,6 +544,30 @@
   }
 }
 
+/* Phase 2: 今日の記録 → 日報の振り返りへの静かなブリッジ行。
+   CTA でも達成表示でもないので緑は使わず、ink-muted の静かなテキスト
+   リンクに留める（Phase 1 の「緑は CTA とストリークのみ」判断を維持）。 */
+.focus-today-daily-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  text-align: left;
+}
+
+.focus-today-daily-link:active {
+  opacity: 0.7;
+}
+
 /* === 集中の気配 (focusPresence, Phase 2) ===
    ホームの静かな一行 + ロビーの「いま集中している仲間」ミニセクション。
    派手な演出をせず、hairline + muted 文字 + 唯一の緑ドットだけで
