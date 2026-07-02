@@ -1,0 +1,242 @@
+/*
+ * ホーム再構成 (投稿を専用ビューへ分離 + GitHub 草マップカードをホームへ)。
+ *
+ * カード類は既存の focus-today-card (src/styles/focus.css) と同じ
+ * 静かなトーン(surface + hairline + shadow-card)に揃える。DESIGN.md
+ * 準拠のため新しい構造色は増やさない — 草マップのセル色は
+ * .contribution-arc-cell.lv-0〜4 (App.css) をそのまま再利用している。
+ */
+
+/* === GitHub 草マップカード === */
+
+.home-github-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  text-align: left;
+}
+
+.home-github-card:active {
+  transform: scale(0.99);
+}
+
+.home-github-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.home-github-card-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.home-github-card-title strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-github-card-stat {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.home-github-card-stat strong {
+  color: var(--ink-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.home-github-grid {
+  display: flex;
+  gap: 3px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.home-github-grid::-webkit-scrollbar {
+  display: none;
+}
+
+.home-github-week {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+/* contribution-arc-cell はプロフィール裏面 (status-flip-back) と共通の
+   色クラス(lv-0〜4)を再利用する。ホームカードでは 1 セルずつタップして
+   詳細を出す必要がないので、サイズだけ少し詰めて 15 週分がカード幅に
+   収まるようにする。 */
+.home-github-grid .contribution-arc-cell {
+  width: 11px;
+  height: 11px;
+  cursor: default;
+}
+
+.home-github-card-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.home-github-card-empty p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.home-github-card-link-btn {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.home-github-card-link-btn:disabled {
+  opacity: 0.6;
+}
+
+.home-github-card-link-error {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-warm);
+}
+
+.home-github-card-status {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* === 「みんなの投稿」入口行 === */
+
+.home-posts-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 14px 18px;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  text-align: left;
+  position: relative;
+}
+
+.home-posts-entry:active {
+  transform: scale(0.99);
+}
+
+.home-posts-entry-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-right: 20px;
+}
+
+.home-posts-entry-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink-strong);
+}
+
+.home-posts-entry-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.home-posts-entry-preview {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.home-posts-entry-preview strong {
+  flex-shrink: 0;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.home-posts-entry-preview span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-posts-entry-arrow {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  font-size: 18px;
+  color: var(--muted);
+}
+
+/* === 投稿ビュー (app-view-posts) === */
+
+/* app-view-feed / feed-view-header の chrome をそのまま流用し、左端に
+   戻るボタンだけ追加する。ホーム(feed)自身にはこのボタンは出ない。 */
+.feed-view-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.feed-view-back:active {
+  background: rgba(var(--ink-rgb), 0.06);
+}
+
+/* iPhone (~844px 高) でお知らせ→今日カード→GitHub カード→入口行が
+   ほぼ 1 画面に収まるよう、モバイルはカード間の余白を少し詰める。 */
+@media (max-width: 720px) {
+  .home-github-card,
+  .home-posts-entry {
+    margin-bottom: 10px;
+  }
+}

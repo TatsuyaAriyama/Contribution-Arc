@@ -15,9 +15,11 @@ export async function login(page: Page) {
   await page.getByTestId("login-password").fill(E2E_USER.password);
   await page.getByTestId("login-submit").click();
 
-  // After auth resolves, the app renders. The default view is the feed,
-  // whose composer is the most stable "we're in" signal.
-  await expect(page.getByTestId("home-post-textarea")).toBeVisible({
+  // After auth resolves, the app renders. The default view is the home
+  // (feed) screen. Since the home reorg (posts moved to their own view),
+  // the composer no longer lives here — the bottom nav's home tab is the
+  // most stable "we're in" signal instead.
+  await expect(page.getByTestId("bottomnav-home")).toBeVisible({
     timeout: 20_000,
   });
 }

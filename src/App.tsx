@@ -248,6 +248,7 @@ import {
   type Language,
 } from "./i18n/translations";
 import "./App.css";
+import "./styles/home.css";
 
 // ポーカー（Jacks or Better）は開くまでロードしない（バンドル分割）。
 const PokerView = lazy(() => import("./poker/PokerView"));
@@ -1255,6 +1256,9 @@ function getContributionArcLevel(minutes: number): 0 | 1 | 2 | 3 | 4 {
 }
 
 const CONTRIBUTION_ARC_WEEKS = 13;
+// ホームの GitHub 草マップカード専用の週数。プロフィール裏面 (13週) より
+// 少し広く「直近約15週」を見せたいというホーム再構成の決定に合わせる。
+const HOME_GITHUB_WEEKS = 15;
 
 function getContributionArc(logs: StudyLog[]): {
   weeks: ContributionArcWeek[];
@@ -1381,7 +1385,10 @@ type GithubArcDay = {
 };
 type GithubArcWeek = { monthLabel: string | null; days: (GithubArcDay | null)[] };
 
-function getGithubContributionArc(days: { date: string; count: number; level: 0 | 1 | 2 | 3 | 4 }[]): {
+function getGithubContributionArc(
+  days: { date: string; count: number; level: 0 | 1 | 2 | 3 | 4 }[],
+  weeksOverride?: number,
+): {
   weeks: GithubArcWeek[];
   total: number;
   activeDays: number;
@@ -1389,7 +1396,7 @@ function getGithubContributionArc(days: { date: string; count: number; level: 0 
   lastWeekCount: number;
   longestStreak: number;
 } {
-  const WEEKS = CONTRIBUTION_ARC_WEEKS;
+  const WEEKS = weeksOverride ?? CONTRIBUTION_ARC_WEEKS;
   // The endpoint uses ISO "YYYY-MM-DD" keys, but our grid walks with
   // (year, month, day) integers — normalize the lookup map to the same
   // composite key the grid uses so lookups are O(1).
@@ -7872,6 +7879,24 @@ function App() {
     () => (githubContributions ? getGithubContributionArc(githubContributions.days) : null),
     [githubContributions],
   );
+  // ホームの GitHub 草マップカード専用。プロフィール裏面の統合ヒートマップ
+  // (githubContributionArc, 13週・学習と合成) とは別に、GitHub 単体・
+  // 直近 HOME_GITHUB_WEEKS 週分の素のグリッドをホーム用に用意する。
+  // githubContributions は currentView に関係なくアプリ起動時から
+  // フェッチされているので、ここでの計算だけで済み追加の fetch は不要。
+  const homeGithubArc = useMemo(
+    () => (githubContributions ? getGithubContributionArc(githubContributions.days, HOME_GITHUB_WEEKS) : null),
+    [githubContributions],
+  );
+  const homeGithubTodayCount = useMemo(() => {
+    if (!homeGithubArc) return 0;
+    for (const week of homeGithubArc.weeks) {
+      for (const day of week.days) {
+        if (day?.isToday) return day.count;
+      }
+    }
+    return 0;
+  }, [homeGithubArc]);
   // Flatten the GitHub 13-week grid into a date-keyed map so the unified
   // heatmap can look up commit count/level per cell in O(1) and blend it
   // with the study level on the same date.
@@ -15575,7 +15600,16 @@ function App() {
   // The shape mirrors the prior in-home-screen IIFE: build an author lookup,
   // merge posts + workspace recruitments, optionally filter to following, then
   // render composer + tabs + list.
-  const feedSection = (() => {
+  //
+  // 投稿の一覧化ロジック (author 解決 + マージ + フィルタ + ソート) は
+  // feedSection 本体だけでなく、ホームの「みんなの投稿」入口行の件数 /
+  // 最新プレビューでも同じ並びを見せたいので、レンダリング部より前に
+  // 切り出しておいて両方から参照する (ロジックの二重管理を避ける)。
+  type FeedTimelineEntry =
+    | { kind: "post"; id: string; createdAt: string; post: ContributionPostRecord }
+    | { kind: "recruitment"; id: string; createdAt: string; recruitment: WorkspaceRecruitmentRecord };
+
+  const feedAuthorLookup = (() => {
     const authorLookup = new Map<string, RecruitmentAuthor>();
     if (currentUser?.uid) {
       authorLookup.set(currentUser.uid, {
@@ -15604,17 +15638,16 @@ function App() {
         });
       }
     });
+    return authorLookup;
+  })();
 
+  const feedSortedEntries = (() => {
     const followingSet = new Set(following);
     if (currentUser?.uid) {
       followingSet.add(currentUser.uid);
     }
 
-    type FeedEntry =
-      | { kind: "post"; id: string; createdAt: string; post: ContributionPostRecord }
-      | { kind: "recruitment"; id: string; createdAt: string; recruitment: WorkspaceRecruitmentRecord };
-
-    const allEntries: FeedEntry[] = [
+    const allEntries: FeedTimelineEntry[] = [
       ...posts
         /* 旧スタイル「学習の記録」カード (postType === "auto-study" の
            subject 無しレガシー) はもう描画しない。新しい学習記録は
@@ -15641,9 +15674,14 @@ function App() {
        手動 / auto-study / auto-workspace / recruitment 全て表示。 */
     const filtered = scopeFiltered;
 
-    const sorted = filtered.sort(
+    return filtered.sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
+  })();
+
+  const feedSection = (() => {
+    const authorLookup = feedAuthorLookup;
+    const sorted = feedSortedEntries;
 
     return (
       <section className="home-feed-section" aria-label={t("投稿")}>
@@ -15757,6 +15795,28 @@ function App() {
         </div>
       </section>
     );
+  })();
+
+  // ホーム「みんなの投稿」入口行用の軽量プレビュー。件数と並びは
+  // feedSortedEntries (feedSection と共通) をそのまま使い、先頭 1 件だけ
+  // 著者名 + 本文冒頭を抜き出す。投稿が無ければ null のまま (プレビュー省略)。
+  const homePostsLatestPreview = (() => {
+    const latest = feedSortedEntries[0];
+    if (!latest) return null;
+    if (latest.kind === "post") {
+      const authorName = feedAuthorLookup.get(latest.post.userId)?.displayName || "Builder";
+      const text = (latest.post.text || "").trim();
+      return {
+        authorName,
+        text: text.length > 40 ? `${text.slice(0, 40)}…` : text,
+      };
+    }
+    const authorName = feedAuthorLookup.get(latest.recruitment.userId)?.displayName || "Builder";
+    const text = (latest.recruitment.message || latest.recruitment.task || latest.recruitment.roomName || "").trim();
+    return {
+      authorName,
+      text: text.length > 40 ? `${text.slice(0, 40)}…` : text,
+    };
   })();
 
   return (
@@ -23562,8 +23622,151 @@ function App() {
                 ) : null}
               </section>
 
-              {feedSection}
+              {/* GitHub 草マップカード(ホーム再構成)。プロフィールのステータス
+                  カード裏面にあった GitHub コントリビューション表示を、
+                  プロフィールを開かなくても見えるようホーム最上段に引き上げる。
+                  セルの色はステータスカード裏面と同じ contribution-arc-cell の
+                  lv-0〜4 をそのまま再利用し、見た目のトーンを揃える。 */}
+              <section
+                className="home-github-card"
+                aria-label="GitHub"
+                role="button"
+                tabIndex={0}
+                onClick={() => setCurrentView("profile")}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setCurrentView("profile");
+                  }
+                }}
+              >
+                <div className="home-github-card-head">
+                  <div className="home-github-card-title">
+                    <span className="card-kicker">GITHUB</span>
+                    {githubUsername ? <strong>@{githubUsername}</strong> : null}
+                  </div>
+                  {githubUsername && homeGithubArc ? (
+                    <span className="home-github-card-stat">
+                      {homeGithubTodayCount > 0 ? (
+                        <>
+                          {t("今日")} <strong>{homeGithubTodayCount}</strong> commit
+                        </>
+                      ) : (
+                        <>
+                          {t("直近{weeks}週", { weeks: HOME_GITHUB_WEEKS })}{" "}
+                          <strong>{homeGithubArc.total}</strong> commit
+                        </>
+                      )}
+                    </span>
+                  ) : null}
+                </div>
+
+                {!githubUsername ? (
+                  <div className="home-github-card-empty">
+                    <p>{t("GitHub を連携すると、コミットの積み上げがここに並びます")}</p>
+                    <button
+                      type="button"
+                      className="home-github-card-link-btn"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        if (IS_IOS_BUILD) {
+                          handleSettingsOpen();
+                        } else {
+                          void handleLinkGithub();
+                        }
+                      }}
+                      disabled={isLinkingGithub}
+                    >
+                      {isLinkingGithub ? t("連携中…") : t("連携する")}
+                    </button>
+                    {linkGithubError ? (
+                      <p className="home-github-card-link-error">{linkGithubError}</p>
+                    ) : null}
+                  </div>
+                ) : homeGithubArc ? (
+                  <div
+                    className="home-github-grid"
+                    role="img"
+                    aria-label={t("直近{weeks}週のGitHub活動", { weeks: HOME_GITHUB_WEEKS })}
+                  >
+                    {homeGithubArc.weeks.map((week, wIndex) => (
+                      <div className="contribution-arc-week home-github-week" key={wIndex}>
+                        {week.days.map((day, dIndex) =>
+                          day ? (
+                            <span
+                              key={dIndex}
+                              className={`contribution-arc-cell lv-${day.level}${day.isToday ? " today" : ""}`}
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            <span key={dIndex} className="contribution-arc-cell empty" aria-hidden="true" />
+                          ),
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="home-github-card-status">
+                    {githubContributionsError
+                      ? t("GitHub データの取得に失敗しました")
+                      : t("GitHub データを読み込み中…")}
+                  </p>
+                )}
+              </section>
+
+              {/* 「みんなの投稿」入口行(ホーム再構成)。投稿フィード自体は
+                  専用ビュー (posts) に分離し、ホームには件数 + 最新 1 件の
+                  プレビューだけを残して 1 画面に収まる構成にする。 */}
+              <button
+                type="button"
+                className="home-posts-entry"
+                data-testid="home-posts-entry"
+                onClick={() => setCurrentView("posts")}
+              >
+                <div className="home-posts-entry-head">
+                  <span className="home-posts-entry-title">{t("みんなの投稿")}</span>
+                  <span className="home-posts-entry-count">
+                    {t("{count} 件", { count: feedSortedEntries.length.toLocaleString() })}
+                  </span>
+                </div>
+                {homePostsLatestPreview ? (
+                  <p className="home-posts-entry-preview">
+                    <strong>{homePostsLatestPreview.authorName}</strong>
+                    {homePostsLatestPreview.text ? <span>{homePostsLatestPreview.text}</span> : null}
+                  </p>
+                ) : null}
+                <span className="home-posts-entry-arrow" aria-hidden="true">
+                  ›
+                </span>
+              </button>
             </PullToRefresh>
+          </div>
+        </article>
+      ) : null}
+
+      {/* 投稿専用ビュー(ホーム再構成)。ホームの「みんなの投稿」入口行から
+          遷移するサブ画面という位置づけなので、ボトムナビの「ホーム」タブは
+          このビュー表示中もアクティブのままにする(下の mobile-bottom-nav
+          の判定を参照)。 */}
+      {currentView === "posts" ? (
+        <article className="app-view-feed app-view-posts">
+          <header className="feed-view-header">
+            <button
+              type="button"
+              className="feed-view-back"
+              onClick={() => setCurrentView("feed")}
+              aria-label={t("戻る")}
+            >
+              ‹
+            </button>
+            <h1>{t("投稿")}</h1>
+          </header>
+          <div
+            className={`feed-view-content${
+              isProfileHydrated ? " is-hydrated" : " is-hydrating"
+            }`}
+          >
+            <PullToRefresh onRefresh={handleFeedRefresh}>{feedSection}</PullToRefresh>
           </div>
         </article>
       ) : null}
@@ -23702,8 +23905,16 @@ function App() {
           three-column desktop layout — hide the feed there too and let
           the report's native two-column view use the full width.
           On every other view the right pane respects the user's
-          isFeedOpen preference (default true, persisted to localStorage). */}
-      {currentView !== "workspace" && currentView !== "feed" && currentView !== "daily" && isFeedOpen ? (
+          isFeedOpen preference (default true, persisted to localStorage).
+          "posts" は投稿フィード専用ビューそのもの (フルブリードの
+          app-view-posts) なので、その裏で同じ feedSection をもう一度
+          two-pane-right として重ねて出すと DOM が二重化して data-testid
+          が衝突する。feed と同じ扱いで隠す。 */}
+      {currentView !== "workspace" &&
+      currentView !== "feed" &&
+      currentView !== "posts" &&
+      currentView !== "daily" &&
+      isFeedOpen ? (
         <aside className="two-pane-right" aria-label={t("投稿")}>
           {feedSection}
         </aside>
@@ -23718,8 +23929,10 @@ function App() {
           矢印の向き = パネルの動く方向で直感的に：開いているときは右向き
           (›＝右へ畳む)、畳んでいるときは左向き (‹＝左へ引き出す)。
           2 カラムになる ≥1081px でのみ意味を持つので、それ未満は CSS で
-          非表示（狭い幅では投稿は bottom-nav のホームから辿れる）。 */}
-      {currentView !== "workspace" && currentView !== "feed" ? (
+          非表示（狭い幅では投稿は bottom-nav のホームから辿れる）。
+          "posts" は two-pane-right 自体を出さないので、このトグルも
+          feed と同様に隠す。 */}
+      {currentView !== "workspace" && currentView !== "feed" && currentView !== "posts" ? (
         <button
           type="button"
           className={`feed-dock-toggle${isFeedOpen ? " is-open" : ""}`}
@@ -23772,7 +23985,7 @@ function App() {
           <button
             type="button"
             data-testid="bottomnav-home"
-            className={currentView === "feed" ? "is-active" : ""}
+            className={currentView === "feed" || currentView === "posts" ? "is-active" : ""}
             onClick={() => setCurrentView("feed")}
             aria-label={t("ホーム")}
           >

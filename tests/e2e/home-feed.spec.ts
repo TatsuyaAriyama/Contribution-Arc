@@ -1,7 +1,17 @@
 // ゴール① ホーム画面: 自由投稿 / フィード閲覧 / スクロール
 // Auth + Firestore Emulator 前提（npm run test:e2e / verify.sh が起動）。
+//
+// ホーム再構成 (投稿を専用ビューへ分離) 後は、投稿の composer / フィード
+// 一覧はホーム (feed view) ではなく「みんなの投稿」入口行から遷移する
+// posts view にある。各テストはまずそこへ移動してから投稿を作成する。
 import { test, expect, type Page } from "@playwright/test";
 import { login } from "./fixtures/login";
+
+// ホームの「みんなの投稿」入口行から posts view へ遷移する。
+async function goToPosts(page: Page) {
+  await page.getByTestId("home-posts-entry").click();
+  await expect(page.getByTestId("home-post-textarea")).toBeVisible();
+}
 
 // composer から1件投稿し、フィード先頭に現れるまで待つ。
 async function createPost(page: Page, body: string) {
@@ -17,6 +27,7 @@ test.describe("home feed", () => {
   // W-E2E-HOME-POST: 自由投稿がフィードに出る
   test("自由投稿を作成するとフィードに出現する", async ({ page }) => {
     await login(page);
+    await goToPosts(page);
     const body = `e2e-post-${Date.now()}`;
     await createPost(page, body);
   });
@@ -24,6 +35,7 @@ test.describe("home feed", () => {
   // W-E2E-HOME-SCROLL: 複数投稿してスクロールしても投稿が欠落しない
   test("フィードをスクロールしても投稿が欠落しない", async ({ page }) => {
     await login(page);
+    await goToPosts(page);
 
     const stamp = Date.now();
     const COUNT = 12;
@@ -61,6 +73,7 @@ test.describe("home feed", () => {
   // 閾値で）。PerformanceObserver('longtask') で >50ms タスクを数える。
   test("スクロール中の long task が閾値以下", async ({ page }) => {
     await login(page);
+    await goToPosts(page);
 
     // スクロールできるだけの投稿を用意する。
     const stamp = Date.now();

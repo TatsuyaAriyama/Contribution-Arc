@@ -250,6 +250,12 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "集中にもどる":                "Back to focus",
   "{n}日連続":                   "{n}-day streak",
   "直近7日の学習時間":            "Study time over the last 7 days",
+  // ─── Home GitHub card (ホーム再構成: 投稿を専用ビューへ分離) ──
+  "GitHub を連携すると、コミットの積み上げがここに並びます":
+    "Link GitHub and your commit streak shows up here",
+  "連携する":                    "Link",
+  "直近{weeks}週":               "Last {weeks}w",
+  "直近{weeks}週のGitHub活動":    "GitHub activity, last {weeks} weeks",
   // ─── Focus presence (集中の気配, Phase 2) ───────────────────
   "いま {n} 人が集中しています": "{n} people are focusing right now",
   "いま集中している仲間":        "Focusing right now",
@@ -327,6 +333,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
 
   // ─── Posts & Feed ───────────────────────────────────────────
   "投稿":                        "Post",
+  "みんなの投稿":                "Everyone's posts",
   "返信":                        "Reply",
   "投稿の投稿に失敗しました。":  "Couldn't post. Please try again.",
   "あなたの学習を投稿すると、誰かの励みになります":

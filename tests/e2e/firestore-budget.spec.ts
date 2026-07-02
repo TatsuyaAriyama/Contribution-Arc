@@ -46,8 +46,10 @@ test("1セッションの Firestore ランタイム書き込み/読み取りが�
   await page.getByTestId("learning-editor-name").fill(`budget-${Date.now()}`);
   await page.getByTestId("learning-editor-save").click();
   await expect(page.getByTestId("learning-card-trigger").first()).toBeVisible();
-  // ホームへ戻って1件投稿（もう1バースト）
+  // ホームへ戻って1件投稿（もう1バースト）。投稿の composer はホーム再構成
+  // で専用の posts view に分離されたので、「みんなの投稿」入口行から移動する。
   await page.getByTestId("bottomnav-home").click();
+  await page.getByTestId("home-posts-entry").click();
   await page.getByTestId("home-post-textarea").fill(`budget-post-${Date.now()}`);
   await page.getByTestId("home-post-submit").click();
   await expect(page.getByTestId("feed-post").first()).toBeVisible();
