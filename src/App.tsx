@@ -23696,6 +23696,13 @@ function App() {
                 tabIndex={0}
                 onClick={() => setCurrentView("profile")}
                 onKeyDown={(event) => {
+                  // カード内には日セル・詳細スロットの閉じるボタン等、本物の
+                  // <button> がネストしている。それらにフォーカスした状態で
+                  // Enter/Space を押すと keydown がこのカードまでバブリングし、
+                  // 本来の意図(セルの選択/解除、閉じる)と無関係にプロフィールへ
+                  // 遷移してしまう。カード自身がフォーカスされている場合のみ
+                  // 反応させる(クリックは各子要素側で stopPropagation 済み)。
+                  if (event.target !== event.currentTarget) return;
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
                     setCurrentView("profile");
