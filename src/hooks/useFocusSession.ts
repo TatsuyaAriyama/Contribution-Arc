@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   clearFocusSession,
-  elapsedMinutes,
+  focusWorkMinutes,
   getElapsedMs,
+  getPomodoroState,
   loadFocusSession,
   pauseSession,
   resumeSession,
   saveFocusSession,
   startSession,
+  type FocusMode,
   type FocusSession,
   type FocusTarget,
+  type PomodoroState,
 } from "../services/focusSession";
 
 export type UseFocusSessionResult = {
@@ -17,10 +20,12 @@ export type UseFocusSessionResult = {
   /** 計測中は 1 秒毎に更新。一時停止中は tick を止め凍結する。 */
   elapsedMs: number;
   isPaused: boolean;
-  start: (target: FocusTarget) => void;
+  /** mode !== "pomodoro" のセッションでは null。1 秒 tick と同期して更新。 */
+  pomodoro: PomodoroState | null;
+  start: (target: FocusTarget, mode?: FocusMode) => void;
   pause: () => void;
   resume: () => void;
-  /** 経過分数を返してセッションを clear する。0 分なら 1 分に繰り上げる。 */
+  /** 記録すべき学習分数(focusWorkMinutes)を返してセッションを clear する。0 分なら 1 分に繰り上げる。 */
   end: () => number | null;
   discard: () => void;
 };
@@ -39,6 +44,10 @@ export function useFocusSession(): UseFocusSessionResult {
     const restored = loadFocusSession();
     return restored ? getElapsedMs(restored) : 0;
   });
+  const [pomodoro, setPomodoro] = useState<PomodoroState | null>(() => {
+    const restored = loadFocusSession();
+    return restored ? getPomodoroState(restored) : null;
+  });
 
   // 最新の session を effect / callback から同期的に読むための ref。
   // (setState の非同期性に依存せず、end()/discard() が呼ばれた瞬間の
@@ -54,7 +63,10 @@ export function useFocusSession(): UseFocusSessionResult {
 
     const tick = () => {
       const current = sessionRef.current;
-      if (current) setElapsedMs(getElapsedMs(current));
+      if (!current) return;
+      const now = Date.now();
+      setElapsedMs(getElapsedMs(current, now));
+      setPomodoro(getPomodoroState(current, now));
     };
     tick();
     const intervalId = window.setInterval(tick, 1000);
@@ -67,17 +79,21 @@ export function useFocusSession(): UseFocusSessionResult {
     const handleVisibilityChange = () => {
       if (document.visibilityState !== "visible") return;
       const current = sessionRef.current;
-      if (current) setElapsedMs(getElapsedMs(current));
+      if (!current) return;
+      const now = Date.now();
+      setElapsedMs(getElapsedMs(current, now));
+      setPomodoro(getPomodoroState(current, now));
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
 
-  const start = useCallback((target: FocusTarget) => {
-    const next = startSession(target);
+  const start = useCallback((target: FocusTarget, mode: FocusMode = "stopwatch") => {
+    const next = startSession(target, Date.now(), mode);
     saveFocusSession(next);
     setSession(next);
     setElapsedMs(0);
+    setPomodoro(getPomodoroState(next));
   }, []);
 
   const pause = useCallback(() => {
@@ -87,6 +103,7 @@ export function useFocusSession(): UseFocusSessionResult {
     saveFocusSession(next);
     setSession(next);
     setElapsedMs(getElapsedMs(next));
+    setPomodoro(getPomodoroState(next));
   }, []);
 
   const resume = useCallback(() => {
@@ -96,15 +113,17 @@ export function useFocusSession(): UseFocusSessionResult {
     saveFocusSession(next);
     setSession(next);
     setElapsedMs(getElapsedMs(next));
+    setPomodoro(getPomodoroState(next));
   }, []);
 
   const end = useCallback((): number | null => {
     const current = sessionRef.current;
     if (!current) return null;
-    const minutes = elapsedMinutes(current);
+    const minutes = focusWorkMinutes(current);
     clearFocusSession();
     setSession(null);
     setElapsedMs(0);
+    setPomodoro(null);
     return minutes > 0 ? minutes : 1;
   }, []);
 
@@ -113,12 +132,14 @@ export function useFocusSession(): UseFocusSessionResult {
     clearFocusSession();
     setSession(null);
     setElapsedMs(0);
+    setPomodoro(null);
   }, []);
 
   return {
     session,
     elapsedMs,
     isPaused: session !== null && session.pausedAt !== null,
+    pomodoro,
     start,
     pause,
     resume,

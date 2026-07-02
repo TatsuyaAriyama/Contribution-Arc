@@ -1,6 +1,6 @@
 import "../styles/focus.css";
 import { useTranslation } from "../i18n/LanguageContext";
-import type { FocusSession } from "../services/focusSession";
+import type { FocusSession, PomodoroState } from "../services/focusSession";
 
 /**
  * 計測中に画面下部・ボトムナビの上へ浮くグローバルミニバー。
@@ -12,6 +12,7 @@ type Props = {
   session: FocusSession | null;
   elapsedMs: number;
   isPaused: boolean;
+  pomodoro: PomodoroState | null;
   onClick: () => void;
 };
 
@@ -25,10 +26,12 @@ function formatClock(ms: number): string {
   return hours > 0 ? `${pad(hours)}:${pad(minutes)}:${pad(seconds)}` : `${pad(minutes)}:${pad(seconds)}`;
 }
 
-export function FocusMiniBar({ session, elapsedMs, isPaused, onClick }: Props) {
+export function FocusMiniBar({ session, elapsedMs, isPaused, pomodoro, onClick }: Props) {
   const { t } = useTranslation();
 
   if (!session) return null;
+
+  const isPomodoro = session.mode === "pomodoro" && pomodoro !== null;
 
   return (
     <button
@@ -37,9 +40,22 @@ export function FocusMiniBar({ session, elapsedMs, isPaused, onClick }: Props) {
       onClick={onClick}
       aria-label={t("計測中の集中セッションを開く")}
     >
-      <span className={`focus-mini-dot${isPaused ? " is-paused" : ""}`} aria-hidden="true" />
-      <span className="focus-mini-clock">{formatClock(elapsedMs)}</span>
-      <span className="focus-mini-name">{session.target.itemName}</span>
+      <span
+        className={`focus-mini-dot${isPomodoro && pomodoro?.phase === "break" ? " is-break" : ""}${
+          isPaused ? " is-paused" : ""
+        }`}
+        aria-hidden="true"
+      />
+      <span className="focus-mini-clock">
+        {formatClock(isPomodoro && pomodoro ? pomodoro.remainingMs : elapsedMs)}
+      </span>
+      <span className="focus-mini-name">
+        {isPomodoro && pomodoro
+          ? pomodoro.phase === "work"
+            ? t("集中フェーズ")
+            : t("休息フェーズ")
+          : session.target.itemName}
+      </span>
       {isPaused ? <span className="focus-mini-status">{t("一時停止中")}</span> : null}
     </button>
   );

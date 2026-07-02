@@ -16389,7 +16389,8 @@ function App() {
           session={focusSession.session}
           elapsedMs={focusSession.elapsedMs}
           isPaused={focusSession.isPaused}
-          onStart={(target) => focusSession.start(target)}
+          pomodoro={focusSession.pomodoro}
+          onStart={(target, mode) => focusSession.start(target, mode)}
           onPause={() => focusSession.pause()}
           onResume={() => focusSession.resume()}
           onEnd={() => {
@@ -23505,6 +23506,7 @@ function App() {
           session={focusSession.session}
           elapsedMs={focusSession.elapsedMs}
           isPaused={focusSession.isPaused}
+          pomodoro={focusSession.pomodoro}
           onClick={() => setIsFocusSheetOpen(true)}
         />
       ) : null}

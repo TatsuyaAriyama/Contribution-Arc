@@ -1798,6 +1798,8 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "例: 認可ロジックの設計": "e.g. Designing the auth flow",
   "「{task}」を記録に追加": "Add \"{task}\" to your library",
   "ポモドーロ": "Pomodoro",
+  "ストップウォッチ": "Stopwatch",
+  "計測モード": "Timer mode",
   "{n}周目": "Round {n}",
   "集中フェーズ": "Focus phase",
   "休息フェーズ": "Rest phase",

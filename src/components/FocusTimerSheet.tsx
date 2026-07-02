@@ -1,6 +1,8 @@
+import { useState } from "react";
 import "../styles/focus.css";
 import { useTranslation } from "../i18n/LanguageContext";
-import type { FocusSession, FocusTarget } from "../services/focusSession";
+import type { FocusMode, FocusSession, FocusTarget, PomodoroState } from "../services/focusSession";
+import { focusWorkMinutes } from "../services/focusSession";
 
 /**
  * 計測シート(フォーカスセッション)。下から出るフルスクリーンに近い
@@ -11,12 +13,29 @@ import type { FocusSession, FocusTarget } from "../services/focusSession";
  * 過剰な装飾・グラデーションは置かない。
  */
 
+const FOCUS_MODE_STORAGE_KEY = "ca:focus-mode";
+
+function isFocusMode(value: unknown): value is FocusMode {
+  return value === "stopwatch" || value === "pomodoro";
+}
+
+/** 前回選択したモードを localStorage から復元する。無ければ既定の stopwatch。 */
+function readStoredFocusMode(): FocusMode {
+  try {
+    const stored = window.localStorage.getItem(FOCUS_MODE_STORAGE_KEY);
+    return isFocusMode(stored) ? stored : "stopwatch";
+  } catch {
+    return "stopwatch";
+  }
+}
+
 type Props = {
   targets: FocusTarget[];
   session: FocusSession | null;
   elapsedMs: number;
   isPaused: boolean;
-  onStart: (target: FocusTarget) => void;
+  pomodoro: PomodoroState | null;
+  onStart: (target: FocusTarget, mode: FocusMode) => void;
   onPause: () => void;
   onResume: () => void;
   onEnd: () => void;
@@ -39,6 +58,7 @@ export function FocusTimerSheet({
   session,
   elapsedMs,
   isPaused,
+  pomodoro,
   onStart,
   onPause,
   onResume,
@@ -47,12 +67,25 @@ export function FocusTimerSheet({
   onClose,
 }: Props) {
   const { t } = useTranslation();
+  const [mode, setMode] = useState<FocusMode>(() => readStoredFocusMode());
 
   const handleDiscard = () => {
     if (window.confirm(t("この集中セッションを破棄しますか？記録には残りません。"))) {
       onDiscard();
     }
   };
+
+  const handleModeChange = (next: FocusMode) => {
+    setMode(next);
+    try {
+      window.localStorage.setItem(FOCUS_MODE_STORAGE_KEY, next);
+    } catch {
+      /* best-effort。保存できなくても選択自体は使える */
+    }
+  };
+
+  const isPomodoro = session?.mode === "pomodoro" && pomodoro !== null;
+  const workMinutes = session ? focusWorkMinutes(session) : 0;
 
   return (
     <div
@@ -87,13 +120,37 @@ export function FocusTimerSheet({
               <span className="focus-sheet-target-name">{session.target.itemName}</span>
             </div>
 
+            {isPomodoro && pomodoro ? (
+              <p className="focus-sheet-pomo-phase">
+                <span
+                  className={`focus-sheet-dot focus-sheet-dot-sm${
+                    pomodoro.phase === "break" ? " is-break" : ""
+                  }${isPaused ? " is-paused" : ""}`}
+                  aria-hidden="true"
+                />
+                {pomodoro.phase === "work" ? t("集中フェーズ") : t("休息フェーズ")}
+              </p>
+            ) : null}
+
             <div className="focus-sheet-clock">
-              <span
-                className={`focus-sheet-dot${isPaused ? " is-paused" : ""}`}
-                aria-hidden="true"
-              />
-              <span>{formatClock(elapsedMs)}</span>
+              {!isPomodoro ? (
+                <span
+                  className={`focus-sheet-dot${isPaused ? " is-paused" : ""}`}
+                  aria-hidden="true"
+                />
+              ) : null}
+              <span>{formatClock(isPomodoro && pomodoro ? pomodoro.remainingMs : elapsedMs)}</span>
             </div>
+
+            {isPomodoro && pomodoro ? (
+              <p className="focus-sheet-pomo-meta">
+                {t("{n}周目", { n: pomodoro.round })}
+                <span aria-hidden="true"> · </span>
+                {workMinutes}
+                {t("分")}
+              </p>
+            ) : null}
+
             {isPaused ? <p className="focus-sheet-status">{t("一時停止中")}</p> : null}
 
             <div className="focus-sheet-controls">
@@ -120,25 +177,46 @@ export function FocusTimerSheet({
             <p>{t("ライブラリで学習対象を追加してください")}</p>
           </div>
         ) : (
-          <ul className="focus-sheet-list">
-            {targets.map((target) => (
-              <li key={target.itemId}>
-                <button
-                  type="button"
-                  className="focus-sheet-target-row"
-                  onClick={() => onStart(target)}
-                >
-                  <span
-                    className="focus-sheet-target-bar"
-                    style={{ ["--focus-target-color" as string]: target.itemColor }}
-                    aria-hidden="true"
-                  />
-                  <span className="focus-sheet-target-name">{target.itemName}</span>
-                  <span className="focus-sheet-target-cta">{t("集中をはじめる")} ›</span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          <>
+            <div className="focus-sheet-mode-toggle" role="group" aria-label={t("計測モード")}>
+              <button
+                type="button"
+                className={`focus-sheet-mode-btn${mode === "stopwatch" ? " is-active" : ""}`}
+                aria-pressed={mode === "stopwatch"}
+                onClick={() => handleModeChange("stopwatch")}
+              >
+                {t("ストップウォッチ")}
+              </button>
+              <button
+                type="button"
+                className={`focus-sheet-mode-btn${mode === "pomodoro" ? " is-active" : ""}`}
+                aria-pressed={mode === "pomodoro"}
+                onClick={() => handleModeChange("pomodoro")}
+              >
+                {t("ポモドーロ")}
+              </button>
+            </div>
+
+            <ul className="focus-sheet-list">
+              {targets.map((target) => (
+                <li key={target.itemId}>
+                  <button
+                    type="button"
+                    className="focus-sheet-target-row"
+                    onClick={() => onStart(target, mode)}
+                  >
+                    <span
+                      className="focus-sheet-target-bar"
+                      style={{ ["--focus-target-color" as string]: target.itemColor }}
+                      aria-hidden="true"
+                    />
+                    <span className="focus-sheet-target-name">{target.itemName}</span>
+                    <span className="focus-sheet-target-cta">{t("集中をはじめる")} ›</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </section>
     </div>

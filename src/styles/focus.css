@@ -102,6 +102,36 @@
   margin: 0;
 }
 
+/* === モード選択(未計測): ストップウォッチ / ポモドーロ === */
+
+.focus-sheet-mode-toggle {
+  display: inline-flex;
+  align-self: flex-start;
+  background: rgba(var(--ink-rgb), 0.04);
+  border-radius: 10px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.focus-sheet-mode-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  min-height: 32px;
+}
+
+.focus-sheet-mode-btn.is-active {
+  background: var(--surface);
+  color: var(--ink-strong);
+  box-shadow: 0 1px 3px rgba(var(--ink-rgb), 0.08);
+}
+
 .focus-sheet-list {
   list-style: none;
   margin: 0;
@@ -203,9 +233,38 @@
   animation: focus-pulse 1.6s ease-in-out infinite;
 }
 
-.focus-sheet-dot.is-paused {
+.focus-sheet-dot.is-paused,
+.focus-sheet-dot.is-break {
   background: rgba(var(--ink-rgb), 0.28);
   animation: none;
+}
+
+/* ポモドーロのフェーズ表示(集中フェーズ / 休息フェーズ)。派手さは禁物
+   なので、テキスト + 小さいドットのみで静かに伝える。 */
+.focus-sheet-pomo-phase {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.focus-sheet-dot-sm {
+  width: 7px;
+  height: 7px;
+  /* フェーズ切替の合図であって「計測中」の合図ではないため、静かに
+     色だけで伝える(点滅・拍動アニメは載せない)。 */
+  animation: none;
+}
+
+.focus-sheet-pomo-meta {
+  margin: -8px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .focus-sheet-status {
@@ -328,7 +387,8 @@
   animation: focus-pulse 1.6s ease-in-out infinite;
 }
 
-.focus-mini-dot.is-paused {
+.focus-mini-dot.is-paused,
+.focus-mini-dot.is-break {
   background: rgba(var(--ink-rgb), 0.28);
   animation: none;
 }

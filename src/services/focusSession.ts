@@ -14,14 +14,35 @@ export type FocusTarget = {
   category: "book" | "stack";
 };
 
+/** stopwatch = 従来の単純経過計測。pomodoro = 25分work/5分break の導出フェーズ。 */
+export type FocusMode = "stopwatch" | "pomodoro";
+
 export type FocusSession = {
   target: FocusTarget;
+  mode: FocusMode;
   /** epoch ms */
   startedAt: number;
   /** 一時停止中なら epoch ms、計測中/未一時停止なら null */
   pausedAt: number | null;
   /** 一時停止の累計 ms */
   pausedTotalMs: number;
+};
+
+/** ポモドーロの work フェーズ長(ms)。 */
+export const POMODORO_WORK_MS = 25 * 60_000;
+/** ポモドーロの break フェーズ長(ms)。 */
+export const POMODORO_BREAK_MS = 5 * 60_000;
+
+const POMODORO_CYCLE_MS = POMODORO_WORK_MS + POMODORO_BREAK_MS;
+
+export type PomodoroState = {
+  phase: "work" | "break";
+  /** 現在フェーズの残り ms */
+  remainingMs: number;
+  /** 現在何周目か (1 始まり) */
+  round: number;
+  /** 完了した work 周回数 */
+  completedRounds: number;
 };
 
 const STORAGE_KEY = "ca:focus-session";
@@ -31,9 +52,14 @@ const MAX_SESSION_AGE_MS = 24 * 60 * 60 * 1000;
 
 // ===== 純ロジック =====
 
-export function startSession(target: FocusTarget, now: number = Date.now()): FocusSession {
+export function startSession(
+  target: FocusTarget,
+  now: number = Date.now(),
+  mode: FocusMode = "stopwatch",
+): FocusSession {
   return {
     target,
+    mode,
     startedAt: now,
     pausedAt: null,
     pausedTotalMs: 0,
@@ -67,6 +93,51 @@ export function elapsedMinutes(session: FocusSession, now: number = Date.now()):
   return Math.floor(getElapsedMs(session, now) / 60000);
 }
 
+/**
+ * ポモドーロのフェーズは保存しない「導出型」設計。実効経過時間
+ * (getElapsedMs、pause 除外済み)を 30 分サイクル(work 25 分 + break
+ * 5 分)にマップするだけの純関数なので、永続化・復元・一時停止のどの
+ * タイミングで呼んでも壊れない。mode !== "pomodoro" のセッションには
+ * 意味を持たないため null を返す。
+ */
+export function getPomodoroState(session: FocusSession, now: number = Date.now()): PomodoroState | null {
+  if (session.mode !== "pomodoro") return null;
+
+  const elapsed = getElapsedMs(session, now);
+  const cyclesElapsed = Math.floor(elapsed / POMODORO_CYCLE_MS);
+  const inCycle = elapsed % POMODORO_CYCLE_MS;
+  const isWork = inCycle < POMODORO_WORK_MS;
+
+  return {
+    phase: isWork ? "work" : "break",
+    remainingMs: isWork ? POMODORO_WORK_MS - inCycle : POMODORO_CYCLE_MS - inCycle,
+    round: cyclesElapsed + 1,
+    completedRounds: isWork ? cyclesElapsed : cyclesElapsed + 1,
+  };
+}
+
+/**
+ * 記録すべき「学習分数」。stopwatch は従来どおり全経過の floor。
+ * pomodoro は work フェーズ分のみを積算する(break は学習時間に含めない):
+ * 完了した work 周回(25分×completedRounds) + 現在 work フェーズ中なら
+ * そのフェーズの経過分(floor)を足す。
+ */
+export function focusWorkMinutes(session: FocusSession, now: number = Date.now()): number {
+  if (session.mode !== "pomodoro") {
+    return elapsedMinutes(session, now);
+  }
+
+  const state = getPomodoroState(session, now);
+  if (!state) return elapsedMinutes(session, now); // 到達しない防御(mode 不整合時のフォールバック)
+
+  const workMinutesPerRound = POMODORO_WORK_MS / 60000;
+  const completedMinutes = state.completedRounds * workMinutesPerRound;
+  if (state.phase !== "work") return completedMinutes;
+
+  const currentPhaseElapsedMs = POMODORO_WORK_MS - state.remainingMs;
+  return completedMinutes + Math.floor(currentPhaseElapsedMs / 60000);
+}
+
 // ===== 永続化 =====
 
 /** Safari private ブラウジング等で localStorage が例外を投げても握りつぶす。 */
@@ -95,7 +166,15 @@ function isFocusTarget(value: unknown): value is FocusTarget {
   );
 }
 
-function isFocusSession(value: unknown): value is FocusSession {
+function isFocusMode(value: unknown): value is FocusMode {
+  return value === "stopwatch" || value === "pomodoro";
+}
+
+/**
+ * mode は後方互換のため任意扱い(旧保存 JSON に無いケースを許す)。
+ * ただし値が存在するのに不正なら偽を返し、呼び出し側で破棄させる。
+ */
+function isFocusSessionShape(value: unknown): value is Omit<FocusSession, "mode"> & { mode?: unknown } {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Record<string, unknown>;
   return (
@@ -105,7 +184,8 @@ function isFocusSession(value: unknown): value is FocusSession {
     (candidate.pausedAt === null ||
       (typeof candidate.pausedAt === "number" && Number.isFinite(candidate.pausedAt))) &&
     typeof candidate.pausedTotalMs === "number" &&
-    Number.isFinite(candidate.pausedTotalMs)
+    Number.isFinite(candidate.pausedTotalMs) &&
+    (candidate.mode === undefined || isFocusMode(candidate.mode))
   );
 }
 
@@ -132,15 +212,19 @@ export function loadFocusSession(now: number = Date.now()): FocusSession | null 
     const raw = storage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
-    if (!isFocusSession(parsed)) {
+    if (!isFocusSessionShape(parsed)) {
       storage.removeItem(STORAGE_KEY);
       return null;
     }
-    if (now - parsed.startedAt > MAX_SESSION_AGE_MS) {
+    const session: FocusSession = {
+      ...parsed,
+      mode: (parsed.mode as FocusMode | undefined) ?? "stopwatch",
+    };
+    if (now - session.startedAt > MAX_SESSION_AGE_MS) {
       storage.removeItem(STORAGE_KEY);
       return null;
     }
-    return parsed;
+    return session;
   } catch {
     // JSON.parse 失敗 or storage アクセス例外。壊れた値を掃除しておく。
     try {

@@ -5,7 +5,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   clearFocusSession,
   elapsedMinutes,
+  focusWorkMinutes,
   getElapsedMs,
+  getPomodoroState,
   loadFocusSession,
   pauseSession,
   resumeSession,
@@ -158,5 +160,125 @@ describe("loadFocusSession の破棄条件", () => {
     saveFocusSession(session);
     const over = started + 24 * 60 * 60 * 1000 + 1;
     expect(loadFocusSession(over)).toBeNull();
+  });
+
+  it("mode が無い旧保存 JSON は stopwatch として復元する(後方互換)", () => {
+    const storage = (globalThis as { localStorage: Storage }).localStorage;
+    const legacy = {
+      target,
+      startedAt: 1_700_000_000_000,
+      pausedAt: null,
+      pausedTotalMs: 0,
+      // mode フィールドなし
+    };
+    storage.setItem("ca:focus-session", JSON.stringify(legacy));
+    const restored = loadFocusSession(1_700_000_000_000 + 1_000);
+    expect(restored).not.toBeNull();
+    expect(restored?.mode).toBe("stopwatch");
+  });
+
+  it("mode が不正値なら破棄する(null を返す)", () => {
+    const storage = (globalThis as { localStorage: Storage }).localStorage;
+    const invalid = {
+      target,
+      mode: "daily", // FocusMode ではない不正値
+      startedAt: 1_700_000_000_000,
+      pausedAt: null,
+      pausedTotalMs: 0,
+    };
+    storage.setItem("ca:focus-session", JSON.stringify(invalid));
+    expect(loadFocusSession(1_700_000_000_000 + 1_000)).toBeNull();
+    expect(storage.getItem("ca:focus-session")).toBeNull();
+  });
+});
+
+describe("getPomodoroState", () => {
+  it("mode が stopwatch なら null", () => {
+    const session = startSession(target, 0, "stopwatch");
+    expect(getPomodoroState(session, 10_000)).toBeNull();
+  });
+
+  it("開始直後は work フェーズ・round 1・残り25分", () => {
+    const started = 0;
+    const session = startSession(target, started, "pomodoro");
+    const state = getPomodoroState(session, started);
+    expect(state).toEqual({
+      phase: "work",
+      remainingMs: 25 * 60_000,
+      round: 1,
+      completedRounds: 0,
+    });
+  });
+
+  it("26分経過で break フェーズ・残り4分(work 25分の周回は完了扱い)", () => {
+    const started = 0;
+    const session = startSession(target, started, "pomodoro");
+    const state = getPomodoroState(session, started + 26 * 60_000);
+    expect(state).toEqual({
+      phase: "break",
+      remainingMs: 4 * 60_000,
+      round: 1,
+      completedRounds: 1,
+    });
+  });
+
+  it("31分経過で2周目の work に入り、completedRounds は1", () => {
+    const started = 0;
+    const session = startSession(target, started, "pomodoro");
+    const state = getPomodoroState(session, started + 31 * 60_000);
+    expect(state).toEqual({
+      phase: "work",
+      remainingMs: 24 * 60_000,
+      round: 2,
+      completedRounds: 1,
+    });
+  });
+
+  it("一時停止を挟んでも、実効経過(pause 除外)でフェーズが決まる", () => {
+    const started = 0;
+    let session = startSession(target, started, "pomodoro");
+    // 20分経過してから1時間一時停止(この間はフェーズ判定に影響しない)
+    session = pauseSession(session, started + 20 * 60_000);
+    const frozen = getPomodoroState(session, started + 999 * 60_000);
+    expect(frozen).toEqual({
+      phase: "work",
+      remainingMs: 5 * 60_000,
+      round: 1,
+      completedRounds: 0,
+    });
+
+    // 再開してさらに8分(実効経過 = 20分 + 8分 = 28分 → break に入っている)
+    session = resumeSession(session, started + 999 * 60_000);
+    const afterResume = getPomodoroState(session, started + 999 * 60_000 + 8 * 60_000);
+    expect(afterResume).toEqual({
+      phase: "break",
+      remainingMs: 2 * 60_000,
+      round: 1,
+      completedRounds: 1,
+    });
+  });
+});
+
+describe("focusWorkMinutes", () => {
+  it("stopwatch は elapsedMinutes と同じ(従来通り)", () => {
+    const session = startSession(target, 0, "stopwatch");
+    expect(focusWorkMinutes(session, 119_000)).toBe(elapsedMinutes(session, 119_000));
+    expect(focusWorkMinutes(session, 119_000)).toBe(1);
+  });
+
+  it("pomodoro で 26分経過 → break 中なので work 分は 25 のまま増えない", () => {
+    const session = startSession(target, 0, "pomodoro");
+    expect(focusWorkMinutes(session, 26 * 60_000)).toBe(25);
+  });
+
+  it("pomodoro で 31分経過(2周目 work 1分) → 25 + 1 = 26", () => {
+    const session = startSession(target, 0, "pomodoro");
+    expect(focusWorkMinutes(session, 31 * 60_000)).toBe(26);
+  });
+
+  it("pomodoro の break 中は学習分に加算されない", () => {
+    const session = startSession(target, 0, "pomodoro");
+    // 29分経過(break の1分前ではなくbreak内: 25-30分がbreak)
+    expect(focusWorkMinutes(session, 29 * 60_000)).toBe(25);
   });
 });
