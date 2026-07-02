@@ -242,7 +242,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
     "Discard this focus session? It won't be logged.",
   "ライブラリで学習対象を追加してください":
     "Add a learning subject in your library first",
-  "集中をはじめる":              "Start focusing",
+  "作業をはじめる":              "Start working",
   "計測中の集中セッションを開く": "Open the running focus session",
   // ─── Home "今日" hero card (Phase 1 wiring) ─────────────────
   "今日の学習":                  "Today's study",

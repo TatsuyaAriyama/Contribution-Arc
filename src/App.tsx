@@ -23657,7 +23657,7 @@ function App() {
                     className="focus-today-cta"
                     onClick={() => setIsFocusSheetOpen(true)}
                   >
-                    {t("集中をはじめる")}
+                    {t("作業をはじめる")}
                   </button>
                 )}
                 {focusPresenceList.length > 0 ? (

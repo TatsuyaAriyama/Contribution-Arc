@@ -211,7 +211,7 @@ export function FocusTimerSheet({
                       aria-hidden="true"
                     />
                     <span className="focus-sheet-target-name">{target.itemName}</span>
-                    <span className="focus-sheet-target-cta">{t("集中をはじめる")} ›</span>
+                    <span className="focus-sheet-target-cta">{t("作業をはじめる")} ›</span>
                   </button>
                 </li>
               ))}
