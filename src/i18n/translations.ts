@@ -499,6 +499,8 @@ export const EN_TRANSLATIONS: Record<string, string> = {
                                 "Today's builds, learnings, and workroom calls quietly flow here.",
   "気になるエンジニアをフォローすると、ここに学びと作業部屋の募集が流れます。":
                                 "Follow engineers to see their learnings and workroom calls here.",
+  "気になるエンジニアをフォローすると、ここに学びが流れます。「すべて」タブで全員のログを見ることもできます。":
+                                "Follow engineers to see their learnings here. The \"All\" tab shows everyone's logs.",
   "もっと見る":                 "Load more",
 
   // === 日報 ===

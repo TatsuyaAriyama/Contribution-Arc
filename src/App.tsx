@@ -21222,13 +21222,13 @@ function App() {
                 visibleTimelinePosts.map((post) => postCard(post))
               ) : timelineFilter === "following" ? (
                 <article className="log-empty-card">
-                  <p className="card-kicker">Following</p>
+                  <p className="card-kicker">{t("フォロー中")}</p>
                   <strong>{t("フォロー中のログはまだありません。")}</strong>
-                  <span>{t("気になるエンジニアをフォローすると、ここに学びが流れます。Allタブで全員のログを見ることもできます。")}</span>
+                  <span>{t("気になるエンジニアをフォローすると、ここに学びが流れます。「すべて」タブで全員のログを見ることもできます。")}</span>
                 </article>
               ) : (
                 <article className="log-empty-card">
-                  <p className="card-kicker">Quiet Progress</p>
+                  <p className="card-kicker">{t("みんなの積み上げ")}</p>
                   <strong>{t("まだログはありません。")}</strong>
                   <span>{t("今日作っているもの、学んだこと、commitしたことを静かに共有できます。")}</span>
                 </article>
