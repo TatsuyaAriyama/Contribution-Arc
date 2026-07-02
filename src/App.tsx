@@ -184,6 +184,10 @@ import { ShareToXModal } from "./components/ShareToXModal";
 import { TutorialHint } from "./components/TutorialHint";
 import { BarcodeScannerModal } from "./components/BarcodeScannerModal";
 import { LearningRecordModal } from "./components/LearningRecordModal";
+import { useFocusSession } from "./hooks/useFocusSession";
+import { FocusTimerSheet } from "./components/FocusTimerSheet";
+import { FocusMiniBar } from "./components/FocusMiniBar";
+import type { FocusTarget } from "./services/focusSession";
 import streakFlameIcon from "./assets/streak-flame.png";
 import { ToastHost } from "./components/ToastHost";
 import { PullToRefresh } from "./components/PullToRefresh";
@@ -4432,6 +4436,28 @@ function App() {
   const lastAutoPostAtRef = useRef<Record<string, number>>({});
   // 設定モーダルから呼び出す「ホーム画面に追加」インストラクション modal の表示状態。
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
+  // フォーカスセッション(計測)。計測エンジン自体は useFocusSession が
+  // localStorage 永続化・1 秒 tick を持つので、ここではシートの開閉と
+  // 「終了 → 記録モーダルへのプリフィル分数」だけを状態として持つ。
+  const focusSession = useFocusSession();
+  const [isFocusSheetOpen, setIsFocusSheetOpen] = useState(false);
+  const [learningRecordInitialMinutes, setLearningRecordInitialMinutes] = useState<number | null>(
+    null,
+  );
+  // FocusTimerSheet に渡す計測対象一覧。archived は棚から退けた学習対象
+  // なので計測の選択肢からも外す。
+  const focusTargets = useMemo<FocusTarget[]>(
+    () =>
+      learningItems
+        .filter((item) => !item.archived)
+        .map((item) => ({
+          itemId: item.id,
+          itemName: item.name,
+          itemColor: item.color,
+          category: item.category,
+        })),
+    [learningItems],
+  );
   // リロード時の初期 view は "feed"（= bottom-nav のホームに対応する新ホーム）。
   // bottom-nav swap でラベル「ホーム」が view "feed" を指すよう変更したため、
   // 初期表示も「ホーム」と書かれた画面 = feed view にする。
@@ -8361,6 +8387,16 @@ function App() {
   const selectedRoomPosts = selectedRoom ? posts.filter((post) => post.roomId === selectedRoom.id).slice(0, 4) : [];
   const selectedDailyReport = dailyReports.find((report) => report.date === selectedDailyDate) || null;
   const currentLearnerDate = getLearnerDate(new Date(feedNowTick));
+  /* ホーム「今日」ヒーローカード用の今日合計。studyStreak (6 時 cutoff の
+     getLearnerDate 基準) と同じ「学習者の1日」の境界に揃えるため、
+     todayStudyMinutes (calendar-day 基準の getTodayKey) とは別に計算する。 */
+  const todayFocusHeroMinutes = useMemo(
+    () =>
+      studyLogs
+        .filter((log) => getLearnerDate(new Date(log.createdAt)) === currentLearnerDate)
+        .reduce((sum, log) => sum + log.minutes, 0),
+    [studyLogs, currentLearnerDate],
+  );
   // 連続日報ストリーク (今日まで連続して書いた日数)
   const dailyReportStreak = useMemo(() => getDailyReportStreak(dailyReports), [dailyReports]);
   // 日報を 1 枚の画像カードに書き出して共有/保存する。ネイティブな
@@ -16347,6 +16383,36 @@ function App() {
         />
       ) : null}
 
+      {isFocusSheetOpen ? (
+        <FocusTimerSheet
+          targets={focusTargets}
+          session={focusSession.session}
+          elapsedMs={focusSession.elapsedMs}
+          isPaused={focusSession.isPaused}
+          onStart={(target) => focusSession.start(target)}
+          onPause={() => focusSession.pause()}
+          onResume={() => focusSession.resume()}
+          onEnd={() => {
+            // end() はセッションを clear するので、対象の退避は end() の
+            // 前に済ませておく。
+            const target = focusSession.session?.target;
+            const minutes = focusSession.end();
+            setIsFocusSheetOpen(false);
+            const stillExists = target ? learningItems.some((it) => it.id === target.itemId) : false;
+            if (minutes && target && stillExists) {
+              setLearningRecordInitialMinutes(minutes);
+              setLearningRecordItemId(target.itemId);
+            }
+            // 対象が削除済みの場合はトースト等を出さずシートを閉じるだけでよい。
+          }}
+          onDiscard={() => {
+            focusSession.discard();
+            setIsFocusSheetOpen(false);
+          }}
+          onClose={() => setIsFocusSheetOpen(false)}
+        />
+      ) : null}
+
       {(() => {
         const recordItem = learningRecordItemId
           ? learningItems.find((it) => it.id === learningRecordItemId)
@@ -16357,8 +16423,15 @@ function App() {
             itemName={recordItem.name}
             itemColor={recordItem.color}
             category={recordItem.category}
-            onClose={() => setLearningRecordItemId(null)}
-            onSubmit={(values) => handleSaveLearningRecord(recordItem, values)}
+            initialMinutes={learningRecordInitialMinutes ?? undefined}
+            onClose={() => {
+              setLearningRecordItemId(null);
+              setLearningRecordInitialMinutes(null);
+            }}
+            onSubmit={(values) => {
+              handleSaveLearningRecord(recordItem, values);
+              setLearningRecordInitialMinutes(null);
+            }}
             onEdit={() => {
               setLearningRecordItemId(null);
               setLearningDetailId(recordItem.id);
@@ -23188,6 +23261,59 @@ function App() {
                   <span className="home-notice-banner-chevron" aria-hidden="true">›</span>
                 </button>
               ) : null}
+
+              {/* 「今日」ヒーローカード(PRODUCT.md 3. コア動線 / 6. UX 原則 1)。
+                  開いて 1 秒で今日の合計・ストリーク・集中の入口が分かる
+                  ようホーム最上段に置く。計測中は「集中にもどる」に切替わり、
+                  ミニバーと同じ経路(シートを開く)に合流する。 */}
+              <section className="focus-today-card" aria-label={t("今日")}>
+                <div className="focus-today-head">
+                  <span className="focus-today-kicker">{t("今日")}</span>
+                  <span className="focus-today-date">{formatDailyDate(currentLearnerDate, language)}</span>
+                </div>
+                <div className="focus-today-stats">
+                  <div className="focus-today-stat">
+                    <span className="focus-today-stat-label">{t("今日の学習")}</span>
+                    <span className="focus-today-stat-value">
+                      {formatStudyTimeJa(todayFocusHeroMinutes, language)}
+                    </span>
+                  </div>
+                  <div className="focus-today-stat">
+                    <span className="focus-today-stat-label">{t("ストリーク")}</span>
+                    {studyStreak > 0 ? (
+                      <span className="focus-today-stat-value focus-today-streak">
+                        {t("{n}日連続", { n: studyStreak })}
+                      </span>
+                    ) : (
+                      <span className="focus-today-stat-value focus-today-stat-muted">
+                        {t("今日からはじめよう")}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {focusSession.session ? (
+                  <button
+                    type="button"
+                    className="focus-today-cta focus-today-cta-active"
+                    onClick={() => setIsFocusSheetOpen(true)}
+                  >
+                    <span className="focus-today-cta-dot" aria-hidden="true" />
+                    <span>{t("集中にもどる")}</span>
+                    <span className="focus-today-cta-clock">
+                      {formatStudyTimeJa(Math.max(1, Math.round(focusSession.elapsedMs / 60000)), language)}
+                    </span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="focus-today-cta"
+                    onClick={() => setIsFocusSheetOpen(true)}
+                  >
+                    {t("集中をはじめる")}
+                  </button>
+                )}
+              </section>
+
               {feedSection}
             </PullToRefresh>
           </div>
@@ -23368,6 +23494,19 @@ function App() {
           </span>
           <span className="feed-dock-toggle-label">{t("投稿")}</span>
         </button>
+      ) : null}
+
+      {/* 計測中のグローバルミニバー。シートを閉じていても計測は続くので、
+          どの画面にいても経過時間を確認して戻れるようにする。オンボー
+          ディング中(welcome)はまだ計測を始めていない・出しても混乱する
+          だけなので隠す。 */}
+      {focusSession.session && !isFocusSheetOpen && onboardingStep !== "welcome" ? (
+        <FocusMiniBar
+          session={focusSession.session}
+          elapsedMs={focusSession.elapsedMs}
+          isPaused={focusSession.isPaused}
+          onClick={() => setIsFocusSheetOpen(true)}
+        />
       ) : null}
 
       {/* Mobile-only bottom navigation. Visible at ≤720px (CSS-gated).

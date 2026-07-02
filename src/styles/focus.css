@@ -363,3 +363,123 @@
     animation: none;
   }
 }
+
+/* === ホーム「今日」ヒーローカード ===
+   静かなカード。緑は CTA と ストリーク数字のみに絞り、それ以外は
+   ink/muted のみで構成する（派手な装飾・グラデーション禁止）。 */
+
+.focus-today-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.focus-today-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.focus-today-kicker {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-strong);
+}
+
+.focus-today-date {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.focus-today-stats {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.focus-today-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.focus-today-stat-label {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.focus-today-stat-value {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.focus-today-streak {
+  color: var(--green);
+}
+
+.focus-today-stat-muted {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.focus-today-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 18px;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+}
+
+.focus-today-cta:active {
+  transform: scale(0.98);
+}
+
+.focus-today-cta-active {
+  justify-content: flex-start;
+  padding-left: 18px;
+}
+
+.focus-today-cta-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--green);
+  flex-shrink: 0;
+  animation: focus-pulse 1.6s ease-in-out infinite;
+}
+
+.focus-today-cta-clock {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  opacity: 0.85;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-today-cta-dot {
+    animation: none;
+  }
+}
