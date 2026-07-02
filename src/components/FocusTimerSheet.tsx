@@ -197,25 +197,24 @@ export function FocusTimerSheet({
               </button>
             </div>
 
-            <ul className="focus-sheet-list">
+            <div className="focus-sheet-target-grid">
               {targets.map((target) => (
-                <li key={target.itemId}>
-                  <button
-                    type="button"
-                    className="focus-sheet-target-row"
-                    onClick={() => onStart(target, mode)}
+                <button
+                  key={target.itemId}
+                  type="button"
+                  className="focus-sheet-target-card"
+                  onClick={() => onStart(target, mode)}
+                  aria-label={t("{name}で作業をはじめる", { name: target.itemName })}
+                >
+                  <span
+                    className={`focus-sheet-target-photo${target.photo ? "" : " is-fallback"}`}
                   >
-                    <span
-                      className="focus-sheet-target-bar"
-                      style={{ ["--focus-target-color" as string]: target.itemColor }}
-                      aria-hidden="true"
-                    />
-                    <span className="focus-sheet-target-name">{target.itemName}</span>
-                    <span className="focus-sheet-target-cta">{t("作業をはじめる")} ›</span>
-                  </button>
-                </li>
+                    {target.photo ? <img src={target.photo} alt="" loading="lazy" /> : null}
+                  </span>
+                  <strong className="focus-sheet-target-card-name">{target.itemName}</strong>
+                </button>
               ))}
-            </ul>
+            </div>
           </>
         )}
       </section>

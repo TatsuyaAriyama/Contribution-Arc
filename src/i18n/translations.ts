@@ -243,6 +243,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "ライブラリで学習対象を追加してください":
     "Add a learning subject in your library first",
   "作業をはじめる":              "Start working",
+  "{name}で作業をはじめる":      "Start working on {name}",
   "計測中の集中セッションを開く": "Open the running focus session",
   // ─── Home "今日" hero card (Phase 1 wiring) ─────────────────
   "今日の学習":                  "Today's study",

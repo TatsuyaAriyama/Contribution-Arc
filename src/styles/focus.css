@@ -132,33 +132,74 @@
   box-shadow: 0 1px 3px rgba(var(--ink-rgb), 0.08);
 }
 
-.focus-sheet-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+/* === 対象を選ぶ = ライブラリと同じ表紙+タイトルの 4 列グリッド ===
+   .learning-grid/.learning-card はドラッグ並べ替え・クイック記録チップ
+   等のロジックと密結合しているため使い回さず、見た目だけをここに再現
+   する専用クラスにする(src/App.css:25031 以降のライブラリ実装と揃える)。 */
+.focus-sheet-target-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  column-gap: 10px;
+  row-gap: 16px;
+}
+
+.focus-sheet-target-card {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 8px;
-}
-
-.focus-sheet-target-row {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface);
-  color: var(--ink);
+  border: none;
+  background: transparent;
+  padding: 0;
   cursor: pointer;
-  text-align: left;
   font: inherit;
-  min-height: 44px;
+  color: inherit;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.focus-sheet-target-row:active {
-  background: rgba(var(--ink-rgb), 0.04);
+.focus-sheet-target-photo {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.focus-sheet-target-photo.is-fallback {
+  aspect-ratio: 3 / 4;
+}
+
+.focus-sheet-target-photo img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+.focus-sheet-target-card-name {
+  width: 100%;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  text-align: center;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.focus-sheet-target-card:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: 8px;
 }
 
 .focus-sheet-target-bar {
@@ -178,13 +219,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.focus-sheet-target-cta {
-  flex-shrink: 0;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--green);
 }
 
 /* === 計測中 === */

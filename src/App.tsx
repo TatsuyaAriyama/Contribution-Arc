@@ -4498,6 +4498,7 @@ function App() {
           itemName: item.name,
           itemColor: item.color,
           category: item.category,
+          photo: item.photo,
         })),
     [learningItems],
   );

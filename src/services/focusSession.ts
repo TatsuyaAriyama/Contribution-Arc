@@ -12,6 +12,8 @@ export type FocusTarget = {
   itemName: string;
   itemColor: string;
   category: "book" | "stack";
+  /** 表紙/アイコン写真 (data URL)。ライブラリと同じ表紙表示に使う。 */
+  photo?: string;
 };
 
 /** stopwatch = 従来の単純経過計測。pomodoro = 25分work/5分break の導出フェーズ。 */
