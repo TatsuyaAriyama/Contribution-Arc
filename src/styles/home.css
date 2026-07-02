@@ -50,17 +50,57 @@
   white-space: nowrap;
 }
 
-.home-github-card-stat {
-  flex-shrink: 0;
-  font-size: 12px;
+/* 連動ストリーク stat 行(PRODUCT.md 独自性1: 積み上げの可視化 × GitHub
+   連携)。focus-today-stat (focus.css) と似た視覚言語だが、home-github-card
+   専用に home.css 側で完結させる新規クラス。3列均等 grid。 */
+.home-github-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.home-github-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--canvas);
+}
+
+.home-github-stat-label {
+  font-size: 11px;
   font-weight: 600;
+  letter-spacing: 0.02em;
   color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.home-github-card-stat strong {
+.home-github-stat-value {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.2;
   color: var(--ink-strong);
   font-variant-numeric: tabular-nums;
+}
+
+/* 「連動日数」だけは緑(AGENTS.md: 緑は Streak/Growth/Success に使用可)。 */
+.home-github-stat-value-synced {
+  color: var(--green);
+}
+
+.home-github-stat-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--green);
+  flex-shrink: 0;
 }
 
 .home-github-grid {
@@ -90,6 +130,13 @@
   width: 11px;
   height: 11px;
   cursor: default;
+}
+
+/* 連動セル(その日に学習ログ + GitHub コミットの両方がある)。既存の
+   lv-0〜4 の塗りはそのまま活かし、静かな緑のリングだけを内側に重ねる
+   (塗りつぶしは変更しない)。 */
+.home-github-grid .contribution-arc-cell.is-synced {
+  box-shadow: 0 0 0 1.5px var(--green) inset;
 }
 
 .home-github-card-empty {

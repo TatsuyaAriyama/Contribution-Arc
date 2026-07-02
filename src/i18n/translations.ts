@@ -256,6 +256,17 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "連携する":                    "Link",
   "直近{weeks}週":               "Last {weeks}w",
   "直近{weeks}週のGitHub活動":    "GitHub activity, last {weeks} weeks",
+  // ─── Home GitHub card: 連動ストリーク(学習ログ×GitHubコミット) ──
+  // "最長連続" は Phase 4 監査セクション(下記)に既存キーがあるため重複させない。
+  "現在の連続":                  "Current streak",
+  "連動日数":                    "Synced days",
+  "{n}日":                       "{n}d",
+  "今日まで連続でコミットした日数":
+    "Consecutive days with a commit, up to today",
+  "これまでで最も長く続いたコミットの連続日数":
+    "The longest streak of consecutive commit days",
+  "学習とGitHub、両方積み上げた日":
+    "Days you logged study time and shipped a commit",
   // ─── Focus presence (集中の気配, Phase 2) ───────────────────
   "いま {n} 人が集中しています": "{n} people are focusing right now",
   "いま集中している仲間":        "Focusing right now",

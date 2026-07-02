@@ -142,12 +142,14 @@ import {
   formatStayTime,
   formatStudyTimeJa,
   getCurrentWeekKey,
+  getDateInputValue,
   getLearnerDate,
   getTodayKey,
   getWeekStart,
 } from "./utils/format";
 import { resolveCoins, resolveOwnedShapes } from "./utils/characterProgress";
 import { getDueDailyReminder } from "./utils/dailyReminder";
+import { computeSyncedStreak } from "./utils/syncedStreak";
 import {
   createCheckoutSession,
   createPortalSession,
@@ -1395,6 +1397,7 @@ function getGithubContributionArc(
   thisWeekCount: number;
   lastWeekCount: number;
   longestStreak: number;
+  currentStreak: number;
 } {
   const WEEKS = weeksOverride ?? CONTRIBUTION_ARC_WEEKS;
   // The endpoint uses ISO "YYYY-MM-DD" keys, but our grid walks with
@@ -1465,6 +1468,10 @@ function getGithubContributionArc(
     thisWeekCount: weekCounts[weekCounts.length - 1] || 0,
     lastWeekCount: weekCounts[weekCounts.length - 2] || 0,
     longestStreak,
+    // ループは startDate → 今日まで順に進み、count>0 で +1・0 でリセットする
+    // ため、ループ終了時点の currentStreak がそのまま「今日で終わる現在の
+    // 連続日数」になる(今日が非アクティブなら 0)。
+    currentStreak,
   };
 }
 
@@ -7888,15 +7895,46 @@ function App() {
     () => (githubContributions ? getGithubContributionArc(githubContributions.days, HOME_GITHUB_WEEKS) : null),
     [githubContributions],
   );
-  const homeGithubTodayCount = useMemo(() => {
-    if (!homeGithubArc) return 0;
-    for (const week of homeGithubArc.weeks) {
-      for (const day of week.days) {
-        if (day?.isToday) return day.count;
-      }
+  // 「連動ストリーク」(PRODUCT.md 独自性1: 積み上げの可視化 × GitHub 連携)。
+  // GitHub 本家プロフィールには無い「学習とコードの両方を積み上げた日」を
+  // studyLogs × githubContributions の掛け合わせで可視化する。
+  const homeGithubActiveDatesIso = useMemo(() => {
+    const set = new Set<string>();
+    if (!githubContributions) return set;
+    for (const day of githubContributions.days) {
+      if (day.count > 0) set.add(day.date);
     }
-    return 0;
-  }, [homeGithubArc]);
+    return set;
+  }, [githubContributions]);
+  const homeStudyActiveDatesIso = useMemo(() => {
+    const set = new Set<string>();
+    for (const log of studyLogs) {
+      const d = new Date(log.createdAt);
+      if (Number.isNaN(d.getTime())) continue;
+      set.add(getDateInputValue(d));
+    }
+    return set;
+  }, [studyLogs]);
+  // 今日から遡って HOME_GITHUB_WEEKS*7 日分の ISO 日付を昇順(古い→新しい、
+  // 末尾が今日)で生成する。ローカル日付ベース(UTC ではない)なので、
+  // 草マップ本体(getGithubContributionArc も同じくローカル new Date() 基準)
+  // と同じ window を見る。
+  const homeSyncedWindowDates = useMemo(() => {
+    const days = HOME_GITHUB_WEEKS * 7;
+    const dates: string[] = [];
+    const cursor = new Date();
+    cursor.setHours(0, 0, 0, 0);
+    cursor.setDate(cursor.getDate() - (days - 1));
+    for (let i = 0; i < days; i++) {
+      dates.push(getDateInputValue(cursor));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return dates;
+  }, []);
+  const homeSyncedStreak = useMemo(
+    () => computeSyncedStreak(homeSyncedWindowDates, homeGithubActiveDatesIso, homeStudyActiveDatesIso),
+    [homeSyncedWindowDates, homeGithubActiveDatesIso, homeStudyActiveDatesIso],
+  );
   // Flatten the GitHub 13-week grid into a date-keyed map so the unified
   // heatmap can look up commit count/level per cell in O(1) and blend it
   // with the study level on the same date.
@@ -23645,21 +23683,30 @@ function App() {
                     <span className="card-kicker">GITHUB</span>
                     {githubUsername ? <strong>@{githubUsername}</strong> : null}
                   </div>
-                  {githubUsername && homeGithubArc ? (
-                    <span className="home-github-card-stat">
-                      {homeGithubTodayCount > 0 ? (
-                        <>
-                          {t("今日")} <strong>{homeGithubTodayCount}</strong> commit
-                        </>
-                      ) : (
-                        <>
-                          {t("直近{weeks}週", { weeks: HOME_GITHUB_WEEKS })}{" "}
-                          <strong>{homeGithubArc.total}</strong> commit
-                        </>
-                      )}
-                    </span>
-                  ) : null}
                 </div>
+
+                {/* 連動ストリーク stat 行(PRODUCT.md 独自性1)。GitHub 本家プロフィール
+                    には無い「連続日数」に加え、学習ログと GitHub コミットの両方が
+                    積み上がった日を可視化する。データ未取得時は出さない。 */}
+                {githubUsername && homeGithubArc ? (
+                  <div className="home-github-stats">
+                    <div className="home-github-stat" title={t("今日まで連続でコミットした日数")}>
+                      <span className="home-github-stat-label">{t("現在の連続")}</span>
+                      <span className="home-github-stat-value">{t("{n}日", { n: homeGithubArc.currentStreak })}</span>
+                    </div>
+                    <div className="home-github-stat" title={t("これまでで最も長く続いたコミットの連続日数")}>
+                      <span className="home-github-stat-label">{t("最長連続")}</span>
+                      <span className="home-github-stat-value">{t("{n}日", { n: homeGithubArc.longestStreak })}</span>
+                    </div>
+                    <div className="home-github-stat" title={t("学習とGitHub、両方積み上げた日")}>
+                      <span className="home-github-stat-label">{t("連動日数")}</span>
+                      <span className="home-github-stat-value home-github-stat-value-synced">
+                        <span className="home-github-stat-dot" aria-hidden="true" />
+                        {t("{n}日", { n: homeSyncedStreak.totalSyncedDays })}
+                      </span>
+                    </div>
+                  </div>
+                ) : null}
 
                 {!githubUsername ? (
                   <div className="home-github-card-empty">
@@ -23691,17 +23738,23 @@ function App() {
                   >
                     {homeGithubArc.weeks.map((week, wIndex) => (
                       <div className="contribution-arc-week home-github-week" key={wIndex}>
-                        {week.days.map((day, dIndex) =>
-                          day ? (
+                        {week.days.map((day, dIndex) => {
+                          if (!day) {
+                            return <span key={dIndex} className="contribution-arc-cell empty" aria-hidden="true" />;
+                          }
+                          const dayIso = getDateInputValue(day.date);
+                          const isSynced =
+                            homeGithubActiveDatesIso.has(dayIso) && homeStudyActiveDatesIso.has(dayIso);
+                          return (
                             <span
                               key={dIndex}
-                              className={`contribution-arc-cell lv-${day.level}${day.isToday ? " today" : ""}`}
+                              className={`contribution-arc-cell lv-${day.level}${day.isToday ? " today" : ""}${
+                                isSynced ? " is-synced" : ""
+                              }`}
                               aria-hidden="true"
                             />
-                          ) : (
-                            <span key={dIndex} className="contribution-arc-cell empty" aria-hidden="true" />
-                          ),
-                        )}
+                          );
+                        })}
                       </div>
                     ))}
                   </div>
