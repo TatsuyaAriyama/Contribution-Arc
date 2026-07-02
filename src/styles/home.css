@@ -123,13 +123,13 @@
 }
 
 /* contribution-arc-cell はプロフィール裏面 (status-flip-back) と共通の
-   色クラス(lv-0〜4)を再利用する。ホームカードでは 1 セルずつタップして
-   詳細を出す必要がないので、サイズだけ少し詰めて 15 週分がカード幅に
-   収まるようにする。 */
+   色クラス(lv-0〜4)を再利用する。ホームカードはサイズだけ少し詰めて
+   15 週分がカード幅に収まるようにする。各セルは button 化されており
+   タップで日別詳細(home-github-detail)を開く。 */
 .home-github-grid .contribution-arc-cell {
   width: 11px;
   height: 11px;
-  cursor: default;
+  cursor: pointer;
 }
 
 /* 連動セル(その日に学習ログ + GitHub コミットの両方がある)。既存の
@@ -137,6 +137,88 @@
    (塗りつぶしは変更しない)。 */
 .home-github-grid .contribution-arc-cell.is-synced {
   box-shadow: 0 0 0 1.5px var(--green) inset;
+}
+
+/* 選択中セル。is-synced (inset box-shadow) と共存できるよう、選択の
+   強調は outline で行う(box-shadow は上と競合しないが、視覚的にも
+   別レイヤーとして重ねやすい)。強い色や拡大アニメは使わず、控えめな
+   ink 系の外側リングのみ。 */
+.home-github-grid .contribution-arc-cell.selected {
+  outline: 2px solid rgba(var(--ink-rgb), 0.7);
+  outline-offset: 1.5px;
+  position: relative;
+  z-index: 1;
+}
+
+/* === 選択日の詳細(グリッド直下・固定スロット) ===
+   プロフィール裏面の contribution-arc-detail と同じ設計判断: セル位置に
+   浮かせるツールチップはカードの 3D フリップを揺らす原因になった教訓が
+   あるため採用せず、グリッドの外に固定表示する。 */
+.home-github-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.home-github-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.home-github-detail-head strong {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-strong);
+}
+
+.home-github-detail-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.home-github-detail-close:active {
+  background: rgba(var(--ink-rgb), 0.06);
+}
+
+.home-github-detail-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.home-github-detail-synced {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--green);
+}
+
+.home-github-detail-empty {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
 }
 
 .home-github-card-empty {

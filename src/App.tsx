@@ -7895,6 +7895,22 @@ function App() {
     () => (githubContributions ? getGithubContributionArc(githubContributions.days, HOME_GITHUB_WEEKS) : null),
     [githubContributions],
   );
+  // ホームの GitHub カードでタップされた日(ISO文字列)。プロフィール裏面の
+  // selectedArcDayKey と同じ考え方で、フリップの外(固定スロット)に詳細を
+  // 出すため、選択状態はグリッドの外まで持ち回れる文字列で持つ。
+  const [homeSelectedGithubDayIso, setHomeSelectedGithubDayIso] = useState<string | null>(null);
+  // homeGithubArc.weeks を ISO日付キーの Map に平らにして、選択日の
+  // commit数/level を O(1) で引けるようにする(githubByKey と同じ発想)。
+  const homeGithubArcByIso = useMemo(() => {
+    const map = new Map<string, GithubArcDay>();
+    if (!homeGithubArc) return map;
+    for (const week of homeGithubArc.weeks) {
+      for (const day of week.days) {
+        if (day) map.set(getDateInputValue(day.date), day);
+      }
+    }
+    return map;
+  }, [homeGithubArc]);
   // 「連動ストリーク」(PRODUCT.md 独自性1: 積み上げの可視化 × GitHub 連携)。
   // GitHub 本家プロフィールには無い「学習とコードの両方を積み上げた日」を
   // studyLogs × githubContributions の掛け合わせで可視化する。
@@ -7906,15 +7922,23 @@ function App() {
     }
     return set;
   }, [githubContributions]);
-  const homeStudyActiveDatesIso = useMemo(() => {
-    const set = new Set<string>();
+  // ISO日付 → その日の学習合計分数。ホームカードの選択日詳細スロットで
+  // 学習時間を出すのに使うほか、活動日 Set (homeStudyActiveDatesIso) も
+  // ここから導出してロジックの重複を避ける。
+  const homeStudyMinutesByIso = useMemo(() => {
+    const map = new Map<string, number>();
     for (const log of studyLogs) {
       const d = new Date(log.createdAt);
       if (Number.isNaN(d.getTime())) continue;
-      set.add(getDateInputValue(d));
+      const iso = getDateInputValue(d);
+      map.set(iso, (map.get(iso) ?? 0) + log.minutes);
     }
-    return set;
+    return map;
   }, [studyLogs]);
+  const homeStudyActiveDatesIso = useMemo(
+    () => new Set(homeStudyMinutesByIso.keys()),
+    [homeStudyMinutesByIso],
+  );
   // 今日から遡って HOME_GITHUB_WEEKS*7 日分の ISO 日付を昇順(古い→新しい、
   // 末尾が今日)で生成する。ローカル日付ベース(UTC ではない)なので、
   // 草マップ本体(getGithubContributionArc も同じくローカル new Date() 基準)
@@ -23745,13 +23769,26 @@ function App() {
                           const dayIso = getDateInputValue(day.date);
                           const isSynced =
                             homeGithubActiveDatesIso.has(dayIso) && homeStudyActiveDatesIso.has(dayIso);
+                          const isSelected = homeSelectedGithubDayIso === dayIso;
+                          const dayMinutes = homeStudyMinutesByIso.get(dayIso) ?? 0;
+                          const ariaParts: string[] = [];
+                          if (day.count > 0) ariaParts.push(`${day.count}commit`);
+                          if (dayMinutes > 0) ariaParts.push(`${t("学習")}${formatStudyTimeJa(dayMinutes)}`);
+                          const ariaLabel = `${day.date.getMonth() + 1}${t("月")}${day.date.getDate()}${t("日")} ${
+                            ariaParts.length > 0 ? ariaParts.join(" / ") : t("記録なし")
+                          }`;
                           return (
-                            <span
+                            <button
+                              type="button"
                               key={dIndex}
                               className={`contribution-arc-cell lv-${day.level}${day.isToday ? " today" : ""}${
                                 isSynced ? " is-synced" : ""
-                              }`}
-                              aria-hidden="true"
+                              }${isSelected ? " selected" : ""}`}
+                              aria-label={ariaLabel}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setHomeSelectedGithubDayIso((prev) => (prev === dayIso ? null : dayIso));
+                              }}
                             />
                           );
                         })}
@@ -23765,6 +23802,54 @@ function App() {
                       : t("GitHub データを読み込み中…")}
                   </p>
                 )}
+
+                {/* 選択日の詳細(グリッドの外・固定スロット)。プロフィール裏面の
+                    contribution-arc-detail と同じ理由 — セル位置に浮かせる
+                    ツールチップはカードの3D揺れの原因になった教訓があるため
+                    採用しない。 */}
+                {homeSelectedGithubDayIso ? (() => {
+                  const [y, m, d] = homeSelectedGithubDayIso.split("-").map((n) => Number(n));
+                  const selectedDate = new Date(y, (m ?? 1) - 1, d ?? 1);
+                  const selectedCommits = homeGithubArcByIso.get(homeSelectedGithubDayIso)?.count ?? 0;
+                  const selectedMinutes = homeStudyMinutesByIso.get(homeSelectedGithubDayIso) ?? 0;
+                  const weekdayLabel = [t("日"), t("月"), t("火"), t("水"), t("木"), t("金"), t("土")][selectedDate.getDay()];
+                  return (
+                    <div className="home-github-detail" role="region" aria-label={t("選択日の学習詳細")}>
+                      <div className="home-github-detail-head">
+                        <strong>
+                          {selectedDate.getMonth() + 1}/{selectedDate.getDate()} {weekdayLabel}{t("曜")}
+                        </strong>
+                        <button
+                          type="button"
+                          className="home-github-detail-close"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setHomeSelectedGithubDayIso(null);
+                          }}
+                          aria-label={t("閉じる")}
+                        >
+                          ×
+                        </button>
+                      </div>
+                      {selectedCommits === 0 && selectedMinutes === 0 ? (
+                        <p className="home-github-detail-empty">{t("記録なし")}</p>
+                      ) : (
+                        <div className="home-github-detail-body">
+                          {selectedCommits > 0 ? <span>{selectedCommits} commit</span> : null}
+                          {selectedMinutes > 0 ? (
+                            <span>{t("学習")} {formatStudyTimeJa(selectedMinutes)}</span>
+                          ) : null}
+                          {selectedCommits > 0 && selectedMinutes > 0 ? (
+                            <span className="home-github-detail-synced">
+                              <span className="home-github-stat-dot" aria-hidden="true" />
+                              {t("この日は連動")}
+                            </span>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })() : null}
               </section>
 
               {/* 「みんなの投稿」入口行(ホーム再構成)。投稿フィード自体は

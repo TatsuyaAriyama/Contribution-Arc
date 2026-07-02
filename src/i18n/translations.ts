@@ -267,6 +267,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
     "The longest streak of consecutive commit days",
   "学習とGitHub、両方積み上げた日":
     "Days you logged study time and shipped a commit",
+  "この日は連動":                "Synced day",
   // ─── Focus presence (集中の気配, Phase 2) ───────────────────
   "いま {n} 人が集中しています": "{n} people are focusing right now",
   "いま集中している仲間":        "Focusing right now",
