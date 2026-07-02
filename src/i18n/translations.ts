@@ -228,6 +228,21 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "ページ":                      "Page",
   "更新":                        "Update",
 
+  // ─── Focus session (計測) ────────────────────────────────────
+  "集中セッション":              "Focus session",
+  "閉じても計測はつづきます":    "Timing keeps running after you close this",
+  "一時停止中":                  "Paused",
+  // 「一時停止」は Phase 13b (ポモドーロ) セクションで既に定義済み。
+  "再開":                        "Resume",
+  "終了して記録":                "End & log",
+  "破棄する":                    "Discard",
+  "この集中セッションを破棄しますか？記録には残りません。":
+    "Discard this focus session? It won't be logged.",
+  "ライブラリで学習対象を追加してください":
+    "Add a learning subject in your library first",
+  "集中をはじめる":              "Start focusing",
+  "計測中の集中セッションを開く": "Open the running focus session",
+
   // ─── Workspace & Rooms ──────────────────────────────────────
   "Silent Workspace":            "Silent Workspace",
   // === Profile week chart ===

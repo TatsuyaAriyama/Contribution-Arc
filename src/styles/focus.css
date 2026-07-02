@@ -1,0 +1,365 @@
+/**
+ * focus.css — フォーカスセッション計測 UI(FocusTimerSheet / FocusMiniBar)
+ * 専用スタイル。App.css には触れず、ここに自己完結させる。
+ * クラス名は `focus-` プレフィックスに統一。
+ *
+ * 色は index.css の CSS 変数(--ink / --surface / --line / --green /
+ * --cta-bg 等)のみを使う。[data-theme="dark"] で自動的に polarity flip
+ * するので、ここではダーク専用のルールを書かない。
+ */
+
+/* === FocusTimerSheet: backdrop + シート本体 === */
+
+.focus-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(17, 24, 39, 0.4);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+@media (min-width: 600px) {
+  .focus-sheet-backdrop {
+    align-items: center;
+  }
+}
+
+.focus-sheet {
+  width: 100%;
+  max-width: 440px;
+  max-height: 92vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 16px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  border: 1px solid var(--line);
+  border-radius: 22px 22px 0 0;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-soft);
+}
+
+@media (min-width: 600px) {
+  .focus-sheet {
+    border-radius: 20px;
+  }
+}
+
+.focus-sheet-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.focus-sheet-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink-strong);
+}
+
+.focus-sheet-close {
+  justify-self: end;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.focus-sheet-close:active {
+  background: rgba(var(--ink-rgb), 0.06);
+}
+
+.focus-sheet-hint {
+  margin: -10px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* === 対象選択(未計測) === */
+
+.focus-sheet-empty {
+  padding: 32px 8px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.focus-sheet-empty p {
+  margin: 0;
+}
+
+.focus-sheet-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.focus-sheet-target-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  min-height: 44px;
+}
+
+.focus-sheet-target-row:active {
+  background: rgba(var(--ink-rgb), 0.04);
+}
+
+.focus-sheet-target-bar {
+  width: 4px;
+  align-self: stretch;
+  min-height: 20px;
+  border-radius: 999px;
+  background: var(--focus-target-color, var(--green));
+  flex-shrink: 0;
+}
+
+.focus-sheet-target-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.focus-sheet-target-cta {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--green);
+}
+
+/* === 計測中 === */
+
+.focus-sheet-active {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0 4px;
+}
+
+.focus-sheet-target {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.focus-sheet-target .focus-sheet-target-bar {
+  height: 16px;
+  min-height: 0;
+}
+
+.focus-sheet-target .focus-sheet-target-name {
+  font-size: 15px;
+}
+
+.focus-sheet-clock {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: var(--ink-strong);
+}
+
+.focus-sheet-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--green);
+  animation: focus-pulse 1.6s ease-in-out infinite;
+}
+
+.focus-sheet-dot.is-paused {
+  background: rgba(var(--ink-rgb), 0.28);
+  animation: none;
+}
+
+.focus-sheet-status {
+  margin: -8px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.focus-sheet-controls {
+  width: 100%;
+  display: flex;
+  gap: 10px;
+}
+
+.focus-btn {
+  flex: 1;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.focus-btn-secondary {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+}
+
+.focus-btn-secondary:active {
+  background: rgba(var(--ink-rgb), 0.04);
+}
+
+.focus-btn-primary {
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+}
+
+.focus-btn-primary:active {
+  transform: scale(0.97);
+}
+
+.focus-sheet-discard {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 10px;
+}
+
+.focus-sheet-discard:active {
+  color: var(--accent-warm);
+}
+
+@keyframes focus-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.82);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-sheet-dot {
+    animation: none;
+  }
+}
+
+/* === FocusMiniBar: 計測中のグローバルミニバー === */
+
+.focus-mini-bar {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  z-index: 90; /* .mobile-bottom-nav (70) より上、モーダル (100+) より下 */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(var(--surface-rgb), 0.96);
+  backdrop-filter: blur(16px) saturate(1.05);
+  -webkit-backdrop-filter: blur(16px) saturate(1.05);
+  box-shadow: var(--shadow-card);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.focus-mini-bar:active {
+  transform: translateX(-50%) scale(0.98);
+}
+
+@media (max-width: 720px) {
+  .focus-mini-bar {
+    /* .mobile-bottom-nav の高さ(padding込みで概ね 68-72px) + 余白の分だけ持ち上げる。 */
+    bottom: calc(72px + 12px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+.focus-mini-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--green);
+  flex-shrink: 0;
+  animation: focus-pulse 1.6s ease-in-out infinite;
+}
+
+.focus-mini-dot.is-paused {
+  background: rgba(var(--ink-rgb), 0.28);
+  animation: none;
+}
+
+.focus-mini-clock {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-strong);
+  flex-shrink: 0;
+}
+
+.focus-mini-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.focus-mini-status {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-mini-dot {
+    animation: none;
+  }
+}
