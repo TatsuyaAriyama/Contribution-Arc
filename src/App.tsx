@@ -8511,6 +8511,34 @@ function App() {
         .reduce((sum, log) => sum + log.minutes, 0),
     [studyLogs, currentLearnerDate],
   );
+  /* 「今日」ヒーローカードの直近 7 日ミニバー用データ。
+     既存の getWeeklyStudyHours() は月曜始まりの「暦週」を返す実装で、
+     週の途中では未来の (まだ来ていない) 曜日が 0 分のまま並んでしまい、
+     日境界も getLearnerDate ではなく生の Date で切っている。ここは
+     todayFocusHeroMinutes / studyStreak と同じ「学習者の1日」
+     (6 時 cutoff の getLearnerDate) を基準にした、今日を起点に遡る
+     ローリング 7 日にしたいため、専用の小さな集計を用意する。 */
+  const focusTodayWeekDays = useMemo(() => {
+    const anchor = new Date(`${currentLearnerDate}T12:00:00`);
+    const days: { key: string; day: string; totalMinutes: number; isToday: boolean }[] = [];
+    for (let offset = 6; offset >= 0; offset -= 1) {
+      const date = new Date(anchor);
+      date.setDate(date.getDate() - offset);
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+        date.getDate(),
+      ).padStart(2, "0")}`;
+      const totalMinutes = studyLogs
+        .filter((log) => getLearnerDate(new Date(log.createdAt)) === key)
+        .reduce((sum, log) => sum + log.minutes, 0);
+      days.push({
+        key,
+        day: dayLabels[(date.getDay() + 6) % 7],
+        totalMinutes,
+        isToday: key === currentLearnerDate,
+      });
+    }
+    return days;
+  }, [studyLogs, currentLearnerDate]);
   /* Phase 2: 「今日」カード → 日報の振り返りへの静かなブリッジ用。
      今日の記録が 1 件以上あるのに振り返りが空のままなら、書き忘れの
      可能性が高いので一行リンクを出す (PRODUCT.md 3. コア動線「振り返る」)。 */
@@ -15621,7 +15649,6 @@ function App() {
       <section className="home-feed-section" aria-label={t("投稿")}>
         <header className="home-feed-head">
           <div>
-            <p className="card-kicker">{t("投稿")}</p>
             <h2>{t("みんなと学びを共有・作業仲間を募集")}</h2>
           </div>
           <span>{t("{count} 件", { count: sorted.length.toLocaleString() })}</span>
@@ -15641,7 +15668,7 @@ function App() {
                   setPostDraft(event.target.value);
                   setPostError("");
                 }}
-                placeholder={t("What are you building tonight?")}
+                placeholder={t("今日は何を積み上げてる？")}
                 maxLength={280}
                 rows={1}
               />
@@ -15650,7 +15677,7 @@ function App() {
                     はユーザー要望で撤去。投稿は自由入力 + 「投稿」ボタンのみで完結。 */}
                 <CharCountRing value={postDraft.length} max={280} />
                 <button type="submit" data-testid="home-post-submit" disabled={isPosting || !postDraft.trim()}>
-                  {isPosting ? t("Posting") : t("投稿")}
+                  {isPosting ? t("投稿中…") : t("投稿")}
                 </button>
               </div>
               {postError ? <p className="log-post-error">{postError}</p> : null}
@@ -15668,7 +15695,7 @@ function App() {
             className={`timeline-filter-tab${timelineFilter === "following" ? " is-active" : ""}`}
             onClick={() => setTimelineFilter("following")}
           >
-            Following
+            {t("フォロー中")}
           </button>
           <button
             type="button"
@@ -15677,7 +15704,7 @@ function App() {
             className={`timeline-filter-tab${timelineFilter === "all" ? " is-active" : ""}`}
             onClick={() => setTimelineFilter("all")}
           >
-            All
+            {t("すべて")}
           </button>
         </div>
 
@@ -15713,7 +15740,7 @@ function App() {
           ) : (
             <article className="log-empty-card">
               <p className="card-kicker">
-                {timelineFilter === "following" ? "Following" : "Quiet Progress"}
+                {timelineFilter === "following" ? t("フォロー中") : t("みんなの積み上げ")}
               </p>
               <strong>
                 {timelineFilter === "following"
@@ -21097,7 +21124,7 @@ function App() {
               body={t("他のユーザーが今日何をしているかをタイムラインで追えます。")}
               bullets={[
                 t("投稿にいいねで応援、返信で対話"),
-                t("「Following / All」タブで自分のフォロー先だけに絞れます"),
+                t("「フォロー中 / すべて」タブで自分のフォロー先だけに絞れます"),
                 t("気になる人をフォローすると、その人の投稿が優先で流れる"),
                 t("あなたの学習を投稿すると、誰かの励みになります"),
               ]}
@@ -21153,14 +21180,14 @@ function App() {
                     setPostDraft(event.target.value);
                     setPostError("");
                   }}
-                  placeholder={t("What are you building tonight?")}
+                  placeholder={t("今日は何を積み上げてる？")}
                   maxLength={280}
                   rows={4}
                 />
                 <div className="log-composer-footer">
                   <span>{postDraft.length}/280</span>
                   <button type="submit" disabled={isPosting || !postDraft.trim()}>
-                    {isPosting ? t("Posting") : t("投稿")}
+                    {isPosting ? t("投稿中…") : t("投稿")}
                   </button>
                 </div>
                 {postError ? <p className="log-post-error">{postError}</p> : null}
@@ -21179,7 +21206,7 @@ function App() {
                   className={`timeline-filter-tab${timelineFilter === "following" ? " is-active" : ""}`}
                   onClick={() => setTimelineFilter("following")}
                 >
-                  Following
+                  {t("フォロー中")}
                 </button>
                 <button
                   type="button"
@@ -21188,7 +21215,7 @@ function App() {
                   className={`timeline-filter-tab${timelineFilter === "all" ? " is-active" : ""}`}
                   onClick={() => setTimelineFilter("all")}
                 >
-                  All
+                  {t("すべて")}
                 </button>
               </div>
               {visibleTimelinePosts.length > 0 ? (
@@ -23448,7 +23475,9 @@ function App() {
                 <div className="focus-today-stats">
                   <div className="focus-today-stat">
                     <span className="focus-today-stat-label">{t("今日の学習")}</span>
-                    <span className="focus-today-stat-value">
+                    <span
+                      className={`focus-today-stat-value${todayFocusHeroMinutes > 0 ? "" : " is-zero"}`}
+                    >
                       {formatStudyTimeJa(todayFocusHeroMinutes, language)}
                     </span>
                   </div>
@@ -23464,6 +23493,29 @@ function App() {
                       </span>
                     )}
                   </div>
+                </div>
+                {/* 直近 7 日ミニバー。緑は当日のみ、動きは一切つけず静かに
+                    置くだけ(AGENTS.md「不自然な animation」禁止 / 緑は成功の
+                    み)。データ可視化なので DESIGN.md の Exception 範囲内。 */}
+                <div className="focus-today-week" role="img" aria-label={t("直近7日の学習時間")}>
+                  {focusTodayWeekDays.map((entry) => {
+                    const capMinutes = 240;
+                    const barHeight =
+                      entry.totalMinutes > 0
+                        ? Math.max(4, Math.round((Math.min(entry.totalMinutes, capMinutes) / capMinutes) * 28))
+                        : 2;
+                    return (
+                      <div className="focus-today-week-col" key={entry.key} aria-hidden="true">
+                        <div className="focus-today-week-track">
+                          <span
+                            className={`focus-today-week-bar${entry.isToday ? " is-today" : ""}`}
+                            style={{ height: `${barHeight}px` }}
+                          />
+                        </div>
+                        <span className="focus-today-week-label">{t(entry.day)}</span>
+                      </div>
+                    );
+                  })}
                 </div>
                 {focusSession.session ? (
                   <button

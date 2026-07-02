@@ -472,6 +472,9 @@
 }
 
 .focus-today-stat-label {
+  display: flex;
+  align-items: center;
+  min-height: 14px;
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -479,11 +482,25 @@
   font-weight: 600;
 }
 
+/* 値行の高さ・行送りを両 stat 列で揃える。「今日からはじめよう」
+   (focus-today-stat-muted, 13px) と数値 (18px) はフォントサイズが
+   違うため、flex + min-height で行の外枠を統一して縦のリズムを合わせる。 */
 .focus-today-stat-value {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
   font-size: 18px;
   font-weight: 800;
+  line-height: 1.2;
   color: var(--ink-strong);
   font-variant-numeric: tabular-nums;
+}
+
+/* 0 分のときは強い ink ではなく控えめな muted に落として、
+   「まだ積み上がっていない」ことを静かに示す。1 分以上は通常の
+   focus-today-stat-value (強い ink) に自動で戻る。 */
+.focus-today-stat-value.is-zero {
+  color: var(--muted);
 }
 
 .focus-today-streak {
@@ -492,6 +509,50 @@
 
 .focus-today-stat-muted {
   font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* 直近 7 日ミニバー。stats 行と CTA の間に静かに置くだけの小さな
+   データ可視化(DESIGN.md Exception: 統計・データ可視化はカラー使用可)。
+   緑は当日のみに絞り、過去日は ink の低 alpha グレーに留める。
+   タップ不要・アニメーションなし(AGENTS.mdの「不自然な animation」禁止)。 */
+.focus-today-week {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 4px;
+  padding-top: 2px;
+}
+
+.focus-today-week-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.focus-today-week-track {
+  display: flex;
+  align-items: flex-end;
+  height: 28px;
+}
+
+.focus-today-week-bar {
+  width: 6px;
+  min-height: 2px;
+  border-radius: 999px;
+  background: rgba(var(--ink-rgb), 0.18);
+}
+
+.focus-today-week-bar.is-today {
+  background: var(--green);
+}
+
+.focus-today-week-label {
+  font-size: 9px;
   font-weight: 600;
   color: var(--muted);
 }

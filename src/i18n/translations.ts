@@ -185,6 +185,8 @@ export const EN_TRANSLATIONS: Record<string, string> = {
     "You can read others' daily reports here and get inspired",
   "フォロー中の投稿はまだありません。":
     "No posts from people you're following yet.",
+  "「フォロー中 / すべて」タブで自分のフォロー先だけに絞れます":
+    "Use the \"Following / All\" tabs to narrow it down to just who you follow",
 
   // ─── Learning & Study ───────────────────────────────────────
   "学習":                        "Learning",
@@ -247,6 +249,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "今日からはじめよう":          "Start your streak today",
   "集中にもどる":                "Back to focus",
   "{n}日連続":                   "{n}-day streak",
+  "直近7日の学習時間":            "Study time over the last 7 days",
   // ─── Focus presence (集中の気配, Phase 2) ───────────────────
   "いま {n} 人が集中しています": "{n} people are focusing right now",
   "いま集中している仲間":        "Focusing right now",
@@ -333,7 +336,9 @@ export const EN_TRANSLATIONS: Record<string, string> = {
     "Haven't earned today's Arc yet. Try posting a log.",
   "今日の分は受け取り済み。明日また投稿してみてください。":
     "You've already earned today's bonus. Post again tomorrow.",
-  "Posting":                    "Posting",
+  "投稿中…":                    "Posting…",
+  "フォロー中":                 "Following",
+  "みんなの積み上げ":           "Quiet Progress",
 
   // ─── Profile ────────────────────────────────────────────────
   "プロフィール — あなたの足跡と設定":
@@ -487,8 +492,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "学習の記録":                 "Study logs",
   "みんなと学びを共有・作業仲間を募集":
                                 "Share what you're learning, find work partners",
-  "What are you building tonight?":
-                                "What are you building tonight?",
+  "今日は何を積み上げてる？":   "What are you building today?",
   "Roomから作成":               "From your workroom",
   "学習ログから作成":           "From your latest log",
   "今日作っているもの、学んだこと、作業部屋の募集が静かに流れます。":
