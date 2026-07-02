@@ -188,6 +188,13 @@ import { useFocusSession } from "./hooks/useFocusSession";
 import { FocusTimerSheet } from "./components/FocusTimerSheet";
 import { FocusMiniBar } from "./components/FocusMiniBar";
 import type { FocusTarget } from "./services/focusSession";
+import {
+  clearFocusPresence,
+  fetchActiveFocusPresence,
+  heartbeatFocusPresence,
+  publishFocusPresence,
+  type FocusPresenceRecord,
+} from "./services/focusPresence";
 import streakFlameIcon from "./assets/streak-flame.png";
 import { ToastHost } from "./components/ToastHost";
 import { PullToRefresh } from "./components/PullToRefresh";
@@ -4458,10 +4465,40 @@ function App() {
         })),
     [learningItems],
   );
+
   // リロード時の初期 view は "feed"（= bottom-nav のホームに対応する新ホーム）。
   // bottom-nav swap でラベル「ホーム」が view "feed" を指すよう変更したため、
   // 初期表示も「ホーム」と書かれた画面 = feed view にする。
   const [currentView, setCurrentViewRaw] = useState<AppView>("feed");
+  /* 集中の気配 一覧(自分以外, Phase 2)。ライブ購読はしない(listener 予算
+     管理、claude-progress.txt 参照) — フィード表示/pull-to-refresh/
+     ロビー更新のタイミングで getDocs する one-shot fetch。連打防止に
+     60 秒以内の再フェッチはスキップする。publish/heartbeat/clear 側は
+     playerName 等が定義された後段(useFocusSession 呼び出しの近く)に置く。 */
+  const [focusPresenceList, setFocusPresenceList] = useState<FocusPresenceRecord[]>([]);
+  // フェッチ時刻を state で持ち回り、経過分の計算に使う。render 中に直接
+  // Date.now() を呼ぶと react-hooks/purity 警告になるため、値を固定して渡す。
+  const [focusPresenceFetchedAt, setFocusPresenceFetchedAt] = useState(0);
+  const lastFocusPresenceFetchAtRef = useRef(0);
+  const refreshFocusPresence = useCallback(
+    async (options?: { force?: boolean }) => {
+      const now = Date.now();
+      if (!options?.force && now - lastFocusPresenceFetchAtRef.current < 60_000) {
+        return;
+      }
+      lastFocusPresenceFetchAtRef.current = now;
+      const records = await fetchActiveFocusPresence(db);
+      const uid = currentUser?.uid;
+      setFocusPresenceList(uid ? records.filter((record) => record.userId !== uid) : records);
+      setFocusPresenceFetchedAt(now);
+    },
+    [currentUser?.uid],
+  );
+  // ホーム(feed)表示のたびに 1 回だけ。
+  useEffect(() => {
+    if (currentView !== "feed") return;
+    void refreshFocusPresence();
+  }, [currentView, refreshFocusPresence]);
   /* Pull-to-refresh：ホーム (= feed view) のみで有効。
      v2 (2026-06-13) — 「過敏すぎる」報告への対応で全面作り直し:
      - 閾値 100 → 180px (ネイティブ PTR 相当)
@@ -7204,7 +7241,9 @@ function App() {
     } catch (error) {
       console.info("Workspace lobby fetch skipped.", error);
     }
-  }, [currentUser, readRoomsSnapshot, applyRemoteRooms]);
+    // 集中の気配もロビー更新に相乗り(自動オープン時 + 手動リフレッシュ両方)。
+    void refreshFocusPresence();
+  }, [currentUser, readRoomsSnapshot, applyRemoteRooms, refreshFocusPresence]);
 
   // Manual lobby refresh: the only way (besides the initial open) to pull a
   // fresh list of other rooms. Wraps refreshLobbyRooms with a short loading
@@ -7712,6 +7751,59 @@ function App() {
   const playerName =
     customUserName.trim() || currentUser?.displayName || currentUser?.email?.split("@")[0] || "Developer";
   const playerInitial = playerName.slice(0, 1).toUpperCase();
+
+  /* 集中の気配 (focusPresence, Phase 2 — PRODUCT.md 独自性2「静かな共在」)。
+     計測(フォーカスセッション)中は「測る=部屋にいる」として、部屋に
+     入らなくてもホーム/ロビーに気配を灯す。session の識別に必要な
+     フィールドだけを依存に取り、pausedAt の出入りでは再発火しない
+     (= 一時停止/再開のたびに publish し直したり heartbeat interval を
+     張り替えたりしない)。未ログインなら何もしない。 */
+  const focusSessionTargetName = focusSession.session?.target.itemName ?? null;
+  const focusSessionMode = focusSession.session?.mode ?? null;
+  const focusSessionStartedAt = focusSession.session?.startedAt ?? null;
+  useEffect(() => {
+    const uid = currentUser?.uid;
+    if (!uid || !focusSessionTargetName || !focusSessionMode || !focusSessionStartedAt) {
+      return;
+    }
+    void publishFocusPresence(db, uid, {
+      name: playerName,
+      characterColor: playerCharacterColor,
+      characterShape: playerCharacterShape,
+      subject: focusSessionTargetName,
+      mode: focusSessionMode,
+      startedAt: focusSessionStartedAt,
+    });
+    // 4分毎に生存確認を更新。一時停止中(isPaused)でも「席にいる」扱いで
+    // 止めない — 離席したわけではないため。
+    const intervalId = window.setInterval(() => {
+      void heartbeatFocusPresence(db, uid);
+    }, 4 * 60_000);
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [
+    currentUser?.uid,
+    focusSessionTargetName,
+    focusSessionMode,
+    focusSessionStartedAt,
+    playerName,
+    playerCharacterColor,
+    playerCharacterShape,
+  ]);
+  // session が「有る→無い」に切り替わった瞬間だけ気配を消す。上の effect の
+  // クリーンアップは interval 停止だけを担うので、ここを分けないと
+  // playerName 変更などの再発火のたびに気配が消えてしまう。
+  const isFocusSessionActive = Boolean(focusSession.session);
+  const wasFocusSessionActiveRef = useRef(false);
+  useEffect(() => {
+    const uid = currentUser?.uid;
+    if (uid && wasFocusSessionActiveRef.current && !isFocusSessionActive) {
+      void clearFocusPresence(db, uid);
+    }
+    wasFocusSessionActiveRef.current = isFocusSessionActive;
+  }, [isFocusSessionActive, currentUser?.uid]);
+
   const isDesktopApp = Boolean(window.contributionArcDesktop?.isElectron);
   const isOnboardingSettings = onboardingStep === "settings";
   const weeklyStudyHours = getWeeklyStudyHours(studyLogs);
@@ -11688,8 +11780,12 @@ function App() {
   // リアルタイム購読中なので技術的には refresh 不要だが、X 流の引いて
   // 更新ジェスチャを実装した時に「何も起きない」と無効感が出る。短い
   // delay で indicator スピンを見せて「更新した」体感を作る。
+  // 集中の気配も、このタイミングに相乗りして force で最新化する。
   const handleFeedRefresh = async () => {
-    await new Promise<void>((resolve) => setTimeout(resolve, 700));
+    await Promise.all([
+      new Promise<void>((resolve) => setTimeout(resolve, 700)),
+      refreshFocusPresence({ force: true }),
+    ]);
   };
 
   const handleProfileBack = () => {
@@ -21796,6 +21892,53 @@ function App() {
                 })()}
               </div>
 
+              {/* 集中の気配(Phase 2)。部屋に入っていなくても、いま計測中の
+                  仲間の存在をロビーに灯す。空なら静かにセクションごと隠す。 */}
+              {focusPresenceList.length > 0 ? (
+                <section className="focus-presence-lobby" aria-label={t("いま集中している仲間")}>
+                  <p className="focus-presence-lobby-title">
+                    <span className="focus-presence-quiet-dot" aria-hidden="true" />
+                    {t("いま集中している仲間")}
+                  </p>
+                  <ul className="focus-presence-lobby-list">
+                    {focusPresenceList.slice(0, 12).map((presence) => {
+                      const elapsedMinutes = Math.max(
+                        0,
+                        Math.floor(((focusPresenceFetchedAt || presence.startedAt) - presence.startedAt) / 60000),
+                      );
+                      return (
+                        <li key={presence.userId} className="focus-presence-lobby-item">
+                          <span
+                            className="focus-presence-avatar"
+                            style={
+                              {
+                                "--focus-presence-color":
+                                  presence.characterColor || characterColorOptions[0].value,
+                              } as CSSProperties
+                            }
+                            aria-hidden="true"
+                          >
+                            {presence.name.slice(0, 1).toUpperCase()}
+                          </span>
+                          <span className="focus-presence-lobby-meta">
+                            <strong className="focus-presence-lobby-name">{presence.name}</strong>
+                            <span className="focus-presence-lobby-subject">{presence.subject}</span>
+                          </span>
+                          <span className="focus-presence-lobby-elapsed">
+                            {t("{n}分", { n: elapsedMinutes })}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {focusPresenceList.length > 12 ? (
+                    <p className="focus-presence-lobby-overflow">
+                      {t("他 {n} 人", { n: focusPresenceList.length - 12 })}
+                    </p>
+                  ) : null}
+                </section>
+              ) : null}
+
               {roomCreateMessage ? (
                 <p className={`room-create-message ${roomCreateState}`}>{roomCreateMessage}</p>
               ) : null}
@@ -23313,6 +23456,12 @@ function App() {
                     {t("集中をはじめる")}
                   </button>
                 )}
+                {focusPresenceList.length > 0 ? (
+                  <p className="focus-presence-quiet-line">
+                    <span className="focus-presence-quiet-dot" aria-hidden="true" />
+                    {t("いま {n} 人が集中しています", { n: focusPresenceList.length })}
+                  </p>
+                ) : null}
               </section>
 
               {feedSection}

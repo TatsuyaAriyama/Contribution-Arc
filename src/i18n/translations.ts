@@ -247,6 +247,11 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "今日からはじめよう":          "Start your streak today",
   "集中にもどる":                "Back to focus",
   "{n}日連続":                   "{n}-day streak",
+  // ─── Focus presence (集中の気配, Phase 2) ───────────────────
+  "いま {n} 人が集中しています": "{n} people are focusing right now",
+  "いま集中している仲間":        "Focusing right now",
+  "他 {n} 人":                   "+{n} more",
+  "{n}分":                       "{n}m",
 
   // ─── Workspace & Rooms ──────────────────────────────────────
   "Silent Workspace":            "Silent Workspace",

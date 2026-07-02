@@ -50,6 +50,14 @@ const post = (userId: string) => ({
   likesCount: 0,
   likedUserIds: [],
 });
+const focusPresence = (userId: string) => ({
+  userId,
+  name: "Alice",
+  subject: "リーダブルコード",
+  mode: "stopwatch",
+  startedAt: Date.now(),
+  lastSeenAt: new Date().toISOString(),
+});
 
 beforeAll(async () => {
   testEnv = await initializeTestEnvironment({
@@ -139,6 +147,39 @@ describe("posts (RULES-RECORD-OWNER: feed は authed read)", () => {
   it("他人の投稿は削除できない", async () => {
     await seed("posts/p3", post(ALICE));
     await assertFails(deleteDoc(doc(bobDb(), "posts/p3")));
+  });
+});
+
+describe("focusPresence (集中の気配)", () => {
+  it("本人は自分の気配を作成・更新できる", async () => {
+    const db = aliceDb();
+    await assertSucceeds(setDoc(doc(db, "focusPresence/alice"), focusPresence(ALICE)));
+    await assertSucceeds(
+      setDoc(doc(db, "focusPresence/alice"), { lastSeenAt: new Date().toISOString() }, { merge: true }),
+    );
+  });
+
+  it("他人になりすました気配は作成できない", async () => {
+    await assertFails(setDoc(doc(bobDb(), "focusPresence/alice"), focusPresence(ALICE)));
+  });
+
+  it("他人の気配は更新・削除できない", async () => {
+    await seed("focusPresence/alice", focusPresence(ALICE));
+    await assertFails(
+      setDoc(doc(bobDb(), "focusPresence/alice"), { lastSeenAt: new Date().toISOString() }, { merge: true }),
+    );
+    await assertFails(deleteDoc(doc(bobDb(), "focusPresence/alice")));
+  });
+
+  it("authed なら誰でも読める", async () => {
+    await seed("focusPresence/alice", focusPresence(ALICE));
+    await assertSucceeds(getDoc(doc(bobDb(), "focusPresence/alice")));
+  });
+
+  it("未認証は読取も書込も不可", async () => {
+    await seed("focusPresence/alice", focusPresence(ALICE));
+    await assertFails(getDoc(doc(anonDb(), "focusPresence/alice")));
+    await assertFails(setDoc(doc(anonDb(), "focusPresence/bob"), focusPresence(BOB)));
   });
 });
 
