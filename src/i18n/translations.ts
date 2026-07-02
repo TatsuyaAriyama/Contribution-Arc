@@ -248,7 +248,6 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   // ─── Home "今日" hero card (Phase 1 wiring) ─────────────────
   "今日の学習":                  "Today's study",
   "今日からはじめよう":          "Start your streak today",
-  "集中にもどる":                "Back to focus",
   "{n}日連続":                   "{n}-day streak",
   "直近7日の学習時間":            "Study time over the last 7 days",
   // ─── Home GitHub card (ホーム再構成: 投稿を専用ビューへ分離) ──

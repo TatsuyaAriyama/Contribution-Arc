@@ -23588,7 +23588,7 @@ function App() {
 
               {/* 「今日」ヒーローカード(PRODUCT.md 3. コア動線 / 6. UX 原則 1)。
                   開いて 1 秒で今日の合計・ストリーク・集中の入口が分かる
-                  ようホーム最上段に置く。計測中は「集中にもどる」に切替わり、
+                  ようホーム最上段に置く。計測中は選択中の学習対象名に切替わり、
                   ミニバーと同じ経路(シートを開く)に合流する。 */}
               <section className="focus-today-card" aria-label={t("今日")}>
                 <div className="focus-today-head">
@@ -23647,7 +23647,7 @@ function App() {
                     onClick={() => setIsFocusSheetOpen(true)}
                   >
                     <span className="focus-today-cta-dot" aria-hidden="true" />
-                    <span>{t("集中にもどる")}</span>
+                    <span>{focusSession.session.target.itemName}</span>
                     <span className="focus-today-cta-clock">
                       {formatStudyTimeJa(Math.max(1, Math.round(focusSession.elapsedMs / 60000)), language)}
                     </span>
