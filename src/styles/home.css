@@ -7,18 +7,18 @@
  * .contribution-arc-cell.lv-0〜4 (App.css) をそのまま再利用している。
  */
 
-/* === GitHub 草マップカード === */
+/* === GitHub 草マップ === */
 
+/* ホームリニューアル②: 以前は独立カードだったが、「今日」ヒーロー
+   カード(focus-today-card, focus.css)にネストして1枚の「継続の物語」に
+   統合した。二重カードに見えないよう chrome(背景・角丸・影)は持たず、
+   border-top の区切りだけにする。 */
 .home-github-card {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 16px 18px;
-  margin-bottom: 14px;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
   cursor: pointer;
   text-align: left;
 }
@@ -364,7 +364,6 @@
 /* iPhone (~844px 高) でお知らせ→今日カード→GitHub カード→入口行が
    ほぼ 1 画面に収まるよう、モバイルはカード間の余白を少し詰める。 */
 @media (max-width: 720px) {
-  .home-github-card,
   .home-posts-entry {
     margin-bottom: 10px;
   }

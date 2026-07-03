@@ -547,48 +547,23 @@
   color: var(--muted);
 }
 
-/* 直近 7 日ミニバー。stats 行と CTA の間に静かに置くだけの小さな
-   データ可視化(DESIGN.md Exception: 統計・データ可視化はカラー使用可)。
-   緑は当日のみに絞り、過去日は ink の低 alpha グレーに留める。
-   タップ不要・アニメーションなし(AGENTS.mdの「不自然な animation」禁止)。 */
-.focus-today-week {
+/* 先週比の差分メッセージ(ホームリニューアル③)。stats 行と CTA の間に
+   静かに置く1行。増えた週だけ出す(減った週の比較は AGENTS.md「静かに
+   褒める」原則に反するため出さない)ので、緑=達成のみに使う配色ルールを
+   崩さない。 */
+.focus-today-diff-line {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 4px;
-  padding-top: 2px;
-}
-
-.focus-today-week-col {
-  display: flex;
-  flex-direction: column;
   align-items: center;
   gap: 6px;
-  flex: 1 1 0;
-  min-width: 0;
+  margin: 0;
+  padding-top: 2px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--green);
 }
 
-.focus-today-week-track {
-  display: flex;
-  align-items: flex-end;
-  height: 28px;
-}
-
-.focus-today-week-bar {
-  width: 6px;
-  min-height: 2px;
-  border-radius: 999px;
-  background: rgba(var(--ink-rgb), 0.18);
-}
-
-.focus-today-week-bar.is-today {
-  background: var(--green);
-}
-
-.focus-today-week-label {
-  font-size: 9px;
-  font-weight: 600;
-  color: var(--muted);
+.focus-today-diff-arrow {
+  font-size: 12px;
 }
 
 .focus-today-cta {
