@@ -1072,6 +1072,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "{days}日学習": "{days} days studied",
   "日コミット": "daily commits",
   "先週比 {diff}": "vs last week {diff}",
+  "先週より {time} 多く積み上がっています": "{time} more than last week",
   "連続して記録した最長期間": "Longest streak ever logged",
   "最長連続": "Longest streak",
   "合計 {minutes}": "Total {minutes}",

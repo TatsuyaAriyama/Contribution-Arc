@@ -8599,34 +8599,6 @@ function App() {
         .reduce((sum, log) => sum + log.minutes, 0),
     [studyLogs, currentLearnerDate],
   );
-  /* 「今日」ヒーローカードの直近 7 日ミニバー用データ。
-     既存の getWeeklyStudyHours() は月曜始まりの「暦週」を返す実装で、
-     週の途中では未来の (まだ来ていない) 曜日が 0 分のまま並んでしまい、
-     日境界も getLearnerDate ではなく生の Date で切っている。ここは
-     todayFocusHeroMinutes / studyStreak と同じ「学習者の1日」
-     (6 時 cutoff の getLearnerDate) を基準にした、今日を起点に遡る
-     ローリング 7 日にしたいため、専用の小さな集計を用意する。 */
-  const focusTodayWeekDays = useMemo(() => {
-    const anchor = new Date(`${currentLearnerDate}T12:00:00`);
-    const days: { key: string; day: string; totalMinutes: number; isToday: boolean }[] = [];
-    for (let offset = 6; offset >= 0; offset -= 1) {
-      const date = new Date(anchor);
-      date.setDate(date.getDate() - offset);
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
-        date.getDate(),
-      ).padStart(2, "0")}`;
-      const totalMinutes = studyLogs
-        .filter((log) => getLearnerDate(new Date(log.createdAt)) === key)
-        .reduce((sum, log) => sum + log.minutes, 0);
-      days.push({
-        key,
-        day: dayLabels[(date.getDay() + 6) % 7],
-        totalMinutes,
-        isToday: key === currentLearnerDate,
-      });
-    }
-    return days;
-  }, [studyLogs, currentLearnerDate]);
   /* Phase 2: 「今日」カード → 日報の振り返りへの静かなブリッジ用。
      今日の記録が 1 件以上あるのに振り返りが空のままなら、書き忘れの
      可能性が高いので一行リンクを出す (PRODUCT.md 3. コア動線「振り返る」)。 */
@@ -23612,29 +23584,26 @@ function App() {
                     )}
                   </div>
                 </div>
-                {/* 直近 7 日ミニバー。緑は当日のみ、動きは一切つけず静かに
-                    置くだけ(AGENTS.md「不自然な animation」禁止 / 緑は成功の
-                    み)。データ可視化なので DESIGN.md の Exception 範囲内。 */}
-                <div className="focus-today-week" role="img" aria-label={t("直近7日の学習時間")}>
-                  {focusTodayWeekDays.map((entry) => {
-                    const capMinutes = 240;
-                    const barHeight =
-                      entry.totalMinutes > 0
-                        ? Math.max(4, Math.round((Math.min(entry.totalMinutes, capMinutes) / capMinutes) * 28))
-                        : 2;
-                    return (
-                      <div className="focus-today-week-col" key={entry.key} aria-hidden="true">
-                        <div className="focus-today-week-track">
-                          <span
-                            className={`focus-today-week-bar${entry.isToday ? " is-today" : ""}`}
-                            style={{ height: `${barHeight}px` }}
-                          />
-                        </div>
-                        <span className="focus-today-week-label">{t(entry.day)}</span>
-                      </div>
-                    );
-                  })}
-                </div>
+                {/* 先週比の差分メッセージ(ホームリニューアル③)。GitHub 草
+                    カード(profile)側で使っている contributionArc.thisWeekMinutes /
+                    lastWeekMinutes をそのまま再利用し、増えた週だけ静かに伝える
+                    (減った週は AGENTS.md「静かに褒める」原則に反するため出さない)。
+                    直近7日ミニバーは下の統合ヒートマップと表示が重複していたため
+                    ここでは削除した。 */}
+                {contributionArc.lastWeekMinutes > 0 &&
+                contributionArc.thisWeekMinutes > contributionArc.lastWeekMinutes ? (
+                  <p className="focus-today-diff-line">
+                    <span className="focus-today-diff-arrow" aria-hidden="true">
+                      ↗
+                    </span>
+                    {t("先週より {time} 多く積み上がっています", {
+                      time: formatStudyTimeJa(
+                        contributionArc.thisWeekMinutes - contributionArc.lastWeekMinutes,
+                        language,
+                      ),
+                    })}
+                  </p>
+                ) : null}
                 {focusSession.session ? (
                   <button
                     type="button"
@@ -23678,14 +23647,14 @@ function App() {
                     <span aria-hidden="true">›</span>
                   </button>
                 ) : null}
-              </section>
 
-              {/* GitHub 草マップカード(ホーム再構成)。プロフィールのステータス
-                  カード裏面にあった GitHub コントリビューション表示を、
-                  プロフィールを開かなくても見えるようホーム最上段に引き上げる。
-                  セルの色はステータスカード裏面と同じ contribution-arc-cell の
-                  lv-0〜4 をそのまま再利用し、見た目のトーンを揃える。 */}
-              <section
+              {/* GitHub 草マップ(ホームリニューアル②)。以前は「今日」ヒーロー
+                  カードと別カードに分け、直近7日ミニバーと内容が重複していた。
+                  1枚の「継続の物語」として統合し、<section> ではなく <div> に
+                  して二重カード化を避ける(chrome は home.css 側で border-top の
+                  区切りだけに簡略化)。セルの色はステータスカード裏面と同じ
+                  contribution-arc-cell の lv-0〜4 をそのまま再利用する。 */}
+              <div
                 className="home-github-card"
                 aria-label="GitHub"
                 role="button"
@@ -23853,6 +23822,7 @@ function App() {
                     </div>
                   );
                 })() : null}
+              </div>
               </section>
 
               {/* 「みんなの投稿」入口行(ホーム再構成)。投稿フィード自体は
