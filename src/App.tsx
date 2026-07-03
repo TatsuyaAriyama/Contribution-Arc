@@ -13836,11 +13836,6 @@ function App() {
                 {t("今日 {duration}", { duration: formatStudyTimeJa(todayStudyMinutes) })}
               </span>
             ) : null}
-            {currentOrganization ? (
-              <span className="player-chip player-chip-org" title={t("{name}所属", { name: currentOrganization.name })}>
-                {currentOrganization.name}
-              </span>
-            ) : null}
             {hasGithub ? (
               <span className="player-chip player-chip-github" title={t("GitHub 連携済み")}>
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="11" height="11">

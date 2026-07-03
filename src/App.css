@@ -8598,6 +8598,15 @@
   font-weight: 800;
   white-space: nowrap;
   text-decoration: none;
+  /* player-chip-goal だけ <button>(他は <span>) で描画されるため、UA 既定の
+     line-height / margin / box-sizing がリセットされず高さが揃わなかった。
+     span には無害な no-op なので基底ルールに置く。 */
+  box-sizing: border-box;
+  margin: 0;
+  line-height: 1;
+  appearance: none;
+  -webkit-appearance: none;
+  font-family: inherit;
 }
 
 .player-chip-streak {
@@ -8610,12 +8619,6 @@
   border-color: rgba(31, 111, 74, 0.24);
   background: rgba(31, 111, 74, 0.08);
   color: var(--green);
-}
-
-.player-chip-org {
-  border-color: rgba(60, 130, 200, 0.28);
-  background: rgba(60, 130, 200, 0.08);
-  color: #2563eb;
 }
 
 .player-chip-github {
