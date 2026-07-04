@@ -459,8 +459,10 @@
 }
 
 /* === ホーム「今日」ヒーローカード ===
-   静かなカード。緑は CTA と ストリーク数字のみに絞り、それ以外は
-   ink/muted のみで構成する（派手な装飾・グラデーション禁止）。 */
+   デザイン刷新「今日という一枚 — 日めくりのアトリエデスク」。
+   DESIGN.md の Handcrafted Layer をホームへ正式展開し、日めくりカレンダー
+   の一枚として演出する。緑は CTA・ストリーク・下線・スタンプのみに
+   絞り、それ以外は ink/muted のみで構成する方針は維持。 */
 
 .focus-today-card {
   display: flex;
@@ -472,24 +474,123 @@
   border-radius: 20px;
   background: var(--surface);
   box-shadow: var(--shadow-card);
+  position: relative;
+  overflow: visible;
+  rotate: -0.4deg;
+  transition: rotate 0.24s cubic-bezier(0.2, 0.8, 0.3, 1);
 }
 
-.focus-today-head {
+/* 紙面(surface-warm + dot grain)。ライト専用、ダークは純黒設計を維持
+   (var(--surface) のまま)。 */
+html:not([data-theme="dark"]) .focus-today-card {
+  background-color: var(--surface-warm, #fffdfa);
+  background-image: radial-gradient(rgba(26, 24, 23, 0.02) 1px, transparent 1.4px);
+  background-size: 4px 4px;
+}
+
+/* 上端中央〜やや左のマスキングテープ(washi-sepia)。日報の entry-card と
+   同じ語彙で、机に留めた紙片に見立てる。 */
+.focus-today-card::before {
+  content: "";
+  position: absolute;
+  top: -9px;
+  left: 34px;
+  width: 64px;
+  height: 21px;
+  transform: rotate(-3deg);
+  background: linear-gradient(135deg, rgba(201, 184, 140, 0.4), rgba(201, 184, 140, 0.26));
+  border-left: 1px solid rgba(255, 255, 255, 0.28);
+  border-right: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 1px 2px rgba(var(--ink-rgb), 0.06);
+  pointer-events: none;
+}
+
+.focus-today-card:focus-within,
+.focus-today-card:active {
+  rotate: 0deg;
+}
+@media (hover: hover) {
+  .focus-today-card:hover {
+    rotate: 0deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-today-card {
+    transition: none;
+  }
+}
+
+/* 日めくりヒーロー(home-daily-leaf)。左に日の数字を明朝の大きな主役、
+   右に月/曜日を縦2段、さらに右へ時間帯の一言を添える。 */
+.focus-today-leaf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 4px 14px;
+}
+
+.focus-today-leaf-date {
   display: flex;
   align-items: baseline;
   gap: 8px;
+  min-width: 0;
 }
 
-.focus-today-kicker {
-  font-size: 13px;
-  font-weight: 800;
+.focus-today-leaf-day {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 6px;
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP", serif;
+  font-weight: 700;
+  font-size: 38px;
+  line-height: 1;
   color: var(--ink-strong);
+  font-variant-numeric: tabular-nums;
 }
 
-.focus-today-date {
-  font-size: 12px;
-  font-weight: 600;
+/* 日の数字の下の緑インク手描き下線(ホーム専用の波形)。 */
+.focus-today-leaf-day::after {
+  content: "";
+  position: absolute;
+  left: -2px;
+  right: -4px;
+  bottom: 0;
+  height: 7px;
+  background: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2070%2010'%20preserveAspectRatio='none'%3E%3Cpath%20d='M1%207%20C%2015%202%2030%209%2045%204%20S%2065%208%2069%203'%20fill='none'%20stroke='%231f6f4a'%20stroke-width='2.4'%20stroke-linecap='round'/%3E%3C/svg%3E")
+    no-repeat center / 100% 100%;
+}
+[data-theme="dark"] .focus-today-leaf-day::after {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2070%2010'%20preserveAspectRatio='none'%3E%3Cpath%20d='M1%207%20C%2015%202%2030%209%2045%204%20S%2065%208%2069%203'%20fill='none'%20stroke='%234ade80'%20stroke-width='2.4'%20stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+.focus-today-leaf-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   color: var(--muted);
+}
+
+.focus-today-leaf-greeting {
+  flex: 1 1 140px;
+  margin: 4px 0 0;
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP", serif;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--muted);
+  text-align: right;
+}
+
+@media (max-width: 480px) {
+  .focus-today-leaf-greeting {
+    flex-basis: 100%;
+    text-align: left;
+  }
 }
 
 .focus-today-stats {
@@ -537,8 +638,38 @@
   color: var(--muted);
 }
 
-.focus-today-streak {
+/* 蔵書印風のストリークスタンプ(home-streak-stamp)。study-log-ticket の
+   stamp と同じ語彙(緑インクの手描き二重円)を流用し、ストリークが
+   1日以上のとき数値表示の代わりに置く。 */
+.focus-today-streak-stamp {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  rotate: -6deg;
   color: var(--green);
+}
+.focus-today-streak-stamp::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  background: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2060%2060'%3E%3Cg%20fill='none'%20stroke='%231f6f4a'%20stroke-width='2'%3E%3Cellipse%20cx='30'%20cy='30'%20rx='25'%20ry='24'%20transform='rotate(-4%2030%2030)'/%3E%3Cellipse%20cx='30'%20cy='30'%20rx='23.5'%20ry='25'%20stroke-opacity='0.45'%20transform='rotate(3%2030%2030)'/%3E%3C/g%3E%3C/svg%3E")
+    center / 100% 100% no-repeat;
+  pointer-events: none;
+}
+[data-theme="dark"] .focus-today-streak-stamp::after {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2060%2060'%3E%3Cg%20fill='none'%20stroke='%234ade80'%20stroke-width='2'%3E%3Cellipse%20cx='30'%20cy='30'%20rx='25'%20ry='24'%20transform='rotate(-4%2030%2030)'/%3E%3Cellipse%20cx='30'%20cy='30'%20rx='23.5'%20ry='25'%20stroke-opacity='0.45'%20transform='rotate(3%2030%2030)'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.focus-today-streak-stamp-value {
+  position: relative;
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP", serif;
+  font-weight: 800;
+  font-size: 15px;
+  line-height: 1;
+  letter-spacing: -0.02em;
 }
 
 .focus-today-stat-muted {

@@ -472,3 +472,12 @@
     inset 0 -8px 16px rgba(0, 0, 0, 0.32),
     0 0 0 1px rgba(255, 255, 255, 0.12);
 }
+
+/* ホーム「今日という一枚」デザイン刷新: 紙アナログ表現(マスキング
+   テープ)は純黒キャンバスでは濁って見えるため、ダークでは大幅減光する
+   (紙の地・dot grain は html:not([data-theme="dark"]) 側で既にライト
+   専用にスコープ済みなので、ここでは::before のテープのみ扱う)。 */
+[data-theme="dark"] .focus-today-card::before,
+[data-theme="dark"] .home-posts-entry::before {
+  opacity: 0.3;
+}

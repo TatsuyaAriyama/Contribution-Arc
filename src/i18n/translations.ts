@@ -250,6 +250,15 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "今日からはじめよう":          "Start your streak today",
   "{n}日連続":                   "{n}-day streak",
   "直近7日の学習時間":            "Study time over the last 7 days",
+  // ─── Home hero: 時間帯挨拶(デザイン刷新「今日という一枚」) ──
+  "おはようございます。まっさらな一枚から":
+    "Good morning — a fresh page awaits",
+  "こんにちは。今日はまだ書きかけです":
+    "Good afternoon — today is still being written",
+  "こんばんは。今日を仕上げる時間です":
+    "Good evening — time to finish the page",
+  "夜の一筆も、ちゃんと積み上がります":
+    "A late-night stroke still counts",
   // ─── Home GitHub card (ホーム再構成: 投稿を専用ビューへ分離) ──
   "GitHub を連携すると、コミットの積み上げがここに並びます":
     "Link GitHub and your commit streak shows up here",
