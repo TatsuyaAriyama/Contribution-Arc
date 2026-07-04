@@ -257,8 +257,6 @@ export const EN_TRANSLATIONS: Record<string, string> = {
     "Good afternoon — today is still being written",
   "こんばんは。今日を仕上げる時間です":
     "Good evening — time to finish the page",
-  "夜の一筆も、ちゃんと積み上がります":
-    "A late-night stroke still counts",
   // ─── Home GitHub card (ホーム再構成: 投稿を専用ビューへ分離) ──
   "GitHub を連携すると、コミットの積み上げがここに並びます":
     "Link GitHub and your commit streak shows up here",
