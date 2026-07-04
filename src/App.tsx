@@ -8607,7 +8607,8 @@ function App() {
     return { day, month, weekday };
   }, [currentLearnerDate, language]);
   /* 時間帯で切り替わる一言(便利性とアート性の接点)。レンダー時の時刻を
-     見るだけで十分なので useMemo にはせず単純式で評価する。 */
+     見るだけで十分なので useMemo にはせず単純式で評価する。深夜帯
+     (22〜4時)は文言なし(空欄)。 */
   const homeGreetingHour = new Date().getHours();
   const homeGreeting =
     homeGreetingHour >= 5 && homeGreetingHour <= 10
@@ -8616,7 +8617,7 @@ function App() {
         ? t("こんにちは。今日はまだ書きかけです")
         : homeGreetingHour >= 17 && homeGreetingHour <= 21
           ? t("こんばんは。今日を仕上げる時間です")
-          : t("夜の一筆も、ちゃんと積み上がります");
+          : "";
   /* ホーム「今日」ヒーローカード用の今日合計。studyStreak (6 時 cutoff の
      getLearnerDate 基準) と同じ「学習者の1日」の境界に揃えるため、
      todayStudyMinutes (calendar-day 基準の getTodayKey) とは別に計算する。 */
@@ -23602,7 +23603,9 @@ function App() {
                       <span className="focus-today-leaf-weekday">{homeDailyLeaf.weekday}</span>
                     </span>
                   </div>
-                  <p className="focus-today-leaf-greeting">{homeGreeting}</p>
+                  {homeGreeting ? (
+                    <p className="focus-today-leaf-greeting">{homeGreeting}</p>
+                  ) : null}
                 </div>
                 <div className="focus-today-stats">
                   <div className="focus-today-stat">
