@@ -382,6 +382,23 @@ components:
     active: "rotate 0 + lift shadow（:hover / :focus-within）"
     motion: "transform 0.28s cubic-bezier(0.2,0.8,0.3,1)"
 
+  home-daily-leaf:
+    description: ホーム「今日」カード（focus-today-card）の日めくりヒーロー。日付を主役にした「日めくりカレンダーの一枚」表現で、旧 focus-today-head（kicker + 日付テキスト）を置き換える。
+    day: "日の数字を {typography.mincho-heading} で 36〜40px / weight 700、下に緑インクの手描き下線（handdrawn-underline、ホーム専用の新しい波形）"
+    meta: "月 / 曜日を縦2段・{typography.eyebrow} 相当サイズ・{colors.ink-muted} で数字の右に添える"
+    greeting: "時間帯で切り替わる一言を右側に（{colors.ink-muted} / 13px / {typography.mincho-heading}）"
+
+  home-streak-stamp:
+    description: ホーム「今日」カードのストリーク表示（1日以上）を、study-log-ticket と同じ語彙の蔵書印に置き換える。0日のときは従来どおり muted テキスト「今日からはじめよう」のまま。
+    stamp: "緑インクの手描き二重円（SVG 楕円 ×2、study-log-ticket の stamp と同一語彙） / dark は {colors.dark-primary}"
+    size: "54〜60px 角、rotate -6deg"
+    value: "「{n}日」を {typography.mincho-heading} で中央に"
+
+  pencil-divider:
+    description: ホーム「今日」カード内、統計/CTA と GitHub 草マップの間の区切り。border-top の直線をやめ、鉛筆書きの手描き横線（揺らいだ SVG）にする。
+    stroke: "{colors.pencil-ink} を薄めた opacity・width 1.4 相当の揺らいだ SVG（日報の鉛筆下線と同じ語彙、波形は新規）"
+    dark: "黒地では視認できないため白ベースの薄いストロークに切り替え（大幅減光）"
+
 ---
 
 
@@ -449,7 +466,7 @@ Contribution Arc は「静かな書斎」のような学習トラッキング SN
 ### Font Family
 全文 **`Inter`**（fallback: `ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial`）。serif / monospace は使わない。OpenType `lnum` を本文 / 数値で有効にし、player chip の Lv 数字を等幅に揃える。
 
-> **唯一の例外** — 日報 (daily-report) と FEED (home-feed) の見出しだけは明朝体 (`{typography.mincho-heading}`) を許可する。Inter 一族の均質さが生む「生成 UI テンプレ感」を意図的に崩し、手帳の紙面に寄せるための逸脱。詳細は **[Handcrafted Layer](#handcrafted-layer--日報の紙アナログ表現)** を参照。この例外を日報 / FEED 以外へ広げない。
+> **唯一の例外** — 日報 (daily-report) と FEED (home-feed) の見出しだけは明朝体 (`{typography.mincho-heading}`) を許可する。Inter 一族の均質さが生む「生成 UI テンプレ感」を意図的に崩し、手帳の紙面に寄せるための逸脱。詳細は **[Handcrafted Layer](#handcrafted-layer--日報の紙アナログ表現)** を参照。この例外を日報 / FEED / ホーム以外へ広げない。
 
 ### Hierarchy
 
@@ -621,7 +638,7 @@ Inter が読み込めない環境では `system-ui` にフォールバック。d
 
 ## Handcrafted Layer — 日報の紙アナログ表現
 
-> **スコープ厳守** — このレイヤーは **日報 (`daily-screen`) と FEED (`app-view-feed` / `home-feed-section`) に適用する Signature 表現**。それ以外（プロフィール / 設定 / アトリエ / モーダル等）は引き続き「Inter / フラット / hairline」の静かな書斎を保つ。さらに広げたくなったら、まず DESIGN.md を更新してから横展開する。
+> **スコープ厳守** — このレイヤーは **日報 (`daily-screen`) と FEED / ホーム (`app-view-feed` / `home-feed-section`) に適用する Signature 表現**。それ以外（プロフィール / 設定 / アトリエ / モーダル等）は引き続き「Inter / フラット / hairline」の静かな書斎を保つ。さらに広げたくなったら、まず DESIGN.md を更新してから横展開する。
 
 ### なぜ例外を許すか
 均質に整った Inter + フラット白 + 完璧なグリッドは、読みやすい反面「どこかで見た生成 UI」に見える。日報は毎日書く最も個人的な画面なので、ここだけ **手の気配（不完全さ・紙の温かみ）** を入れて、決まりすぎた整列をわざと崩す。崩す方向は「ノイズの追加」ではなく「手描き・紙・少しのズレ」という一貫した語彙で行う。
@@ -654,6 +671,9 @@ entry-card を机にテープで留めた紙片に見立て、ごく僅かに傾
 - **舞い込み（`flutter-in`）**：カードが画面に入るときに下からひらりと着地する。スクロール連動（view() timeline）を基本に、非対応ブラウザは初回マウントの階段 delay にフォールバック。
 - **学習ログ = 学習チケット（`study-log-ticket`）**：auto-study 投稿は「『科目』を N 学習しました」の一文をやめ、学習時間を主役にしたインク印風チケットに。緑の印の中で集中メーターが時間に比例して満ち、科目は明朝で見出し化する。作業ログ (auto-workspace) は従来のコンパクト pill のまま。
 - **取り消し線・インクチェックは日報専用**：FEED には持ち込まない（チェック対象が無く、文意も変わるため）。
+
+### ホームへの適用（app-view-feed の今日カード / 投稿入口）
+ホームを「学習者の机に置かれた日めくりカレンダーの一枚」として演出する。紙の地は FEED と共通（既に `app-view-feed` に適用済み）。見出し「ホーム」は明朝 + 手描き緑下線（波形は新規）。「今日」カード（`focus-today-card`）は `masking-tape`（sepia）+ `card-tilt`（-0.4deg、hover / focus-within / active で水平）を纏い、日付は `home-daily-leaf` で日めくりのヒーローに、右に時間帯の一言を添える。ストリークは 1 日以上で `home-streak-stamp`（蔵書印）に切り替わり、0 日は従来どおり muted テキスト。統計/CTA と GitHub 草マップの間は `pencil-divider` に置き換えるが、統計・グリッド・CTA「作業をはじめる」の構造と可読性は変えない。「みんなの投稿」入口（`home-posts-entry`）は surface-warm + dot grain、`masking-tape`（sage・逆角度）+ `card-tilt`（0.6deg）+ 3 段の紙影で机の端のメモに見立てる。
 
 ### 実装ルール
 - 手描きの揺らぎは **inline SVG data-uri** で描く（画像アセットを足さない）。
@@ -689,7 +709,7 @@ entry-card を机にテープで留めた紙片に見立て、ごく僅かに傾
 - ❌ 2 つ目の構造アクセント色を追加しない。新しい色を増やしたくなったら、まず既存の `{colors.primary}` / `{colors.cta-bg}` / `{colors.accent-warm}` で代用できないか検討する。
 - ❌ モーダルの中に position: fixed を直接置かない（祖先 motion.main の transform で祖先基準になる）。Portal を使う。
 - ❌ 「ホバーで色が変わる」だけの装飾を増やさない。モバイル優先のため `:active` / `aria-pressed` で状態を表すのが基本。
-- ❌ Handcrafted Layer（明朝・手描き下線・インクチェック・テープ・カード傾き）を日報 / FEED 以外の画面に無断で広げない。世界観が薄まる。横展開するなら先に DESIGN.md を更新する。
+- ❌ Handcrafted Layer（明朝・手描き下線・インクチェック・テープ・カード傾き）を日報 / FEED / ホーム以外の画面に無断で広げない。世界観が薄まる。横展開するなら先に DESIGN.md を更新する。
 - ❌ FEED の投稿カードの傾きは ±2° を上限とし、hover / tap で必ず水平に戻す（読めなくなる傾きにしない）。取り消し線・インクチェックは日報専用で FEED に持ち込まない。
 - ❌ 紙の小物（折れ角・画鋲）やアニメをランダム JS で散らさない。nth-child の機械的なバリアント分配で「揺らぎ」を出し、prefers-reduced-motion を必ず尊重する。
 - ❌ 手描きのために新しい構造色やフォントを足さない。明朝は日報見出しのみ、線色は既存トークンの流用に留める。

@@ -7,6 +7,32 @@
  * .contribution-arc-cell.lv-0〜4 (App.css) をそのまま再利用している。
  */
 
+/* === ヘッダ「ホーム」= 日めくりのアトリエデスク === */
+
+/* 見出し「ホーム」を明朝 + 緑インクの手描き下線に(日報タイトルと
+   同じ語彙、波形はホーム専用に変える)。 */
+.home-view-title {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 9px;
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP", serif;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+.home-view-title::after {
+  content: "";
+  position: absolute;
+  left: -2px;
+  right: -6px;
+  bottom: 0;
+  height: 7px;
+  background: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20110%208'%20preserveAspectRatio='none'%3E%3Cpath%20d='M1%206%20C%2022%202%2046%207%2070%203%20S%20104%206%20109%202'%20fill='none'%20stroke='%231f6f4a'%20stroke-width='2.4'%20stroke-linecap='round'/%3E%3C/svg%3E")
+    no-repeat center / 100% 100%;
+}
+[data-theme="dark"] .home-view-title::after {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20110%208'%20preserveAspectRatio='none'%3E%3Cpath%20d='M1%206%20C%2022%202%2046%207%2070%203%20S%20104%206%20109%202'%20fill='none'%20stroke='%234ade80'%20stroke-width='2.4'%20stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
 /* === GitHub 草マップ === */
 
 /* ホームリニューアル②: 以前は独立カードだったが、「今日」ヒーロー
@@ -17,10 +43,20 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding-top: 14px;
+  padding-top: 18px;
   border-top: 1px solid var(--line);
   cursor: pointer;
   text-align: left;
+}
+
+/* デザイン刷新: border-top の直線を鉛筆書きの手描き横線(pencil-divider)
+   に置き換える。日報の handdrawn-underline 鉛筆バリアントと同じ語彙で
+   波形は新規(ライト専用、ダークは黒地で視認できないため素の border-top
+   に戻す = dark.css 側で無効化)。 */
+html:not([data-theme="dark"]) .home-github-card {
+  border-top: none;
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20300%206'%20preserveAspectRatio='none'%3E%3Cpath%20d='M2%203%20C%2060%200.5%20120%205%20180%202%20S%20260%204%20298%202'%20fill='none'%20stroke='%231a1817'%20stroke-opacity='0.3'%20stroke-width='1.4'%20stroke-linecap='round'/%3E%3C/svg%3E")
+    no-repeat top center / 100% 6px;
 }
 
 .home-github-card:active {
@@ -67,6 +103,12 @@
   padding: 8px 10px;
   border-radius: 12px;
   background: var(--canvas);
+}
+
+/* 紙面(surface-warm)に馴染むよう、統計チップの背景をごく薄い ink 塗り
+   に調整する(ライト専用。ダークは var(--canvas) のまま)。 */
+html:not([data-theme="dark"]) .home-github-stat {
+  background: rgba(26, 24, 23, 0.035);
 }
 
 .home-github-stat-label {
@@ -264,7 +306,7 @@
   color: var(--muted);
 }
 
-/* === 「みんなの投稿」入口行 === */
+/* === 「みんなの投稿」入口行 === 机の端のメモ */
 
 .home-posts-entry {
   display: flex;
@@ -279,6 +321,52 @@
   box-shadow: var(--shadow-card);
   text-align: left;
   position: relative;
+  overflow: visible;
+  rotate: 0.6deg;
+  transition: rotate 0.24s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+/* 紙面(surface-warm + dot grain)。ライト専用、ダークは純黒設計を維持。 */
+html:not([data-theme="dark"]) .home-posts-entry {
+  background-color: var(--surface-warm, #fffdfa);
+  background-image: radial-gradient(rgba(26, 24, 23, 0.02) 1px, transparent 1.4px);
+  background-size: 4px 4px;
+  box-shadow:
+    0 1px 2px rgba(var(--ink-rgb), 0.05),
+    0 6px 14px -6px rgba(var(--ink-rgb), 0.14),
+    0 18px 30px -18px rgba(var(--ink-rgb), 0.2);
+}
+
+/* マスキングテープ(washi-sage)。右寄り・逆角度で今日カードのテープと
+   区別する。 */
+.home-posts-entry::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  right: 30px;
+  width: 58px;
+  height: 20px;
+  transform: rotate(3.5deg);
+  background: linear-gradient(135deg, rgba(149, 193, 172, 0.38), rgba(149, 193, 172, 0.22));
+  border-left: 1px solid rgba(255, 255, 255, 0.28);
+  border-right: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 1px 2px rgba(var(--ink-rgb), 0.06);
+  pointer-events: none;
+}
+
+.home-posts-entry:focus-visible,
+.home-posts-entry:active {
+  rotate: 0deg;
+}
+@media (hover: hover) {
+  .home-posts-entry:hover {
+    rotate: 0deg;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-posts-entry {
+    transition: none;
+  }
 }
 
 .home-posts-entry:active {
@@ -294,7 +382,8 @@
 }
 
 .home-posts-entry-title {
-  font-size: 14px;
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP", serif;
+  font-size: 15px;
   font-weight: 800;
   color: var(--ink-strong);
 }

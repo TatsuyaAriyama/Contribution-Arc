@@ -8589,6 +8589,34 @@ function App() {
   const selectedRoomPosts = selectedRoom ? posts.filter((post) => post.roomId === selectedRoom.id).slice(0, 4) : [];
   const selectedDailyReport = dailyReports.find((report) => report.date === selectedDailyDate) || null;
   const currentLearnerDate = getLearnerDate(new Date(feedNowTick));
+  /* デザイン刷新「今日という一枚 — 日めくりのアトリエデスク」用に、
+     formatDailyDate の一体化した文字列ではなく日/月/曜日を個別に組む。
+     日の数字を明朝の大きなヒーローにし、月・曜日は右に小さく添える。 */
+  const homeDailyLeaf = useMemo(() => {
+    const parsedDate = new Date(`${currentLearnerDate}T00:00:00`);
+    if (Number.isNaN(parsedDate.getTime())) {
+      return { day: "", month: "", weekday: "" };
+    }
+    const locale = language === "en" ? "en-US" : "ja-JP";
+    const day = String(parsedDate.getDate());
+    const month = parsedDate.toLocaleDateString(locale, {
+      month: language === "en" ? "short" : "long",
+    });
+    const weekdayRaw = parsedDate.toLocaleDateString(locale, { weekday: "short" });
+    const weekday = language === "en" ? weekdayRaw : `(${weekdayRaw})`;
+    return { day, month, weekday };
+  }, [currentLearnerDate, language]);
+  /* 時間帯で切り替わる一言(便利性とアート性の接点)。レンダー時の時刻を
+     見るだけで十分なので useMemo にはせず単純式で評価する。 */
+  const homeGreetingHour = new Date().getHours();
+  const homeGreeting =
+    homeGreetingHour >= 5 && homeGreetingHour <= 10
+      ? t("おはようございます。まっさらな一枚から")
+      : homeGreetingHour >= 11 && homeGreetingHour <= 16
+        ? t("こんにちは。今日はまだ書きかけです")
+        : homeGreetingHour >= 17 && homeGreetingHour <= 21
+          ? t("こんばんは。今日を仕上げる時間です")
+          : t("夜の一筆も、ちゃんと積み上がります");
   /* ホーム「今日」ヒーローカード用の今日合計。studyStreak (6 時 cutoff の
      getLearnerDate 基準) と同じ「学習者の1日」の境界に揃えるため、
      todayStudyMinutes (calendar-day 基準の getTodayKey) とは別に計算する。 */
@@ -23518,7 +23546,7 @@ function App() {
       {currentView === "feed" ? (
         <article className="app-view-feed">
           <header className="feed-view-header">
-            <h1>{t("ホーム")}</h1>
+            <h1 className="home-view-title">{t("ホーム")}</h1>
           </header>
           <div
             className={`feed-view-content${
@@ -23558,9 +23586,23 @@ function App() {
                   ようホーム最上段に置く。計測中は選択中の学習対象名に切替わり、
                   ミニバーと同じ経路(シートを開く)に合流する。 */}
               <section className="focus-today-card" aria-label={t("今日")}>
-                <div className="focus-today-head">
-                  <span className="focus-today-kicker">{t("今日")}</span>
-                  <span className="focus-today-date">{formatDailyDate(currentLearnerDate, language)}</span>
+                {/* デザイン刷新「今日という一枚 — 日めくりのアトリエデスク」。
+                    旧 focus-today-head(kicker「今日」+ 日付テキスト)を、
+                    日付を主役にした日めくりヒーローに作り替える。 */}
+                <div className="focus-today-leaf">
+                  <div
+                    className="focus-today-leaf-date"
+                    aria-label={formatDailyDate(currentLearnerDate, language)}
+                  >
+                    <span className="focus-today-leaf-day" aria-hidden="true">
+                      {homeDailyLeaf.day}
+                    </span>
+                    <span className="focus-today-leaf-meta" aria-hidden="true">
+                      <span className="focus-today-leaf-month">{homeDailyLeaf.month}</span>
+                      <span className="focus-today-leaf-weekday">{homeDailyLeaf.weekday}</span>
+                    </span>
+                  </div>
+                  <p className="focus-today-leaf-greeting">{homeGreeting}</p>
                 </div>
                 <div className="focus-today-stats">
                   <div className="focus-today-stat">
@@ -23574,8 +23616,13 @@ function App() {
                   <div className="focus-today-stat">
                     <span className="focus-today-stat-label">{t("ストリーク")}</span>
                     {studyStreak > 0 ? (
-                      <span className="focus-today-stat-value focus-today-streak">
-                        {t("{n}日連続", { n: studyStreak })}
+                      <span
+                        className="focus-today-streak-stamp"
+                        aria-label={t("{n}日連続", { n: studyStreak })}
+                      >
+                        <span className="focus-today-streak-stamp-value" aria-hidden="true">
+                          {t("{n}日", { n: studyStreak })}
+                        </span>
                       </span>
                     ) : (
                       <span className="focus-today-stat-value focus-today-stat-muted">
