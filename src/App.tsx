@@ -8589,7 +8589,7 @@ function App() {
   const selectedRoomPosts = selectedRoom ? posts.filter((post) => post.roomId === selectedRoom.id).slice(0, 4) : [];
   const selectedDailyReport = dailyReports.find((report) => report.date === selectedDailyDate) || null;
   const currentLearnerDate = getLearnerDate(new Date(feedNowTick));
-  /* デザイン刷新「今日という一枚 — 日めくりのアトリエデスク」用に、
+  /* ホーム「今日」ヒーロー(静かなラグジュアリー路線)用に、
      formatDailyDate の一体化した文字列ではなく日/月/曜日を個別に組む。
      日の数字を明朝の大きなヒーローにし、月・曜日は右に小さく添える。 */
   const homeDailyLeaf = useMemo(() => {
@@ -23587,9 +23587,9 @@ function App() {
                   ようホーム最上段に置く。計測中は選択中の学習対象名に切替わり、
                   ミニバーと同じ経路(シートを開く)に合流する。 */}
               <section className="focus-today-card" aria-label={t("今日")}>
-                {/* デザイン刷新「今日という一枚 — 日めくりのアトリエデスク」。
-                    旧 focus-today-head(kicker「今日」+ 日付テキスト)を、
-                    日付を主役にした日めくりヒーローに作り替える。 */}
+                {/* 静かなラグジュアリー路線の「今日」ヒーロー。旧
+                    focus-today-head(kicker「今日」+ 日付テキスト)を、
+                    日付を主役にしたヒーローに作り替える。 */}
                 <div className="focus-today-leaf">
                   <div
                     className="focus-today-leaf-date"

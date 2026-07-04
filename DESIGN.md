@@ -383,21 +383,19 @@ components:
     motion: "transform 0.28s cubic-bezier(0.2,0.8,0.3,1)"
 
   home-daily-leaf:
-    description: ホーム「今日」カード（focus-today-card）の日めくりヒーロー。日付を主役にした「日めくりカレンダーの一枚」表現で、旧 focus-today-head（kicker + 日付テキスト）を置き換える。
-    day: "日の数字を {typography.mincho-heading} で 36〜40px / weight 700、下に緑インクの手描き下線（handdrawn-underline、ホーム専用の新しい波形）"
-    meta: "月 / 曜日を縦2段・{typography.eyebrow} 相当サイズ・{colors.ink-muted} で数字の右に添える"
-    greeting: "時間帯で切り替わる一言を右側に（{colors.ink-muted} / 13px / {typography.mincho-heading}）"
+    description: ホーム「今日」カード（focus-today-card）の日付ヒーロー。日付を主役にした端正な見出しで、旧 focus-today-head（kicker + 日付テキスト）を置き換える。紙・テープ・傾き・手描きの揺らぎは持たない「静かなラグジュアリー」表現（[Home Premium Accent](#home-premium-accent--静かなラグジュアリー) 参照）。
+    day: "日の数字を {typography.mincho-heading} で 30〜32px / weight 700、下に {colors.accent-rare} 系の細い直線（迷いのない一直線、揺らぎなし）"
+    meta: "月 / 曜日を縦2段・11〜12px・{colors.ink-strong} / {colors.ink-muted} で数字の右に添える"
+    greeting: "時間帯で切り替わる一言を右側に（{colors.ink-muted} / 13px / {typography.mincho-heading} / weight 600）。深夜帯（22〜4時）は非表示。"
 
-  home-streak-stamp:
-    description: ホーム「今日」カードのストリーク表示（1日以上）を、study-log-ticket と同じ語彙の蔵書印に置き換える。0日のときは従来どおり muted テキスト「今日からはじめよう」のまま。
-    stamp: "緑インクの手描き二重円（SVG 楕円 ×2、study-log-ticket の stamp と同一語彙） / dark は {colors.dark-primary}"
-    size: "54〜60px 角、rotate -6deg"
+  home-streak-medallion:
+    description: ホーム「今日」カードのストリーク表示（1日以上）を、正円二重リングの端正なメダルに置き換える。0日のときは従来どおり muted テキスト「今日からはじめよう」のまま。
+    rings: "外リングはブランド緑（達成）、内リングは {colors.accent-rare} 系の金。ともに正円・水平固定で傾けない。新しい構造色は増やさず既存トークンのみで構成"
     value: "「{n}日」を {typography.mincho-heading} で中央に"
 
-  pencil-divider:
-    description: ホーム「今日」カード内、統計/CTA と GitHub 草マップの間の区切り。border-top の直線をやめ、鉛筆書きの手描き横線（揺らいだ SVG）にする。
-    stroke: "{colors.pencil-ink} を薄めた opacity・width 1.4 相当の揺らいだ SVG（日報の鉛筆下線と同じ語彙、波形は新規）"
-    dark: "黒地では視認できないため白ベースの薄いストロークに切り替え（大幅減光）"
+  home-gilt-edge:
+    description: ホーム「今日」カードと「みんなの投稿」入口の上端に引く、ごく細い金のグラデーション線。良質な便箋やカードの縁金のような、唯一かつ控えめな装飾で、テープ・紙工作の代替として2枚の主要カードに共通させる signature。
+    stroke: "高さ2px、{colors.accent-rare} を中心に左右へ透明にフェードするグラデーション。dark は同系のより明るい金に切り替え"
 
 ---
 
@@ -466,7 +464,7 @@ Contribution Arc は「静かな書斎」のような学習トラッキング SN
 ### Font Family
 全文 **`Inter`**（fallback: `ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial`）。serif / monospace は使わない。OpenType `lnum` を本文 / 数値で有効にし、player chip の Lv 数字を等幅に揃える。
 
-> **唯一の例外** — 日報 (daily-report) と FEED (home-feed) の見出しだけは明朝体 (`{typography.mincho-heading}`) を許可する。Inter 一族の均質さが生む「生成 UI テンプレ感」を意図的に崩し、手帳の紙面に寄せるための逸脱。詳細は **[Handcrafted Layer](#handcrafted-layer--日報の紙アナログ表現)** を参照。この例外を日報 / FEED / ホーム以外へ広げない。
+> **唯一の例外** — 日報 (daily-report) と FEED (home-feed) の見出し、およびホーム (`app-view-feed`) の「今日」日付ヒーロー・時間帯挨拶・タイトル・投稿入口タイトルだけは明朝体 (`{typography.mincho-heading}`) を許可する。Inter 一族の均質さが生む「生成 UI テンプレ感」を意図的に崩すための逸脱。日報 / FEED は紙アナログ表現(詳細は **[Handcrafted Layer](#handcrafted-layer--日報の紙アナログ表現)**)、ホームは紙・テープ・傾きを伴わない「静かなラグジュアリー」表現(詳細は **[Home Premium Accent](#home-premium-accent--静かなラグジュアリー)**)という別々の語彙で使う。この例外を日報 / FEED / ホーム以外へ広げない。
 
 ### Hierarchy
 
@@ -638,7 +636,7 @@ Inter が読み込めない環境では `system-ui` にフォールバック。d
 
 ## Handcrafted Layer — 日報の紙アナログ表現
 
-> **スコープ厳守** — このレイヤーは **日報 (`daily-screen`) と FEED / ホーム (`app-view-feed` / `home-feed-section`) に適用する Signature 表現**。それ以外（プロフィール / 設定 / アトリエ / モーダル等）は引き続き「Inter / フラット / hairline」の静かな書斎を保つ。さらに広げたくなったら、まず DESIGN.md を更新してから横展開する。
+> **スコープ厳守** — このレイヤーは **日報 (`daily-screen`) と FEED (`home-feed-section`) に適用する Signature 表現**。それ以外(ホーム / プロフィール / 設定 / アトリエ / モーダル等)は紙・テープ・傾き・手描きの揺らぎを持ち込まない。ホーム (`app-view-feed`) は別の語彙([Home Premium Accent](#home-premium-accent--静かなラグジュアリー))で明朝の一部使用のみ許可する。さらに広げたくなったら、まず DESIGN.md を更新してから横展開する。
 
 ### なぜ例外を許すか
 均質に整った Inter + フラット白 + 完璧なグリッドは、読みやすい反面「どこかで見た生成 UI」に見える。日報は毎日書く最も個人的な画面なので、ここだけ **手の気配（不完全さ・紙の温かみ）** を入れて、決まりすぎた整列をわざと崩す。崩す方向は「ノイズの追加」ではなく「手描き・紙・少しのズレ」という一貫した語彙で行う。
@@ -672,14 +670,35 @@ entry-card を机にテープで留めた紙片に見立て、ごく僅かに傾
 - **学習ログ = 学習チケット（`study-log-ticket`）**：auto-study 投稿は「『科目』を N 学習しました」の一文をやめ、学習時間を主役にしたインク印風チケットに。緑の印の中で集中メーターが時間に比例して満ち、科目は明朝で見出し化する。作業ログ (auto-workspace) は従来のコンパクト pill のまま。
 - **取り消し線・インクチェックは日報専用**：FEED には持ち込まない（チェック対象が無く、文意も変わるため）。
 
-### ホームへの適用（app-view-feed の今日カード / 投稿入口）
-ホームを「学習者の机に置かれた日めくりカレンダーの一枚」として演出する。紙の地は FEED と共通（既に `app-view-feed` に適用済み）。見出し「ホーム」は明朝 + 手描き緑下線（波形は新規）。「今日」カード（`focus-today-card`）は `masking-tape`（sepia）+ `card-tilt`（-0.4deg、hover / focus-within / active で水平）を纏い、日付は `home-daily-leaf` で日めくりのヒーローに、右に時間帯の一言を添える。ストリークは 1 日以上で `home-streak-stamp`（蔵書印）に切り替わり、0 日は従来どおり muted テキスト。統計/CTA と GitHub 草マップの間は `pencil-divider` に置き換えるが、統計・グリッド・CTA「作業をはじめる」の構造と可読性は変えない。「みんなの投稿」入口（`home-posts-entry`）は surface-warm + dot grain、`masking-tape`（sage・逆角度）+ `card-tilt`（0.6deg）+ 3 段の紙影で机の端のメモに見立てる。
-
 ### 実装ルール
 - 手描きの揺らぎは **inline SVG data-uri** で描く（画像アセットを足さない）。
 - 線の色は **既存トークンを流用**（`{colors.primary}` / `{colors.ink}` / `{colors.pencil-ink}`）。手描きのために新しい構造色を増やさない。
 - 「揃いすぎない」は **波形・角度を要素ごとに変える** ことで出す。ランダム JS ではなく、2〜3 バリアントの使い分けで十分。
 - 動きは短く（0.26〜0.36s）、一回性の手応え（pop / draw）に留める。常時アニメは置かない。
+
+
+## Home Premium Accent — 静かなラグジュアリー
+
+> **スコープ厳守** — ホーム（`app-view-feed`）専用の装飾語彙。Handcrafted Layer（紙・テープ・傾き・手描きの揺らぎ）とは別物で、混同しない。大人のユーザーに向けた「静かな高級感」を、装飾を足すのではなく引き算と一点豪華主義で作る。
+
+### なぜ Handcrafted Layer と分けるか
+日報 / FEED の紙工作(マスキングテープ・傾き・手描きの揺らぎ)は、毎日書く手帳としての「手の気配」を狙った表現だった。しかしホームは全ユーザーが毎回最初に開く顔であり、「工作っぽさ」は安っぽく見えるとのフィードバックを受け、ホームだけは別路線に切り替えた。方向性は「良質な文具・上質な便箋」。装飾は増やさず、既存トークンの中で最も贅沢な `{colors.accent-rare}`（金）を、唯一・控えめに使う。
+
+### 構成要素
+
+**1. 金の一筋（`home-gilt-edge`）**
+「今日」カード（`focus-today-card`）と「みんなの投稿」入口（`home-posts-entry`）の上端だけに引く、幅2px・左右にフェードする細い金のグラデーション線。テープに代わる、2枚のカードに共通する唯一の signature。
+
+**2. 日付ヒーロー（`home-daily-leaf`）**
+「今日」カードの日付を主役にする。日の数字は明朝 30〜32px で大きく、下に手描きではない一直線の金の下線を引く。月・曜日は数字の右に小さく添え、さらに右へ時間帯の一言（明朝・muted）を置く。深夜帯（22〜4時）は一言を出さない。
+
+**3. ストリーク・メダリオン（`home-streak-medallion`）**
+連続日数（1日以上）は正円の二重リング(緑 + 金)で表す。手描きの蔵書印のような有機的な揺らぎは持たず、正円・水平固定で端正に見せる。
+
+### 実装ルール
+- 紙テクスチャ・マスキングテープ・カードの傾き・手描きの揺らいだ SVG は使わない。直線・正円などの精密な幾何形状のみ。
+- 金の装飾は `{colors.accent-rare}` トークンの流用に限る。新しい構造色は増やさない。
+- 装飾は「引き算」を基本にする。ホームに新しい飾りを足したくなったら、まず既存の金の一筋・下線・メダリオンで表現できないか検討する。
 
 
 ## Do's and Don'ts
@@ -709,7 +728,8 @@ entry-card を机にテープで留めた紙片に見立て、ごく僅かに傾
 - ❌ 2 つ目の構造アクセント色を追加しない。新しい色を増やしたくなったら、まず既存の `{colors.primary}` / `{colors.cta-bg}` / `{colors.accent-warm}` で代用できないか検討する。
 - ❌ モーダルの中に position: fixed を直接置かない（祖先 motion.main の transform で祖先基準になる）。Portal を使う。
 - ❌ 「ホバーで色が変わる」だけの装飾を増やさない。モバイル優先のため `:active` / `aria-pressed` で状態を表すのが基本。
-- ❌ Handcrafted Layer（明朝・手描き下線・インクチェック・テープ・カード傾き）を日報 / FEED / ホーム以外の画面に無断で広げない。世界観が薄まる。横展開するなら先に DESIGN.md を更新する。
+- ❌ Handcrafted Layer（明朝・手描き下線・インクチェック・テープ・カード傾き）を日報 / FEED 以外の画面に無断で広げない。世界観が薄まる。横展開するなら先に DESIGN.md を更新する。
 - ❌ FEED の投稿カードの傾きは ±2° を上限とし、hover / tap で必ず水平に戻す（読めなくなる傾きにしない）。取り消し線・インクチェックは日報専用で FEED に持ち込まない。
 - ❌ 紙の小物（折れ角・画鋲）やアニメをランダム JS で散らさない。nth-child の機械的なバリアント分配で「揺らぎ」を出し、prefers-reduced-motion を必ず尊重する。
 - ❌ 手描きのために新しい構造色やフォントを足さない。明朝は日報見出しのみ、線色は既存トークンの流用に留める。
+- ❌ ホーム（`app-view-feed`）に紙・テープ・カード傾き・手描きの揺らぎを持ち込まない。Home Premium Accent は明朝の一部使用と `{colors.accent-rare}` の細い金の一筋のみに留める。

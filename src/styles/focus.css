@@ -459,66 +459,37 @@
 }
 
 /* === ホーム「今日」ヒーローカード ===
-   デザイン刷新「今日という一枚 — 日めくりのアトリエデスク」。
-   DESIGN.md の Handcrafted Layer をホームへ正式展開し、日めくりカレンダー
-   の一枚として演出する。緑は CTA・ストリーク・下線・スタンプのみに
-   絞り、それ以外は ink/muted のみで構成する方針は維持。 */
+   静謐なラグジュアリー路線。紙工作(マスキングテープ・傾き・手描きの
+   揺らぎ)は排し、質の良い便箋 1 枚を思わせる端正な余白と、上端のごく
+   細い金の一筋(--rare)だけを唯一の装飾に絞る。緑は CTA・ストリーク・
+   下線のみ、それ以外は ink/muted で構成する方針は維持。 */
 
 .focus-today-card {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 16px 18px;
+  padding: 18px 20px;
   margin-bottom: 14px;
   border: 1px solid var(--line);
   border-radius: 20px;
   background: var(--surface);
   box-shadow: var(--shadow-card);
   position: relative;
-  overflow: visible;
-  rotate: -0.4deg;
-  transition: rotate 0.24s cubic-bezier(0.2, 0.8, 0.3, 1);
+  overflow: hidden;
 }
 
-/* 紙面(surface-warm + dot grain)。ライト専用、ダークは純黒設計を維持
-   (var(--surface) のまま)。 */
-html:not([data-theme="dark"]) .focus-today-card {
-  background-color: var(--surface-warm, #fffdfa);
-  background-image: radial-gradient(rgba(26, 24, 23, 0.02) 1px, transparent 1.4px);
-  background-size: 4px 4px;
-}
-
-/* 上端中央〜やや左のマスキングテープ(washi-sepia)。日報の entry-card と
-   同じ語彙で、机に留めた紙片に見立てる。 */
+/* 上端の細い金の一筋。良質な便箋・カードの縁金のような、控えめな
+   唯一の装飾。既存の --rare(accent-rare)を流用し新しい構造色は
+   増やさない。 */
 .focus-today-card::before {
   content: "";
   position: absolute;
-  top: -9px;
-  left: 34px;
-  width: 64px;
-  height: 21px;
-  transform: rotate(-3deg);
-  background: linear-gradient(135deg, rgba(201, 184, 140, 0.4), rgba(201, 184, 140, 0.26));
-  border-left: 1px solid rgba(255, 255, 255, 0.28);
-  border-right: 1px solid rgba(255, 255, 255, 0.28);
-  box-shadow: 0 1px 2px rgba(var(--ink-rgb), 0.06);
+  top: 0;
+  left: 22px;
+  right: 22px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(200, 169, 91, 0.55), transparent);
   pointer-events: none;
-}
-
-.focus-today-card:focus-within,
-.focus-today-card:active {
-  rotate: 0deg;
-}
-@media (hover: hover) {
-  .focus-today-card:hover {
-    rotate: 0deg;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .focus-today-card {
-    transition: none;
-  }
 }
 
 /* 日めくりヒーロー(home-daily-leaf)。左に日の数字を明朝の大きな主役、
@@ -541,28 +512,28 @@ html:not([data-theme="dark"]) .focus-today-card {
 .focus-today-leaf-day {
   position: relative;
   display: inline-block;
-  padding-bottom: 4px;
+  padding-bottom: 6px;
   font-family: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP", serif;
   font-weight: 700;
-  font-size: 30px;
+  font-size: 32px;
   line-height: 1;
   color: var(--ink-strong);
   font-variant-numeric: tabular-nums;
 }
 
-/* 日の数字の下の緑インク手描き下線(ホーム専用の波形)。 */
+/* 日の数字の下の細い金の直線。手描きの揺らぎではなく、上質な便箋の
+   罫線のように迷いなく一直線に引く。 */
 .focus-today-leaf-day::after {
   content: "";
   position: absolute;
-  left: -2px;
-  right: -4px;
+  left: 1px;
+  right: 1px;
   bottom: 0;
-  height: 7px;
-  background: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2070%2010'%20preserveAspectRatio='none'%3E%3Cpath%20d='M1%207%20C%2015%202%2030%209%2045%204%20S%2065%208%2069%203'%20fill='none'%20stroke='%231f6f4a'%20stroke-width='2.4'%20stroke-linecap='round'/%3E%3C/svg%3E")
-    no-repeat center / 100% 100%;
+  height: 2px;
+  background: rgba(200, 169, 91, 0.85);
 }
 [data-theme="dark"] .focus-today-leaf-day::after {
-  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2070%2010'%20preserveAspectRatio='none'%3E%3Cpath%20d='M1%207%20C%2015%202%2030%209%2045%204%20S%2065%208%2069%203'%20fill='none'%20stroke='%234ade80'%20stroke-width='2.4'%20stroke-linecap='round'/%3E%3C/svg%3E");
+  background: rgba(251, 191, 36, 0.75);
 }
 
 .focus-today-leaf-meta {
@@ -575,14 +546,14 @@ html:not([data-theme="dark"]) .focus-today-card {
 .focus-today-leaf-month {
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   color: var(--ink-strong);
 }
 
 .focus-today-leaf-weekday {
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   color: var(--muted);
 }
 
@@ -591,7 +562,7 @@ html:not([data-theme="dark"]) .focus-today-card {
   margin: 4px 0 0;
   font-family: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP", serif;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.4;
   color: var(--muted);
   text-align: right;
@@ -649,36 +620,36 @@ html:not([data-theme="dark"]) .focus-today-card {
   color: var(--muted);
 }
 
-/* 蔵書印風のストリークスタンプ(home-streak-stamp)。study-log-ticket の
-   stamp と同じ語彙(緑インクの手描き二重円)を流用し、ストリークが
-   1日以上のとき数値表示の代わりに置く。 */
+/* ストリーク・メダリオン(home-streak-medallion)。手描きの蔵書印では
+   なく、正円二重リング(緑 + 金)の端正なメダルに。達成の重みは
+   ブランド緑のリングで、金の内リングは --rare を流用した控えめな
+   仕上げのアクセント(新しい構造色は増やさない)。 */
 .focus-today-streak-stamp {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
-  rotate: -6deg;
+  width: 50px;
+  height: 50px;
   color: var(--green);
 }
 .focus-today-streak-stamp::after {
   content: "";
   position: absolute;
-  inset: -3px;
-  background: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2060%2060'%3E%3Cg%20fill='none'%20stroke='%231f6f4a'%20stroke-width='2'%3E%3Cellipse%20cx='30'%20cy='30'%20rx='25'%20ry='24'%20transform='rotate(-4%2030%2030)'/%3E%3Cellipse%20cx='30'%20cy='30'%20rx='23.5'%20ry='25'%20stroke-opacity='0.45'%20transform='rotate(3%2030%2030)'/%3E%3C/g%3E%3C/svg%3E")
+  inset: -2px;
+  background: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2054%2054'%3E%3Ccircle%20cx='27'%20cy='27'%20r='25'%20fill='none'%20stroke='%231f6f4a'%20stroke-width='1.4'/%3E%3Ccircle%20cx='27'%20cy='27'%20r='20'%20fill='none'%20stroke='%23c8a95b'%20stroke-width='1'%20stroke-opacity='0.85'/%3E%3C/svg%3E")
     center / 100% 100% no-repeat;
   pointer-events: none;
 }
 [data-theme="dark"] .focus-today-streak-stamp::after {
-  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2060%2060'%3E%3Cg%20fill='none'%20stroke='%234ade80'%20stroke-width='2'%3E%3Cellipse%20cx='30'%20cy='30'%20rx='25'%20ry='24'%20transform='rotate(-4%2030%2030)'/%3E%3Cellipse%20cx='30'%20cy='30'%20rx='23.5'%20ry='25'%20stroke-opacity='0.45'%20transform='rotate(3%2030%2030)'/%3E%3C/g%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2054%2054'%3E%3Ccircle%20cx='27'%20cy='27'%20r='25'%20fill='none'%20stroke='%234ade80'%20stroke-width='1.4'/%3E%3Ccircle%20cx='27'%20cy='27'%20r='20'%20fill='none'%20stroke='%23fbbf24'%20stroke-width='1'%20stroke-opacity='0.85'/%3E%3C/svg%3E");
 }
 
 .focus-today-streak-stamp-value {
   position: relative;
   font-family: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP", serif;
   font-weight: 800;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1;
   letter-spacing: -0.02em;
 }
