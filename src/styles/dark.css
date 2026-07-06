@@ -472,11 +472,3 @@
     inset 0 -8px 16px rgba(0, 0, 0, 0.32),
     0 0 0 1px rgba(255, 255, 255, 0.12);
 }
-
-/* ホームの静かなラグジュアリー装飾: 上端の細い金の一筋は、純黒
-   キャンバスでは明るい金(dark-accent-rare 相当)に差し替えて発色を
-   保つ。 */
-[data-theme="dark"] .focus-today-card::before,
-[data-theme="dark"] .home-posts-entry::before {
-  background: linear-gradient(90deg, transparent, rgba(251, 191, 36, 0.45), transparent);
-}
