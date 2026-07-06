@@ -7,12 +7,29 @@
  * .contribution-arc-cell.lv-0〜4 (App.css) をそのまま再利用している。
  */
 
-/* === ヘッダ「ホーム」=== 静かな高級感。装飾は足さず明朝の字面だけで
-   質を語る。手描き下線・波形は使わない。 */
+/* === ヘッダ「ホーム」=== 白黒ミニマル。装飾・明朝・色は使わず、
+   Inter の太字だけ。 */
 .home-view-title {
-  font-family: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP", serif;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--ink-strong);
+}
+
+/* === お知らせバナー(ホーム上のモノクロ上書き) ===
+   App.css の緑アクセント(バッジ塗り・kicker・hover 枠)を、ホームでは
+   白黒に落とす。他画面の同バナーには影響させないため app-view-feed
+   スコープに限定する。 */
+.app-view-feed .home-notice-banner-badge {
+  background: rgba(var(--ink-rgb), 0.06);
+  color: var(--ink);
+}
+.app-view-feed .home-notice-banner-kicker {
+  color: var(--muted);
+}
+@media (hover: hover) {
+  .app-view-feed .home-notice-banner:hover {
+    border-color: rgba(var(--ink-rgb), 0.24);
+  }
 }
 
 /* === GitHub 草マップ === */
@@ -73,8 +90,8 @@
   gap: 2px;
   min-width: 0;
   padding: 8px 10px;
-  border-radius: 12px;
-  background: var(--canvas);
+  border-radius: 10px;
+  background: rgba(var(--ink-rgb), 0.04);
 }
 
 .home-github-stat-label {
@@ -98,16 +115,16 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* 「連動日数」だけは緑(AGENTS.md: 緑は Streak/Growth/Success に使用可)。 */
+/* 白黒ミニマル: 「連動日数」も他の stat と同じ ink に揃える(緑は使わない)。 */
 .home-github-stat-value-synced {
-  color: var(--green);
+  color: var(--ink-strong);
 }
 
 .home-github-stat-dot {
   width: 6px;
   height: 6px;
   border-radius: 999px;
-  background: var(--green);
+  background: var(--ink);
   flex-shrink: 0;
 }
 
@@ -140,11 +157,30 @@
   cursor: pointer;
 }
 
-/* 連動セル(その日に学習ログ + GitHub コミットの両方がある)。既存の
-   lv-0〜4 の塗りはそのまま活かし、静かな緑のリングだけを内側に重ねる
-   (塗りつぶしは変更しない)。 */
+/* 白黒ミニマル: 草マップのセルを緑スケールから黒インクスケールに
+   置き換える(ホームのグリッドに限定。プロフィール側の緑は触らない)。
+   lv が上がるほど濃くなる 4 段の墨色で「積み上げ」の濃淡を表す。 */
+.home-github-grid .contribution-arc-cell.lv-0 {
+  background: rgba(var(--ink-rgb), 0.06);
+}
+.home-github-grid .contribution-arc-cell.lv-1 {
+  background: rgba(var(--ink-rgb), 0.22);
+}
+.home-github-grid .contribution-arc-cell.lv-2 {
+  background: rgba(var(--ink-rgb), 0.42);
+}
+.home-github-grid .contribution-arc-cell.lv-3 {
+  background: rgba(var(--ink-rgb), 0.66);
+}
+.home-github-grid .contribution-arc-cell.lv-4 {
+  background: rgba(var(--ink-rgb), 0.9);
+}
+
+/* 連動セル(その日に学習ログ + GitHub コミットの両方がある)。黒インクの
+   塗りの内側に surface 色(白)のリングを重ね、濃淡に関係なくドーナツ状
+   に「連動」を示す。 */
 .home-github-grid .contribution-arc-cell.is-synced {
-  box-shadow: 0 0 0 1.5px var(--green) inset;
+  box-shadow: 0 0 0 1.5px var(--surface) inset;
 }
 
 /* 選択中セル。is-synced (inset box-shadow) と共存できるよう、選択の
@@ -219,7 +255,7 @@
   gap: 5px;
   font-size: 12px;
   font-weight: 700;
-  color: var(--green);
+  color: var(--ink);
 }
 
 .home-github-detail-empty {
@@ -272,9 +308,8 @@
   color: var(--muted);
 }
 
-/* === 「みんなの投稿」入口行 === 今日カードと同じ静かなラグジュアリー
-   の語彙。紙・テープ・傾きは使わず、上端の細い金の一筋だけで
-   統一感のある高級感を出す。 */
+/* === 「みんなの投稿」入口行 === 今日カードと同じ白黒ミニマル。
+   白地 + 1px グレー罫線のフラットなカード。装飾線・色は使わない。 */
 
 .home-posts-entry {
   display: flex;
@@ -284,23 +319,10 @@
   padding: 14px 18px;
   margin-bottom: 14px;
   border: 1px solid var(--line);
-  border-radius: 20px;
+  border-radius: 16px;
   background: var(--surface);
-  box-shadow: var(--shadow-card);
   text-align: left;
   position: relative;
-  overflow: hidden;
-}
-
-.home-posts-entry::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 22px;
-  right: 22px;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(200, 169, 91, 0.55), transparent);
-  pointer-events: none;
 }
 
 .home-posts-entry:active {
@@ -316,7 +338,6 @@
 }
 
 .home-posts-entry-title {
-  font-family: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP", serif;
   font-size: 15px;
   font-weight: 800;
   color: var(--ink-strong);
