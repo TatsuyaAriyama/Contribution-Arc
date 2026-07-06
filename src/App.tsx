@@ -142,14 +142,12 @@ import {
   formatStayTime,
   formatStudyTimeJa,
   getCurrentWeekKey,
-  getDateInputValue,
   getLearnerDate,
   getTodayKey,
   getWeekStart,
 } from "./utils/format";
 import { resolveCoins, resolveOwnedShapes } from "./utils/characterProgress";
 import { getDueDailyReminder } from "./utils/dailyReminder";
-import { computeSyncedStreak } from "./utils/syncedStreak";
 import {
   createCheckoutSession,
   createPortalSession,
@@ -1258,9 +1256,6 @@ function getContributionArcLevel(minutes: number): 0 | 1 | 2 | 3 | 4 {
 }
 
 const CONTRIBUTION_ARC_WEEKS = 13;
-// ホームの GitHub 草マップカード専用の週数。プロフィール裏面 (13週) より
-// 少し広く「直近約15週」を見せたいというホーム再構成の決定に合わせる。
-const HOME_GITHUB_WEEKS = 15;
 
 function getContributionArc(logs: StudyLog[]): {
   weeks: ContributionArcWeek[];
@@ -7886,79 +7881,6 @@ function App() {
   const githubContributionArc = useMemo(
     () => (githubContributions ? getGithubContributionArc(githubContributions.days) : null),
     [githubContributions],
-  );
-  // ホームの GitHub 草マップカード専用。プロフィール裏面の統合ヒートマップ
-  // (githubContributionArc, 13週・学習と合成) とは別に、GitHub 単体・
-  // 直近 HOME_GITHUB_WEEKS 週分の素のグリッドをホーム用に用意する。
-  // githubContributions は currentView に関係なくアプリ起動時から
-  // フェッチされているので、ここでの計算だけで済み追加の fetch は不要。
-  const homeGithubArc = useMemo(
-    () => (githubContributions ? getGithubContributionArc(githubContributions.days, HOME_GITHUB_WEEKS) : null),
-    [githubContributions],
-  );
-  // ホームの GitHub カードでタップされた日(ISO文字列)。プロフィール裏面の
-  // selectedArcDayKey と同じ考え方で、フリップの外(固定スロット)に詳細を
-  // 出すため、選択状態はグリッドの外まで持ち回れる文字列で持つ。
-  const [homeSelectedGithubDayIso, setHomeSelectedGithubDayIso] = useState<string | null>(null);
-  // homeGithubArc.weeks を ISO日付キーの Map に平らにして、選択日の
-  // commit数/level を O(1) で引けるようにする(githubByKey と同じ発想)。
-  const homeGithubArcByIso = useMemo(() => {
-    const map = new Map<string, GithubArcDay>();
-    if (!homeGithubArc) return map;
-    for (const week of homeGithubArc.weeks) {
-      for (const day of week.days) {
-        if (day) map.set(getDateInputValue(day.date), day);
-      }
-    }
-    return map;
-  }, [homeGithubArc]);
-  // 「連動ストリーク」(PRODUCT.md 独自性1: 積み上げの可視化 × GitHub 連携)。
-  // GitHub 本家プロフィールには無い「学習とコードの両方を積み上げた日」を
-  // studyLogs × githubContributions の掛け合わせで可視化する。
-  const homeGithubActiveDatesIso = useMemo(() => {
-    const set = new Set<string>();
-    if (!githubContributions) return set;
-    for (const day of githubContributions.days) {
-      if (day.count > 0) set.add(day.date);
-    }
-    return set;
-  }, [githubContributions]);
-  // ISO日付 → その日の学習合計分数。ホームカードの選択日詳細スロットで
-  // 学習時間を出すのに使うほか、活動日 Set (homeStudyActiveDatesIso) も
-  // ここから導出してロジックの重複を避ける。
-  const homeStudyMinutesByIso = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const log of studyLogs) {
-      const d = new Date(log.createdAt);
-      if (Number.isNaN(d.getTime())) continue;
-      const iso = getDateInputValue(d);
-      map.set(iso, (map.get(iso) ?? 0) + log.minutes);
-    }
-    return map;
-  }, [studyLogs]);
-  const homeStudyActiveDatesIso = useMemo(
-    () => new Set(homeStudyMinutesByIso.keys()),
-    [homeStudyMinutesByIso],
-  );
-  // 今日から遡って HOME_GITHUB_WEEKS*7 日分の ISO 日付を昇順(古い→新しい、
-  // 末尾が今日)で生成する。ローカル日付ベース(UTC ではない)なので、
-  // 草マップ本体(getGithubContributionArc も同じくローカル new Date() 基準)
-  // と同じ window を見る。
-  const homeSyncedWindowDates = useMemo(() => {
-    const days = HOME_GITHUB_WEEKS * 7;
-    const dates: string[] = [];
-    const cursor = new Date();
-    cursor.setHours(0, 0, 0, 0);
-    cursor.setDate(cursor.getDate() - (days - 1));
-    for (let i = 0; i < days; i++) {
-      dates.push(getDateInputValue(cursor));
-      cursor.setDate(cursor.getDate() + 1);
-    }
-    return dates;
-  }, []);
-  const homeSyncedStreak = useMemo(
-    () => computeSyncedStreak(homeSyncedWindowDates, homeGithubActiveDatesIso, homeStudyActiveDatesIso),
-    [homeSyncedWindowDates, homeGithubActiveDatesIso, homeStudyActiveDatesIso],
   );
   // Flatten the GitHub 13-week grid into a date-keyed map so the unified
   // heatmap can look up commit count/level per cell in O(1) and blend it
@@ -15856,28 +15778,6 @@ function App() {
     );
   })();
 
-  // ホーム「みんなの投稿」入口行用の軽量プレビュー。件数と並びは
-  // feedSortedEntries (feedSection と共通) をそのまま使い、先頭 1 件だけ
-  // 著者名 + 本文冒頭を抜き出す。投稿が無ければ null のまま (プレビュー省略)。
-  const homePostsLatestPreview = (() => {
-    const latest = feedSortedEntries[0];
-    if (!latest) return null;
-    if (latest.kind === "post") {
-      const authorName = feedAuthorLookup.get(latest.post.userId)?.displayName || "Builder";
-      const text = (latest.post.text || "").trim();
-      return {
-        authorName,
-        text: text.length > 40 ? `${text.slice(0, 40)}…` : text,
-      };
-    }
-    const authorName = feedAuthorLookup.get(latest.recruitment.userId)?.displayName || "Builder";
-    const text = (latest.recruitment.message || latest.recruitment.task || latest.recruitment.roomName || "").trim();
-    return {
-      authorName,
-      text: text.length > 40 ? `${text.slice(0, 40)}…` : text,
-    };
-  })();
-
   return (
     <MotionConfig reducedMotion="user">
     <motion.main
@@ -23697,209 +23597,7 @@ function App() {
                     <span aria-hidden="true">›</span>
                   </button>
                 ) : null}
-
-              {/* GitHub 草マップ(ホームリニューアル②)。以前は「今日」ヒーロー
-                  カードと別カードに分け、直近7日ミニバーと内容が重複していた。
-                  1枚の「継続の物語」として統合し、<section> ではなく <div> に
-                  して二重カード化を避ける(chrome は home.css 側で border-top の
-                  区切りだけに簡略化)。セルの色はステータスカード裏面と同じ
-                  contribution-arc-cell の lv-0〜4 をそのまま再利用する。 */}
-              <div
-                className="home-github-card"
-                aria-label="GitHub"
-                role="button"
-                tabIndex={0}
-                onClick={() => setCurrentView("profile")}
-                onKeyDown={(event) => {
-                  // カード内には日セル・詳細スロットの閉じるボタン等、本物の
-                  // <button> がネストしている。それらにフォーカスした状態で
-                  // Enter/Space を押すと keydown がこのカードまでバブリングし、
-                  // 本来の意図(セルの選択/解除、閉じる)と無関係にプロフィールへ
-                  // 遷移してしまう。カード自身がフォーカスされている場合のみ
-                  // 反応させる(クリックは各子要素側で stopPropagation 済み)。
-                  if (event.target !== event.currentTarget) return;
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    setCurrentView("profile");
-                  }
-                }}
-              >
-                <div className="home-github-card-head">
-                  <div className="home-github-card-title">
-                    <span className="card-kicker">GITHUB</span>
-                    {githubUsername ? <strong>@{githubUsername}</strong> : null}
-                  </div>
-                </div>
-
-                {/* 連動ストリーク stat 行(PRODUCT.md 独自性1)。GitHub 本家プロフィール
-                    には無い「連続日数」に加え、学習ログと GitHub コミットの両方が
-                    積み上がった日を可視化する。データ未取得時は出さない。 */}
-                {githubUsername && homeGithubArc ? (
-                  <div className="home-github-stats">
-                    <div className="home-github-stat" title={t("今日まで連続でコミットした日数")}>
-                      <span className="home-github-stat-label">{t("現在の連続")}</span>
-                      <span className="home-github-stat-value">{t("{n}日", { n: homeGithubArc.currentStreak })}</span>
-                    </div>
-                    <div className="home-github-stat" title={t("これまでで最も長く続いたコミットの連続日数")}>
-                      <span className="home-github-stat-label">{t("最長連続")}</span>
-                      <span className="home-github-stat-value">{t("{n}日", { n: homeGithubArc.longestStreak })}</span>
-                    </div>
-                    <div className="home-github-stat" title={t("学習とGitHub、両方積み上げた日")}>
-                      <span className="home-github-stat-label">{t("連動日数")}</span>
-                      <span className="home-github-stat-value home-github-stat-value-synced">
-                        <span className="home-github-stat-dot" aria-hidden="true" />
-                        {t("{n}日", { n: homeSyncedStreak.totalSyncedDays })}
-                      </span>
-                    </div>
-                  </div>
-                ) : null}
-
-                {!githubUsername ? (
-                  <div className="home-github-card-empty">
-                    <p>{t("GitHub を連携すると、コミットの積み上げがここに並びます")}</p>
-                    <button
-                      type="button"
-                      className="home-github-card-link-btn"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        if (IS_IOS_BUILD) {
-                          handleSettingsOpen();
-                        } else {
-                          void handleLinkGithub();
-                        }
-                      }}
-                      disabled={isLinkingGithub}
-                    >
-                      {isLinkingGithub ? t("連携中…") : t("連携する")}
-                    </button>
-                    {linkGithubError ? (
-                      <p className="home-github-card-link-error">{linkGithubError}</p>
-                    ) : null}
-                  </div>
-                ) : homeGithubArc ? (
-                  <div
-                    className="home-github-grid"
-                    role="img"
-                    aria-label={t("直近{weeks}週のGitHub活動", { weeks: HOME_GITHUB_WEEKS })}
-                  >
-                    {homeGithubArc.weeks.map((week, wIndex) => (
-                      <div className="contribution-arc-week home-github-week" key={wIndex}>
-                        {week.days.map((day, dIndex) => {
-                          if (!day) {
-                            return <span key={dIndex} className="contribution-arc-cell empty" aria-hidden="true" />;
-                          }
-                          const dayIso = getDateInputValue(day.date);
-                          const isSynced =
-                            homeGithubActiveDatesIso.has(dayIso) && homeStudyActiveDatesIso.has(dayIso);
-                          const isSelected = homeSelectedGithubDayIso === dayIso;
-                          const dayMinutes = homeStudyMinutesByIso.get(dayIso) ?? 0;
-                          const ariaParts: string[] = [];
-                          if (day.count > 0) ariaParts.push(`${day.count}commit`);
-                          if (dayMinutes > 0) ariaParts.push(`${t("学習")}${formatStudyTimeJa(dayMinutes)}`);
-                          const ariaLabel = `${day.date.getMonth() + 1}${t("月")}${day.date.getDate()}${t("日")} ${
-                            ariaParts.length > 0 ? ariaParts.join(" / ") : t("記録なし")
-                          }`;
-                          return (
-                            <button
-                              type="button"
-                              key={dIndex}
-                              className={`contribution-arc-cell lv-${day.level}${day.isToday ? " today" : ""}${
-                                isSynced ? " is-synced" : ""
-                              }${isSelected ? " selected" : ""}`}
-                              aria-label={ariaLabel}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setHomeSelectedGithubDayIso((prev) => (prev === dayIso ? null : dayIso));
-                              }}
-                            />
-                          );
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="home-github-card-status">
-                    {githubContributionsError
-                      ? t("GitHub データの取得に失敗しました")
-                      : t("GitHub データを読み込み中…")}
-                  </p>
-                )}
-
-                {/* 選択日の詳細(グリッドの外・固定スロット)。プロフィール裏面の
-                    contribution-arc-detail と同じ理由 — セル位置に浮かせる
-                    ツールチップはカードの3D揺れの原因になった教訓があるため
-                    採用しない。 */}
-                {homeSelectedGithubDayIso ? (() => {
-                  const [y, m, d] = homeSelectedGithubDayIso.split("-").map((n) => Number(n));
-                  const selectedDate = new Date(y, (m ?? 1) - 1, d ?? 1);
-                  const selectedCommits = homeGithubArcByIso.get(homeSelectedGithubDayIso)?.count ?? 0;
-                  const selectedMinutes = homeStudyMinutesByIso.get(homeSelectedGithubDayIso) ?? 0;
-                  const weekdayLabel = [t("日"), t("月"), t("火"), t("水"), t("木"), t("金"), t("土")][selectedDate.getDay()];
-                  return (
-                    <div className="home-github-detail" role="region" aria-label={t("選択日の学習詳細")}>
-                      <div className="home-github-detail-head">
-                        <strong>
-                          {selectedDate.getMonth() + 1}/{selectedDate.getDate()} {weekdayLabel}{t("曜")}
-                        </strong>
-                        <button
-                          type="button"
-                          className="home-github-detail-close"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setHomeSelectedGithubDayIso(null);
-                          }}
-                          aria-label={t("閉じる")}
-                        >
-                          ×
-                        </button>
-                      </div>
-                      {selectedCommits === 0 && selectedMinutes === 0 ? (
-                        <p className="home-github-detail-empty">{t("記録なし")}</p>
-                      ) : (
-                        <div className="home-github-detail-body">
-                          {selectedCommits > 0 ? <span>{selectedCommits} commit</span> : null}
-                          {selectedMinutes > 0 ? (
-                            <span>{t("学習")} {formatStudyTimeJa(selectedMinutes)}</span>
-                          ) : null}
-                          {selectedCommits > 0 && selectedMinutes > 0 ? (
-                            <span className="home-github-detail-synced">
-                              <span className="home-github-stat-dot" aria-hidden="true" />
-                              {t("この日は連動")}
-                            </span>
-                          ) : null}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })() : null}
-              </div>
               </section>
-
-              {/* 「みんなの投稿」入口行(ホーム再構成)。投稿フィード自体は
-                  専用ビュー (posts) に分離し、ホームには件数 + 最新 1 件の
-                  プレビューだけを残して 1 画面に収まる構成にする。 */}
-              <button
-                type="button"
-                className="home-posts-entry"
-                data-testid="home-posts-entry"
-                onClick={() => setCurrentView("posts")}
-              >
-                <div className="home-posts-entry-head">
-                  <span className="home-posts-entry-title">{t("みんなの投稿")}</span>
-                  <span className="home-posts-entry-count">
-                    {t("{count} 件", { count: feedSortedEntries.length.toLocaleString() })}
-                  </span>
-                </div>
-                {homePostsLatestPreview ? (
-                  <p className="home-posts-entry-preview">
-                    <strong>{homePostsLatestPreview.authorName}</strong>
-                    {homePostsLatestPreview.text ? <span>{homePostsLatestPreview.text}</span> : null}
-                  </p>
-                ) : null}
-                <span className="home-posts-entry-arrow" aria-hidden="true">
-                  ›
-                </span>
-              </button>
             </PullToRefresh>
           </div>
         </article>
