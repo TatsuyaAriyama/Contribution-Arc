@@ -148,6 +148,7 @@ import {
 } from "./utils/format";
 import { resolveCoins, resolveOwnedShapes } from "./utils/characterProgress";
 import { getDueDailyReminder } from "./utils/dailyReminder";
+import { getDueReviews } from "./utils/reviewSchedule";
 import {
   createCheckoutSession,
   createPortalSession,
@@ -8193,6 +8194,14 @@ function App() {
     return ordered;
   }, [studyLogs, learningItems]);
 
+
+  /* 忘却曲線に基づく「そろそろ復習どきの学習対象」。学習記録 (studyLogs)
+     の履歴だけから算出するので追加の永続データは不要。ホームで静かに提示
+     するだけで、通知の発火はしない (PRODUCT.md「通知より習慣」)。 */
+  const dueReviews = useMemo(
+    () => getDueReviews(learningItems, studyLogs, new Date()),
+    [learningItems, studyLogs],
+  );
 
   const closeQuickLogPopover = useCallback(() => {
     setIsQuickLogPopoverOpen(false);
@@ -23598,6 +23607,49 @@ function App() {
                   </button>
                 ) : null}
               </section>
+              {dueReviews.length > 0 ? (
+                <section className="home-review-card" aria-label={t("そろそろ復習どき")}>
+                  <div className="home-review-head">
+                    <span className="home-review-kicker">{t("そろそろ復習どき")}</span>
+                    <span className="home-review-note">
+                      {t("忘れかけた頃に見直すと、記憶に長く残ります")}
+                    </span>
+                  </div>
+                  <ul className="home-review-list">
+                    {dueReviews.slice(0, 3).map((review) => {
+                      const last = new Date(review.lastStudiedAt);
+                      return (
+                        <li key={review.item.id}>
+                          <button
+                            type="button"
+                            className="home-review-row"
+                            onClick={() => setCurrentView("learning")}
+                          >
+                            <span className="home-review-row-name">{review.item.name}</span>
+                            <span className="home-review-row-meta">
+                              {t("前回 {date}", {
+                                date: `${last.getMonth() + 1}/${last.getDate()}`,
+                              })}
+                            </span>
+                            <span className="home-review-row-chevron" aria-hidden="true">
+                              ›
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {dueReviews.length > 3 ? (
+                    <button
+                      type="button"
+                      className="home-review-more"
+                      onClick={() => setCurrentView("learning")}
+                    >
+                      {t("ほか {n} 件をライブラリで見る", { n: dueReviews.length - 3 })}
+                    </button>
+                  ) : null}
+                </section>
+              ) : null}
             </PullToRefresh>
           </div>
         </article>

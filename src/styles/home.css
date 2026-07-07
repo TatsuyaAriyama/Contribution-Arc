@@ -412,3 +412,106 @@
     margin-bottom: 10px;
   }
 }
+
+/* === そろそろ復習どきカード (reviewSchedule) ===
+   忘却曲線に基づき「見直す頃の学習対象」を静かに提示する。煽らず、
+   白地 + hairline + muted 文字で既存 focus-today-card のトーンに揃える。 */
+.home-review-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.home-review-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.home-review-kicker {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--ink-strong);
+}
+
+.home-review-note {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.home-review-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-review-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 0;
+  border: none;
+  border-top: 1px solid var(--line);
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.home-review-list li:first-child .home-review-row {
+  border-top: none;
+}
+
+.home-review-row-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.home-review-row-meta {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.home-review-row-chevron {
+  flex: 0 0 auto;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.home-review-row:active {
+  opacity: 0.7;
+}
+
+.home-review-more {
+  align-self: flex-start;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.home-review-more:active {
+  opacity: 0.7;
+}
