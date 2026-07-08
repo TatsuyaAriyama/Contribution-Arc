@@ -9,6 +9,7 @@
   "main": "electron/main.mjs",
   "scripts": {
     "dev": "vite",
+    "dev:emu": "cross-env VITE_USE_EMULATORS=true vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "lint": "eslint .",

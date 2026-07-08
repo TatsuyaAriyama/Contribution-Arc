@@ -3680,8 +3680,9 @@ function LoginScreen() {
         </div>
         <div className="showcase-figure showcase-figure-login">
           {/* ログイン画面の分身は、特別な frost（白髪）ではなく新規ユーザーが
-              最初に持つ初期キャラ（blocky の default shape）を見せる。 */}
-          <ProfileCharacterPreview shape="default" color="#7667a8" />
+              最初に持つ初期キャラ（blocky の default shape）を見せる。
+              白黒ミニマル移行でキャラも ink 単色に。 */}
+          <ProfileCharacterPreview shape="default" color="#1a1817" />
         </div>
         <div className="showcase-foreground" />
       </div>
@@ -3701,37 +3702,34 @@ function LoginScreen() {
           aria-label="Contribution"
           focusable="false"
         >
-          <defs>
-            <linearGradient id="loginShowcaseInk" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#f0fff5" />
-              <stop offset="1" stopColor="#bfe7cc" />
-            </linearGradient>
-          </defs>
+          {/* 白黒ミニマル (DESIGN.md): 筆記体 + 緑グラデをやめ、
+              Inter の太字ロゴタイプを currentColor で描く。 */}
           <text
             x="50%"
             y="62%"
             textAnchor="middle"
-            fontFamily="'Caveat', 'Pacifico', 'Brush Script MT', cursive"
-            fontSize="200"
-            fontWeight="700"
-            fill="url(#loginShowcaseInk)"
+            fontFamily="Inter, ui-sans-serif, system-ui, sans-serif"
+            fontSize="150"
+            fontWeight="900"
+            fill="currentColor"
             textLength="980"
             lengthAdjust="spacingAndGlyphs"
-            style={{ letterSpacing: "0.01em" }}
+            style={{ letterSpacing: "-0.02em" }}
           >
             Contribution
           </text>
           <text
             x="50%"
-            y="92%"
+            y="90%"
             textAnchor="middle"
-            fontFamily="'Caveat', 'Pacifico', 'Brush Script MT', cursive"
-            fontSize="64"
-            fontWeight="600"
-            fill="#bfe7cc"
-            opacity="0.86"
+            fontFamily="Inter, ui-sans-serif, system-ui, sans-serif"
+            fontSize="44"
+            fontWeight="700"
+            fill="currentColor"
+            opacity="0.55"
+            style={{ letterSpacing: "0.3em" }}
           >
-            — arc —
+            ARC
           </text>
         </svg>
         <p className="showcase-tagline">
@@ -7918,7 +7916,7 @@ function App() {
       const linkedItem = log.learningItemId ? itemById.get(log.learningItemId) : undefined;
       const subject = linkedItem ? linkedItem.name : log.subject;
       const key = linkedItem ? `item:${linkedItem.id}` : `subject:${subject}`;
-      const fallbackColor = linkedItem ? linkedItem.color : log.color || "rgba(31,111,74,0.7)";
+      const fallbackColor = linkedItem ? linkedItem.color : log.color || "rgba(26,24,23,0.7)";
       const entry = totals.get(key) || { subject, minutes: 0, color: fallbackColor };
       entry.minutes += log.minutes;
       if (linkedItem) {
@@ -14471,7 +14469,7 @@ function App() {
                         <span className="profile-week-day-detail-row-main">
                           <span
                             className="profile-week-day-detail-color"
-                            style={{ background: log.color || "rgba(31,111,74,0.5)" }}
+                            style={{ background: log.color || "rgba(26,24,23,0.5)" }}
                             aria-hidden="true"
                           />
                           <span className="profile-week-day-detail-subject">{log.subject}</span>
@@ -15338,7 +15336,7 @@ function App() {
               <li key={`${entry.subject}-${index}`}>
                 <span
                   className="contribution-arc-detail-dot"
-                  style={{ background: entry.color || "rgba(31,111,74,0.7)" }}
+                  style={{ background: entry.color || "rgba(26,24,23,0.7)" }}
                   aria-hidden="true"
                 />
                 <strong>{entry.subject}</strong>
@@ -15458,7 +15456,7 @@ function App() {
                       <ul className="contribution-arc-tooltip-list">
                         {hoveredArcDayLogs.slice(0, 4).map((log) => (
                           <li key={log.id}>
-                            <i style={{ background: log.color || "rgba(31,111,74,0.7)" }} />
+                            <i style={{ background: log.color || "rgba(26,24,23,0.7)" }} />
                             <span>{log.subject}</span>
                             <small>{formatStudyTime(log.minutes)}</small>
                           </li>
@@ -17355,7 +17353,7 @@ function App() {
                     <ul className="daily-detail-modal-logs">
                       {logsForDay.map((log) => (
                         <li key={log.id}>
-                          <i style={{ background: log.color || "rgba(31,111,74,0.7)" }} aria-hidden="true" />
+                          <i style={{ background: log.color || "rgba(26,24,23,0.7)" }} aria-hidden="true" />
                           <strong>{log.subject}</strong>
                           <span>{formatStudyTime(log.minutes)}</span>
                         </li>
@@ -21080,7 +21078,7 @@ function App() {
                       ? itemById.get(log.learningItemId)
                       : undefined;
                     const cover = item?.photo;
-                    const swatch = log.color || item?.color || "rgba(31,111,74,0.5)";
+                    const swatch = log.color || item?.color || "rgba(26,24,23,0.5)";
                     const d = new Date(log.createdAt);
                     const valid = !Number.isNaN(d.getTime());
                     const ymd = valid
@@ -23772,37 +23770,34 @@ function App() {
               aria-label="Contribution"
               focusable="false"
             >
-              <defs>
-                <linearGradient id="showcaseInk" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0" stopColor="#f0fff5" />
-                  <stop offset="1" stopColor="#bfe7cc" />
-                </linearGradient>
-              </defs>
+              {/* 白黒ミニマル (DESIGN.md): 筆記体 + 緑グラデをやめ、
+                  Inter の太字ロゴタイプを currentColor で描く。 */}
               <text
                 x="50%"
                 y="62%"
                 textAnchor="middle"
-                fontFamily="'Caveat', 'Pacifico', 'Brush Script MT', cursive"
-                fontSize="200"
-                fontWeight="700"
-                fill="url(#showcaseInk)"
+                fontFamily="Inter, ui-sans-serif, system-ui, sans-serif"
+                fontSize="150"
+                fontWeight="900"
+                fill="currentColor"
                 textLength="980"
                 lengthAdjust="spacingAndGlyphs"
-                style={{ letterSpacing: "0.01em" }}
+                style={{ letterSpacing: "-0.02em" }}
               >
                 Contribution
               </text>
               <text
                 x="50%"
-                y="92%"
+                y="90%"
                 textAnchor="middle"
-                fontFamily="'Caveat', 'Pacifico', 'Brush Script MT', cursive"
-                fontSize="64"
-                fontWeight="600"
-                fill="#bfe7cc"
-                opacity="0.86"
+                fontFamily="Inter, ui-sans-serif, system-ui, sans-serif"
+                fontSize="44"
+                fontWeight="700"
+                fill="currentColor"
+                opacity="0.55"
+                style={{ letterSpacing: "0.3em" }}
               >
-                — arc —
+                ARC
               </text>
             </svg>
             <p className="showcase-tagline">

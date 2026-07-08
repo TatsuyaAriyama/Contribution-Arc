@@ -117,7 +117,7 @@ export function WorkspaceRecruitmentFeedCard({
 
   const displayName = author?.displayName || "Builder";
   const avatarLetter = displayName.slice(0, 1).toUpperCase();
-  const accentColor = author?.characterColor || "#1f6f4a";
+  const accentColor = author?.characterColor || "#1a1817";
 
   const stateLabel = isUpcoming ? t("🗓 予定") : isActive ? t("募集中") : t("終了");
   const stateClassName = isUpcoming ? "state-upcoming" : isActive ? "state-active" : "state-ended";

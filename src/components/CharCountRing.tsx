@@ -10,11 +10,12 @@ function CharCountRing({ value, max }: { value: number; max: number }) {
   const isNearLimit = value >= max - 20;
   const isOverLimit = value >= max;
   const remaining = max - value;
+  // 白黒ミニマル: 進捗は ink の濃度だけで表現する (通常→警告→超過で濃く)。
   const strokeColor = isOverLimit
-    ? "var(--accent-warm, #d3573b)"
+    ? "var(--ink, #1a1817)"
     : isNearLimit
-    ? "#c8a95b"
-    : "var(--green, #1f6f4a)";
+    ? "rgba(var(--ink-rgb, 26, 24, 23), 0.65)"
+    : "rgba(var(--ink-rgb, 26, 24, 23), 0.4)";
   return (
     <span className="char-count-ring" aria-label={t("{value} / {max} 文字", { value, max })}>
       <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">

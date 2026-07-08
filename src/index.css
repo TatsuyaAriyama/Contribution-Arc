@@ -33,11 +33,17 @@
   --line: #e6e3df;
   --line-soft: rgba(26, 24, 23, 0.06);
   --line-strong: rgba(26, 24, 23, 0.12);
-  --green: #1f6f4a;
-  --green-hover: #2d8a5b;
-  --green-soft: #dce8e1;
-  --rare: #c8a95b;
-  --accent-warm: #d3573b;
+  /* 白黒ミニマル移行 (DESIGN.md): アクセント色ゼロ。旧 green / rare /
+     accent-warm トークンは ink 系へ再マップし、数百箇所の参照を一括で
+     無彩色化する。変数名はレガシー互換のため残す。 */
+  --green: #1a1817;
+  --green-hover: #3a3835;
+  --green-soft: rgba(26, 24, 23, 0.06);
+  /* rgba(var(--ink-rgb), a) 参照 (~80 箇所) が fallback の緑
+     31,111,74 で描画されるのを防ぐため、ink-rgb と同値で明示定義。 */
+  --green-rgb: 26, 24, 23;
+  --rare: #615d59;
+  --accent-warm: #1a1817;
   /* Notion "barely-there" elevation — 多層 micro shadow で「浮く」より
      「紙が重なっている」感を出す。token は warm ink-rgb ベース。 */
   --shadow-soft:
@@ -48,7 +54,7 @@
     0 0.5px 1px rgba(26, 24, 23, 0.025),
     0 1px 3px rgba(26, 24, 23, 0.035),
     0 6px 18px rgba(26, 24, 23, 0.05);
-  --ring-focus: 0 0 0 3px rgba(31, 111, 74, 0.22);
+  --ring-focus: 0 0 0 3px rgba(26, 24, 23, 0.18);
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
@@ -86,14 +92,16 @@
   /* 一部レガシーで使われている --border (未定義) も white 寄りに定義。
      これで learning-card 等の枠が "見えない" 状態が解消される。 */
   --border: rgba(255, 255, 255, 0.40);
-  --green: #4ade80;
-  --green-hover: #6ee7b7;
-  --green-soft: rgba(74, 222, 128, 0.16);
-  --rare: #fbbf24;
-  --accent-warm: #fb923c;
+  /* 白黒ミニマル: ダークも無彩色 (白インク) に統一。 */
+  --green: #ffffff;
+  --green-hover: rgba(255, 255, 255, 0.82);
+  --green-soft: rgba(255, 255, 255, 0.12);
+  --green-rgb: 255, 255, 255;
+  --rare: #c8cdd2;
+  --accent-warm: #ffffff;
   --shadow-soft: 0 14px 40px rgba(0, 0, 0, 0.7);
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.6), 0 8px 24px rgba(0, 0, 0, 0.45);
-  --ring-focus: 0 0 0 3px rgba(74, 222, 128, 0.36);
+  --ring-focus: 0 0 0 3px rgba(255, 255, 255, 0.32);
 }
 
 /* Notion DESIGN.md 流の display tightening。Inter のデフォルトトラッキング
@@ -139,6 +147,22 @@ body {
 
 button {
   font: inherit;
+}
+
+/* ===============================================================
+   心地よい操作性の共通層 (白黒ミニマル)
+   - テキスト選択もインク濃淡で
+   - キーボード操作時だけ ink のフォーカスリングを出す
+     (マウス/タップでは出ないので視覚ノイズにならない)
+   =============================================================== */
+::selection {
+  background: rgba(var(--ink-rgb), 0.14);
+}
+
+:focus-visible {
+  outline: 2px solid rgba(var(--ink-rgb), 0.55);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 #root {

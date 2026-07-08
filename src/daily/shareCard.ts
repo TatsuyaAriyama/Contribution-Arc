@@ -44,8 +44,9 @@ const COLOR = {
   ink: "#1f1f28",
   sub: "#8a8a98",
   hair: "rgba(31, 31, 40, 0.10)",
-  green: "#1f6f4a",
-  greenSoft: "rgba(31, 111, 74, 0.12)",
+  /* 白黒ミニマル: シェア画像も ink 基調に統一 (変数名はレガシー互換)。 */
+  green: "#1f1f28",
+  greenSoft: "rgba(31, 31, 40, 0.10)",
   ring: "rgba(31, 31, 40, 0.26)",
   done: "rgba(31, 31, 40, 0.42)",
 };
