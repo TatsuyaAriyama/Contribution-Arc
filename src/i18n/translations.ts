@@ -185,6 +185,8 @@ export const EN_TRANSLATIONS: Record<string, string> = {
     "You can read others' daily reports here and get inspired",
   "フォロー中の投稿はまだありません。":
     "No posts from people you're following yet.",
+  "「フォロー中 / すべて」タブで自分のフォロー先だけに絞れます":
+    "Use the \"Following / All\" tabs to narrow it down to just who you follow",
 
   // ─── Learning & Study ───────────────────────────────────────
   "学習":                        "Learning",
@@ -227,6 +229,57 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "ページ数を直接入力":          "Enter page number",
   "ページ":                      "Page",
   "更新":                        "Update",
+
+  // ─── Focus session (計測) ────────────────────────────────────
+  "集中セッション":              "Focus session",
+  "閉じても計測はつづきます":    "Timing keeps running after you close this",
+  "一時停止中":                  "Paused",
+  // 「一時停止」は Phase 13b (ポモドーロ) セクションで既に定義済み。
+  "再開":                        "Resume",
+  "終了して記録":                "End & log",
+  "破棄する":                    "Discard",
+  "この集中セッションを破棄しますか？記録には残りません。":
+    "Discard this focus session? It won't be logged.",
+  "ライブラリで学習対象を追加してください":
+    "Add a learning subject in your library first",
+  "作業をはじめる":              "Start working",
+  "{name}で作業をはじめる":      "Start working on {name}",
+  "計測中の集中セッションを開く": "Open the running focus session",
+  // ─── Home "今日" hero card (Phase 1 wiring) ─────────────────
+  "今日の学習":                  "Today's study",
+  "今日からはじめよう":          "Start your streak today",
+  "{n}日連続":                   "{n}-day streak",
+  "直近7日の学習時間":            "Study time over the last 7 days",
+  // ─── Home hero: 時間帯挨拶(デザイン刷新「今日という一枚」) ──
+  "おはようございます。まっさらな一枚から":
+    "Good morning — a fresh page awaits",
+  "こんにちは。今日はまだ書きかけです":
+    "Good afternoon — today is still being written",
+  "こんばんは。今日を仕上げる時間です":
+    "Good evening — time to finish the page",
+  // ─── Home GitHub card (ホーム再構成: 投稿を専用ビューへ分離) ──
+  "GitHub を連携すると、コミットの積み上げがここに並びます":
+    "Link GitHub and your commit streak shows up here",
+  "連携する":                    "Link",
+  "直近{weeks}週":               "Last {weeks}w",
+  "直近{weeks}週のGitHub活動":    "GitHub activity, last {weeks} weeks",
+  // ─── Home GitHub card: 連動ストリーク(学習ログ×GitHubコミット) ──
+  // "最長連続" は Phase 4 監査セクション(下記)に既存キーがあるため重複させない。
+  "現在の連続":                  "Current streak",
+  "連動日数":                    "Synced days",
+  "{n}日":                       "{n}d",
+  "今日まで連続でコミットした日数":
+    "Consecutive days with a commit, up to today",
+  "これまでで最も長く続いたコミットの連続日数":
+    "The longest streak of consecutive commit days",
+  "学習とGitHub、両方積み上げた日":
+    "Days you logged study time and shipped a commit",
+  "この日は連動":                "Synced day",
+  // ─── Focus presence (集中の気配, Phase 2) ───────────────────
+  "いま {n} 人が集中しています": "{n} people are focusing right now",
+  "いま集中している仲間":        "Focusing right now",
+  "他 {n} 人":                   "+{n} more",
+  "{n}分":                       "{n}m",
 
   // ─── Workspace & Rooms ──────────────────────────────────────
   "Silent Workspace":            "Silent Workspace",
@@ -299,6 +352,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
 
   // ─── Posts & Feed ───────────────────────────────────────────
   "投稿":                        "Post",
+  "みんなの投稿":                "Everyone's posts",
   "返信":                        "Reply",
   "投稿の投稿に失敗しました。":  "Couldn't post. Please try again.",
   "あなたの学習を投稿すると、誰かの励みになります":
@@ -308,7 +362,9 @@ export const EN_TRANSLATIONS: Record<string, string> = {
     "Haven't earned today's Arc yet. Try posting a log.",
   "今日の分は受け取り済み。明日また投稿してみてください。":
     "You've already earned today's bonus. Post again tomorrow.",
-  "Posting":                    "Posting",
+  "投稿中…":                    "Posting…",
+  "フォロー中":                 "Following",
+  "みんなの積み上げ":           "Quiet Progress",
 
   // ─── Profile ────────────────────────────────────────────────
   "プロフィール — あなたの足跡と設定":
@@ -462,14 +518,15 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "学習の記録":                 "Study logs",
   "みんなと学びを共有・作業仲間を募集":
                                 "Share what you're learning, find work partners",
-  "What are you building tonight?":
-                                "What are you building tonight?",
+  "今日は何を積み上げてる？":   "What are you building today?",
   "Roomから作成":               "From your workroom",
   "学習ログから作成":           "From your latest log",
   "今日作っているもの、学んだこと、作業部屋の募集が静かに流れます。":
                                 "Today's builds, learnings, and workroom calls quietly flow here.",
   "気になるエンジニアをフォローすると、ここに学びと作業部屋の募集が流れます。":
                                 "Follow engineers to see their learnings and workroom calls here.",
+  "気になるエンジニアをフォローすると、ここに学びが流れます。「すべて」タブで全員のログを見ることもできます。":
+                                "Follow engineers to see their learnings here. The \"All\" tab shows everyone's logs.",
   "もっと見る":                 "Load more",
 
   // === 日報 ===
@@ -1022,6 +1079,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "{days}日学習": "{days} days studied",
   "日コミット": "daily commits",
   "先週比 {diff}": "vs last week {diff}",
+  "先週より {time} 多く積み上がっています": "{time} more than last week",
   "連続して記録した最長期間": "Longest streak ever logged",
   "最長連続": "Longest streak",
   "合計 {minutes}": "Total {minutes}",
@@ -1744,6 +1802,9 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "もっと見る ({count} 件)": "Show more ({count})",
   "この日報を削除": "Delete this entry",
 
+  // === Phase 2: ホーム「今日」カード → 日報の振り返りへのブリッジ ===
+  "今日の振り返りを書く": "Write today's reflection",
+
   // === Phase 12: Library status labels rename ===
   "学習中": "Learning",
   "達成済み": "Mastered",
@@ -1778,6 +1839,8 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   "例: 認可ロジックの設計": "e.g. Designing the auth flow",
   "「{task}」を記録に追加": "Add \"{task}\" to your library",
   "ポモドーロ": "Pomodoro",
+  "ストップウォッチ": "Stopwatch",
+  "計測モード": "Timer mode",
   "{n}周目": "Round {n}",
   "集中フェーズ": "Focus phase",
   "休息フェーズ": "Rest phase",

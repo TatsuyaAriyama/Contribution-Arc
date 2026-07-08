@@ -1,0 +1,517 @@
+/*
+ * ホーム再構成 (投稿を専用ビューへ分離 + GitHub 草マップカードをホームへ)。
+ *
+ * カード類は既存の focus-today-card (src/styles/focus.css) と同じ
+ * 静かなトーン(surface + hairline + shadow-card)に揃える。DESIGN.md
+ * 準拠のため新しい構造色は増やさない — 草マップのセル色は
+ * .contribution-arc-cell.lv-0〜4 (App.css) をそのまま再利用している。
+ */
+
+/* === ヘッダ「ホーム」=== 白黒ミニマル。装飾・明朝・色は使わず、
+   Inter の太字だけ。 */
+.home-view-title {
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--ink-strong);
+}
+
+/* === お知らせバナー(ホーム上のモノクロ上書き) ===
+   App.css の緑アクセント(バッジ塗り・kicker・hover 枠)を、ホームでは
+   白黒に落とす。他画面の同バナーには影響させないため app-view-feed
+   スコープに限定する。 */
+.app-view-feed .home-notice-banner-badge {
+  background: rgba(var(--ink-rgb), 0.06);
+  color: var(--ink);
+}
+.app-view-feed .home-notice-banner-kicker {
+  color: var(--muted);
+}
+@media (hover: hover) {
+  .app-view-feed .home-notice-banner:hover {
+    border-color: rgba(var(--ink-rgb), 0.24);
+  }
+}
+
+/* === GitHub 草マップ === */
+
+/* ホームリニューアル②: 以前は独立カードだったが、「今日」ヒーロー
+   カード(focus-today-card, focus.css)にネストして1枚の「継続の物語」に
+   統合した。二重カードに見えないよう chrome(背景・角丸・影)は持たず、
+   border-top の区切りだけにする。 */
+.home-github-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  cursor: pointer;
+  text-align: left;
+}
+
+.home-github-card:active {
+  transform: scale(0.99);
+}
+
+.home-github-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.home-github-card-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.home-github-card-title strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 連動ストリーク stat 行(PRODUCT.md 独自性1: 積み上げの可視化 × GitHub
+   連携)。focus-today-stat (focus.css) と似た視覚言語だが、home-github-card
+   専用に home.css 側で完結させる新規クラス。3列均等 grid。 */
+.home-github-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.home-github-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(var(--ink-rgb), 0.04);
+}
+
+.home-github-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-github-stat-value {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--ink-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 白黒ミニマル: 「連動日数」も他の stat と同じ ink に揃える(緑は使わない)。 */
+.home-github-stat-value-synced {
+  color: var(--ink-strong);
+}
+
+.home-github-stat-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--ink);
+  flex-shrink: 0;
+}
+
+.home-github-grid {
+  display: flex;
+  gap: 3px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.home-github-grid::-webkit-scrollbar {
+  display: none;
+}
+
+.home-github-week {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+/* contribution-arc-cell はプロフィール裏面 (status-flip-back) と共通の
+   色クラス(lv-0〜4)を再利用する。ホームカードはサイズだけ少し詰めて
+   15 週分がカード幅に収まるようにする。各セルは button 化されており
+   タップで日別詳細(home-github-detail)を開く。 */
+.home-github-grid .contribution-arc-cell {
+  width: 11px;
+  height: 11px;
+  cursor: pointer;
+}
+
+/* 白黒ミニマル: 草マップのセルを緑スケールから黒インクスケールに
+   置き換える(ホームのグリッドに限定。プロフィール側の緑は触らない)。
+   lv が上がるほど濃くなる 4 段の墨色で「積み上げ」の濃淡を表す。 */
+.home-github-grid .contribution-arc-cell.lv-0 {
+  background: rgba(var(--ink-rgb), 0.06);
+}
+.home-github-grid .contribution-arc-cell.lv-1 {
+  background: rgba(var(--ink-rgb), 0.22);
+}
+.home-github-grid .contribution-arc-cell.lv-2 {
+  background: rgba(var(--ink-rgb), 0.42);
+}
+.home-github-grid .contribution-arc-cell.lv-3 {
+  background: rgba(var(--ink-rgb), 0.66);
+}
+.home-github-grid .contribution-arc-cell.lv-4 {
+  background: rgba(var(--ink-rgb), 0.9);
+}
+
+/* 連動セル(その日に学習ログ + GitHub コミットの両方がある)。黒インクの
+   塗りの内側に surface 色(白)のリングを重ね、濃淡に関係なくドーナツ状
+   に「連動」を示す。 */
+.home-github-grid .contribution-arc-cell.is-synced {
+  box-shadow: 0 0 0 1.5px var(--surface) inset;
+}
+
+/* 選択中セル。is-synced (inset box-shadow) と共存できるよう、選択の
+   強調は outline で行う(box-shadow は上と競合しないが、視覚的にも
+   別レイヤーとして重ねやすい)。強い色や拡大アニメは使わず、控えめな
+   ink 系の外側リングのみ。 */
+.home-github-grid .contribution-arc-cell.selected {
+  outline: 2px solid rgba(var(--ink-rgb), 0.7);
+  outline-offset: 1.5px;
+  position: relative;
+  z-index: 1;
+}
+
+/* === 選択日の詳細(グリッド直下・固定スロット) ===
+   プロフィール裏面の contribution-arc-detail と同じ設計判断: セル位置に
+   浮かせるツールチップはカードの 3D フリップを揺らす原因になった教訓が
+   あるため採用せず、グリッドの外に固定表示する。 */
+.home-github-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.home-github-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.home-github-detail-head strong {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-strong);
+}
+
+.home-github-detail-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.home-github-detail-close:active {
+  background: rgba(var(--ink-rgb), 0.06);
+}
+
+.home-github-detail-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.home-github-detail-synced {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.home-github-detail-empty {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.home-github-card-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.home-github-card-empty p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.home-github-card-link-btn {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.home-github-card-link-btn:disabled {
+  opacity: 0.6;
+}
+
+.home-github-card-link-error {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-warm);
+}
+
+.home-github-card-status {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* === 「みんなの投稿」入口行 === 今日カードと同じ白黒ミニマル。
+   白地 + 1px グレー罫線のフラットなカード。装飾線・色は使わない。 */
+
+.home-posts-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 14px 18px;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  text-align: left;
+  position: relative;
+}
+
+.home-posts-entry:active {
+  transform: scale(0.99);
+}
+
+.home-posts-entry-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-right: 20px;
+}
+
+.home-posts-entry-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink-strong);
+}
+
+.home-posts-entry-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.home-posts-entry-preview {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.home-posts-entry-preview strong {
+  flex-shrink: 0;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.home-posts-entry-preview span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-posts-entry-arrow {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  font-size: 18px;
+  color: var(--muted);
+}
+
+/* === 投稿ビュー (app-view-posts) === */
+
+/* app-view-feed / feed-view-header の chrome をそのまま流用し、左端に
+   戻るボタンだけ追加する。ホーム(feed)自身にはこのボタンは出ない。 */
+.feed-view-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.feed-view-back:active {
+  background: rgba(var(--ink-rgb), 0.06);
+}
+
+/* iPhone (~844px 高) でお知らせ→今日カード→GitHub カード→入口行が
+   ほぼ 1 画面に収まるよう、モバイルはカード間の余白を少し詰める。 */
+@media (max-width: 720px) {
+  .home-posts-entry {
+    margin-bottom: 10px;
+  }
+}
+
+/* === そろそろ復習どきカード (reviewSchedule) ===
+   忘却曲線に基づき「見直す頃の学習対象」を静かに提示する。煽らず、
+   白地 + hairline + muted 文字で既存 focus-today-card のトーンに揃える。 */
+.home-review-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.home-review-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.home-review-kicker {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--ink-strong);
+}
+
+.home-review-note {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.home-review-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-review-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 0;
+  border: none;
+  border-top: 1px solid var(--line);
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.home-review-list li:first-child .home-review-row {
+  border-top: none;
+}
+
+.home-review-row-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.home-review-row-meta {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.home-review-row-chevron {
+  flex: 0 0 auto;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.home-review-row:active {
+  opacity: 0.7;
+}
+
+.home-review-more {
+  align-self: flex-start;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.home-review-more:active {
+  opacity: 0.7;
+}

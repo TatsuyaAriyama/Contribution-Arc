@@ -20,6 +20,7 @@ type Props = {
   itemName: string;
   itemColor: string;
   category: "book" | "stack";
+  initialMinutes?: number;
   onClose: () => void;
   onSubmit: (values: LearningRecordValues) => void;
   onEdit: () => void;
@@ -61,13 +62,22 @@ export function LearningRecordModal({
   itemName,
   itemColor,
   category,
+  initialMinutes,
   onClose,
   onSubmit,
   onEdit,
 }: Props) {
   const { t } = useTranslation();
-  const [hours, setHours] = useState("");
-  const [minutes, setMinutes] = useState("");
+  const hasInitialMinutes = initialMinutes !== undefined;
+  const initialHoursPart = hasInitialMinutes ? Math.floor(initialMinutes! / 60) : 0;
+  const initialMinutesPart = hasInitialMinutes ? initialMinutes! % 60 : 0;
+  const [hours, setHours] = useState(initialHoursPart > 0 ? String(initialHoursPart) : "");
+  const [minutes, setMinutes] = useState(() => {
+    if (initialMinutesPart > 0) return String(initialMinutesPart);
+    if (initialHoursPart > 0) return "";
+    // 両方 0（initialMinutes を明示的に 0 指定）なら 1 分へ繰り上げる。
+    return hasInitialMinutes ? "1" : "";
+  });
   const [amount, setAmount] = useState("");
   const [unit, setUnit] = useState(category === "book" ? t("ページ") : "");
   const [note, setNote] = useState("");

@@ -148,6 +148,7 @@ import {
 } from "./utils/format";
 import { resolveCoins, resolveOwnedShapes } from "./utils/characterProgress";
 import { getDueDailyReminder } from "./utils/dailyReminder";
+import { getDueReviews } from "./utils/reviewSchedule";
 import {
   createCheckoutSession,
   createPortalSession,
@@ -184,6 +185,17 @@ import { ShareToXModal } from "./components/ShareToXModal";
 import { TutorialHint } from "./components/TutorialHint";
 import { BarcodeScannerModal } from "./components/BarcodeScannerModal";
 import { LearningRecordModal } from "./components/LearningRecordModal";
+import { useFocusSession } from "./hooks/useFocusSession";
+import { FocusTimerSheet } from "./components/FocusTimerSheet";
+import { FocusMiniBar } from "./components/FocusMiniBar";
+import type { FocusTarget } from "./services/focusSession";
+import {
+  clearFocusPresence,
+  fetchActiveFocusPresence,
+  heartbeatFocusPresence,
+  publishFocusPresence,
+  type FocusPresenceRecord,
+} from "./services/focusPresence";
 import streakFlameIcon from "./assets/streak-flame.png";
 import { ToastHost } from "./components/ToastHost";
 import { PullToRefresh } from "./components/PullToRefresh";
@@ -237,6 +249,7 @@ import {
   type Language,
 } from "./i18n/translations";
 import "./App.css";
+import "./styles/home.css";
 
 // ポーカー（Jacks or Better）は開くまでロードしない（バンドル分割）。
 const PokerView = lazy(() => import("./poker/PokerView"));
@@ -1370,15 +1383,19 @@ type GithubArcDay = {
 };
 type GithubArcWeek = { monthLabel: string | null; days: (GithubArcDay | null)[] };
 
-function getGithubContributionArc(days: { date: string; count: number; level: 0 | 1 | 2 | 3 | 4 }[]): {
+function getGithubContributionArc(
+  days: { date: string; count: number; level: 0 | 1 | 2 | 3 | 4 }[],
+  weeksOverride?: number,
+): {
   weeks: GithubArcWeek[];
   total: number;
   activeDays: number;
   thisWeekCount: number;
   lastWeekCount: number;
   longestStreak: number;
+  currentStreak: number;
 } {
-  const WEEKS = CONTRIBUTION_ARC_WEEKS;
+  const WEEKS = weeksOverride ?? CONTRIBUTION_ARC_WEEKS;
   // The endpoint uses ISO "YYYY-MM-DD" keys, but our grid walks with
   // (year, month, day) integers — normalize the lookup map to the same
   // composite key the grid uses so lookups are O(1).
@@ -1447,6 +1464,10 @@ function getGithubContributionArc(days: { date: string; count: number; level: 0 
     thisWeekCount: weekCounts[weekCounts.length - 1] || 0,
     lastWeekCount: weekCounts[weekCounts.length - 2] || 0,
     longestStreak,
+    // ループは startDate → 今日まで順に進み、count>0 で +1・0 でリセットする
+    // ため、ループ終了時点の currentStreak がそのまま「今日で終わる現在の
+    // 連続日数」になる(今日が非アクティブなら 0)。
+    currentStreak,
   };
 }
 
@@ -2089,7 +2110,12 @@ function renderReflectionBody(
 
 /* "今日のログから下書きを挿入" 用のサマリ。selectedDailyDate と同じ
  * 学習日に属する studyLogs を subject 別に集計し、1 行の自然文に整形。
- * ログが無ければ空文字を返し、呼び出し側でトーストを出す。 */
+ * ログが無ければ空文字を返し、呼び出し側でトーストを出す。
+ *
+ * Phase 2: 1 行目の集計に加えて、その日のログの note (要点メモ) を
+ * 記録順・重複除去・最大 5 件の箇条書きとして下に添える (振り返りの
+ * 下書きをより具体的にするため)。note が無いログのみの日は従来通り
+ * 1 行のみを返すので、呼び出し側の挙動は変わらない。 */
 function summarizeStudyLogsForDate(
   logs: StudyLog[],
   date: string,
@@ -2115,10 +2141,27 @@ function summarizeStudyLogsForDate(
     t("{subject} {time}", { subject, time: formatStayTime(minutes, language) }),
   );
   const joiner = language === "en" ? ", " : "、";
-  return t("{summary} (合計 {total})", {
+  const headline = t("{summary} (合計 {total})", {
     summary: segments.join(joiner),
     total: formatStayTime(totalMinutes, language),
   });
+
+  // note (要点メモ) を記録順・重複除去で集め、最大 5 件の箇条書きにする。
+  const uniqueNotes: string[] = [];
+  for (const log of todays) {
+    const flattened = (log.note || "").replace(/\s+/g, " ").trim();
+    if (!flattened) continue;
+    if (uniqueNotes.includes(flattened)) continue;
+    uniqueNotes.push(flattened);
+  }
+  if (uniqueNotes.length === 0) return headline;
+  const noteLines = uniqueNotes
+    .slice(0, 5)
+    .map((note) => `- ${note.length > 80 ? note.slice(0, 80) : note}`);
+  if (uniqueNotes.length > 5) {
+    noteLines.push("- …");
+  }
+  return [headline, ...noteLines].join("\n");
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
@@ -4432,10 +4475,63 @@ function App() {
   const lastAutoPostAtRef = useRef<Record<string, number>>({});
   // 設定モーダルから呼び出す「ホーム画面に追加」インストラクション modal の表示状態。
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
+  // フォーカスセッション(計測)。計測エンジン自体は useFocusSession が
+  // localStorage 永続化・1 秒 tick を持つので、ここではシートの開閉と
+  // 「終了 → 記録モーダルへのプリフィル分数」だけを状態として持つ。
+  const focusSession = useFocusSession();
+  const [isFocusSheetOpen, setIsFocusSheetOpen] = useState(false);
+  const [learningRecordInitialMinutes, setLearningRecordInitialMinutes] = useState<number | null>(
+    null,
+  );
+  // FocusTimerSheet に渡す計測対象一覧。archived は棚から退けた学習対象
+  // なので計測の選択肢からも外す。
+  const focusTargets = useMemo<FocusTarget[]>(
+    () =>
+      learningItems
+        .filter((item) => !item.archived)
+        .map((item) => ({
+          itemId: item.id,
+          itemName: item.name,
+          itemColor: item.color,
+          category: item.category,
+          photo: item.photo,
+        })),
+    [learningItems],
+  );
+
   // リロード時の初期 view は "feed"（= bottom-nav のホームに対応する新ホーム）。
   // bottom-nav swap でラベル「ホーム」が view "feed" を指すよう変更したため、
   // 初期表示も「ホーム」と書かれた画面 = feed view にする。
   const [currentView, setCurrentViewRaw] = useState<AppView>("feed");
+  /* 集中の気配 一覧(自分以外, Phase 2)。ライブ購読はしない(listener 予算
+     管理、claude-progress.txt 参照) — フィード表示/pull-to-refresh/
+     ロビー更新のタイミングで getDocs する one-shot fetch。連打防止に
+     60 秒以内の再フェッチはスキップする。publish/heartbeat/clear 側は
+     playerName 等が定義された後段(useFocusSession 呼び出しの近く)に置く。 */
+  const [focusPresenceList, setFocusPresenceList] = useState<FocusPresenceRecord[]>([]);
+  // フェッチ時刻を state で持ち回り、経過分の計算に使う。render 中に直接
+  // Date.now() を呼ぶと react-hooks/purity 警告になるため、値を固定して渡す。
+  const [focusPresenceFetchedAt, setFocusPresenceFetchedAt] = useState(0);
+  const lastFocusPresenceFetchAtRef = useRef(0);
+  const refreshFocusPresence = useCallback(
+    async (options?: { force?: boolean }) => {
+      const now = Date.now();
+      if (!options?.force && now - lastFocusPresenceFetchAtRef.current < 60_000) {
+        return;
+      }
+      lastFocusPresenceFetchAtRef.current = now;
+      const records = await fetchActiveFocusPresence(db);
+      const uid = currentUser?.uid;
+      setFocusPresenceList(uid ? records.filter((record) => record.userId !== uid) : records);
+      setFocusPresenceFetchedAt(now);
+    },
+    [currentUser?.uid],
+  );
+  // ホーム(feed)表示のたびに 1 回だけ。
+  useEffect(() => {
+    if (currentView !== "feed") return;
+    void refreshFocusPresence();
+  }, [currentView, refreshFocusPresence]);
   /* Pull-to-refresh：ホーム (= feed view) のみで有効。
      v2 (2026-06-13) — 「過敏すぎる」報告への対応で全面作り直し:
      - 閾値 100 → 180px (ネイティブ PTR 相当)
@@ -7178,7 +7274,9 @@ function App() {
     } catch (error) {
       console.info("Workspace lobby fetch skipped.", error);
     }
-  }, [currentUser, readRoomsSnapshot, applyRemoteRooms]);
+    // 集中の気配もロビー更新に相乗り(自動オープン時 + 手動リフレッシュ両方)。
+    void refreshFocusPresence();
+  }, [currentUser, readRoomsSnapshot, applyRemoteRooms, refreshFocusPresence]);
 
   // Manual lobby refresh: the only way (besides the initial open) to pull a
   // fresh list of other rooms. Wraps refreshLobbyRooms with a short loading
@@ -7686,6 +7784,59 @@ function App() {
   const playerName =
     customUserName.trim() || currentUser?.displayName || currentUser?.email?.split("@")[0] || "Developer";
   const playerInitial = playerName.slice(0, 1).toUpperCase();
+
+  /* 集中の気配 (focusPresence, Phase 2 — PRODUCT.md 独自性2「静かな共在」)。
+     計測(フォーカスセッション)中は「測る=部屋にいる」として、部屋に
+     入らなくてもホーム/ロビーに気配を灯す。session の識別に必要な
+     フィールドだけを依存に取り、pausedAt の出入りでは再発火しない
+     (= 一時停止/再開のたびに publish し直したり heartbeat interval を
+     張り替えたりしない)。未ログインなら何もしない。 */
+  const focusSessionTargetName = focusSession.session?.target.itemName ?? null;
+  const focusSessionMode = focusSession.session?.mode ?? null;
+  const focusSessionStartedAt = focusSession.session?.startedAt ?? null;
+  useEffect(() => {
+    const uid = currentUser?.uid;
+    if (!uid || !focusSessionTargetName || !focusSessionMode || !focusSessionStartedAt) {
+      return;
+    }
+    void publishFocusPresence(db, uid, {
+      name: playerName,
+      characterColor: playerCharacterColor,
+      characterShape: playerCharacterShape,
+      subject: focusSessionTargetName,
+      mode: focusSessionMode,
+      startedAt: focusSessionStartedAt,
+    });
+    // 4分毎に生存確認を更新。一時停止中(isPaused)でも「席にいる」扱いで
+    // 止めない — 離席したわけではないため。
+    const intervalId = window.setInterval(() => {
+      void heartbeatFocusPresence(db, uid);
+    }, 4 * 60_000);
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [
+    currentUser?.uid,
+    focusSessionTargetName,
+    focusSessionMode,
+    focusSessionStartedAt,
+    playerName,
+    playerCharacterColor,
+    playerCharacterShape,
+  ]);
+  // session が「有る→無い」に切り替わった瞬間だけ気配を消す。上の effect の
+  // クリーンアップは interval 停止だけを担うので、ここを分けないと
+  // playerName 変更などの再発火のたびに気配が消えてしまう。
+  const isFocusSessionActive = Boolean(focusSession.session);
+  const wasFocusSessionActiveRef = useRef(false);
+  useEffect(() => {
+    const uid = currentUser?.uid;
+    if (uid && wasFocusSessionActiveRef.current && !isFocusSessionActive) {
+      void clearFocusPresence(db, uid);
+    }
+    wasFocusSessionActiveRef.current = isFocusSessionActive;
+  }, [isFocusSessionActive, currentUser?.uid]);
+
   const isDesktopApp = Boolean(window.contributionArcDesktop?.isElectron);
   const isOnboardingSettings = onboardingStep === "settings";
   const weeklyStudyHours = getWeeklyStudyHours(studyLogs);
@@ -8044,6 +8195,14 @@ function App() {
   }, [studyLogs, learningItems]);
 
 
+  /* 忘却曲線に基づく「そろそろ復習どきの学習対象」。学習記録 (studyLogs)
+     の履歴だけから算出するので追加の永続データは不要。ホームで静かに提示
+     するだけで、通知の発火はしない (PRODUCT.md「通知より習慣」)。 */
+  const dueReviews = useMemo(
+    () => getDueReviews(learningItems, studyLogs, new Date()),
+    [learningItems, studyLogs],
+  );
+
   const closeQuickLogPopover = useCallback(() => {
     setIsQuickLogPopoverOpen(false);
     setQuickLogMinutesById({});
@@ -8361,6 +8520,53 @@ function App() {
   const selectedRoomPosts = selectedRoom ? posts.filter((post) => post.roomId === selectedRoom.id).slice(0, 4) : [];
   const selectedDailyReport = dailyReports.find((report) => report.date === selectedDailyDate) || null;
   const currentLearnerDate = getLearnerDate(new Date(feedNowTick));
+  /* ホーム「今日」ヒーロー(白黒ミニマル)用に、
+     formatDailyDate の一体化した文字列ではなく日/月/曜日を個別に組む。
+     日の数字を明朝の大きなヒーローにし、月・曜日は右に小さく添える。 */
+  const homeDailyLeaf = useMemo(() => {
+    const parsedDate = new Date(`${currentLearnerDate}T00:00:00`);
+    if (Number.isNaN(parsedDate.getTime())) {
+      return { day: "", month: "", weekday: "" };
+    }
+    const locale = language === "en" ? "en-US" : "ja-JP";
+    const day = String(parsedDate.getDate());
+    const month = parsedDate.toLocaleDateString(locale, {
+      month: language === "en" ? "short" : "long",
+    });
+    const weekdayRaw = parsedDate.toLocaleDateString(locale, { weekday: "short" });
+    const weekday = language === "en" ? weekdayRaw : `(${weekdayRaw})`;
+    return { day, month, weekday };
+  }, [currentLearnerDate, language]);
+  /* 時間帯で切り替わる一言(便利性とアート性の接点)。レンダー時の時刻を
+     見るだけで十分なので useMemo にはせず単純式で評価する。深夜帯
+     (22〜4時)は文言なし(空欄)。 */
+  const homeGreetingHour = new Date().getHours();
+  const homeGreeting =
+    homeGreetingHour >= 5 && homeGreetingHour <= 10
+      ? t("おはようございます。まっさらな一枚から")
+      : homeGreetingHour >= 11 && homeGreetingHour <= 16
+        ? t("こんにちは。今日はまだ書きかけです")
+        : homeGreetingHour >= 17 && homeGreetingHour <= 21
+          ? t("こんばんは。今日を仕上げる時間です")
+          : "";
+  /* ホーム「今日」ヒーローカード用の今日合計。studyStreak (6 時 cutoff の
+     getLearnerDate 基準) と同じ「学習者の1日」の境界に揃えるため、
+     todayStudyMinutes (calendar-day 基準の getTodayKey) とは別に計算する。 */
+  const todayFocusHeroMinutes = useMemo(
+    () =>
+      studyLogs
+        .filter((log) => getLearnerDate(new Date(log.createdAt)) === currentLearnerDate)
+        .reduce((sum, log) => sum + log.minutes, 0),
+    [studyLogs, currentLearnerDate],
+  );
+  /* Phase 2: 「今日」カード → 日報の振り返りへの静かなブリッジ用。
+     今日の記録が 1 件以上あるのに振り返りが空のままなら、書き忘れの
+     可能性が高いので一行リンクを出す (PRODUCT.md 3. コア動線「振り返る」)。 */
+  const todayHasStudyLogs = studyLogs.some(
+    (log) => getLearnerDate(new Date(log.createdAt)) === currentLearnerDate,
+  );
+  const todayDailyReportForBridge = dailyReports.find((report) => report.date === currentLearnerDate) || null;
+  const todayReflectionIsEmpty = !(todayDailyReportForBridge?.reflection || "").trim();
   // 連続日報ストリーク (今日まで連続して書いた日数)
   const dailyReportStreak = useMemo(() => getDailyReportStreak(dailyReports), [dailyReports]);
   // 日報を 1 枚の画像カードに書き出して共有/保存する。ネイティブな
@@ -11652,8 +11858,12 @@ function App() {
   // リアルタイム購読中なので技術的には refresh 不要だが、X 流の引いて
   // 更新ジェスチャを実装した時に「何も起きない」と無効感が出る。短い
   // delay で indicator スピンを見せて「更新した」体感を作る。
+  // 集中の気配も、このタイミングに相乗りして force で最新化する。
   const handleFeedRefresh = async () => {
-    await new Promise<void>((resolve) => setTimeout(resolve, 700));
+    await Promise.all([
+      new Promise<void>((resolve) => setTimeout(resolve, 700)),
+      refreshFocusPresence({ force: true }),
+    ]);
   };
 
   const handleProfileBack = () => {
@@ -13558,11 +13768,6 @@ function App() {
                 {t("今日 {duration}", { duration: formatStudyTimeJa(todayStudyMinutes) })}
               </span>
             ) : null}
-            {currentOrganization ? (
-              <span className="player-chip player-chip-org" title={t("{name}所属", { name: currentOrganization.name })}>
-                {currentOrganization.name}
-              </span>
-            ) : null}
             {hasGithub ? (
               <span className="player-chip player-chip-github" title={t("GitHub 連携済み")}>
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="11" height="11">
@@ -15385,7 +15590,16 @@ function App() {
   // The shape mirrors the prior in-home-screen IIFE: build an author lookup,
   // merge posts + workspace recruitments, optionally filter to following, then
   // render composer + tabs + list.
-  const feedSection = (() => {
+  //
+  // 投稿の一覧化ロジック (author 解決 + マージ + フィルタ + ソート) は
+  // feedSection 本体だけでなく、ホームの「みんなの投稿」入口行の件数 /
+  // 最新プレビューでも同じ並びを見せたいので、レンダリング部より前に
+  // 切り出しておいて両方から参照する (ロジックの二重管理を避ける)。
+  type FeedTimelineEntry =
+    | { kind: "post"; id: string; createdAt: string; post: ContributionPostRecord }
+    | { kind: "recruitment"; id: string; createdAt: string; recruitment: WorkspaceRecruitmentRecord };
+
+  const feedAuthorLookup = (() => {
     const authorLookup = new Map<string, RecruitmentAuthor>();
     if (currentUser?.uid) {
       authorLookup.set(currentUser.uid, {
@@ -15414,17 +15628,16 @@ function App() {
         });
       }
     });
+    return authorLookup;
+  })();
 
+  const feedSortedEntries = (() => {
     const followingSet = new Set(following);
     if (currentUser?.uid) {
       followingSet.add(currentUser.uid);
     }
 
-    type FeedEntry =
-      | { kind: "post"; id: string; createdAt: string; post: ContributionPostRecord }
-      | { kind: "recruitment"; id: string; createdAt: string; recruitment: WorkspaceRecruitmentRecord };
-
-    const allEntries: FeedEntry[] = [
+    const allEntries: FeedTimelineEntry[] = [
       ...posts
         /* 旧スタイル「学習の記録」カード (postType === "auto-study" の
            subject 無しレガシー) はもう描画しない。新しい学習記録は
@@ -15451,15 +15664,19 @@ function App() {
        手動 / auto-study / auto-workspace / recruitment 全て表示。 */
     const filtered = scopeFiltered;
 
-    const sorted = filtered.sort(
+    return filtered.sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
+  })();
+
+  const feedSection = (() => {
+    const authorLookup = feedAuthorLookup;
+    const sorted = feedSortedEntries;
 
     return (
       <section className="home-feed-section" aria-label={t("投稿")}>
         <header className="home-feed-head">
           <div>
-            <p className="card-kicker">{t("投稿")}</p>
             <h2>{t("みんなと学びを共有・作業仲間を募集")}</h2>
           </div>
           <span>{t("{count} 件", { count: sorted.length.toLocaleString() })}</span>
@@ -15479,7 +15696,7 @@ function App() {
                   setPostDraft(event.target.value);
                   setPostError("");
                 }}
-                placeholder={t("What are you building tonight?")}
+                placeholder={t("今日は何を積み上げてる？")}
                 maxLength={280}
                 rows={1}
               />
@@ -15488,7 +15705,7 @@ function App() {
                     はユーザー要望で撤去。投稿は自由入力 + 「投稿」ボタンのみで完結。 */}
                 <CharCountRing value={postDraft.length} max={280} />
                 <button type="submit" data-testid="home-post-submit" disabled={isPosting || !postDraft.trim()}>
-                  {isPosting ? t("Posting") : t("投稿")}
+                  {isPosting ? t("投稿中…") : t("投稿")}
                 </button>
               </div>
               {postError ? <p className="log-post-error">{postError}</p> : null}
@@ -15506,7 +15723,7 @@ function App() {
             className={`timeline-filter-tab${timelineFilter === "following" ? " is-active" : ""}`}
             onClick={() => setTimelineFilter("following")}
           >
-            Following
+            {t("フォロー中")}
           </button>
           <button
             type="button"
@@ -15515,7 +15732,7 @@ function App() {
             className={`timeline-filter-tab${timelineFilter === "all" ? " is-active" : ""}`}
             onClick={() => setTimelineFilter("all")}
           >
-            All
+            {t("すべて")}
           </button>
         </div>
 
@@ -15551,7 +15768,7 @@ function App() {
           ) : (
             <article className="log-empty-card">
               <p className="card-kicker">
-                {timelineFilter === "following" ? "Following" : "Quiet Progress"}
+                {timelineFilter === "following" ? t("フォロー中") : t("みんなの積み上げ")}
               </p>
               <strong>
                 {timelineFilter === "following"
@@ -16347,6 +16564,37 @@ function App() {
         />
       ) : null}
 
+      {isFocusSheetOpen ? (
+        <FocusTimerSheet
+          targets={focusTargets}
+          session={focusSession.session}
+          elapsedMs={focusSession.elapsedMs}
+          isPaused={focusSession.isPaused}
+          pomodoro={focusSession.pomodoro}
+          onStart={(target, mode) => focusSession.start(target, mode)}
+          onPause={() => focusSession.pause()}
+          onResume={() => focusSession.resume()}
+          onEnd={() => {
+            // end() はセッションを clear するので、対象の退避は end() の
+            // 前に済ませておく。
+            const target = focusSession.session?.target;
+            const minutes = focusSession.end();
+            setIsFocusSheetOpen(false);
+            const stillExists = target ? learningItems.some((it) => it.id === target.itemId) : false;
+            if (minutes && target && stillExists) {
+              setLearningRecordInitialMinutes(minutes);
+              setLearningRecordItemId(target.itemId);
+            }
+            // 対象が削除済みの場合はトースト等を出さずシートを閉じるだけでよい。
+          }}
+          onDiscard={() => {
+            focusSession.discard();
+            setIsFocusSheetOpen(false);
+          }}
+          onClose={() => setIsFocusSheetOpen(false)}
+        />
+      ) : null}
+
       {(() => {
         const recordItem = learningRecordItemId
           ? learningItems.find((it) => it.id === learningRecordItemId)
@@ -16357,8 +16605,15 @@ function App() {
             itemName={recordItem.name}
             itemColor={recordItem.color}
             category={recordItem.category}
-            onClose={() => setLearningRecordItemId(null)}
-            onSubmit={(values) => handleSaveLearningRecord(recordItem, values)}
+            initialMinutes={learningRecordInitialMinutes ?? undefined}
+            onClose={() => {
+              setLearningRecordItemId(null);
+              setLearningRecordInitialMinutes(null);
+            }}
+            onSubmit={(values) => {
+              handleSaveLearningRecord(recordItem, values);
+              setLearningRecordInitialMinutes(null);
+            }}
             onEdit={() => {
               setLearningRecordItemId(null);
               setLearningDetailId(recordItem.id);
@@ -20910,7 +21165,7 @@ function App() {
               body={t("他のユーザーが今日何をしているかをタイムラインで追えます。")}
               bullets={[
                 t("投稿にいいねで応援、返信で対話"),
-                t("「Following / All」タブで自分のフォロー先だけに絞れます"),
+                t("「フォロー中 / すべて」タブで自分のフォロー先だけに絞れます"),
                 t("気になる人をフォローすると、その人の投稿が優先で流れる"),
                 t("あなたの学習を投稿すると、誰かの励みになります"),
               ]}
@@ -20966,14 +21221,14 @@ function App() {
                     setPostDraft(event.target.value);
                     setPostError("");
                   }}
-                  placeholder={t("What are you building tonight?")}
+                  placeholder={t("今日は何を積み上げてる？")}
                   maxLength={280}
                   rows={4}
                 />
                 <div className="log-composer-footer">
                   <span>{postDraft.length}/280</span>
                   <button type="submit" disabled={isPosting || !postDraft.trim()}>
-                    {isPosting ? t("Posting") : t("投稿")}
+                    {isPosting ? t("投稿中…") : t("投稿")}
                   </button>
                 </div>
                 {postError ? <p className="log-post-error">{postError}</p> : null}
@@ -20992,7 +21247,7 @@ function App() {
                   className={`timeline-filter-tab${timelineFilter === "following" ? " is-active" : ""}`}
                   onClick={() => setTimelineFilter("following")}
                 >
-                  Following
+                  {t("フォロー中")}
                 </button>
                 <button
                   type="button"
@@ -21001,20 +21256,20 @@ function App() {
                   className={`timeline-filter-tab${timelineFilter === "all" ? " is-active" : ""}`}
                   onClick={() => setTimelineFilter("all")}
                 >
-                  All
+                  {t("すべて")}
                 </button>
               </div>
               {visibleTimelinePosts.length > 0 ? (
                 visibleTimelinePosts.map((post) => postCard(post))
               ) : timelineFilter === "following" ? (
                 <article className="log-empty-card">
-                  <p className="card-kicker">Following</p>
+                  <p className="card-kicker">{t("フォロー中")}</p>
                   <strong>{t("フォロー中のログはまだありません。")}</strong>
-                  <span>{t("気になるエンジニアをフォローすると、ここに学びが流れます。Allタブで全員のログを見ることもできます。")}</span>
+                  <span>{t("気になるエンジニアをフォローすると、ここに学びが流れます。「すべて」タブで全員のログを見ることもできます。")}</span>
                 </article>
               ) : (
                 <article className="log-empty-card">
-                  <p className="card-kicker">Quiet Progress</p>
+                  <p className="card-kicker">{t("みんなの積み上げ")}</p>
                   <strong>{t("まだログはありません。")}</strong>
                   <span>{t("今日作っているもの、学んだこと、commitしたことを静かに共有できます。")}</span>
                 </article>
@@ -21734,6 +21989,53 @@ function App() {
                   );
                 })()}
               </div>
+
+              {/* 集中の気配(Phase 2)。部屋に入っていなくても、いま計測中の
+                  仲間の存在をロビーに灯す。空なら静かにセクションごと隠す。 */}
+              {focusPresenceList.length > 0 ? (
+                <section className="focus-presence-lobby" aria-label={t("いま集中している仲間")}>
+                  <p className="focus-presence-lobby-title">
+                    <span className="focus-presence-quiet-dot" aria-hidden="true" />
+                    {t("いま集中している仲間")}
+                  </p>
+                  <ul className="focus-presence-lobby-list">
+                    {focusPresenceList.slice(0, 12).map((presence) => {
+                      const elapsedMinutes = Math.max(
+                        0,
+                        Math.floor(((focusPresenceFetchedAt || presence.startedAt) - presence.startedAt) / 60000),
+                      );
+                      return (
+                        <li key={presence.userId} className="focus-presence-lobby-item">
+                          <span
+                            className="focus-presence-avatar"
+                            style={
+                              {
+                                "--focus-presence-color":
+                                  presence.characterColor || characterColorOptions[0].value,
+                              } as CSSProperties
+                            }
+                            aria-hidden="true"
+                          >
+                            {presence.name.slice(0, 1).toUpperCase()}
+                          </span>
+                          <span className="focus-presence-lobby-meta">
+                            <strong className="focus-presence-lobby-name">{presence.name}</strong>
+                            <span className="focus-presence-lobby-subject">{presence.subject}</span>
+                          </span>
+                          <span className="focus-presence-lobby-elapsed">
+                            {t("{n}分", { n: elapsedMinutes })}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {focusPresenceList.length > 12 ? (
+                    <p className="focus-presence-lobby-overflow">
+                      {t("他 {n} 人", { n: focusPresenceList.length - 12 })}
+                    </p>
+                  ) : null}
+                </section>
+              ) : null}
 
               {roomCreateMessage ? (
                 <p className={`room-create-message ${roomCreateState}`}>{roomCreateMessage}</p>
@@ -23167,7 +23469,7 @@ function App() {
       {currentView === "feed" ? (
         <article className="app-view-feed">
           <header className="feed-view-header">
-            <h1>{t("ホーム")}</h1>
+            <h1 className="home-view-title">{t("ホーム")}</h1>
           </header>
           <div
             className={`feed-view-content${
@@ -23201,8 +23503,194 @@ function App() {
                   <span className="home-notice-banner-chevron" aria-hidden="true">›</span>
                 </button>
               ) : null}
-              {feedSection}
+
+              {/* 「今日」ヒーローカード(PRODUCT.md 3. コア動線 / 6. UX 原則 1)。
+                  開いて 1 秒で今日の合計・ストリーク・集中の入口が分かる
+                  ようホーム最上段に置く。計測中は選択中の学習対象名に切替わり、
+                  ミニバーと同じ経路(シートを開く)に合流する。 */}
+              <section className="focus-today-card" aria-label={t("今日")}>
+                {/* 白黒ミニマルの「今日」ヒーロー。旧 focus-today-head
+                    (kicker「今日」+ 日付テキスト)を、日付を主役にした
+                    ヒーローに作り替える。 */}
+                <div className="focus-today-leaf">
+                  <div
+                    className="focus-today-leaf-date"
+                    aria-label={formatDailyDate(currentLearnerDate, language)}
+                  >
+                    <span className="focus-today-leaf-day" aria-hidden="true">
+                      {homeDailyLeaf.day}
+                    </span>
+                    <span className="focus-today-leaf-meta" aria-hidden="true">
+                      <span className="focus-today-leaf-month">{homeDailyLeaf.month}</span>
+                      <span className="focus-today-leaf-weekday">{homeDailyLeaf.weekday}</span>
+                    </span>
+                  </div>
+                  {homeGreeting ? (
+                    <p className="focus-today-leaf-greeting">{homeGreeting}</p>
+                  ) : null}
+                </div>
+                <div className="focus-today-stats">
+                  <div className="focus-today-stat">
+                    <span className="focus-today-stat-label">{t("今日の学習")}</span>
+                    <span
+                      className={`focus-today-stat-value${todayFocusHeroMinutes > 0 ? "" : " is-zero"}`}
+                    >
+                      {formatStudyTimeJa(todayFocusHeroMinutes, language)}
+                    </span>
+                  </div>
+                  <div className="focus-today-stat">
+                    <span className="focus-today-stat-label">{t("ストリーク")}</span>
+                    {studyStreak > 0 ? (
+                      <span
+                        className="focus-today-streak-stamp"
+                        aria-label={t("{n}日連続", { n: studyStreak })}
+                      >
+                        <span className="focus-today-streak-stamp-value" aria-hidden="true">
+                          {t("{n}日", { n: studyStreak })}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="focus-today-stat-value focus-today-stat-muted">
+                        {t("今日からはじめよう")}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {/* 先週比の差分メッセージ(ホームリニューアル③)。GitHub 草
+                    カード(profile)側で使っている contributionArc.thisWeekMinutes /
+                    lastWeekMinutes をそのまま再利用し、増えた週だけ静かに伝える
+                    (減った週は AGENTS.md「静かに褒める」原則に反するため出さない)。
+                    直近7日ミニバーは下の統合ヒートマップと表示が重複していたため
+                    ここでは削除した。 */}
+                {contributionArc.lastWeekMinutes > 0 &&
+                contributionArc.thisWeekMinutes > contributionArc.lastWeekMinutes ? (
+                  <p className="focus-today-diff-line">
+                    <span className="focus-today-diff-arrow" aria-hidden="true">
+                      ↗
+                    </span>
+                    {t("先週より {time} 多く積み上がっています", {
+                      time: formatStudyTimeJa(
+                        contributionArc.thisWeekMinutes - contributionArc.lastWeekMinutes,
+                        language,
+                      ),
+                    })}
+                  </p>
+                ) : null}
+                {focusSession.session ? (
+                  <button
+                    type="button"
+                    className="focus-today-cta focus-today-cta-active"
+                    onClick={() => setIsFocusSheetOpen(true)}
+                  >
+                    <span className="focus-today-cta-dot" aria-hidden="true" />
+                    <span>{focusSession.session.target.itemName}</span>
+                    <span className="focus-today-cta-clock">
+                      {formatStudyTimeJa(Math.max(1, Math.round(focusSession.elapsedMs / 60000)), language)}
+                    </span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="focus-today-cta"
+                    onClick={() => setIsFocusSheetOpen(true)}
+                  >
+                    {t("作業をはじめる")}
+                  </button>
+                )}
+                {focusPresenceList.length > 0 ? (
+                  <p className="focus-presence-quiet-line">
+                    <span className="focus-presence-quiet-dot" aria-hidden="true" />
+                    {t("いま {n} 人が集中しています", { n: focusPresenceList.length })}
+                  </p>
+                ) : null}
+                {todayHasStudyLogs && todayReflectionIsEmpty ? (
+                  <button
+                    type="button"
+                    className="focus-today-daily-link"
+                    onClick={() => {
+                      if (selectedDailyDate !== currentLearnerDate) {
+                        handleDailyDateChange(currentLearnerDate);
+                      }
+                      setCurrentView("daily");
+                      setDailySubTab("reflection");
+                    }}
+                  >
+                    <span>{t("今日の振り返りを書く")}</span>
+                    <span aria-hidden="true">›</span>
+                  </button>
+                ) : null}
+              </section>
+              {dueReviews.length > 0 ? (
+                <section className="home-review-card" aria-label={t("そろそろ復習どき")}>
+                  <div className="home-review-head">
+                    <span className="home-review-kicker">{t("そろそろ復習どき")}</span>
+                    <span className="home-review-note">
+                      {t("忘れかけた頃に見直すと、記憶に長く残ります")}
+                    </span>
+                  </div>
+                  <ul className="home-review-list">
+                    {dueReviews.slice(0, 3).map((review) => {
+                      const last = new Date(review.lastStudiedAt);
+                      return (
+                        <li key={review.item.id}>
+                          <button
+                            type="button"
+                            className="home-review-row"
+                            onClick={() => setCurrentView("learning")}
+                          >
+                            <span className="home-review-row-name">{review.item.name}</span>
+                            <span className="home-review-row-meta">
+                              {t("前回 {date}", {
+                                date: `${last.getMonth() + 1}/${last.getDate()}`,
+                              })}
+                            </span>
+                            <span className="home-review-row-chevron" aria-hidden="true">
+                              ›
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {dueReviews.length > 3 ? (
+                    <button
+                      type="button"
+                      className="home-review-more"
+                      onClick={() => setCurrentView("learning")}
+                    >
+                      {t("ほか {n} 件をライブラリで見る", { n: dueReviews.length - 3 })}
+                    </button>
+                  ) : null}
+                </section>
+              ) : null}
             </PullToRefresh>
+          </div>
+        </article>
+      ) : null}
+
+      {/* 投稿専用ビュー(ホーム再構成)。ホームの「みんなの投稿」入口行から
+          遷移するサブ画面という位置づけなので、ボトムナビの「ホーム」タブは
+          このビュー表示中もアクティブのままにする(下の mobile-bottom-nav
+          の判定を参照)。 */}
+      {currentView === "posts" ? (
+        <article className="app-view-feed app-view-posts">
+          <header className="feed-view-header">
+            <button
+              type="button"
+              className="feed-view-back"
+              onClick={() => setCurrentView("feed")}
+              aria-label={t("戻る")}
+            >
+              ‹
+            </button>
+            <h1>{t("投稿")}</h1>
+          </header>
+          <div
+            className={`feed-view-content${
+              isProfileHydrated ? " is-hydrated" : " is-hydrating"
+            }`}
+          >
+            <PullToRefresh onRefresh={handleFeedRefresh}>{feedSection}</PullToRefresh>
           </div>
         </article>
       ) : null}
@@ -23341,8 +23829,16 @@ function App() {
           three-column desktop layout — hide the feed there too and let
           the report's native two-column view use the full width.
           On every other view the right pane respects the user's
-          isFeedOpen preference (default true, persisted to localStorage). */}
-      {currentView !== "workspace" && currentView !== "feed" && currentView !== "daily" && isFeedOpen ? (
+          isFeedOpen preference (default true, persisted to localStorage).
+          "posts" は投稿フィード専用ビューそのもの (フルブリードの
+          app-view-posts) なので、その裏で同じ feedSection をもう一度
+          two-pane-right として重ねて出すと DOM が二重化して data-testid
+          が衝突する。feed と同じ扱いで隠す。 */}
+      {currentView !== "workspace" &&
+      currentView !== "feed" &&
+      currentView !== "posts" &&
+      currentView !== "daily" &&
+      isFeedOpen ? (
         <aside className="two-pane-right" aria-label={t("投稿")}>
           {feedSection}
         </aside>
@@ -23357,8 +23853,10 @@ function App() {
           矢印の向き = パネルの動く方向で直感的に：開いているときは右向き
           (›＝右へ畳む)、畳んでいるときは左向き (‹＝左へ引き出す)。
           2 カラムになる ≥1081px でのみ意味を持つので、それ未満は CSS で
-          非表示（狭い幅では投稿は bottom-nav のホームから辿れる）。 */}
-      {currentView !== "workspace" && currentView !== "feed" ? (
+          非表示（狭い幅では投稿は bottom-nav のホームから辿れる）。
+          "posts" は two-pane-right 自体を出さないので、このトグルも
+          feed と同様に隠す。 */}
+      {currentView !== "workspace" && currentView !== "feed" && currentView !== "posts" ? (
         <button
           type="button"
           className={`feed-dock-toggle${isFeedOpen ? " is-open" : ""}`}
@@ -23383,6 +23881,20 @@ function App() {
         </button>
       ) : null}
 
+      {/* 計測中のグローバルミニバー。シートを閉じていても計測は続くので、
+          どの画面にいても経過時間を確認して戻れるようにする。オンボー
+          ディング中(welcome)はまだ計測を始めていない・出しても混乱する
+          だけなので隠す。 */}
+      {focusSession.session && !isFocusSheetOpen && onboardingStep !== "welcome" ? (
+        <FocusMiniBar
+          session={focusSession.session}
+          elapsedMs={focusSession.elapsedMs}
+          isPaused={focusSession.isPaused}
+          pomodoro={focusSession.pomodoro}
+          onClick={() => setIsFocusSheetOpen(true)}
+        />
+      ) : null}
+
       {/* Mobile-only bottom navigation. Visible at ≤720px (CSS-gated).
           5 primary destinations match the desktop topbar-nav so the
           mobile user never has to dig through a menu to switch views.
@@ -23397,7 +23909,7 @@ function App() {
           <button
             type="button"
             data-testid="bottomnav-home"
-            className={currentView === "feed" ? "is-active" : ""}
+            className={currentView === "feed" || currentView === "posts" ? "is-active" : ""}
             onClick={() => setCurrentView("feed")}
             aria-label={t("ホーム")}
           >

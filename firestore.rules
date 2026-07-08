@@ -567,5 +567,21 @@ service cloud.firestore {
       allow delete: if signedIn()
         && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
     }
+
+    // 集中の気配 (focusPresence, Phase 2)。フォーカスセッション計測中の
+    // 存在をホーム/ロビーに灯すための 1 人 1 枚の best-effort presence。
+    // 誰でも read でき(気配を眺めるだけ)、書き込みは本人の uid ドキュメント
+    // のみ、フィールドは軽量な文字列/enum に絞って検証する。
+    match /focusPresence/{userId} {
+      allow read: if signedIn();
+      allow create, update: if isOwner(userId)
+        && request.resource.data.userId == userId
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 40
+        && request.resource.data.subject is string
+        && request.resource.data.subject.size() <= 80
+        && request.resource.data.mode in ["stopwatch", "pomodoro"];
+      allow delete: if isOwner(userId);
+    }
   }
 }

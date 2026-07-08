@@ -46,11 +46,12 @@ test("1セッションの Firestore ランタイム書き込み/読み取りが�
   await page.getByTestId("learning-editor-name").fill(`budget-${Date.now()}`);
   await page.getByTestId("learning-editor-save").click();
   await expect(page.getByTestId("learning-card-trigger").first()).toBeVisible();
-  // ホームへ戻って1件投稿（もう1バースト）
+  // ホームへ戻る。以前はここで「みんなの投稿」入口から posts view に移動し
+  // 1 件投稿して write バーストをもう1つ発生させていたが、ホーム画面の
+  // 整理で GitHub カードと「みんなの投稿」入口を撤去したため、投稿ステップは
+  // 外した。学習対象の作成が代表的な write バーストとして残るので、
+  // ①リスナー暴走 ②書き込みループ の回帰検知力は維持される。
   await page.getByTestId("bottomnav-home").click();
-  await page.getByTestId("home-post-textarea").fill(`budget-post-${Date.now()}`);
-  await page.getByTestId("home-post-submit").click();
-  await expect(page.getByTestId("feed-post").first()).toBeVisible();
   // 後続のフラッシュ分を取りこぼさないよう少しだけ待つ。
   await page.waitForTimeout(1500);
 

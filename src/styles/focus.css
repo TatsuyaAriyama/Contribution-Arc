@@ -1,0 +1,822 @@
+/**
+ * focus.css — フォーカスセッション計測 UI(FocusTimerSheet / FocusMiniBar)
+ * 専用スタイル。App.css には触れず、ここに自己完結させる。
+ * クラス名は `focus-` プレフィックスに統一。
+ *
+ * 色は index.css の CSS 変数(--ink / --surface / --line / --green /
+ * --cta-bg 等)のみを使う。[data-theme="dark"] で自動的に polarity flip
+ * するので、ここではダーク専用のルールを書かない。
+ */
+
+/* === FocusTimerSheet: backdrop + シート本体 === */
+
+.focus-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(17, 24, 39, 0.4);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+@media (min-width: 600px) {
+  .focus-sheet-backdrop {
+    align-items: center;
+  }
+}
+
+.focus-sheet {
+  width: 100%;
+  max-width: 440px;
+  max-height: 92vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 16px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  border: 1px solid var(--line);
+  border-radius: 22px 22px 0 0;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-soft);
+}
+
+@media (min-width: 600px) {
+  .focus-sheet {
+    border-radius: 20px;
+  }
+}
+
+.focus-sheet-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.focus-sheet-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink-strong);
+}
+
+.focus-sheet-close {
+  justify-self: end;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.focus-sheet-close:active {
+  background: rgba(var(--ink-rgb), 0.06);
+}
+
+.focus-sheet-hint {
+  margin: -10px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* === 対象選択(未計測) === */
+
+.focus-sheet-empty {
+  padding: 32px 8px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.focus-sheet-empty p {
+  margin: 0;
+}
+
+/* === モード選択(未計測): ストップウォッチ / ポモドーロ === */
+
+.focus-sheet-mode-toggle {
+  display: inline-flex;
+  align-self: flex-start;
+  background: rgba(var(--ink-rgb), 0.04);
+  border-radius: 10px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.focus-sheet-mode-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  min-height: 32px;
+}
+
+.focus-sheet-mode-btn.is-active {
+  background: var(--surface);
+  color: var(--ink-strong);
+  box-shadow: 0 1px 3px rgba(var(--ink-rgb), 0.08);
+}
+
+/* === 対象を選ぶ = ライブラリと同じ表紙+タイトルの 4 列グリッド ===
+   .learning-grid/.learning-card はドラッグ並べ替え・クイック記録チップ
+   等のロジックと密結合しているため使い回さず、見た目だけをここに再現
+   する専用クラスにする(src/App.css:25031 以降のライブラリ実装と揃える)。 */
+.focus-sheet-target-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  column-gap: 10px;
+  row-gap: 16px;
+}
+
+.focus-sheet-target-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.focus-sheet-target-photo {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.focus-sheet-target-photo.is-fallback {
+  aspect-ratio: 3 / 4;
+}
+
+.focus-sheet-target-photo img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+.focus-sheet-target-card-name {
+  width: 100%;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  text-align: center;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.focus-sheet-target-card:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.focus-sheet-target-bar {
+  width: 4px;
+  align-self: stretch;
+  min-height: 20px;
+  border-radius: 999px;
+  background: var(--focus-target-color, var(--green));
+  flex-shrink: 0;
+}
+
+.focus-sheet-target-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* === 計測中 === */
+
+.focus-sheet-active {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0 4px;
+}
+
+.focus-sheet-target {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.focus-sheet-target .focus-sheet-target-bar {
+  height: 16px;
+  min-height: 0;
+}
+
+.focus-sheet-target .focus-sheet-target-name {
+  font-size: 15px;
+}
+
+.focus-sheet-clock {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: var(--ink-strong);
+}
+
+.focus-sheet-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--green);
+  animation: focus-pulse 1.6s ease-in-out infinite;
+}
+
+.focus-sheet-dot.is-paused,
+.focus-sheet-dot.is-break {
+  background: rgba(var(--ink-rgb), 0.28);
+  animation: none;
+}
+
+/* ポモドーロのフェーズ表示(集中フェーズ / 休息フェーズ)。派手さは禁物
+   なので、テキスト + 小さいドットのみで静かに伝える。 */
+.focus-sheet-pomo-phase {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.focus-sheet-dot-sm {
+  width: 7px;
+  height: 7px;
+  /* フェーズ切替の合図であって「計測中」の合図ではないため、静かに
+     色だけで伝える(点滅・拍動アニメは載せない)。 */
+  animation: none;
+}
+
+.focus-sheet-pomo-meta {
+  margin: -8px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.focus-sheet-status {
+  margin: -8px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.focus-sheet-controls {
+  width: 100%;
+  display: flex;
+  gap: 10px;
+}
+
+.focus-btn {
+  flex: 1;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.focus-btn-secondary {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+}
+
+.focus-btn-secondary:active {
+  background: rgba(var(--ink-rgb), 0.04);
+}
+
+.focus-btn-primary {
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+}
+
+.focus-btn-primary:active {
+  transform: scale(0.97);
+}
+
+.focus-sheet-discard {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 10px;
+}
+
+.focus-sheet-discard:active {
+  color: var(--accent-warm);
+}
+
+@keyframes focus-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.82);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-sheet-dot {
+    animation: none;
+  }
+}
+
+/* === FocusMiniBar: 計測中のグローバルミニバー === */
+
+.focus-mini-bar {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  z-index: 90; /* .mobile-bottom-nav (70) より上、モーダル (100+) より下 */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(var(--surface-rgb), 0.96);
+  backdrop-filter: blur(16px) saturate(1.05);
+  -webkit-backdrop-filter: blur(16px) saturate(1.05);
+  box-shadow: var(--shadow-card);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.focus-mini-bar:active {
+  transform: translateX(-50%) scale(0.98);
+}
+
+@media (max-width: 720px) {
+  .focus-mini-bar {
+    /* .mobile-bottom-nav の高さ(padding込みで概ね 68-72px) + 余白の分だけ持ち上げる。 */
+    bottom: calc(72px + 12px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+.focus-mini-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--green);
+  flex-shrink: 0;
+  animation: focus-pulse 1.6s ease-in-out infinite;
+}
+
+.focus-mini-dot.is-paused,
+.focus-mini-dot.is-break {
+  background: rgba(var(--ink-rgb), 0.28);
+  animation: none;
+}
+
+.focus-mini-clock {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-strong);
+  flex-shrink: 0;
+}
+
+.focus-mini-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.focus-mini-status {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-mini-dot {
+    animation: none;
+  }
+}
+
+/* === ホーム「今日」ヒーローカード ===
+   白黒ミニマル。緑・金・明朝・手描き・傾き・装飾線は一切使わない。
+   白地 + 1px グレー罫線のフラットなカードで、階層はタイポグラフィ
+   (サイズ・ウェイト)と余白だけで作る。 */
+
+.focus-today-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  position: relative;
+}
+
+/* 日付ヒーロー(home-daily-leaf)。左に日の数字を Inter の大きな主役、
+   右に月/曜日を縦2段、さらに右へ時間帯の一言を添える。 */
+.focus-today-leaf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 4px 14px;
+}
+
+.focus-today-leaf-date {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.focus-today-leaf-day {
+  display: inline-block;
+  font-weight: 800;
+  font-size: 34px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--ink-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.focus-today-leaf-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 3px;
+}
+
+.focus-today-leaf-month {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+
+.focus-today-leaf-weekday {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+.focus-today-leaf-greeting {
+  flex: 1 1 140px;
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--muted);
+  text-align: right;
+}
+
+@media (max-width: 480px) {
+  .focus-today-leaf-greeting {
+    flex-basis: 100%;
+    text-align: left;
+  }
+}
+
+.focus-today-stats {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.focus-today-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.focus-today-stat-label {
+  display: flex;
+  align-items: center;
+  min-height: 14px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* 値行の高さ・行送りを両 stat 列で揃える。「今日からはじめよう」
+   (focus-today-stat-muted, 13px) と数値 (18px) はフォントサイズが
+   違うため、flex + min-height で行の外枠を統一して縦のリズムを合わせる。 */
+.focus-today-stat-value {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--ink-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 0 分のときは強い ink ではなく控えめな muted に落として、
+   「まだ積み上がっていない」ことを静かに示す。1 分以上は通常の
+   focus-today-stat-value (強い ink) に自動で戻る。 */
+.focus-today-stat-value.is-zero {
+  color: var(--muted);
+}
+
+/* ストリーク値。装飾(メダリオン・リング・明朝)は使わず、もう一方の
+   stat「今日の学習」と同じ Inter の太字数値で揃える。 */
+.focus-today-streak-stamp {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}
+
+.focus-today-streak-stamp-value {
+  font-weight: 800;
+  font-size: 18px;
+  line-height: 1.2;
+  color: var(--ink-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.focus-today-stat-muted {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* 先週比の差分メッセージ(ホームリニューアル③)。stats 行と CTA の間に
+   静かに置く1行。白黒ミニマルでは緑を使わず、muted なテキストとして
+   静かに添える。 */
+.focus-today-diff-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding-top: 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.focus-today-diff-arrow {
+  font-size: 12px;
+}
+
+.focus-today-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 18px;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+}
+
+.focus-today-cta:active {
+  transform: scale(0.98);
+}
+
+.focus-today-cta-active {
+  justify-content: flex-start;
+  padding-left: 18px;
+}
+
+.focus-today-cta-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--cta-fg);
+  flex-shrink: 0;
+  animation: focus-pulse 1.6s ease-in-out infinite;
+}
+
+.focus-today-cta-clock {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  opacity: 0.85;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-today-cta-dot {
+    animation: none;
+  }
+}
+
+/* Phase 2: 今日の記録 → 日報の振り返りへの静かなブリッジ行。
+   CTA でも達成表示でもないので緑は使わず、ink-muted の静かなテキスト
+   リンクに留める（Phase 1 の「緑は CTA とストリークのみ」判断を維持）。 */
+.focus-today-daily-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  text-align: left;
+}
+
+.focus-today-daily-link:active {
+  opacity: 0.7;
+}
+
+/* === 集中の気配 (focusPresence, Phase 2) ===
+   ホームの静かな一行 + ロビーの「いま集中している仲間」ミニセクション。
+   派手な演出をせず、hairline + muted 文字 + 唯一の緑ドットだけで
+   「誰かも今やっている」を伝える。 */
+
+.focus-presence-quiet-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding-top: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.focus-presence-quiet-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--ink);
+  flex-shrink: 0;
+  animation: focus-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-presence-quiet-dot {
+    animation: none;
+  }
+}
+
+.focus-presence-lobby {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 14px 0;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.focus-presence-lobby-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-strong);
+}
+
+.focus-presence-lobby-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.focus-presence-lobby-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.focus-presence-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--focus-presence-color, var(--green));
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.focus-presence-lobby-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.focus-presence-lobby-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.focus-presence-lobby-subject {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.focus-presence-lobby-elapsed {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  color: var(--muted);
+}
+
+.focus-presence-lobby-overflow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}

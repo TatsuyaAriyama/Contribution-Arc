@@ -6008,6 +6008,9 @@
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
+  /* フィード密度の微圧縮: .log-post-main の gap (8px) をアクション行の
+     上だけ約18%締める (8px → 約6.5px)。head↔本文の間隔は変えない。 */
+  margin-top: -1.5px;
 }
 
 .log-like-button {
@@ -8629,6 +8632,15 @@
   font-weight: 800;
   white-space: nowrap;
   text-decoration: none;
+  /* player-chip-goal だけ <button>(他は <span>) で描画されるため、UA 既定の
+     line-height / margin / box-sizing がリセットされず高さが揃わなかった。
+     span には無害な no-op なので基底ルールに置く。 */
+  box-sizing: border-box;
+  margin: 0;
+  line-height: 1;
+  appearance: none;
+  -webkit-appearance: none;
+  font-family: inherit;
 }
 
 .player-chip-streak {
@@ -8641,12 +8653,6 @@
   border-color: rgba(31, 111, 74, 0.24);
   background: rgba(31, 111, 74, 0.08);
   color: var(--green);
-}
-
-.player-chip-org {
-  border-color: rgba(60, 130, 200, 0.28);
-  background: rgba(60, 130, 200, 0.08);
-  color: #2563eb;
 }
 
 .player-chip-github {
@@ -25739,7 +25745,9 @@
 }
 
 .home-feed-head h2 {
-  margin: 4px 0 0;
+  /* kicker (旧 "投稿" ラベル) を撤去して h2 が div 内の最初の要素に
+     なったため、上マージンは不要 (旧 4px は kicker との間隔用だった)。 */
+  margin: 0;
   font-size: 18px;
   font-weight: 600;
   color: var(--ink, #111827);
@@ -25758,7 +25766,9 @@
 .home-feed-list {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  /* フィード密度の微圧縮 (18px → 15px, 約17%減)。読みやすさを保ったまま
+     カード間の縦マージンを詰める。詰め込みにならない範囲に留める。 */
+  gap: 15px;
 }
 
 .home-feed-list .feed-card,
@@ -27213,11 +27223,20 @@ select:focus-visible,
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 0;
     padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
-    background: rgba(var(--surface-rgb), 0.94);
+    /* 実機で裏のフィードテキストが透けて見える報告があったため、
+       0.94 → 0.97 に引き上げて可読性を確保。backdrop-filter 非対応
+       ブラウザでは以下の @supports フォールバックで完全不透明にする。 */
+    background: rgba(var(--surface-rgb), 0.97);
     border-top: 1px solid rgba(var(--ink-rgb), 0.08);
     backdrop-filter: blur(20px) saturate(1.05);
     -webkit-backdrop-filter: blur(20px) saturate(1.05);
     box-shadow: 0 -8px 32px rgba(var(--ink-rgb), 0.06);
+  }
+
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .mobile-bottom-nav {
+      background: rgb(var(--surface-rgb));
+    }
   }
 
   .mobile-bottom-nav button {
