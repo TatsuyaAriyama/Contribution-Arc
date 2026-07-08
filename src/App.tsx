@@ -19962,6 +19962,19 @@ function App() {
 
             {dailyHistoryTab === "mine" ? (
             <div className="daily-history-panel" role="tabpanel">
+            <div className="daily-history-quick-filters" role="group" aria-label={t("クイックフィルタ")}>
+              <button
+                type="button"
+                className={`daily-history-quick-chip${dailyHistoryDateFilter === getLearnerDate() ? " is-active" : ""}`}
+                onClick={() =>
+                  setDailyHistoryDateFilter((current) =>
+                    current === getLearnerDate() ? "" : getLearnerDate()
+                  )
+                }
+              >
+                {t("今日")}
+              </button>
+            </div>
             <div className="daily-history-filters" aria-label={t("過去の日報を絞り込む")}>
               <label>
                 <span>{t("日付")}</span>
